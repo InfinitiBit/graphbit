@@ -14,19 +14,11 @@ pip install graphbit
 
 ```bash
 git clone https://github.com/InfinitiBit/graphbit.git
-cd graphbit
-pip install -e .
-```
-
-### Development Installation
-
-```bash
-# Install with development dependencies
-pip install -e ".[dev]"
-
-# Or install maturin for building from source
-pip install maturin
-maturin develop
+cd graphbit/
+cargo build --release
+cd python/
+cargo build --release
+maturin develop --release
 ```
 
 ## Quick Start
@@ -35,14 +27,11 @@ maturin develop
 import graphbit
 import os
 
-# Initialize the library
 graphbit.init()
 
-# Set up LLM configuration
 api_key = os.getenv("OPENAI_API_KEY")
 config = graphbit.PyLlmConfig.openai(api_key, "gpt-4")
 
-# Create a simple workflow
 builder = graphbit.PyWorkflowBuilder("Hello World")
 node = graphbit.PyWorkflowNode.agent_node(
     "Greeter",
@@ -54,7 +43,6 @@ node = graphbit.PyWorkflowNode.agent_node(
 node_id = builder.add_node(node)
 workflow = builder.build()
 
-# Execute the workflow
 executor = graphbit.PyWorkflowExecutor(config)
 context = executor.execute(workflow)
 print(f"Result: {context.get_variable('output')}")
@@ -67,16 +55,12 @@ print(f"Result: {context.get_variable('output')}")
 Configuration for LLM providers.
 
 ```python
-# OpenAI configuration
 openai_config = graphbit.PyLlmConfig.openai(api_key, "gpt-4")
 
-# Anthropic configuration  
 anthropic_config = graphbit.PyLlmConfig.anthropic(api_key, "claude-3-sonnet-20240229")
 
-# HuggingFace configuration
 hf_config = graphbit.PyLlmConfig.huggingface(api_key, "microsoft/DialoGPT-medium")
 
-# Get configuration properties
 print(f"Provider: {config.provider_name()}")
 print(f"Model: {config.model_name()}")
 ```
@@ -89,7 +73,6 @@ Builder pattern for creating workflows.
 builder = graphbit.PyWorkflowBuilder("My Workflow")
 builder.description("A sample workflow for demonstration")
 
-# Add nodes
 agent_node = graphbit.PyWorkflowNode.agent_node(
     "Analyzer", 
     "Analyzes input data",
@@ -99,7 +82,6 @@ agent_node = graphbit.PyWorkflowNode.agent_node(
 
 node_id = builder.add_node(agent_node)
 
-# Add more nodes
 transform_node = graphbit.PyWorkflowNode.transform_node(
     "Formatter",
     "Formats the output", 
@@ -108,11 +90,9 @@ transform_node = graphbit.PyWorkflowNode.transform_node(
 
 transform_id = builder.add_node(transform_node)
 
-# Connect nodes
 edge = graphbit.PyWorkflowEdge.data_flow()
 builder.connect(node_id, transform_id, edge)
 
-# Build the workflow
 final_workflow = builder.build()
 ```
 
@@ -121,31 +101,25 @@ final_workflow = builder.build()
 Service for generating text embeddings.
 
 ```python
-# Configure embedding service
 config = graphbit.PyEmbeddingConfig.openai(api_key, "text-embedding-ada-002")
-# or
+
 config = graphbit.PyEmbeddingConfig.huggingface(api_key, "sentence-transformers/all-MiniLM-L6-v2")
 
-# Customize configuration
 config = config.with_timeout(30).with_max_batch_size(100)
 
-# Create service
 embedding_service = graphbit.PyEmbeddingService(config)
 
-# Generate embeddings
 import asyncio
 
 async def generate_embeddings():
-    # Single text embedding
+    """ Generating embeddings with embeddings model """
     embedding = await embedding_service.embed_text("Hello world")
     print(f"Embedding dimensions: {len(embedding)}")
     
-    # Multiple text embeddings
     texts = ["First text", "Second text", "Third text"]
     embeddings = await embedding_service.embed_texts(texts)
     print(f"Generated {len(embeddings)} embeddings")
-    
-    # Calculate similarity
+
     similarity = graphbit.PyEmbeddingService.cosine_similarity(embeddings[0], embeddings[1])
     print(f"Similarity: {similarity}")
 
@@ -167,7 +141,6 @@ agent = graphbit.PyWorkflowNode.agent_node(
     prompt="Write an article about {topic}"
 )
 
-# Agent with custom configuration
 agent = graphbit.PyWorkflowNode.agent_node_with_config(
     name="Technical Writer",
     description="Writes technical documentation",
@@ -181,14 +154,13 @@ agent = graphbit.PyWorkflowNode.agent_node_with_config(
 #### Condition Nodes
 
 ```python
-# Simple condition
+
 condition = graphbit.PyWorkflowNode.condition_node(
     name="Quality Check",
     description="Validates content quality",
     expression="quality_score > 0.8"
 )
 
-# Complex condition
 condition = graphbit.PyWorkflowNode.condition_node(
     name="Content Filter",
     description="Filters inappropriate content",
@@ -199,7 +171,7 @@ condition = graphbit.PyWorkflowNode.condition_node(
 #### Transform Nodes
 
 ```python
-# Built-in transformations
+
 uppercase_transform = graphbit.PyWorkflowNode.transform_node(
     name="Uppercase",
     description="Converts text to uppercase",
@@ -229,7 +201,8 @@ delay = graphbit.PyWorkflowNode.delay_node(
 #### Document Loader Nodes
 
 ```python
-# Load different document types
+
+
 pdf_loader = graphbit.PyWorkflowNode.document_loader_node(
     name="PDF Loader",
     description="Loads PDF documents",
@@ -250,7 +223,7 @@ text_loader = graphbit.PyWorkflowNode.document_loader_node(
 #### Agent Capabilities
 
 ```python
-# Define agent capabilities
+
 text_capability = graphbit.PyAgentCapability.text_processing()
 data_capability = graphbit.PyAgentCapability.data_analysis()
 tool_capability = graphbit.PyAgentCapability.tool_execution()
@@ -263,7 +236,7 @@ print(f"Capability: {text_capability}")
 #### Workflow Edges
 
 ```python
-# Different types of edges
+
 data_edge = graphbit.PyWorkflowEdge.data_flow()
 control_edge = graphbit.PyWorkflowEdge.control_flow()
 conditional_edge = graphbit.PyWorkflowEdge.conditional("status == 'success'")
@@ -274,15 +247,14 @@ conditional_edge = graphbit.PyWorkflowEdge.conditional("status == 'success'")
 Executes workflows with the configured LLM.
 
 ```python
-# Basic executor
+
 executor = graphbit.PyWorkflowExecutor(config)
 
-# Pre-configured executors for different use cases
+
 high_throughput_executor = graphbit.PyWorkflowExecutor.new_high_throughput(config)
 low_latency_executor = graphbit.PyWorkflowExecutor.new_low_latency(config)
 memory_optimized_executor = graphbit.PyWorkflowExecutor.new_memory_optimized(config)
 
-# Configure retry logic
 retry_config = graphbit.PyRetryConfig(max_attempts=3)
 retry_config = retry_config.with_exponential_backoff(
     initial_delay_ms=1000,
@@ -290,26 +262,25 @@ retry_config = retry_config.with_exponential_backoff(
     max_delay_ms=30000
 ).with_jitter(0.1)
 
-# Configure circuit breaker
+
 circuit_breaker = graphbit.PyCircuitBreakerConfig(
     failure_threshold=5,
     recovery_timeout_ms=60000
 )
 
-# Advanced executor configuration
 advanced_executor = executor.with_retry_config(retry_config) \
                            .with_circuit_breaker_config(circuit_breaker) \
                            .with_max_node_execution_time(30000) \
                            .with_fail_fast(True)
 
-# Execution methods
+
 context = executor.execute(workflow)
 print(f"Workflow ID: {context.workflow_id()}")
 print(f"Status: {context.state()}")
 print(f"Completed: {context.is_completed()}")
 print(f"Execution time: {context.execution_time_ms()}ms")
 
-# Asynchronous execution
+
 import asyncio
 
 async def run_workflow():
@@ -318,11 +289,10 @@ async def run_workflow():
 
 context = asyncio.run(run_workflow())
 
-# Concurrent execution of multiple workflows
 workflows = [workflow1, workflow2, workflow3]
 contexts = executor.execute_concurrent(workflows)
 
-# Batch execution
+
 contexts = executor.execute_batch(workflows)
 ```
 
@@ -331,20 +301,19 @@ contexts = executor.execute_batch(workflows)
 Represents a complete workflow definition.
 
 ```python
-# Workflow properties
+
 print(f"Name: {workflow.name()}")
 print(f"Description: {workflow.description()}")
 print(f"Node count: {workflow.node_count()}")
 print(f"Edge count: {workflow.edge_count()}")
 
-# Validation
+
 validation_result = workflow.validate()
 if validation_result.is_valid():
     print("Workflow is valid!")
 else:
     print(f"Validation errors: {validation_result.errors()}")
 
-# Serialization
 json_str = workflow.to_json()
 workflow_from_json = graphbit.PyWorkflow.from_json(json_str)
 ```
@@ -354,7 +323,7 @@ workflow_from_json = graphbit.PyWorkflow.from_json(json_str)
 Advanced dynamic workflow generation capabilities.
 
 ```python
-# Configure dynamic graph behavior
+
 dynamic_config = graphbit.PyDynamicGraphConfig() \
     .with_max_auto_nodes(10) \
     .with_confidence_threshold(0.8) \
@@ -367,7 +336,6 @@ dynamic_config = graphbit.PyDynamicGraphConfig() \
 manager = graphbit.PyDynamicGraphManager(llm_config, dynamic_config)
 manager.initialize(llm_config, dynamic_config)
 
-# Generate a single node dynamically
 context = executor.execute(workflow)  # Get current context
 node_response = manager.generate_node(
     workflow_id="workflow_123",
@@ -380,7 +348,6 @@ print(f"Generated node with confidence: {node_response.confidence()}")
 print(f"Reasoning: {node_response.reasoning()}")
 generated_node = node_response.get_node()
 
-# Auto-complete workflow
 auto_completion = manager.auto_complete_workflow(
     workflow=workflow,
     context=context,
@@ -391,7 +358,6 @@ if auto_completion.success():
     print(f"Generated {auto_completion.node_count()} new nodes")
     print(f"Completion time: {auto_completion.completion_time_ms()}ms")
     
-# Get analytics
 analytics = manager.get_analytics()
 print(f"Total nodes generated: {analytics.total_nodes_generated()}")
 print(f"Success rate: {analytics.success_rate():.2%}")
@@ -404,16 +370,15 @@ print(f"Cache hit rate: {analytics.cache_hit_rate():.2%}")
 Specialized workflow auto-completion engine.
 
 ```python
-# Create auto-completion engine
+
 auto_completion_engine = graphbit.PyWorkflowAutoCompletion(manager)
 auto_completion_engine.initialize(manager)
 
-# Configure completion behavior
+
 configured_engine = auto_completion_engine \
     .with_max_iterations(5) \
     .with_timeout_ms(30000)
 
-# Complete workflow
 result = configured_engine.complete_workflow(
     workflow=workflow,
     context=context,
@@ -428,13 +393,13 @@ print(f"Auto-completion result: {result}")
 ### Multi-Agent Workflows
 
 ```python
+
 import asyncio
 import graphbit
 
 async def research_workflow():
     builder = graphbit.PyWorkflowBuilder("Research Pipeline")
     
-    # Research agent
     researcher = graphbit.PyWorkflowNode.agent_node(
         "Researcher",
         "Conducts initial research",
@@ -450,14 +415,12 @@ async def research_workflow():
         "Analyze this research data: {research_data}. Identify patterns and insights."
     )
     
-    # Quality check
     quality_check = graphbit.PyWorkflowNode.condition_node(
         "Quality Gate",
         "Ensures research quality",
         "word_count > 100 && source_count > 2"
     )
     
-    # Summary agent
     summarizer = graphbit.PyWorkflowNode.agent_node(
         "Summarizer",
         "Creates executive summary",
@@ -465,13 +428,11 @@ async def research_workflow():
         "Create a concise summary of: {analysis}"
     )
     
-    # Build workflow
     researcher_id = builder.add_node(researcher)
     quality_id = builder.add_node(quality_check)
     analyst_id = builder.add_node(analyst)
     summary_id = builder.add_node(summarizer)
     
-    # Connect nodes
     data_edge = graphbit.PyWorkflowEdge.data_flow()
     conditional_edge = graphbit.PyWorkflowEdge.conditional("quality_score > 0.8")
     
@@ -481,7 +442,6 @@ async def research_workflow():
     
     workflow = builder.build()
     
-    # Execute
     config = graphbit.PyLlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4")
     executor = graphbit.PyWorkflowExecutor(config)
     
@@ -489,7 +449,6 @@ async def research_workflow():
     
     return context
 
-# Run the workflow
 context = asyncio.run(research_workflow())
 print(f"Research complete: {context.get_variable('output')}")
 ```
@@ -497,22 +456,19 @@ print(f"Research complete: {context.get_variable('output')}")
 ### Workflow Context and Variables
 
 ```python
-# Access workflow execution context
+
 context = executor.execute(workflow)
 
-# Check workflow status
 print(f"Workflow ID: {context.workflow_id()}")
 print(f"Current state: {context.state()}")
 print(f"Is completed: {context.is_completed()}")
 print(f"Is failed: {context.is_failed()}")
 print(f"Execution time: {context.execution_time_ms()}ms")
 
-# Access variables from workflow execution
 output_value = context.get_variable("output")
 if output_value:
     print(f"Output: {output_value}")
 
-# Get all variables
 all_variables = context.variables()
 for key, value in all_variables:
     print(f"{key}: {value}")
@@ -521,7 +477,7 @@ for key, value in all_variables:
 ### Error Handling and Retry Logic
 
 ```python
-# Configure retry behavior
+
 retry_config = graphbit.PyRetryConfig(max_attempts=3)
 retry_config = retry_config.with_exponential_backoff(
     initial_delay_ms=1000,
@@ -529,17 +485,15 @@ retry_config = retry_config.with_exponential_backoff(
     max_delay_ms=30000
 ).with_jitter(0.1)
 
-# Configure circuit breaker
 circuit_breaker = graphbit.PyCircuitBreakerConfig(
     failure_threshold=5,
     recovery_timeout_ms=60000
 )
 
-# Create robust executor
+
 robust_executor = executor.with_retry_config(retry_config) \
                          .with_circuit_breaker_config(circuit_breaker)
 
-# Handle execution errors
 try:
     context = robust_executor.execute(workflow)
     if context.is_failed():
@@ -559,7 +513,6 @@ class WorkflowTemplates:
         """Creates a content generation pipeline."""
         builder = graphbit.PyWorkflowBuilder("Content Pipeline")
         
-        # Research stage
         researcher = graphbit.PyWorkflowNode.agent_node(
             "Content Researcher", 
             "Researches the topic",
@@ -567,7 +520,6 @@ class WorkflowTemplates:
             "Research {topic} and gather relevant information"
         )
         
-        # Writing stage
         writer = graphbit.PyWorkflowNode.agent_node(
             "Content Writer",
             "Writes the initial draft", 
@@ -575,7 +527,6 @@ class WorkflowTemplates:
             "Write a {content_type} about {topic} using this research: {research}"
         )
         
-        # Editing stage
         editor = graphbit.PyWorkflowNode.agent_node(
             "Content Editor",
             "Edits and improves the content",
@@ -606,14 +557,12 @@ class WorkflowTemplates:
             "Extract key data points from: {input}"
         )
         
-        # Data validation
         validator = graphbit.PyWorkflowNode.condition_node(
             "Data Validator",
             "Validates extracted data",
             "data_points > 5 && confidence > 0.8"
         )
         
-        # Data analysis
         analyzer = graphbit.PyWorkflowNode.agent_node(
             "Data Analyzer", 
             "Analyzes the data",
@@ -621,7 +570,6 @@ class WorkflowTemplates:
             "Analyze this data and identify trends: {data}"
         )
         
-        # Report generation
         reporter = graphbit.PyWorkflowNode.agent_node(
             "Report Generator",
             "Generates analysis report",
@@ -660,8 +608,8 @@ import asyncio
 
 app = FastAPI()
 
-# Initialize GraphBit
 graphbit.init()
+
 config = graphbit.PyLlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4")
 executor = graphbit.PyWorkflowExecutor(config)
 
@@ -677,10 +625,8 @@ class WorkflowResponse(BaseModel):
 @app.post("/execute", response_model=WorkflowResponse)
 async def execute_workflow(request: WorkflowRequest):
     try:
-        # Parse workflow from JSON
         workflow = graphbit.PyWorkflow.from_json(request.workflow_json)
         
-        # Validate workflow
         validation_result = workflow.validate()
         if not validation_result.is_valid():
             return WorkflowResponse(
@@ -689,7 +635,6 @@ async def execute_workflow(request: WorkflowRequest):
                 error=f"Validation errors: {validation_result.errors()}"
             )
         
-        # Execute workflow
         context = await executor.execute_async(workflow)
         
         if context.is_completed():
@@ -708,20 +653,17 @@ async def health_check():
 ### Jupyter Notebook Integration
 
 ```python
-# In a Jupyter notebook
+
 import graphbit
 import json
 from IPython.display import display, JSON
 
-# Create workflow interactively
 def create_interactive_workflow():
     builder = graphbit.PyWorkflowBuilder("Interactive Analysis")
     
-    # Get user input
     topic = input("Enter topic to analyze: ")
     analysis_type = input("Analysis type (sentiment/summary/keywords): ")
     
-    # Create appropriate agent
     if analysis_type == "sentiment":
         prompt = f"Analyze the sentiment of: {{input}}"
     elif analysis_type == "summary":
@@ -739,7 +681,6 @@ def create_interactive_workflow():
     node_id = builder.add_node(agent)
     return builder.build(), topic
 
-# Execute and display results
 workflow, topic = create_interactive_workflow()
 
 config = graphbit.PyLlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4")
@@ -747,7 +688,6 @@ executor = graphbit.PyWorkflowExecutor(config)
 
 context = executor.execute(workflow)
 
-# Pretty print results
 result_data = {
     "workflow_id": context.workflow_id(),
     "status": context.state(),
@@ -760,14 +700,13 @@ display(JSON(result_data))
 ### Django Integration
 
 ```python
-# In Django views.py
+
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 import json
 import graphbit
 
-# Initialize GraphBit (do this in Django settings or apps.py)
 graphbit.init()
 
 @csrf_exempt
@@ -776,7 +715,6 @@ def execute_workflow_view(request):
     try:
         data = json.loads(request.body)
         
-        # Create workflow from template
         workflow_type = data.get('workflow_type')
         input_data = data.get('input_data', {})
         
@@ -787,10 +725,9 @@ def execute_workflow_view(request):
         else:
             return JsonResponse({"error": "Unknown workflow type"}, status=400)
         
-        # Execute workflow
         config = graphbit.PyLlmConfig.openai(
             os.getenv("OPENAI_API_KEY"), 
-            "gpt-4"
+            "gpt-4o-mini"
         )
         executor = graphbit.PyWorkflowExecutor(config)
         context = executor.execute(workflow)
@@ -824,7 +761,6 @@ class TestGraphBitWorkflows(unittest.TestCase):
     
     def setUp(self):
         graphbit.init()
-        # Use OpenAI configuration for testing (or mock if available)
         self.config = graphbit.PyLlmConfig.openai("test-key", "gpt-4")
         self.executor = graphbit.PyWorkflowExecutor(self.config)
     
@@ -852,7 +788,6 @@ class TestGraphBitWorkflows(unittest.TestCase):
         node_id = builder.add_node(node)
         workflow = builder.build()
         
-        # Should return valid result
         validation_result = workflow.validate()
         self.assertTrue(validation_result.is_valid())
     
@@ -1035,7 +970,7 @@ def safe_workflow_execution(workflow, max_retries=3):
 ### Code Organization
 
 ```python
-# graphbit_workflows.py
+
 import graphbit
 from typing import Dict, Any
 

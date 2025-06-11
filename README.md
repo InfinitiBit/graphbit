@@ -14,7 +14,7 @@
 
 A framework for building reliable AI agent workflows with strong type safety, comprehensive error handling, and predictable performance. Built with a Rust core and Python bindings.
 
-## ✨ Key Features
+##  Key Features
 
 - **Type Safety** - Strong typing throughout the execution pipeline
 - **Reliability** - Circuit breakers, retry policies, and error handling
@@ -22,7 +22,7 @@ A framework for building reliable AI agent workflows with strong type safety, co
 - **Resource Management** - Concurrency controls and memory optimization
 - **Observability** - Built-in metrics and execution tracing
 
-## 🚀 Quick Start
+##  Quick Start
 
 ### Installation
 ```bash
@@ -103,7 +103,7 @@ executor = graphbit.PyWorkflowExecutor.new_low_latency(config).without_retries()
 executor = graphbit.PyWorkflowExecutor.new_memory_optimized(config)
 ```
 
-## 📊 Observability
+## Observability
 
 ```python
 # Monitor execution
@@ -113,6 +113,6 @@ print(f"Active tasks: {stats.current_active_tasks}")
 print(f"Execution time: {result.execution_time_ms()}ms")
 ```
 
-## 🤝 Contributing
+## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
+See the [Contributing](CONTRIBUTING.md) file for development setup and guidelines.
