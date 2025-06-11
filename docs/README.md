@@ -1,805 +1,697 @@
 # GraphBit Documentation
 
-Welcome to GraphBit - a declarative agentic workflow automation framework that lets you build powerful AI-driven workflows with ease. This documentation is organized by topics and use cases, with practical Python examples to get you started quickly.
+Welcome to GraphBit - a high-performance agentic workflow automation framework built with Rust and Python bindings. GraphBit enables developers to create reliable, type-safe AI workflows with strong error handling, concurrency control, and multi-LLM provider support.
 
-## 🚀 Getting Started
+## 🚀 Quick Start
 
-### Quick Setup
+### Installation & Setup
+```bash
+# Install via pip
+pip install graphbit
+
+# Or install from source
+git clone https://github.com/InfinitiBit/graphbit.git
+cd graphbit && make install
+```
+
+### Your First Workflow
 ```python
 import graphbit
 import os
 
-# Initialize and create your first workflow
+# Initialize GraphBit
 graphbit.init()
-config = graphbit.PyLlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4")
 
-builder = graphbit.PyWorkflowBuilder("Hello World")
-node = graphbit.PyWorkflowNode.agent_node(
-    "Greeter", "Generates greetings", "greeter",
-    "Say hello to {name}"
+# Configure LLM provider
+config = graphbit.PyLlmConfig.openai(
+    api_key=os.getenv("OPENAI_API_KEY"), 
+    model="gpt-4o-mini"
 )
 
-workflow = builder.add_node(node).build()
-executor = graphbit.PyWorkflowExecutor(config)
-context = executor.execute(workflow)
+# Build workflow
+builder = graphbit.PyWorkflowBuilder("Hello GraphBit")
+node = graphbit.PyWorkflowNode.agent_node(
+    name="Greeter",
+    description="Generates personalized greetings", 
+    agent_id="greeter-001",
+    prompt="Generate a warm, personalized greeting for {name}"
+)
+
+node_id = builder.add_node(node)
+workflow = builder.build()
+
+# Execute with reliability features
+executor = graphbit.PyWorkflowExecutor(config) \
+    .with_retry_config(graphbit.PyRetryConfig.default()) \
+    .with_circuit_breaker_config(graphbit.PyCircuitBreakerConfig.default())
+
+result = executor.execute(workflow)
+print(f"Completed in {result.execution_time_ms()}ms")
 ```
 
-**Learn more**: [Installation Guide](00-installation-setup.md) | [Quick Start Tutorial](01-getting-started-workflows.md)
+**Learn more**: [Installation Guide](00-installation-setup.md) | [Getting Started](01-getting-started-workflows.md)
+
+---
+
+## 📚 Documentation Index
+
+### Core Concepts & Architecture
+- **[Installation & Setup](00-installation-setup.md)** - Environment setup, dependencies, API keys
+- **[Getting Started](01-getting-started-workflows.md)** - First workflows, basic concepts
+- **[Complete API Reference](05-complete-api-reference.md)** - Full Python API documentation
+- **[Quick API Reference](06-api-quick-reference.md)** - Common patterns and shortcuts
+
+### Advanced Features & Use Cases
+- **[Use Case Examples](02-use-case-examples.md)** - Real-world workflow examples
+- **[Local LLM Integration](03-local-llm-integration.md)** - Ollama, HuggingFace setup
+- **[Document Processing](04-document-processing-guide.md)** - PDF, text, markdown processing
+- **[Embeddings Guide](07-embeddings-guide.md)** - Semantic search, RAG patterns
+- **[HuggingFace Integration](08-huggingface-integration.md)** - Models, embeddings, deployment
+
+### Project Management
+- **[Python API Summary](python-api-summary.md)** - Quick reference for Python bindings
+- **[Contributing Guide](CONTRIBUTING.md)** - Development setup, guidelines
+- **[Changelog](CHANGELOG.md)** - Release notes and updates
+
+---
+
+## 🏗️ Architecture Overview
+
+GraphBit follows a three-tier architecture designed for performance, reliability, and ease of use:
+
+```
+┌─────────────────┐
+│   Python API    │ ← PyO3 Bindings with async support
+├─────────────────┤
+│   CLI Tool      │ ← Project management & execution
+├─────────────────┤
+│   Rust Core     │ ← Workflow engine, agents, LLM providers
+└─────────────────┘
+```
+
+### Core Components
+
+- **Workflow Engine**: Graph-based execution with dependency management
+- **Agent System**: LLM-backed intelligent agents with configurable capabilities
+- **LLM Providers**: Multi-provider support (OpenAI, Anthropic, Ollama, HuggingFace)
+- **Reliability**: Circuit breakers, retry policies, comprehensive error handling
+- **Concurrency**: Semaphore-based resource management and throttling
+- **Type Safety**: Strong typing throughout with UUID-based identifiers
 
 ---
 
 ## 🧠 Embeddings & Semantic Analysis
 
-GraphBit provides powerful embeddings support for semantic search, similarity analysis, and content understanding.
+GraphBit provides powerful embeddings support for semantic search, similarity analysis, and RAG (Retrieval-Augmented Generation) workflows.
 
 ### Quick Embeddings Example
 ```python
 import asyncio
 import graphbit
 
-async def embeddings_example():
-    # Configure OpenAI embeddings
+async def embeddings_demo():
+    # Configure embedding service
     config = graphbit.PyEmbeddingConfig.openai(
         api_key="your-openai-key",
         model="text-embedding-3-small"
-    )
+    ).with_timeout(30).with_max_batch_size(100)
     
-    # Create embedding service
     service = graphbit.PyEmbeddingService(config)
     
     # Generate embeddings
-    texts = ["Machine learning", "Artificial intelligence", "Data science"]
+    texts = ["Machine learning fundamentals", "Deep learning algorithms", "Natural language processing"]
     embeddings = await service.embed_texts(texts)
     
-    # Calculate similarity
+    # Calculate semantic similarity
     similarity = graphbit.PyEmbeddingService.cosine_similarity(
         embeddings[0], embeddings[1]
     )
     print(f"Similarity: {similarity:.3f}")
+    
+    # Get model information
+    dimensions = await service.get_dimensions()
+    provider, model = service.get_provider_info()
+    print(f"Model: {provider}/{model} ({dimensions} dimensions)")
 
-asyncio.run(embeddings_example())
+asyncio.run(embeddings_demo())
 ```
 
-### Semantic Search Engine
-Build intelligent search systems that understand meaning:
-
+### RAG (Retrieval-Augmented Generation) Pipeline
 ```python
-class SemanticSearch:
-    def __init__(self, embedding_service):
-        self.service = embedding_service
-        self.documents = []
-        self.embeddings = []
+async def create_rag_workflow(knowledge_base, question):
+    """Complete RAG pipeline with semantic search and generation"""
     
-    async def add_documents(self, documents):
-        self.documents.extend(documents)
-        new_embeddings = await self.service.embed_texts(documents)
-        self.embeddings.extend(new_embeddings)
-    
-    async def search(self, query, top_k=5):
-        query_embedding = await self.service.embed_text(query)
-        
-        similarities = []
-        for i, doc_embedding in enumerate(self.embeddings):
-            similarity = graphbit.PyEmbeddingService.cosine_similarity(
-                query_embedding, doc_embedding
-            )
-            similarities.append((self.documents[i], similarity))
-        
-        return sorted(similarities, key=lambda x: x[1], reverse=True)[:top_k]
-```
-
-### RAG (Retrieval-Augmented Generation)
-Combine embeddings with workflows for intelligent content generation:
-
-```python
-async def rag_pipeline(question, knowledge_base):
     # Setup embedding service
-    embedding_config = graphbit.PyEmbeddingConfig.openai("your-key", "text-embedding-3-small")
+    embedding_config = graphbit.PyEmbeddingConfig.openai(
+        api_key=os.getenv("OPENAI_API_KEY"),
+        model="text-embedding-3-small"
+    )
     embedding_service = graphbit.PyEmbeddingService(embedding_config)
     
-    # Create search engine
-    search = SemanticSearch(embedding_service)
-    await search.add_documents(knowledge_base)
+    # Create semantic search
+    query_embedding = await embedding_service.embed_text(question)
+    doc_embeddings = await embedding_service.embed_texts(knowledge_base)
     
-    # Find relevant context
-    relevant_docs = await search.search(question, top_k=3)
-    context = "\n\n".join([doc for doc, _ in relevant_docs])
+    # Find most relevant documents
+    similarities = []
+    for i, doc_embedding in enumerate(doc_embeddings):
+        similarity = graphbit.PyEmbeddingService.cosine_similarity(
+            query_embedding, doc_embedding
+        )
+        similarities.append((knowledge_base[i], similarity))
+    
+    # Get top 3 most relevant documents
+    top_docs = sorted(similarities, key=lambda x: x[1], reverse=True)[:3]
+    context = "\n\n".join([doc for doc, _ in top_docs])
     
     # Create RAG workflow
-    llm_config = graphbit.PyLlmConfig.openai("your-key", "gpt-4")
     builder = graphbit.PyWorkflowBuilder("RAG Pipeline")
     
     rag_node = graphbit.PyWorkflowNode.agent_node(
-        "RAG Agent",
-        "Answers using context",
-        "rag_agent",
-        f"Context: {context}\n\nQuestion: {question}\n\nAnswer:"
+        name="RAG Agent",
+        description="Answers questions using retrieved context",
+        agent_id="rag-agent",
+        prompt=f"""Context:\n{context}\n\nQuestion: {question}\n\nPlease provide a comprehensive answer based on the context above."""
     )
     
     builder.add_node(rag_node)
     workflow = builder.build()
     
-    # Execute and get answer
+    # Execute RAG workflow
+    llm_config = graphbit.PyLlmConfig.openai(
+        api_key=os.getenv("OPENAI_API_KEY"),
+        model="gpt-4"
+    )
     executor = graphbit.PyWorkflowExecutor(llm_config)
     result = executor.execute(workflow)
-    return result
+    
+    return result.get_variable("output")
 ```
 
-**Learn more**: [Embeddings Guide](07-embeddings-guide.md) | [API Reference](05-complete-api-reference.md#embeddings-classes)
+**Learn more**: [Embeddings Guide](07-embeddings-guide.md) | [HuggingFace Integration](08-huggingface-integration.md)
 
 ---
 
-## 🏗️ Static vs Dynamic Workflows
+## 🔄 Dynamic Workflow Generation
 
-GraphBit supports both static workflows (predefined structure) and dynamic workflows (generated at runtime).
+GraphBit supports both static workflows (predefined structure) and dynamic workflows (generated at runtime based on context and objectives).
 
 ### Static Workflows
 Perfect for predictable, repeatable processes:
 
 ```python
-def create_blog_workflow():
+def create_content_pipeline():
     """Static workflow - structure defined at design time"""
-    builder = graphbit.PyWorkflowBuilder("Static Blog Generator")
+    builder = graphbit.PyWorkflowBuilder("Content Creation Pipeline")
     
-    # Predefined pipeline: Research → Write → Edit
-    researcher = builder.add_node(graphbit.PyWorkflowNode.agent_node(
-        "Researcher", "Researches topics", "research",
-        "Research key points about: {topic}"
-    ))
+    # Research phase
+    researcher = graphbit.PyWorkflowNode.agent_node(
+        name="Content Researcher",
+        description="Researches topics and trends",
+        agent_id="researcher",
+        prompt="Research comprehensive information about: {topic}"
+    )
     
-    writer = builder.add_node(graphbit.PyWorkflowNode.agent_node(
-        "Writer", "Writes content", "write", 
-        "Write a blog post using research: {research}"
-    ))
+    # Writing phase  
+    writer = graphbit.PyWorkflowNode.agent_node(
+        name="Content Writer",
+        description="Creates engaging content",
+        agent_id="writer",
+        prompt="Write compelling content based on research: {research_data}"
+    )
     
-    editor = builder.add_node(graphbit.PyWorkflowNode.agent_node(
-        "Editor", "Edits content", "edit",
-        "Edit and improve: {content}"
-    ))
+    # Quality control
+    editor = graphbit.PyWorkflowNode.agent_node(
+        name="Content Editor", 
+        description="Reviews and improves content",
+        agent_id="editor",
+        prompt="Review and improve this content for clarity and engagement: {draft_content}"
+    )
     
-    builder.connect(researcher, writer, graphbit.PyWorkflowEdge.data_flow())
-    builder.connect(writer, editor, graphbit.PyWorkflowEdge.data_flow())
-    return builder.build()
-```
-
-### Dynamic Workflows
-Generated programmatically based on runtime conditions:
-
-```python
-def create_dynamic_content_workflow(content_type, complexity_level, target_audience):
-    """Dynamic workflow - structure determined at runtime"""
-    builder = graphbit.PyWorkflowBuilder(f"Dynamic-{content_type}-{complexity_level}")
+    # Connect nodes
+    research_id = builder.add_node(researcher)
+    writer_id = builder.add_node(writer)
+    editor_id = builder.add_node(editor)
     
-    # Base research node (always included)
-    researcher = builder.add_node(graphbit.PyWorkflowNode.agent_node(
-        "Researcher", "Researches content", "research",
-        f"Research {content_type} topics for {target_audience}: {{topic}}"
-    ))
-    
-    previous_node = researcher
-    
-    # Add nodes based on complexity
-    if complexity_level >= 2:
-        outliner = builder.add_node(graphbit.PyWorkflowNode.agent_node(
-            "Outliner", "Creates outline", "outline",
-            f"Create detailed outline for {content_type}: {{research}}"
-        ))
-        builder.connect(previous_node, outliner, graphbit.PyWorkflowEdge.data_flow())
-        previous_node = outliner
-    
-    # Content creation varies by type
-    if content_type == "blog":
-        writer = builder.add_node(graphbit.PyWorkflowNode.agent_node(
-            "Blog Writer", "Writes blog posts", "blog_writer",
-            "Write comprehensive blog post: {research}"
-        ))
-    elif content_type == "social":
-        writer = builder.add_node(graphbit.PyWorkflowNode.agent_node(
-            "Social Writer", "Writes social content", "social_writer",
-            "Create engaging social media content: {research}"
-        ))
-    else:
-        writer = builder.add_node(graphbit.PyWorkflowNode.agent_node(
-            "General Writer", "Writes content", "writer",
-            "Write content based on: {research}"
-        ))
-    
-    builder.connect(previous_node, writer, graphbit.PyWorkflowEdge.data_flow())
-    previous_node = writer
-    
-    # Add quality control for complex content
-    if complexity_level >= 3:
-        reviewer = builder.add_node(graphbit.PyWorkflowNode.agent_node(
-            "Quality Reviewer", "Reviews content quality", "reviewer",
-            f"Review and improve {content_type} for {target_audience}: {{content}}"
-        ))
-        builder.connect(previous_node, reviewer, graphbit.PyWorkflowEdge.data_flow())
-        previous_node = reviewer
-    
-    return builder.build()
-
-# Usage examples
-blog_workflow = create_dynamic_content_workflow("blog", 3, "developers")
-social_workflow = create_dynamic_content_workflow("social", 2, "general audience")
-```
-
----
-
-## 📝 Content Creation & Writing
-
-Build AI workflows for automated content generation, from blog posts to social media campaigns.
-
-### Static Blog Post Generation Pipeline
-```python
-def create_blog_workflow():
-    builder = graphbit.PyWorkflowBuilder("Blog Generator")
-    
-    # Research → Outline → Write → Optimize
-    researcher = builder.add_node(graphbit.PyWorkflowNode.agent_node(
-        "Researcher", "Researches topics", "research",
-        "Research key points about: {topic}"
-    ))
-    
-    writer = builder.add_node(graphbit.PyWorkflowNode.agent_node(
-        "Writer", "Writes content", "write", 
-        "Write a blog post using research: {research}"
-    ))
-    
-    builder.connect(researcher, writer, graphbit.PyWorkflowEdge.data_flow())
-    return builder.build()
-```
-
-### Dynamic Social Media Campaigns
-Create platform-specific content that adapts to campaign requirements:
-
-```python
-def create_adaptive_social_campaign(platforms, campaign_style, budget_level):
-    """Dynamic social media workflow based on requirements"""
-    builder = graphbit.PyWorkflowBuilder(f"Social-{campaign_style}-{budget_level}")
-    
-    # Strategy varies by budget and style
-    if budget_level == "premium":
-        strategist = builder.add_node(graphbit.PyWorkflowNode.agent_node(
-            "Premium Strategist", "Creates premium strategy", "premium_strategy",
-            f"Create {campaign_style} premium social strategy for: {{product}}"
-        ))
-    else:
-        strategist = builder.add_node(graphbit.PyWorkflowNode.agent_node(
-            "Standard Strategist", "Creates standard strategy", "standard_strategy",
-            f"Create {campaign_style} cost-effective strategy for: {{product}}"
-        ))
-    
-    content_nodes = []
-    
-    # Add platform-specific writers based on requirements
-    for platform in platforms:
-        if platform == "twitter":
-            writer = builder.add_node(graphbit.PyWorkflowNode.agent_node(
-                "Twitter Writer", "Writes Twitter content", f"twitter_{campaign_style}",
-                f"Create {campaign_style} Twitter content: {{strategy}}"
-            ))
-        elif platform == "linkedin":
-            writer = builder.add_node(graphbit.PyWorkflowNode.agent_node(
-                "LinkedIn Writer", "Writes LinkedIn content", f"linkedin_{campaign_style}",
-                f"Create professional {campaign_style} LinkedIn content: {{strategy}}"
-            ))
-        elif platform == "instagram":
-            writer = builder.add_node(graphbit.PyWorkflowNode.agent_node(
-                "Instagram Writer", "Writes Instagram content", f"instagram_{campaign_style}",
-                f"Create visual {campaign_style} Instagram content: {{strategy}}"
-            ))
-        
-        builder.connect(strategist, writer, graphbit.PyWorkflowEdge.data_flow())
-        content_nodes.append(writer)
-    
-    # Add review step for premium campaigns
-    if budget_level == "premium":
-        reviewer = builder.add_node(graphbit.PyWorkflowNode.agent_node(
-            "Campaign Reviewer", "Reviews campaign content", "premium_review",
-            "Ensure premium quality across all content: {all_content}"
-        ))
-        
-        for content_node in content_nodes:
-            builder.connect(content_node, reviewer, graphbit.PyWorkflowEdge.data_flow())
-    
-    return builder.build()
-
-# Dynamic usage
-campaign = create_adaptive_social_campaign(
-    platforms=["twitter", "linkedin"], 
-    campaign_style="professional", 
-    budget_level="premium"
-)
-```
-
-**Examples**: [Content Creation Workflows](02-use-case-examples.md#content-creation-examples)
-
----
-
-## 📊 Data Analysis & Processing
-
-Transform raw data into insights with AI-powered analysis workflows.
-
-### Static Customer Feedback Analysis
-```python
-def create_feedback_analyzer():
-    builder = graphbit.PyWorkflowBuilder("Feedback Analyzer")
-    
-    # Parallel analysis: sentiment + categorization + priority
-    sentiment = builder.add_node(create_sentiment_node())
-    category = builder.add_node(create_category_node()) 
-    priority = builder.add_node(create_priority_node())
-    
-    # Merge results for final report
-    reporter = builder.add_node(create_report_node())
-    
-    # Fan-out then fan-in pattern
-    for analyzer in [sentiment, category, priority]:
-        builder.connect(analyzer, reporter)
+    builder.connect(research_id, writer_id, graphbit.PyWorkflowEdge.data_flow())
+    builder.connect(writer_id, editor_id, graphbit.PyWorkflowEdge.data_flow())
     
     return builder.build()
 ```
-
-### Dynamic Data Processing Pipeline
-Adapt processing based on data characteristics:
-
-```python
-def create_dynamic_data_processor(data_source, data_size, processing_requirements):
-    """Dynamic data processing workflow"""
-    builder = graphbit.PyWorkflowBuilder(f"DataProcessor-{data_source}-{data_size}")
-    
-    # Data validation (always needed)
-    validator = builder.add_node(graphbit.PyWorkflowNode.agent_node(
-        "Data Validator", "Validates data quality", "validator",
-        f"Validate {data_source} data quality and structure: {{raw_data}}"
-    ))
-    
-    previous_node = validator
-    
-    # Processing pipeline varies by data size
-    if data_size == "large":
-        # Add chunking for large datasets
-        chunker = builder.add_node(graphbit.PyWorkflowNode.agent_node(
-            "Data Chunker", "Chunks large data", "chunker",
-            "Split large dataset into manageable chunks: {validated_data}"
-        ))
-        builder.connect(previous_node, chunker, graphbit.PyWorkflowEdge.data_flow())
-        previous_node = chunker
-    
-    # Add processing steps based on requirements
-    for requirement in processing_requirements:
-        if requirement == "sentiment_analysis":
-            processor = builder.add_node(graphbit.PyWorkflowNode.agent_node(
-                "Sentiment Processor", "Analyzes sentiment", "sentiment",
-                "Perform sentiment analysis on: {data_chunk}"
-            ))
-        elif requirement == "entity_extraction":
-            processor = builder.add_node(graphbit.PyWorkflowNode.agent_node(
-                "Entity Extractor", "Extracts entities", "entities",
-                "Extract named entities from: {data_chunk}"
-            ))
-        elif requirement == "summarization":
-            processor = builder.add_node(graphbit.PyWorkflowNode.agent_node(
-                "Summarizer", "Summarizes content", "summary",
-                "Summarize key insights from: {data_chunk}"
-            ))
-        
-        builder.connect(previous_node, processor, graphbit.PyWorkflowEdge.data_flow())
-        previous_node = processor
-    
-    # Final aggregation for large datasets
-    if data_size == "large":
-        aggregator = builder.add_node(graphbit.PyWorkflowNode.agent_node(
-            "Results Aggregator", "Aggregates results", "aggregator",
-            "Combine and summarize all processing results: {processed_chunks}"
-        ))
-        builder.connect(previous_node, aggregator, graphbit.PyWorkflowEdge.data_flow())
-    
-    return builder.build()
-
-# Dynamic usage
-workflow = create_dynamic_data_processor(
-    data_source="customer_feedback",
-    data_size="large", 
-    processing_requirements=["sentiment_analysis", "entity_extraction", "summarization"]
-)
-```
-
-**Examples**: [Data Analysis Workflows](02-use-case-examples.md#data-analysis-examples)
-
----
-
-## 🏢 Business Process Automation
-
-Automate complex business workflows with conditional logic and intelligent routing.
-
-### Static Customer Support Automation
-```python
-def create_support_workflow():
-    builder = graphbit.PyWorkflowBuilder("Support Automation")
-    
-    # Classify → Route → Respond
-    classifier = create_classifier_node()
-    urgent_handler = create_urgent_handler_node()
-    standard_handler = create_standard_handler_node()
-    
-    # Conditional routing based on urgency
-    builder.connect(classifier, urgent_handler, condition="urgency == 'high'")
-    builder.connect(classifier, standard_handler, condition="urgency != 'high'")
-    
-    return builder.build()
-```
-
-### Dynamic Business Process Engine
-Generate workflows based on business rules:
-
-```python
-def create_dynamic_approval_workflow(request_type, amount, department, approval_policy):
-    """Dynamic approval workflow based on business rules"""
-    builder = graphbit.PyWorkflowBuilder(f"Approval-{request_type}-{department}")
-    
-    # Initial request processor
-    processor = builder.add_node(graphbit.PyWorkflowNode.agent_node(
-        "Request Processor", "Processes requests", "processor",
-        f"Process {request_type} request for {department}: {{request_details}}"
-    ))
-    
-    previous_node = processor
-    
-    # Determine approval chain based on amount and policy
-    approval_chain = approval_policy.get_approval_chain(amount, department, request_type)
-    
-    for i, approver_level in enumerate(approval_chain):
-        approver = builder.add_node(graphbit.PyWorkflowNode.agent_node(
-            f"Approver Level {i+1}", f"Reviews {approver_level} approval", f"approve_{i}",
-            f"Review {request_type} request as {approver_level}: {{request_summary}}"
-        ))
-        
-        # Add conditional logic based on approval outcome
-        if i > 0:  # Not the first approver
-            condition_node = builder.add_node(graphbit.PyWorkflowNode.condition_node(
-                f"Approval Gate {i}", "Checks previous approval", 
-                f"approval_status_{i-1} == 'approved'"
-            ))
-            builder.connect(previous_node, condition_node, graphbit.PyWorkflowEdge.data_flow())
-            builder.connect(condition_node, approver, graphbit.PyWorkflowEdge.conditional("passed"))
-        else:
-            builder.connect(previous_node, approver, graphbit.PyWorkflowEdge.data_flow())
-        
-        previous_node = approver
-    
-    # Final processor
-    finalizer = builder.add_node(graphbit.PyWorkflowNode.agent_node(
-        "Request Finalizer", "Finalizes approved requests", "finalizer",
-        f"Finalize approved {request_type} request: {{final_approval}}"
-    ))
-    builder.connect(previous_node, finalizer, graphbit.PyWorkflowEdge.data_flow())
-    
-    return builder.build()
-
-# Usage with business rules
-class ApprovalPolicy:
-    def get_approval_chain(self, amount, department, request_type):
-        if amount > 10000:
-            return ["manager", "director", "vp"]
-        elif amount > 1000:
-            return ["manager", "director"] 
-        else:
-            return ["manager"]
-
-policy = ApprovalPolicy()
-workflow = create_dynamic_approval_workflow("expense", 5000, "engineering", policy)
-```
-
-**Examples**: [Business Automation](02-use-case-examples.md#business-automation)
-
----
-
-## 🧠 Multi-Agent Collaboration
-
-Coordinate multiple AI agents to solve complex problems through collaboration.
-
-### Static Research & Writing Team
-```python
-# Specialist agents working together
-researcher = create_specialist_agent("research", "domain expert")
-fact_checker = create_specialist_agent("fact_check", "accuracy expert") 
-writer = create_specialist_agent("write", "content expert")
-editor = create_specialist_agent("edit", "editorial expert")
-
-# Sequential collaboration with feedback loops
-builder.connect(researcher, writer)
-builder.connect(writer, fact_checker)
-builder.connect(fact_checker, editor)
-```
-
-### Dynamic Expert Assembly
-Create specialized teams based on problem complexity:
-
-```python
-def create_dynamic_expert_team(problem_domain, complexity, available_experts):
-    """Dynamically assemble expert team based on problem requirements"""
-    builder = graphbit.PyWorkflowBuilder(f"Expert-Team-{problem_domain}")
-    
-    # Problem analyzer determines required expertise
-    analyzer = builder.add_node(graphbit.PyWorkflowNode.agent_node(
-        "Problem Analyzer", "Analyzes problem requirements", "analyzer",
-        f"Analyze {problem_domain} problem and determine required expertise: {{problem_description}}"
-    ))
-    
-    # Select experts based on analysis
-    expert_nodes = []
-    expert_selector = ExpertSelector(available_experts)
-    
-    if complexity == "high":
-        # Multi-stage expert collaboration
-        primary_experts = expert_selector.get_primary_experts(problem_domain)
-        secondary_experts = expert_selector.get_secondary_experts(problem_domain)
-        
-        # Primary expert phase
-        for expert in primary_experts:
-            expert_node = builder.add_node(graphbit.PyWorkflowNode.agent_node(
-                f"{expert.name} Expert", f"Provides {expert.specialty} expertise", 
-                f"expert_{expert.id}",
-                f"Provide {expert.specialty} analysis for: {{problem_analysis}}"
-            ))
-            builder.connect(analyzer, expert_node, graphbit.PyWorkflowEdge.data_flow())
-            expert_nodes.append(expert_node)
-        
-        # Synthesis node
-        synthesizer = builder.add_node(graphbit.PyWorkflowNode.agent_node(
-            "Expert Synthesizer", "Synthesizes expert opinions", "synthesizer",
-            "Combine expert analyses into coherent solution: {expert_opinions}"
-        ))
-        
-        for expert_node in expert_nodes:
-            builder.connect(expert_node, synthesizer, graphbit.PyWorkflowEdge.data_flow())
-        
-        # Secondary expert review
-        for expert in secondary_experts:
-            reviewer = builder.add_node(graphbit.PyWorkflowNode.agent_node(
-                f"{expert.name} Reviewer", f"Reviews from {expert.specialty} perspective",
-                f"reviewer_{expert.id}",
-                f"Review solution from {expert.specialty} perspective: {{synthesized_solution}}"
-            ))
-            builder.connect(synthesizer, reviewer, graphbit.PyWorkflowEdge.data_flow())
-    
-    else:
-        # Simple expert consultation
-        experts = expert_selector.get_basic_experts(problem_domain)
-        for expert in experts:
-            expert_node = builder.add_node(graphbit.PyWorkflowNode.agent_node(
-                f"{expert.name} Expert", f"Provides {expert.specialty} expertise",
-                f"expert_{expert.id}",
-                f"Provide {expert.specialty} solution for: {{problem_analysis}}"
-            ))
-            builder.connect(analyzer, expert_node, graphbit.PyWorkflowEdge.data_flow())
-    
-    return builder.build()
-
-# Dynamic expert team creation
-team_workflow = create_dynamic_expert_team(
-    problem_domain="machine_learning",
-    complexity="high",
-    available_experts=expert_database.get_available_experts()
-)
-```
-
-**Examples**: [Multi-Agent Workflows](02-use-case-examples.md#multi-agent-examples)
-
----
-
-## ⚡ Performance & Scaling
-
-Build high-performance workflows that scale with your needs.
-
-### Concurrent Execution
-```python
-# Execute multiple workflows in parallel
-executor = graphbit.PyWorkflowExecutor(config)
-
-# Configure performance optimizations
-pool_config = graphbit.PyPoolConfig(max_size=100, min_size=10)
-retry_config = graphbit.PyRetryConfig(max_attempts=3, backoff_ms=1000)
-
-executor.configure_pools(pool_config)
-executor.configure_retries(retry_config)
-
-# Monitor performance
-stats = executor.get_performance_stats()
-print(f"Success rate: {stats.success_rate()}")
-```
-
-### Memory Pool Optimization
-Configure object pools and circuit breakers for production workloads.
-
-**Learn more**: [Performance Guide](05-complete-api-reference.md#performance)
-
----
-
-## 🔌 LLM Provider Integration
-
-Connect with any LLM provider seamlessly through Python.
-
-### Multiple Providers
-```python
-# OpenAI for production
-openai_config = graphbit.PyLlmConfig.openai(api_key, "gpt-4")
-
-# Anthropic for analysis
-anthropic_config = graphbit.PyLlmConfig.anthropic(api_key, "claude-3-sonnet")
-
-# HuggingFace for open-source models
-huggingface_config = graphbit.PyLlmConfig.huggingface(hf_token, "microsoft/DialoGPT-medium")
-
-# Local models with Ollama
-ollama_config = graphbit.PyLlmConfig.ollama("localhost:11434", "llama2")
-```
-
-### Provider Fallback Strategies
-Implement robust fallback chains for high availability.
-
-```python
-# Primary and fallback configurations
-primary_config = graphbit.PyLlmConfig.openai(openai_key, "gpt-4")
-fallback_config = graphbit.PyLlmConfig.huggingface(hf_token, "microsoft/DialoGPT-medium")
-
-# Use in executor with automatic fallback
-executor = graphbit.PyWorkflowExecutor(primary_config)
-executor.add_fallback_config(fallback_config)
-```
-
-**Learn more**: [LLM Integration](05-complete-api-reference.md#pyllmconfig) | [HuggingFace Guide](08-huggingface-integration.md) | [Local LLMs](03-local-llm-integration.md)
-
----
-
-## 🔧 Advanced Python Features
 
 ### Dynamic Workflow Generation
+AI-powered workflow creation that adapts to requirements:
+
 ```python
-# Generate workflows programmatically
-def create_dynamic_workflow(task_type, complexity):
-    builder = graphbit.PyWorkflowBuilder(f"Dynamic-{task_type}")
+async def create_adaptive_workflow(objective, constraints, llm_config):
+    """Dynamic workflow - structure determined by AI at runtime"""
     
-    if complexity == "simple":
-        return create_single_agent_workflow(builder, task_type)
-    elif complexity == "complex":
-        return create_multi_stage_workflow(builder, task_type)
-    else:
-        return create_adaptive_workflow(builder, task_type)
+    # Configure dynamic graph manager
+    dynamic_config = graphbit.PyDynamicGraphConfig() \
+        .with_max_auto_nodes(10) \
+        .with_confidence_threshold(0.7) \
+        .with_generation_temperature(0.3) \
+        .enable_validation()
+    
+    manager = graphbit.PyDynamicGraphManager(llm_config, dynamic_config)
+    manager.initialize(llm_config, dynamic_config)
+    
+    # Start with base workflow
+    builder = graphbit.PyWorkflowBuilder("Adaptive Workflow")
+    
+    # Create initial context
+    context = graphbit.PyWorkflowContext()
+    context.set_variable("objective", objective)
+    context.set_variable("constraints", constraints)
+    
+    # Let AI generate optimal workflow structure
+    objectives = [objective, "Ensure quality output", "Minimize execution time"]
+    auto_completion = graphbit.PyWorkflowAutoCompletion(manager)
+    
+    base_workflow = builder.build()
+    result = auto_completion.complete_workflow(
+        base_workflow, context, objectives
+    )
+    
+    # Get analytics
+    analytics = result.get_analytics()
+    print(f"Generated {analytics.total_nodes_generated()} nodes")
+    print(f"Success rate: {analytics.success_rate():.2%}")
+    print(f"Average confidence: {analytics.avg_confidence():.2f}")
+    
+    return base_workflow
 ```
 
-### Workflow Factory Pattern
-```python
-class WorkflowFactory:
-    """Factory for creating workflows based on runtime parameters"""
-    
-    @staticmethod
-    def create_workflow(workflow_type: str, **kwargs) -> graphbit.PyWorkflow:
-        if workflow_type == "content_creation":
-            return WorkflowFactory._create_content_workflow(**kwargs)
-        elif workflow_type == "data_analysis":
-            return WorkflowFactory._create_analysis_workflow(**kwargs)
-        elif workflow_type == "business_process":
-            return WorkflowFactory._create_business_workflow(**kwargs)
-        else:
-            raise ValueError(f"Unknown workflow type: {workflow_type}")
-    
-    @staticmethod
-    def _create_content_workflow(content_type, target_audience, complexity_level):
-        builder = graphbit.PyWorkflowBuilder(f"Content-{content_type}-{complexity_level}")
-        
-        # Build workflow based on parameters
-        if content_type == "blog" and complexity_level >= 3:
-            # Complex blog workflow with research, outline, writing, editing
-            pass
-        elif content_type == "social" and target_audience == "professional":
-            # Professional social media workflow
-            pass
-        
-        return builder.build()
+**Learn more**: [Complete API Reference](05-complete-api-reference.md#dynamic-workflows)
 
-# Usage
-workflow = WorkflowFactory.create_workflow(
-    "content_creation",
-    content_type="blog",
-    target_audience="developers", 
-    complexity_level=3
+---
+
+## ⚙️ Multi-LLM Provider Support
+
+GraphBit supports multiple LLM providers with a unified interface:
+
+### Provider Configuration
+```python
+# OpenAI (cloud)
+openai_config = graphbit.PyLlmConfig.openai(
+    api_key=os.getenv("OPENAI_API_KEY"),
+    model="gpt-4o"
+)
+
+# Anthropic (cloud)
+anthropic_config = graphbit.PyLlmConfig.anthropic(
+    api_key=os.getenv("ANTHROPIC_API_KEY"),
+    model="claude-3-5-sonnet-20241022"
+)
+
+# HuggingFace (cloud/local)
+hf_config = graphbit.PyLlmConfig.huggingface(
+    api_key=os.getenv("HF_API_KEY"),
+    model="microsoft/DialoGPT-medium"
+)
+
+# Ollama (local)
+ollama_config = graphbit.PyLlmConfig.ollama(
+    model="llama3.1:8b",
+    base_url="http://localhost:11434"
 )
 ```
 
-### Async/Await Support
+### Performance Profiles
 ```python
-import asyncio
+# High-throughput configuration (batch processing)
+executor = graphbit.PyWorkflowExecutor.new_high_throughput(config) \
+    .with_max_node_execution_time(300000)  # 5 minutes
 
-async def run_workflows_concurrently():
-    executor = graphbit.PyWorkflowExecutor(config)
-    
-    # Run multiple workflows concurrently
-    tasks = [
-        executor.execute_async(workflow1),
-        executor.execute_async(workflow2),
-        executor.execute_async(workflow3)
-    ]
-    
-    results = await asyncio.gather(*tasks)
-    return results
+# Low-latency configuration (real-time applications)  
+executor = graphbit.PyWorkflowExecutor.new_low_latency(config) \
+    .without_retries() \
+    .with_fail_fast(True)
+
+# Memory-optimized configuration (resource-constrained environments)
+executor = graphbit.PyWorkflowExecutor.new_memory_optimized(config) \
+    .with_max_node_execution_time(60000)  # 1 minute
 ```
 
-### Context Managers
-```python
-# Use context managers for resource management
-with graphbit.PyWorkflowExecutor(config) as executor:
-    executor.set_variable("input", "data")
-    context = executor.execute(workflow)
-    
-    # Automatic cleanup when exiting context
-```
-
-**Learn more**: [Advanced Features](05-complete-api-reference.md#advanced-features)
+**Learn more**: [Local LLM Integration](03-local-llm-integration.md) | [HuggingFace Integration](08-huggingface-integration.md)
 
 ---
 
-## 📚 Complete Documentation
+## 🛡️ Reliability & Error Handling
 
-### Core Python Guides
-- **[Project Overview](index.md)** - What GraphBit is and why use it
-- **[Installation Guide](00-installation-setup.md)** - Setup instructions for Python environments  
-- **[Quick Start](01-getting-started-workflows.md)** - Build your first workflow in 5 minutes
-- **[HuggingFace Integration](08-huggingface-integration.md)** - Open-source models and cost-effective AI
-- **[Embeddings Guide](07-embeddings-guide.md)** - Semantic search, similarity analysis, and RAG pipelines
-- **[Complete API Reference](05-complete-api-reference.md)** - Full Python library documentation
+GraphBit provides comprehensive reliability features for production deployments:
 
-### Practical Python Examples
-- **[Use Case Examples](02-use-case-examples.md)** - Real-world Python workflow examples
-- **[Local LLM Integration](03-local-llm-integration.md)** - Using Ollama with Python
-- **[Document Processing](04-document-processing-guide.md)** - Working with documents in Python
+### Retry Policies
+```python
+# Configure exponential backoff retry
+retry_config = graphbit.PyRetryConfig(max_attempts=3) \
+    .with_exponential_backoff(
+        initial_delay_ms=1000,
+        multiplier=2.0,
+        max_delay_ms=10000
+    ) \
+    .with_jitter(0.1)
 
-### Python Developer Resources  
-- **[Contributing Guide](CONTRIBUTING.md)** - How to contribute to GraphBit
-- **[API Quick Reference](06-api-quick-reference.md)** - Python API cheat sheet
-- **[Changelog](CHANGELOG.md)** - Version history and updates
+executor = executor.with_retry_config(retry_config)
+```
+
+### Circuit Breakers
+```python
+# Prevent cascading failures
+circuit_breaker = graphbit.PyCircuitBreakerConfig(
+    failure_threshold=5,
+    recovery_timeout_ms=30000
+)
+
+executor = executor.with_circuit_breaker_config(circuit_breaker)
+```
+
+### Concurrency Control
+```python
+# Monitor resource usage
+stats = await executor.get_concurrency_stats()
+print(f"Active tasks: {stats.current_active_tasks}")
+```
+
+**Learn more**: [Complete API Reference](05-complete-api-reference.md#reliability-features)
 
 ---
 
-## 🐍 Python-Specific Features
+## 📄 Document Processing
 
-### Type Hints Support
+GraphBit provides built-in document processing capabilities for various formats:
+
+### Document Loader Nodes
 ```python
-from typing import Optional, Dict, Any
-import graphbit
+# PDF document processing
+pdf_loader = graphbit.PyWorkflowNode.document_loader_node(
+    name="PDF Processor",
+    description="Extracts and processes PDF content",
+    document_type="pdf",
+    source_path="/path/to/document.pdf"
+)
 
-def create_typed_workflow(config: graphbit.PyLlmConfig) -> graphbit.PyWorkflow:
-    builder = graphbit.PyWorkflowBuilder("Typed Workflow")
-    # Your workflow logic here
+# Text file processing
+text_loader = graphbit.PyWorkflowNode.document_loader_node(
+    name="Text Processor", 
+    description="Processes plain text files",
+    document_type="text",
+    source_path="/path/to/document.txt"
+)
+
+# Markdown processing
+md_loader = graphbit.PyWorkflowNode.document_loader_node(
+    name="Markdown Processor",
+    description="Processes markdown documents", 
+    document_type="markdown",
+    source_path="/path/to/document.md"
+)
+
+# HTML processing
+html_loader = graphbit.PyWorkflowNode.document_loader_node(
+    name="HTML Processor",
+    description="Extracts content from HTML files",
+    document_type="html", 
+    source_path="/path/to/document.html"
+)
+```
+
+### Document Analysis Pipeline
+```python
+def create_document_analysis_workflow():
+    builder = graphbit.PyWorkflowBuilder("Document Analysis")
+    
+    # Load document
+    loader = graphbit.PyWorkflowNode.document_loader_node(
+        "Document Loader", "Loads source document", 
+        "pdf", "/path/to/report.pdf"
+    )
+    
+    # Extract key information
+    analyzer = graphbit.PyWorkflowNode.agent_node(
+        "Document Analyzer", "Analyzes document content",
+        "analyzer", "Extract key insights from: {document_content}"
+    )
+    
+    # Generate summary
+    summarizer = graphbit.PyWorkflowNode.agent_node(
+        "Summarizer", "Creates executive summary",
+        "summarizer", "Create executive summary of: {analysis}"
+    )
+    
+    # Connect pipeline
+    loader_id = builder.add_node(loader)
+    analyzer_id = builder.add_node(analyzer)
+    summarizer_id = builder.add_node(summarizer)
+    
+    builder.connect(loader_id, analyzer_id, graphbit.PyWorkflowEdge.data_flow())
+    builder.connect(analyzer_id, summarizer_id, graphbit.PyWorkflowEdge.data_flow())
+    
     return builder.build()
-
-def execute_with_types(
-    workflow: graphbit.PyWorkflow, 
-    variables: Dict[str, Any]
-) -> Optional[graphbit.PyWorkflowContext]:
-    executor = graphbit.PyWorkflowExecutor(config)
-    return executor.execute(workflow)
 ```
 
-### Integration with Python Ecosystem
-```python
-# Works with popular Python libraries
-import pandas as pd
-import numpy as np
-from datetime import datetime
+**Learn more**: [Document Processing Guide](04-document-processing-guide.md)
 
-# Process DataFrame with GraphBit
-def process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
-    workflow = create_data_processing_workflow()
-    executor = graphbit.PyWorkflowExecutor(config)
+---
+
+## 🎯 Node Types & Capabilities
+
+GraphBit supports various node types for different workflow requirements:
+
+### Agent Nodes
+```python
+# Basic agent node
+agent = graphbit.PyWorkflowNode.agent_node(
+    name="Content Analyzer",
+    description="Analyzes content quality and structure", 
+    agent_id="analyzer-v1",
+    prompt="Analyze the quality and structure of: {content}"
+)
+
+# Agent with custom configuration
+advanced_agent = graphbit.PyWorkflowNode.agent_node_with_config(
+    name="Technical Writer",
+    description="Creates technical documentation",
+    agent_id="tech-writer",
+    prompt="Write technical documentation for: {feature}",
+    max_tokens=2000,
+    temperature=0.3
+)
+```
+
+### Condition Nodes
+```python
+# Quality gate
+quality_check = graphbit.PyWorkflowNode.condition_node(
+    name="Quality Gate",
+    description="Validates content meets quality standards",
+    expression="quality_score > 0.8 && readability_score > 0.7"
+)
+
+# Content filter
+content_filter = graphbit.PyWorkflowNode.condition_node(
+    name="Content Filter",
+    description="Filters inappropriate content",
+    expression="toxicity_score < 0.1 && sentiment != 'negative'"
+)
+```
+
+### Transform Nodes
+```python
+# Text transformations
+uppercase = graphbit.PyWorkflowNode.transform_node(
+    "Uppercase Transform", "Converts to uppercase", "uppercase"
+)
+
+json_extractor = graphbit.PyWorkflowNode.transform_node(
+    "JSON Extractor", "Extracts JSON data", "json_extract"
+)
+
+# Available transformations: uppercase, lowercase, json_extract, split, join
+```
+
+### Delay Nodes
+```python
+# Rate limiting
+delay = graphbit.PyWorkflowNode.delay_node(
+    name="Rate Limiter",
+    description="Prevents API rate limiting",
+    duration_seconds=30
+)
+```
+
+**Learn more**: [Complete API Reference](05-complete-api-reference.md#node-types)
+
+---
+
+## 🚦 Workflow Control Flow
+
+Control how data and execution flows through your workflows:
+
+### Edge Types
+```python
+# Data flow (passes output to input)
+data_edge = graphbit.PyWorkflowEdge.data_flow()
+
+# Control flow (execution order only)
+control_edge = graphbit.PyWorkflowEdge.control_flow()
+
+# Conditional execution
+conditional_edge = graphbit.PyWorkflowEdge.conditional("approval_status == 'approved'")
+```
+
+### Complex Workflow Example
+```python
+def create_content_approval_workflow():
+    builder = graphbit.PyWorkflowBuilder("Content Approval Pipeline")
     
-    for index, row in df.iterrows():
-        executor.set_variable("data", row.to_dict())
-        context = executor.execute(workflow)
-        # Process results back to DataFrame
+    # Content creation
+    creator = graphbit.PyWorkflowNode.agent_node(
+        "Content Creator", "Creates initial content",
+        "creator", "Create content about: {topic}"
+    )
     
-    return df
+    # Quality assessment
+    assessor = graphbit.PyWorkflowNode.agent_node(
+        "Quality Assessor", "Assesses content quality", 
+        "assessor", "Rate content quality (0-1): {content}"
+    )
+    
+    # Quality gate
+    quality_gate = graphbit.PyWorkflowNode.condition_node(
+        "Quality Gate", "Checks if content meets standards",
+        "quality_score >= 0.7"
+    )
+    
+    # Content reviewer (for high quality content)
+    reviewer = graphbit.PyWorkflowNode.agent_node(
+        "Content Reviewer", "Reviews approved content",
+        "reviewer", "Review and finalize: {content}"
+    )
+    
+    # Content improver (for low quality content)
+    improver = graphbit.PyWorkflowNode.agent_node(
+        "Content Improver", "Improves low quality content",
+        "improver", "Improve this content: {content}"
+    )
+    
+    # Build workflow
+    creator_id = builder.add_node(creator)
+    assessor_id = builder.add_node(assessor)
+    gate_id = builder.add_node(quality_gate)
+    reviewer_id = builder.add_node(reviewer)
+    improver_id = builder.add_node(improver)
+    
+    # Connect nodes
+    builder.connect(creator_id, assessor_id, graphbit.PyWorkflowEdge.data_flow())
+    builder.connect(assessor_id, gate_id, graphbit.PyWorkflowEdge.data_flow())
+    
+    # Conditional branches
+    builder.connect(gate_id, reviewer_id, 
+                   graphbit.PyWorkflowEdge.conditional("quality_score >= 0.7"))
+    builder.connect(gate_id, improver_id,
+                   graphbit.PyWorkflowEdge.conditional("quality_score < 0.7"))
+    
+    return builder.build()
 ```
 
 ---
+
+## 🔧 CLI Tools
+
+GraphBit includes a powerful CLI for project management and workflow execution:
+
+### Project Management
+```bash
+# Initialize new project
+graphbit init my-workflow-project --path ./projects/
+
+# Validate workflow definition
+graphbit validate workflow.json
+
+# Execute workflow
+graphbit run workflow.json --config production.json
+
+# Get version info
+graphbit version
+```
+
+### Environment Configuration
+```bash
+# Set up API keys
+export OPENAI_API_KEY="your-openai-key"
+export ANTHROPIC_API_KEY="your-anthropic-key"
+export HF_API_KEY="your-huggingface-key"
+
+# Activate conda environment (for development)
+conda activate graphbit
+```
+
+---
+
+## 📊 Performance & Monitoring
+
+GraphBit provides built-in monitoring and performance analytics:
+
+### Execution Analytics
+```python
+# Monitor workflow execution
+result = executor.execute(workflow)
+
+print(f"Execution time: {result.execution_time_ms()}ms")
+print(f"Workflow state: {result.state()}")
+
+# Get detailed statistics
+if result.get_stats():
+    stats = result.get_stats()
+    print(f"Total nodes: {stats.total_nodes}")
+    print(f"Success rate: {stats.successful_nodes / stats.total_nodes:.2%}")
+    print(f"Average node time: {stats.avg_execution_time_ms:.2f}ms")
+```
+
+### Concurrency Monitoring
+```python
+# Real-time concurrency statistics
+stats = await executor.get_concurrency_stats()
+print(f"Active tasks: {stats.current_active_tasks}")
+print(f"Peak concurrency: {stats.peak_active_tasks}")
+print(f"Total acquisitions: {stats.total_permit_acquisitions}")
+print(f"Average wait time: {stats.avg_wait_time_ms:.2f}ms")
+```
+
+---
+
+## 📖 Learning Resources
+
+### Documentation Sections
+1. **[Installation & Setup](00-installation-setup.md)** - Get up and running quickly
+2. **[Getting Started](01-getting-started-workflows.md)** - Build your first workflows  
+3. **[Use Case Examples](02-use-case-examples.md)** - Real-world applications
+4. **[Local LLM Integration](03-local-llm-integration.md)** - Self-hosted models
+5. **[Document Processing](04-document-processing-guide.md)** - Handle various file formats
+6. **[Complete API Reference](05-complete-api-reference.md)** - Full API documentation
+7. **[Quick Reference](06-api-quick-reference.md)** - Common patterns
+8. **[Embeddings Guide](07-embeddings-guide.md)** - Semantic search & RAG
+9. **[HuggingFace Integration](08-huggingface-integration.md)** - Open-source models
+
+### Example Workflows
+- Content creation pipelines
+- Document analysis systems  
+- Customer support automation
+- Code review workflows
+- Research assistants
+- Multi-agent collaboration
+
+### Community & Support
+- **GitHub**: [InfinitiBit/graphbit](https://github.com/InfinitiBit/graphbit)
+- **Issues**: Report bugs and request features
+- **Discussions**: Ask questions and share workflows
+- **Contributing**: See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup
+
+---
+
+## 🚀 What's Next?
+
+GraphBit is actively developed with regular releases. Check the [Changelog](CHANGELOG.md) for latest updates and the [roadmap](https://github.com/InfinitiBit/graphbit/projects) for upcoming features.
+
+Start building your first workflow with the [Getting Started Guide](01-getting-started-workflows.md) or explore [real-world examples](02-use-case-examples.md) to see GraphBit in action.
