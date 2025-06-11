@@ -673,25 +673,3 @@ print(f"Average wait time: {stats.avg_wait_time_ms:.2f}ms")
 7. **[Quick Reference](06-api-quick-reference.md)** - Common patterns
 8. **[Embeddings Guide](07-embeddings-guide.md)** - Semantic search & RAG
 9. **[HuggingFace Integration](08-huggingface-integration.md)** - Open-source models
-
-### Example Workflows
-- Content creation pipelines
-- Document analysis systems  
-- Customer support automation
-- Code review workflows
-- Research assistants
-- Multi-agent collaboration
-
-### Community & Support
-- **GitHub**: [InfinitiBit/graphbit](https://github.com/InfinitiBit/graphbit)
-- **Issues**: Report bugs and request features
-- **Discussions**: Ask questions and share workflows
-- **Contributing**: See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup
-
----
-
-## 🚀 What's Next?
-
-GraphBit is actively developed with regular releases. Check the [Changelog](CHANGELOG.md) for latest updates and the [roadmap](https://github.com/InfinitiBit/graphbit/projects) for upcoming features.
-
-Start building your first workflow with the [Getting Started Guide](01-getting-started-workflows.md) or explore [real-world examples](02-use-case-examples.md) to see GraphBit in action.
