@@ -208,13 +208,7 @@ repos:
     files: ^(Cargo\.toml|Cargo\.lock|.*/Cargo\.toml)$
     pass_filenames: false
 
-      # License check
-  - id: license-check
-    name: License header check
-    entry: bash -c 'find src core/src python/src -name "*.rs" -exec grep -L "Copyright\|License\|SPDX" {} + | head -5'
-    language: system
-    files: ^(src/.*\.rs|core/src/.*\.rs|python/src/.*\.rs)$
-    pass_filenames: false
+
 
 +# NOTE: Ensure `.secrets.baseline` exists to prevent hook failure
 +# Run: detect-secrets scan > .secrets.baseline

@@ -6,7 +6,6 @@ description: Complete API reference for the GraphBit Python library
 # GraphBit Python Library Documentation
 
 **Version**: Latest  
-**License**: MIT  
 **Repository**: [GraphBit](https://github.com/InfinitiBit/graphbit)
 
 !!! info "Prerequisites"

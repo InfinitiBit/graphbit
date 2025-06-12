@@ -107,8 +107,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `pyo3` 0.20+ for Python bindings
   - `chrono` 0.4+ for date/time handling
 
-### License
-- MIT License
 
 ### Repository
 - https://github.com/InfinitiBit/graphbit

@@ -399,9 +399,6 @@ We're especially looking for contributions in:
 - **Discussions**: Ask questions and share ideas
 - **Email**: [maintainers@graphbit.dev](mailto:maintainers@graphbit.dev)
 
-## 📄 License
-
-By contributing to GraphBit, you agree that your contributions will be licensed under the MIT License.
 
 ---
 

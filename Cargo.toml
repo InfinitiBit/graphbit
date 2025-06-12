@@ -20,7 +20,6 @@ default = []
 authors = ["GraphBit Team"]
 description = "Command-line interface for GraphBit agentic workflow automation"
 edition = "2021"
-license = "MIT"
 name = "graphbit"
 publish = false
 repository = "https://github.com/InfinitiBit/graphbit"
