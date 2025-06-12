@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Comprehensive test runner for GraphBit Python integration tests."""
 import os
-import subprocess
+import subprocess  # nosec B404
 import sys
 import time
 from typing import Any, Dict, List, Tuple

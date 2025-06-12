@@ -11,9 +11,9 @@ try:
 
     _LANGCHAIN_AVAILABLE = True
 except ImportError:
-    PromptTemplate = None  # type: ignore
-    ChatOpenAI = None  # type: ignore
-    HumanMessage = None  # type: ignore
+    PromptTemplate = None
+    ChatOpenAI = None
+    HumanMessage = None
     _LANGCHAIN_AVAILABLE = False
 
 from .common import (

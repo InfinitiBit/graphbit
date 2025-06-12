@@ -863,7 +863,11 @@ impl PyWorkflowExecutor {
     }
 
     /// Execute workflow asynchronously (returns a coroutine for Python await)
-    fn execute_async<'a>(&self, workflow: &PyWorkflow, py: Python<'a>) -> PyResult<Bound<'a, PyAny>> {
+    fn execute_async<'a>(
+        &self,
+        workflow: &PyWorkflow,
+        py: Python<'a>,
+    ) -> PyResult<Bound<'a, PyAny>> {
         let workflow_clone = workflow.inner.clone();
         // Clone the configuration fields to avoid lifetime issues
         let llm_config = self.llm_config.clone();

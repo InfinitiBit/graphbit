@@ -17,6 +17,7 @@ class TestOpenAIEmbeddings:
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             pytest.skip("OPENAI_API_KEY not set")
+            raise RuntimeError("Should not reach here due to pytest.skip")
         return api_key
 
     @pytest.fixture
@@ -106,6 +107,7 @@ class TestHuggingFaceEmbeddings:
         api_key = os.getenv("HUGGINGFACE_API_KEY")
         if not api_key:
             pytest.skip("HUGGINGFACE_API_KEY not set")
+            raise RuntimeError("Should not reach here due to pytest.skip")
         return api_key
 
     @pytest.fixture

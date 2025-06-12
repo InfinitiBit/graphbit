@@ -2,7 +2,9 @@
 
 import asyncio
 import os
-from typing import Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union, cast
+
+from typing_extensions import TypedDict
 
 try:
     from langchain.schema import AIMessage, HumanMessage
@@ -10,34 +12,8 @@ try:
     from langgraph.graph import END, StateGraph
 
     # ToolExecutor has been moved or deprecated, removing the import
-    from typing_extensions import TypedDict
 
     _LANGGRAPH_AVAILABLE = True
-except ImportError:
-    StateGraph = None  # type: ignore
-    END = None  # type: ignore
-    ChatOpenAI = None  # type: ignore
-    HumanMessage = None  # type: ignore
-    AIMessage = None  # type: ignore
-    TypedDict = None  # type: ignore
-    _LANGGRAPH_AVAILABLE = False
-
-from .common import (
-    COMPLEX_WORKFLOW_STEPS,
-    CONCURRENT_TASK_PROMPTS,
-    MEMORY_INTENSIVE_PROMPT,
-    PARALLEL_TASKS,
-    SEQUENTIAL_TASKS,
-    SIMPLE_TASK_PROMPT,
-    BaseBenchmark,
-    BenchmarkMetrics,
-    calculate_throughput,
-    count_tokens_estimate,
-    get_standard_llm_config,
-)
-
-# Define state schemas for LangGraph
-if _LANGGRAPH_AVAILABLE:
 
     class SimpleState(TypedDict):
         """State for simple task execution."""
@@ -55,11 +31,33 @@ if _LANGGRAPH_AVAILABLE:
         context: str
         step_data: Dict[str, Any]
 
-else:
-    # Fallback class definitions when TypedDict is not available
-    SimpleState = dict  # type: ignore
+except ImportError:
 
-    WorkflowState = dict  # type: ignore
+    StateGraph = cast(Any, None)
+    END = cast(Any, None)
+    ChatOpenAI = cast(Any, None)
+    HumanMessage = cast(Any, None)
+    AIMessage = cast(Any, None)
+    TypedDict = cast(Any, None)
+    _LANGGRAPH_AVAILABLE = False
+
+
+if TYPE_CHECKING:
+    from typing_extensions import TypedDict
+
+from .common import (
+    COMPLEX_WORKFLOW_STEPS,
+    CONCURRENT_TASK_PROMPTS,
+    MEMORY_INTENSIVE_PROMPT,
+    PARALLEL_TASKS,
+    SEQUENTIAL_TASKS,
+    SIMPLE_TASK_PROMPT,
+    BaseBenchmark,
+    BenchmarkMetrics,
+    calculate_throughput,
+    count_tokens_estimate,
+    get_standard_llm_config,
+)
 
 
 class LangGraphBenchmark(BaseBenchmark):

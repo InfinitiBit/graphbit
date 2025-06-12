@@ -12,9 +12,9 @@ try:
 
     _PYDANTIC_AI_AVAILABLE = True
 except ImportError:
-    Agent = None  # type: ignore
-    OpenAIModel = None  # type: ignore
-    BaseModel = None  # type: ignore
+    Agent = None
+    OpenAIModel = None
+    BaseModel = None
     _PYDANTIC_AI_AVAILABLE = False
 
 from .common import (
