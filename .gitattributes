@@ -1,0 +1,25 @@
+# Auto normalize text files to LF on commit
+* text=auto
+
+# Explicit CRLF for Windows scripts and secret baseline (common with tools)
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+.secrets.baseline text eol=crlf
+
+# LF endings for source code and config files
+*.py text eol=lf
+*.rs text eol=lf
+*.toml text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.sh text eol=lf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
