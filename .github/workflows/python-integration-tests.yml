@@ -2,9 +2,9 @@ name: Python Integration Tests
 
 on:
   push:
-    branches: [main, develop, dev_main, bugfix/pre-test-commit-all-files, bugfix/python-integration-test-gha]
+    branches: [main, develop]
   pull_request:
-    branches: [main, develop, dev_main, bugfix/pre-test-commit-all-files, bugfix/python-integration-test-gha]
+    branches: [main, develop]
   schedule:
     # Run tests daily at 2 AM UTC
   - cron: 0 2 * * *
