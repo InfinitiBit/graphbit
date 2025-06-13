@@ -11,7 +11,7 @@ env:
 
 jobs:
 
-  # 🧠 Run Clippy (lint)
+  # Run Clippy (lint)
   lint:
     strategy:
       matrix:
@@ -47,7 +47,7 @@ jobs:
       shell: pwsh
       run: cargo clippy --all-targets --all-features -- -D warnings
 
-  # ✨ Run rustfmt
+  # Run rustfmt
   fmt:
     strategy:
       matrix:
@@ -72,7 +72,7 @@ jobs:
       shell: pwsh
       run: cargo fmt --all -- --check
 
-  # 🔧 Build and test Rust
+  # Build and test Rust
   build-and-test:
     strategy:
       matrix:
