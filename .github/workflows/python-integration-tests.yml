@@ -37,83 +37,125 @@ jobs:
       with:
         components: rustfmt, clippy
 
-    - name: Install Python dependencies
-      shell: ${{ contains(matrix.os, 'windows') && 'pwsh' || 'bash -l {0}' }}
+    # ------------------------------
+    # OS-Specific: Install Python deps
+    - name: Install Python dependencies (bash)
+      if: ${{ runner.os != 'Windows' }}
+      shell: bash -l {0}
       run: |
         conda activate graphbit
         pip install poetry
         poetry config virtualenvs.create false
         poetry install --with dev,benchmarks
 
-    - name: Install maturin
-      shell: ${{ contains(matrix.os, 'windows') && 'pwsh' || 'bash -l {0}' }}
+    - name: Install Python dependencies (pwsh)
+      if: ${{ runner.os == 'Windows' }}
+      shell: pwsh
+      run: |
+        conda activate graphbit
+        pip install poetry
+        poetry config virtualenvs.create false
+        poetry install --with dev,benchmarks
+
+    # ------------------------------
+    # OS-Specific: Install maturin
+    - name: Install maturin (bash)
+      if: ${{ runner.os != 'Windows' }}
+      shell: bash -l {0}
       run: |
         conda activate graphbit
         pip install maturin
 
-    - name: Check API Key
-      shell: ${{ contains(matrix.os, 'windows') && 'pwsh' || 'bash -l {0}' }}
+    - name: Install maturin (pwsh)
+      if: ${{ runner.os == 'Windows' }}
+      shell: pwsh
       run: |
-        if [ -z "${OPENAI_API_KEY}" ]; then
+        conda activate graphbit
+        pip install maturin
+
+    # ------------------------------
+    # OS-Specific: Check API Key
+    - name: Check API Key (bash)
+      if: ${{ runner.os != 'Windows' }}
+      shell: bash -l {0}
+      run: |
+        if [ -z "$OPENAI_API_KEY" ]; then
           echo "ERROR: OPENAI_API_KEY secret is not set"
           exit 1
         fi
 
-    - name: Build Rust components
-      shell: ${{ contains(matrix.os, 'windows') && 'pwsh' || 'bash -l {0}' }}
+    - name: Check API Key (pwsh)
+      if: ${{ runner.os == 'Windows' }}
+      shell: pwsh
+      run: |
+        if (-not $env:OPENAI_API_KEY) {
+          Write-Host "ERROR: OPENAI_API_KEY secret is not set"
+          exit 1
+        }
+
+    # ------------------------------
+    # OS-Specific: Build Rust
+    - name: Build Rust components (bash)
+      if: ${{ runner.os != 'Windows' }}
+      shell: bash -l {0}
       run: |
         conda activate graphbit
         cargo build --release
 
-    - name: Build Python bindings
-      shell: ${{ contains(matrix.os, 'windows') && 'pwsh' || 'bash -l {0}' }}
+    - name: Build Rust components (pwsh)
+      if: ${{ runner.os == 'Windows' }}
+      shell: pwsh
+      run: |
+        conda activate graphbit
+        cargo build --release
+
+    # ------------------------------
+    # OS-Specific: Build Python bindings
+    - name: Build Python bindings (bash)
+      if: ${{ runner.os != 'Windows' }}
+      shell: bash -l {0}
       run: |
         conda activate graphbit
         cd python
         maturin develop --release
 
-    - name: Run Python Integration Tests
-      shell: ${{ contains(matrix.os, 'windows') && 'pwsh' || 'bash -l {0}' }}
+    - name: Build Python bindings (pwsh)
+      if: ${{ runner.os == 'Windows' }}
+      shell: pwsh
+      run: |
+        conda activate graphbit
+        cd python
+        maturin develop --release
+
+    # ------------------------------
+    # OS-Specific: Run All Tests
+    - name: Run All Python Integration Tests (bash)
+      if: ${{ runner.os != 'Windows' }}
+      shell: bash -l {0}
       run: |
         conda activate graphbit
         cd tests/python_integration_tests
         python -m pytest . -v --tb=short --maxfail=5
-
-    - name: Run Static Workflow Tests
-      shell: ${{ contains(matrix.os, 'windows') && 'pwsh' || 'bash -l {0}' }}
-      run: |
-        conda activate graphbit
-        cd tests/python_integration_tests
         python -m pytest tests_static_workflow.py -v --tb=short
-
-    - name: Run Dynamic Workflow Tests
-      shell: ${{ contains(matrix.os, 'windows') && 'pwsh' || 'bash -l {0}' }}
-      run: |
-        conda activate graphbit
-        cd tests/python_integration_tests
         python -m pytest tests_dynamic_workflow.py -v --tb=short
-
-    - name: Run LLM Integration Tests
-      shell: ${{ contains(matrix.os, 'windows') && 'pwsh' || 'bash -l {0}' }}
-      run: |
-        conda activate graphbit
-        cd tests/python_integration_tests
         python -m pytest tests_llm.py -v --tb=short
-
-    - name: Run Embeddings Integration Tests
-      shell: ${{ contains(matrix.os, 'windows') && 'pwsh' || 'bash -l {0}' }}
-      run: |
-        conda activate graphbit
-        cd tests/python_integration_tests
         python -m pytest tests_embeddings.py -v --tb=short
-
-    - name: Run Test Runner
-      shell: ${{ contains(matrix.os, 'windows') && 'pwsh' || 'bash -l {0}' }}
-      run: |
-        conda activate graphbit
-        cd tests/python_integration_tests
         python test_runner.py
 
+    - name: Run All Python Integration Tests (pwsh)
+      if: ${{ runner.os == 'Windows' }}
+      shell: pwsh
+      run: |
+        conda activate graphbit
+        cd tests/python_integration_tests
+        python -m pytest . -v --tb=short --maxfail=5
+        python -m pytest tests_static_workflow.py -v --tb=short
+        python -m pytest tests_dynamic_workflow.py -v --tb=short
+        python -m pytest tests_llm.py -v --tb=short
+        python -m pytest tests_embeddings.py -v --tb=short
+        python test_runner.py
+
+    # ------------------------------
     - name: Upload test results
       uses: actions/upload-artifact@v4
       if: always()

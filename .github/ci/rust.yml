@@ -11,7 +11,7 @@ env:
 
 jobs:
 
-  # 🔎 Lint job using cargo clippy
+  # 🧠 Run Clippy (lint)
   lint:
     strategy:
       matrix:
@@ -26,7 +26,7 @@ jobs:
       with:
         components: clippy
 
-    - name: Cache Rust dependencies
+    - name: Cache Cargo
       uses: actions/cache@v4
       with:
         path: |
@@ -36,10 +36,18 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-cargo-clippy
 
-    - name: Run Clippy
+    # OS-specific shell
+    - name: Run Clippy (bash)
+      if: ${{ runner.os != 'Windows' }}
+      shell: bash
       run: cargo clippy --all-targets --all-features -- -D warnings
 
-  # 🧼 Format check
+    - name: Run Clippy (pwsh)
+      if: ${{ runner.os == 'Windows' }}
+      shell: pwsh
+      run: cargo clippy --all-targets --all-features -- -D warnings
+
+  # ✨ Run rustfmt
   fmt:
     strategy:
       matrix:
@@ -54,10 +62,17 @@ jobs:
       with:
         components: rustfmt
 
-    - name: Run rustfmt
+    - name: Run rustfmt (bash)
+      if: ${{ runner.os != 'Windows' }}
+      shell: bash
       run: cargo fmt --all -- --check
 
-  # 🛠 Build and test
+    - name: Run rustfmt (pwsh)
+      if: ${{ runner.os == 'Windows' }}
+      shell: pwsh
+      run: cargo fmt --all -- --check
+
+  # 🔧 Build and test Rust
   build-and-test:
     strategy:
       matrix:
@@ -70,7 +85,7 @@ jobs:
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
 
-    - name: Cache Rust dependencies and target
+    - name: Cache Cargo + Target
       uses: actions/cache@v4
       with:
         path: |
@@ -81,8 +96,22 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-cargo-build
 
-    - name: Build
+    - name: Build (bash)
+      if: ${{ runner.os != 'Windows' }}
+      shell: bash
       run: cargo build --verbose
 
-    - name: Test
+    - name: Build (pwsh)
+      if: ${{ runner.os == 'Windows' }}
+      shell: pwsh
+      run: cargo build --verbose
+
+    - name: Test (bash)
+      if: ${{ runner.os != 'Windows' }}
+      shell: bash
+      run: cargo test --verbose
+
+    - name: Test (pwsh)
+      if: ${{ runner.os == 'Windows' }}
+      shell: pwsh
       run: cargo test --verbose
