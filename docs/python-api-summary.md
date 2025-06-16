@@ -58,7 +58,10 @@ config = graphbit.PyLlmConfig.anthropic(api_key: str, model: str)
 config = graphbit.PyLlmConfig.huggingface(api_key: str, model: str)
 
 # Create Ollama configuration (local)
-config = graphbit.PyLlmConfig.ollama(model: str, base_url: str)
+config = graphbit.PyLlmConfig.ollama(model: str)
+
+# Create Ollama configuration with custom base URL
+config = graphbit.PyLlmConfig.ollama_with_base_url(model: str, base_url: str)
 ```
 
 #### Instance Methods
@@ -83,9 +86,12 @@ anthropic_config = graphbit.PyLlmConfig.anthropic(
     model="claude-3-5-sonnet-20241022"
 )
 
-ollama_config = graphbit.PyLlmConfig.ollama(
+ollama_config = graphbit.PyLlmConfig.ollama("llama3.1:8b")
+
+# With custom base URL
+ollama_remote_config = graphbit.PyLlmConfig.ollama_with_base_url(
     model="llama3.1:8b",
-    base_url="http://localhost:11434"
+    base_url="http://ollama-server:11434"
 )
 ```
 

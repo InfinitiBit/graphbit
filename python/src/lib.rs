@@ -52,6 +52,20 @@ impl PyLlmConfig {
         }
     }
 
+    #[staticmethod]
+    fn ollama(model: String) -> Self {
+        Self {
+            inner: LlmConfig::ollama(model),
+        }
+    }
+
+    #[staticmethod]
+    fn ollama_with_base_url(model: String, base_url: String) -> Self {
+        Self {
+            inner: LlmConfig::ollama_with_base_url(model, base_url),
+        }
+    }
+
     fn provider_name(&self) -> String {
         self.inner.provider_name().to_string()
     }

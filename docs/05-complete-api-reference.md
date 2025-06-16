@@ -182,6 +182,50 @@ config = graphbit.PyLlmConfig.huggingface("your-hf-token", "microsoft/DialoGPT-m
 
 **Get your token:** [HuggingFace Settings](https://huggingface.co/settings/tokens)
 
+##### `ollama(model: str) -> PyLlmConfig`
+Creates an Ollama configuration for local LLM inference.
+
+**Parameters:**
+- `model` (str): Model name available in your local Ollama installation (e.g., "llama3.1", "mistral", "codellama")
+
+**Returns:** PyLlmConfig instance
+
+**Example:**
+```python
+config = graphbit.PyLlmConfig.ollama("llama3.1")
+```
+
+**Prerequisites:**
+1. Install Ollama: [ollama.ai](https://ollama.ai)
+2. Start Ollama server: `ollama serve`
+3. Pull a model: `ollama pull llama3.1`
+
+##### `ollama_with_base_url(model: str, base_url: str) -> PyLlmConfig`
+Creates an Ollama configuration with custom base URL.
+
+**Parameters:**
+- `model` (str): Model name available in your Ollama installation
+- `base_url` (str): Custom Ollama server URL (default: "http://localhost:11434")
+
+**Returns:** PyLlmConfig instance
+
+**Example:**
+```python
+# Remote Ollama server
+config = graphbit.PyLlmConfig.ollama_with_base_url("llama3.1", "http://ollama-server:11434")
+```
+
+**Popular Ollama Models:**
+- `llama3.1` - Meta's latest Llama model (4.7GB)
+- `llama3.1:70b` - Larger Llama model for higher quality (40GB)
+- `mistral` - Fast and efficient model (4.1GB)
+- `codellama` - Code generation model (3.8GB)
+- `gemma2` - Google's model (5.4GB)
+- `qwen2.5` - Multilingual model (4.4GB)
+- `phi3` - Microsoft's compact model (2.3GB)
+
+**No API key required** - Ollama runs locally on your machine for privacy and offline access.
+
 #### Instance Methods
 
 ##### `provider_name() -> str`

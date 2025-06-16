@@ -311,9 +311,12 @@ hf_config = graphbit.PyLlmConfig.huggingface(
 )
 
 # Ollama (local)
-ollama_config = graphbit.PyLlmConfig.ollama(
+ollama_config = graphbit.PyLlmConfig.ollama("llama3.1:8b")
+
+# Ollama with custom base URL
+ollama_remote_config = graphbit.PyLlmConfig.ollama_with_base_url(
     model="llama3.1:8b",
-    base_url="http://localhost:11434"
+    base_url="http://ollama-server:11434"
 )
 ```
 

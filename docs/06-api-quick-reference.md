@@ -456,7 +456,10 @@ config = graphbit.PyLlmConfig.anthropic("api-key", "claude-3-sonnet")
 config = graphbit.PyLlmConfig.huggingface("hf-token", "microsoft/DialoGPT-medium")
 
 # Local Ollama
-config = graphbit.PyLlmConfig.ollama("llama3.1", "http://localhost:11434")
+config = graphbit.PyLlmConfig.ollama("llama3.1")
+
+# Ollama with custom URL
+config = graphbit.PyLlmConfig.ollama_with_base_url("llama3.1", "http://localhost:11434")
 ```
 
 ### Popular HuggingFace Models
