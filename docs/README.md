@@ -14,8 +14,12 @@ Welcome to the comprehensive documentation for **GraphBit** - a high-performance
 - [Workflow Builder](user-guide/workflow-builder.md) - Creating and connecting workflow nodes
 - [Agent Configuration](user-guide/agents.md) - Setting up AI agents with different capabilities
 - [LLM Providers](user-guide/llm-providers.md) - Working with OpenAI, Anthropic, Ollama, and more
+- [Dynamic Graph Generation](user-guide/dynamics-graph.md) - Auto-generating workflow structures
+- [Data Validation](user-guide/validation.md) - Input validation and data quality checks
+- [Performance Optimization](user-guide/performance.md) - Tuning for speed and efficiency
+- [Monitoring & Observability](user-guide/monitoring.md) - Metrics collection and debugging
 - [Embeddings & Vector Search](user-guide/embeddings.md) - Text embeddings and similarity search
-- [Error Handling & Reliability](user-guide/reliability.md) - Circuit breakers, retries, and fault tolerance
+- [Reliability & Fault Tolerance](user-guide/reliability.md) - Circuit breakers, retries, and error handling
 
 ### 🔧 API Reference
 - [Python API](api-reference/python-api.md) - Complete Python API documentation
@@ -24,10 +28,10 @@ Welcome to the comprehensive documentation for **GraphBit** - a high-performance
 - [Execution Patterns](api-reference/execution.md) - Sync, async, batch, and concurrent execution
 
 ### 🎯 Advanced Topics
-- [Dynamic Graph Generation](advanced/dynamic-graphs.md) - Auto-generating workflow nodes
-- [Custom Validators](advanced/validation.md) - Building custom validation logic
-- [Performance Optimization](advanced/performance.md) - Tuning for throughput and latency
-- [Monitoring & Observability](advanced/monitoring.md) - Metrics, tracing, and debugging
+- [Custom Extensions](advanced/extensions.md) - Building custom node types and providers
+- [Plugin Development](advanced/plugins.md) - Creating GraphBit plugins
+- [Advanced Patterns](advanced/patterns.md) - Complex workflow design patterns
+- [Integration Guides](advanced/integrations.md) - Connecting with external systems
 
 ### 🛠️ Development
 - [Architecture Overview](development/architecture.md) - System design and components
