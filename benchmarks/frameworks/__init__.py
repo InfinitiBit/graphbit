@@ -29,12 +29,19 @@ try:
 except ImportError:
     CrewAIBenchmark = None  # type: ignore
 
+try:
+    from .langgraph_benchmark import LangGraphBenchmark
+except ImportError:
+    LangGraphBenchmark = None  # type: ignore
+
+
 __all__ = [
     "BenchmarkMetrics",
     "BenchmarkScenario",
     "FrameworkType",
     "GraphBitBenchmark",
     "LangChainBenchmark",
+    "LangGraphBenchmark",
     "PydanticAIBenchmark",
     "LlamaIndexBenchmark",
     "CrewAIBenchmark",
