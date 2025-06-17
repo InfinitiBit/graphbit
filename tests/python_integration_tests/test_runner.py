@@ -17,7 +17,13 @@ class IntegrationTestRunner:
             ("tests_llm.py", "LLM Integration Tests"),
             ("tests_static_workflow.py", "Static Workflow Integration Tests"),
             ("tests_dynamic_workflow.py", "Dynamic Workflow Integration Tests"),
+            ("tests_workflow_builder.py", "Builder Integration Tests"),
+            ("tests_executor_async.py", "Async Executor Tests"),
+            ("tests_workflow_context.py", "Workflow Context Accessor Tests"),
+            ("tests_executor_batch.py", "Executor Batch + Agent Task Tests"),
+            ("tests_validation_result.py", "Validation Error Handling Tests"),
         ]
+
         self.results: Dict[str, Dict[str, Any]] = {}
 
     def setup_environment(self) -> bool:
