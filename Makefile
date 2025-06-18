@@ -1,255 +1,262 @@
-# GraphBit Development Makefile
-# This Makefile provides convenient targets for development workflows
+# GraphBit Development Makefile (Flat Unified Version)
+# -----------------------------------------
 
-.PHONY: help install clean test test-rust test-python lint lint-rust lint-python format format-rust format-python build docs dev-setup all-checks ci secrets secrets-audit secrets-baseline secrets-update build-perf install-perf test-perf benchmark-perf
+# Load environment variables from .env if present
+ifneq (,$(wildcard .env))
+	export $(shell sed 's/=.*//' .env)
+endif
 
-# Default target
-help: ## Show this help message
+# Default environment type (can be overridden by .env)
+ENV_TYPE ?= poetry
+
+# Set shell type for OS-specific logic
+ifeq ($(OS),Windows_NT)
+	SHELL_TYPE := windows
+else
+	SHELL_TYPE := unix
+endif
+
+# Detect Python environment activation command
+ifeq ($(ENV_TYPE),conda)
+	PYTHON_ENV := conda activate graphbit
+else ifeq ($(ENV_TYPE),venv)
+	ifeq ($(SHELL_TYPE),windows)
+		PYTHON_ENV := call .venv\Scripts\activate.bat
+	else
+		PYTHON_ENV := . .venv/bin/activate
+	endif
+else ifeq ($(ENV_TYPE),poetry)
+	PYTHON_ENV := poetry run
+else
+	PYTHON_ENV := conda activate graphbit
+endif
+
+.PHONY: help install clean test test-rust test-python lint lint-rust lint-python \
+        format format-rust format-python build docs dev-setup all-checks ci \
+        secrets secrets-audit secrets-baseline secrets-update \
+        build-perf install-perf test-perf benchmark-perf \
+        quick quick-python pre-commit-install pre-commit-run pre-commit-update pre-commit-clean \
+        examples watch-test watch-check release-check typos lint-fix format-check test-integration test-coverage \
+        create-env create-conda-env check-env init
+
+# -------------------------------------------
+#  Help
+# -------------------------------------------
+help:
 	@echo "GraphBit Development Commands:"
 	@echo ""
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 	@echo ""
 	@echo "Environment variables:"
-	@echo "  PYTHON_ENV: Python environment to activate (default: conda activate graphbit)"
+	@echo "  ENV_TYPE: Environment type to use (poetry, conda, venv)"
+	@echo "  PYTHON_ENV: Python environment activation logic based on ENV_TYPE"
+	@echo "  OPENAI_API_KEY: Required for LLM-based tasks"
 
-# Environment setup
-PYTHON_ENV ?= conda activate graphbit
-# OPENAI_API_KEY should be set as environment variable
+# -------------------------------------------
+# 🛠 Interactive Setup
+# -------------------------------------------
+check-env: ## Ask interactively if .env is missing (with defaults)
+	@if [ ! -f .env ]; then \
+		echo ".env not found. Let's set it up interactively."; \
+		read -p "Choose ENV_TYPE (poetry/conda/venv) [poetry]: " ENV_TYPE_INPUT; \
+		ENV_TYPE_INPUT=$${ENV_TYPE_INPUT:-poetry}; \
+		read -p "Enter your OPENAI_API_KEY [sk-xxxxx]: " API_KEY_INPUT; \
+		API_KEY_INPUT=$${API_KEY_INPUT:-sk-xxxxx}; \
+		echo "ENV_TYPE=$$ENV_TYPE_INPUT" > .env; \
+		echo "OPENAI_API_KEY=$$API_KEY_INPUT" >> .env; \
+		echo " .env created with defaults."; \
+	else \
+		echo ".env already exists."; \
+	fi
 
-# Setup and Installation
+init: check-env create-env dev-setup ## One-click first-time project setup
+	@echo " Project environment initialized completely!"
+
+# -------------------------------------------
+#  Environment Creation
+# -------------------------------------------
+create-env: create-conda-env ## Create environment based on ENV_TYPE
+	@echo " Environment creation logic (conda by default)"
+
 create-conda-env: ## Create conda environment if it doesn't exist
 	@echo "Checking if conda environment 'graphbit' exists..."
 	@conda info --envs | grep -q "^graphbit " || { \
 		echo "Creating conda environment 'graphbit' with Python 3.11.0..."; \
 		conda create -n graphbit python=3.11.0 -y; \
 		echo "Conda environment 'graphbit' created successfully!"; \
-	} && echo "Conda environment 'graphbit' is ready!"
+	}
 
-dev-setup: create-conda-env ## Set up development environment
+dev-setup: ## Set up development environment
 	@echo "Setting up development environment..."
-	$(PYTHON_ENV) && poetry install --with dev,benchmarks
+	$(PYTHON_ENV) poetry install --with dev,benchmarks
 	cargo build --workspace
-	$(PYTHON_ENV) && pre-commit install
-	$(PYTHON_ENV) && pre-commit install --hook-type commit-msg
-	$(PYTHON_ENV) && pre-commit install --hook-type pre-push
-	@echo "Development environment ready!"
+	$(PYTHON_ENV) pre-commit install
+	$(PYTHON_ENV) pre-commit install --hook-type commit-msg
+	$(PYTHON_ENV) pre-commit install --hook-type pre-push
+	@echo " Development environment ready!"
 
 install: ## Install all dependencies
-	@echo "Installing Python dependencies..."
-	$(PYTHON_ENV) && poetry install --with dev,benchmarks
-	@echo "Installing Rust dependencies..."
+	$(PYTHON_ENV) poetry install --with dev,benchmarks
 	cargo fetch
-	@echo "Dependencies installed!"
 
-# Cleaning
 clean: ## Clean build artifacts
-	@echo "Cleaning Rust artifacts..."
 	cargo clean
-	@echo "Cleaning Python artifacts..."
-	$(PYTHON_ENV) && find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
-	$(PYTHON_ENV) && find . -type f -name "*.pyc" -delete 2>/dev/null || true
-	$(PYTHON_ENV) && find . -type d -name "*.egg-info" -exec rm -rf {} + 2>/dev/null || true
-	@echo "Clean complete!"
+	$(PYTHON_ENV) find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+	$(PYTHON_ENV) find . -type f -name "*.pyc" -delete 2>/dev/null || true
+	$(PYTHON_ENV) find . -type d -name "*.egg-info" -exec rm -rf {} + 2>/dev/null || true
 
-# Testing
-test: test-rust test-python ## Run all tests (Rust + Python)
+test: test-rust test-python ## Run all tests
 
-test-rust: ## Run Rust tests
-	@echo "Running Rust tests..."
+test-rust:
 	cargo test --workspace --all-features
 
-test-python: ## Run Python tests
-	@echo "Running Python tests..."
-	@if [ -z "$$OPENAI_API_KEY" ]; then echo "ERROR: OPENAI_API_KEY environment variable is required"; exit 1; fi
-	$(PYTHON_ENV) && pytest -v
+test-python:
+	@if [ -z "$$OPENAI_API_KEY" ]; then echo " OPENAI_API_KEY is required"; exit 1; fi
+	$(PYTHON_ENV) pytest -v
 
-test-integration: ## Run integration tests
-	@echo "Running integration tests..."
-	@if [ -z "$$OPENAI_API_KEY" ]; then echo "ERROR: OPENAI_API_KEY environment variable is required"; exit 1; fi
-	cargo test --test integration_tests
-
-test-coverage: ## Run tests with coverage
-	@echo "Running Rust tests with coverage..."
+test-coverage:
 	cargo tarpaulin --workspace --out Html --output-dir target/coverage
-	@echo "Running Python tests with coverage..."
-	@if [ -z "$$OPENAI_API_KEY" ]; then echo "ERROR: OPENAI_API_KEY environment variable is required"; exit 1; fi
-	$(PYTHON_ENV) && pytest --cov=graphbit --cov-report=html:target/coverage/python
+	$(PYTHON_ENV) pytest --cov=graphbit --cov-report=html:target/coverage/python
 
-# Linting
-lint: lint-rust lint-python ## Run all linting (Rust + Python)
+lint: lint-rust lint-python
 
-lint-rust: ## Run Rust linting (clippy)
-	@echo "Running Rust linting..."
+lint-rust:
 	cargo clippy --workspace --all-targets --all-features -- -D warnings
 
-lint-python: ## Run Python linting (flake8, mypy)
-	@echo "Running Python linting..."
-	$(PYTHON_ENV) && flake8 graphbit/ tests/ benchmarks/
-	$(PYTHON_ENV) && mypy graphbit/ --ignore-missing-imports
+lint-python:
+	$(PYTHON_ENV) flake8 graphbit/ tests/ benchmarks/
+	$(PYTHON_ENV) mypy graphbit/ --ignore-missing-imports
 
-lint-fix: ## Fix linting issues automatically
-	@echo "Fixing Rust linting issues..."
+lint-fix:
 	cargo clippy --workspace --all-targets --all-features --fix --allow-staged --allow-dirty
-	@echo "Fixing Python import sorting..."
-	$(PYTHON_ENV) && isort graphbit/ tests/ benchmarks/
+	$(PYTHON_ENV) isort graphbit/ tests/ benchmarks/
 
-# Formatting
-format: format-rust format-python ## Format all code (Rust + Python)
+format: format-rust format-python
 
-format-rust: ## Format Rust code
-	@echo "Formatting Rust code..."
+format-rust:
 	cargo fmt --all
 
-format-python: ## Format Python code
-	@echo "Formatting Python code..."
-	$(PYTHON_ENV) && black graphbit/ tests/ benchmarks/
-	$(PYTHON_ENV) && isort graphbit/ tests/ benchmarks/
+format-python:
+	$(PYTHON_ENV) black graphbit/ tests/ benchmarks/
+	$(PYTHON_ENV) isort graphbit/ tests/ benchmarks/
 
-format-check: ## Check if code is formatted correctly
-	@echo "Checking Rust formatting..."
+format-check:
 	cargo fmt --all -- --check
-	@echo "Checking Python formatting..."
-	$(PYTHON_ENV) && black --check graphbit/ tests/ benchmarks/
-	$(PYTHON_ENV) && isort --check-only graphbit/ tests/ benchmarks/
+	$(PYTHON_ENV) black --check graphbit/ tests/ benchmarks/
+	$(PYTHON_ENV) isort --check-only graphbit/ tests/ benchmarks/
 
-# Building
-build: ## Build Rust workspace and Python package
-	@echo "Building Rust workspace..."
+build:
 	cargo build --workspace --release
-	@echo "Building Python package..."
-	$(PYTHON_ENV) && poetry build
+	$(PYTHON_ENV) poetry build
 
-build-dev: ## Build in development mode
-	@echo "Building Rust workspace (debug)..."
+build-dev:
 	cargo build --workspace
-	@echo "Installing Python package in development mode..."
-	$(PYTHON_ENV) && pip install -e .
+	$(PYTHON_ENV) pip install -e .
 
-# Documentation
-docs: ## Build documentation
-	@echo "Building Rust documentation..."
+docs:
 	cargo doc --workspace --no-deps --open
-	@echo "Building Python documentation..."
-	$(PYTHON_ENV) && cd docs && make html
+	$(PYTHON_ENV) cd docs && make html
 
-docs-serve: ## Serve documentation locally
-	@echo "Serving documentation..."
-	$(PYTHON_ENV) && cd docs && python -m http.server 8000
+docs-serve:
+	$(PYTHON_ENV) cd docs && python -m http.server 8000
 
-# Benchmarks
-bench: ## Run benchmarks
-	@echo "Running Rust benchmarks..."
-	cargo bench
-	@echo "Running Python benchmarks..."
-	@if [ -z "$$OPENAI_API_KEY" ]; then echo "ERROR: OPENAI_API_KEY environment variable is required"; exit 1; fi
-	$(PYTHON_ENV) && python -m benchmarks.run_benchmarks
-
-# Security and Quality
-security: ## Run security checks
-	@echo "Running Rust security audit..."
+security:
 	cargo audit
-	@echo "Running Python security checks..."
-	$(PYTHON_ENV) && safety check
-	$(PYTHON_ENV) && bandit -r graphbit/
-	@echo "Running secret detection..."
+	$(PYTHON_ENV) safety check
+	$(PYTHON_ENV) bandit -r graphbit/
 	$(MAKE) secrets
 
-secrets: ## Detect secrets in codebase using detect-secrets
-	@echo "Scanning for secrets with detect-secrets..."
-	$(PYTHON_ENV) && detect-secrets scan --baseline .secrets.baseline
+# -------------------------------------------
+# 🔐 Secrets and Typos
+# -------------------------------------------
+secrets:
+	$(PYTHON_ENV) detect-secrets scan --baseline .secrets.baseline
 
-secrets-audit: ## Run comprehensive secret audit including baseline check
-	@echo "Running comprehensive secret audit with detect-secrets..."
-	@echo "Scanning current files..."
-	$(PYTHON_ENV) && detect-secrets scan --baseline .secrets.baseline
-	@echo "Auditing baseline file..."
-	$(PYTHON_ENV) && detect-secrets audit .secrets.baseline
+secrets-audit:
+	$(PYTHON_ENV) detect-secrets scan --baseline .secrets.baseline
+	$(PYTHON_ENV) detect-secrets audit .secrets.baseline
 
-secrets-baseline: ## Create or update detect-secrets baseline
-	@echo "Creating/updating detect-secrets baseline..."
-	$(PYTHON_ENV) && detect-secrets scan > .secrets.baseline
-	@echo "Detect-secrets baseline updated at .secrets.baseline"
+secrets-baseline:
+	$(PYTHON_ENV) detect-secrets scan > .secrets.baseline
 
-secrets-update: ## Update detect-secrets baseline
+secrets-update:
 	@echo "Edit .secrets.baseline to update detect-secrets configuration"
 	@echo "See: https://github.com/Yelp/detect-secrets"
 
-typos: ## Check for typos
-	@echo "Checking for typos..."
+typos:
 	typos
 
-# All-in-one checks
-all-checks: format-check lint test secrets ## Run all checks (format, lint, test, secrets)
-	@echo "All checks completed successfully!"
+# -------------------------------------------
+#  Benchmarking
+# -------------------------------------------
+bench:
+	cargo bench
+	@if [ -z "$$OPENAI_API_KEY" ]; then echo " OPENAI_API_KEY required"; exit 1; fi
+	$(PYTHON_ENV) python -m benchmarks.run_benchmarks
 
-ci: clean all-checks ## Run CI pipeline locally
-	@echo "CI pipeline completed successfully!"
-
-# Release preparation
-release-check: all-checks docs ## Check if ready for release
-	@echo "Checking if ready for release..."
-	cargo publish --dry-run
-	$(PYTHON_ENV) && poetry check
-	@echo "Release check completed!"
-
-# Quick development commands
-quick: format-rust lint-rust test-rust ## Quick Rust development cycle
-	@echo "Quick development cycle completed!"
-
-quick-python: format-python lint-python test-python ## Quick Python development cycle
-	@echo "Quick Python development cycle completed!"
-
-# Pre-commit hooks
-pre-commit-install: ## Install pre-commit hooks
-	@echo "Installing pre-commit hooks..."
-	$(PYTHON_ENV) && pre-commit install
-	$(PYTHON_ENV) && pre-commit install --hook-type commit-msg
-	$(PYTHON_ENV) && pre-commit install --hook-type pre-push
-	@echo "Pre-commit hooks installed!"
-
-pre-commit-run: ## Run all pre-commit hooks on all files
-	@echo "Running pre-commit hooks on all files..."
-	$(PYTHON_ENV) && pre-commit run --all-files
-
-pre-commit-update: ## Update pre-commit hook versions
-	@echo "Updating pre-commit hooks..."
-	$(PYTHON_ENV) && pre-commit autoupdate
-
-pre-commit-clean: ## Clean pre-commit cache
-	@echo "Cleaning pre-commit cache..."
-	$(PYTHON_ENV) && pre-commit clean
-
-# Examples and demos
-examples: ## Run example scripts
-	@echo "Running examples..."
-	export OPENAI_API_KEY=$(OPENAI_API_KEY) && $(PYTHON_ENV) && python examples/basic_workflow.py
-
-# Watch mode for development
-watch-test: ## Watch for changes and run tests
-	@echo "Watching for changes and running tests..."
-	cargo watch -x "test --workspace"
-
-watch-check: ## Watch for changes and run checks
-	@echo "Watching for changes and running checks..."
-	cargo watch -x "check --workspace" -x "clippy --workspace"
-
-# Performance build targets
 build-perf:
-	@echo "🚀 Building GraphBit with performance optimizations..."
+	@echo " Building GraphBit with performance optimizations..."
 	@conda run -n graphbit cargo build --release --features performance
 	@conda run -n graphbit maturin develop --release
 
-# Install with performance optimizations
 install-perf: build-perf
-	@echo "📦 Installing GraphBit with performance optimizations..."
+	@echo " Installing GraphBit with performance optimizations..."
 	@conda run -n graphbit pip install -e python/
 
-# Run performance tests
 test-perf: build-perf
-	@echo "⚡ Running performance tests..."
+	@echo " Running performance tests..."
 	@conda run -n graphbit python performance_test.py
 
-# Run comprehensive benchmarks
 benchmark-perf: build-perf
-	@echo "📊 Running comprehensive benchmarks..."
+	@echo " Running comprehensive benchmarks..."
 	@conda run -n graphbit python benchmarks/run_comprehensive_benchmark.py
+
+# -------------------------------------------
+#  Pre-commit Hooks
+# -------------------------------------------
+pre-commit-install:
+	$(PYTHON_ENV) pre-commit install
+	$(PYTHON_ENV) pre-commit install --hook-type commit-msg
+	$(PYTHON_ENV) pre-commit install --hook-type pre-push
+
+pre-commit-run:
+	$(PYTHON_ENV) pre-commit run --all-files
+
+pre-commit-update:
+	$(PYTHON_ENV) pre-commit autoupdate
+
+pre-commit-clean:
+	$(PYTHON_ENV) pre-commit clean
+
+# -------------------------------------------
+#  CI & Release
+# -------------------------------------------
+all-checks: format-check lint test secrets
+	@echo " All checks passed!"
+
+ci: clean all-checks
+	@echo " CI pipeline completed successfully!"
+
+release-check: all-checks docs
+	cargo publish --dry-run
+	$(PYTHON_ENV) poetry check
+
+# -------------------------------------------
+#  Quick Commands
+# -------------------------------------------
+quick: format-rust lint-rust test-rust
+
+quick-python: format-python lint-python test-python
+
+# -------------------------------------------
+#  Examples & Dev Watch
+# -------------------------------------------
+examples:
+	@if [ -z "$$OPENAI_API_KEY" ]; then echo " OPENAI_API_KEY required"; exit 1; fi
+	$(PYTHON_ENV) python examples/basic_workflow.py
+
+watch-test:
+	cargo watch -x "test --workspace"
+
+watch-check:
+	cargo watch -x "check --workspace" -x "clippy --workspace"

@@ -38,6 +38,7 @@ try:
     from frameworks.crewai_benchmark import CrewAIBenchmark
     from frameworks.graphbit_benchmark import GraphBitBenchmark
     from frameworks.langchain_benchmark import LangChainBenchmark
+    from frameworks.langgraph_benchmark import LangGraphBenchmark
     from frameworks.llamaindex_benchmark import LlamaIndexBenchmark
     from frameworks.pydantic_ai_benchmark import PydanticAIBenchmark
 except ImportError as e:
@@ -45,6 +46,7 @@ except ImportError as e:
     print("Make sure you're running this from the GraphBit workspace root directory.")
     print("Also ensure all required dependencies are installed:")
     print("  - pip install langchain langchain-openai")
+    print("  - pip install langgraph")
     print("  - pip install pydantic-ai")
     print("  - pip install llama-index")
     print("  - pip install crewai")
@@ -90,6 +92,13 @@ class ComprehensiveBenchmarkRunner:
                 "results": {},
                 "errors": {},
                 "color": "#A23B72",
+            },
+            FrameworkType.LANGGRAPH: {
+                "name": "LangGraph",
+                "benchmark": LangGraphBenchmark(self.config),
+                "results": {},
+                "errors": {},
+                "color": "#062505",
             },
             FrameworkType.PYDANTIC_AI: {
                 "name": "PydanticAI",

@@ -1,31 +1,30 @@
-[package]
-name = "graphbit"
-version = "0.1.0"
-edition = "2021"
-authors = ["GraphBit Team"]
-description = "Python bindings for GraphBit agentic workflow automation"
-repository = "https://github.com/InfinitiBit/graphbit"
-publish = false
+[dependencies]
+chrono = {version = "0.4", features = ["serde"]}
+futures = "0.3"
+graphbit-core = {path = "../core", features = ["python"]}
+num_cpus = "1.16"
+pyo3 = {version = "0.24.1", features = ["extension-module"]}
+pyo3-async-runtimes = {version = "0.24", features = ["tokio-runtime"]}
+reqwest = {version = "0.11", features = ["json"]}
+serde = {version = "1.0", features = ["derive"]}
+serde_json = "1.0"
+tokio = {version = "1.38", features = ["full"]}
+
+[features]
+cli = []
+default = []
 
 [lib]
 crate-type = ["cdylib"]
 
-[dependencies]
-graphbit-core = { path = "../core", features = ["python"] }
-
-pyo3 = { version = "0.24.1", features = ["extension-module"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-tokio = { version = "1.38", features = ["full"] }
-reqwest = { version = "0.11", features = ["json"] }
-chrono = { version = "0.4", features = ["serde"] }
-futures = "0.3"
-num_cpus = "1.16"
-pyo3-async-runtimes = { version = "0.24", features = ["tokio-runtime"] }
+[package]
+authors = ["GraphBit Team"]
+description = "Python bindings for GraphBit agentic workflow automation"
+edition = "2021"
+name = "graphbit"
+publish = false
+repository = "https://github.com/InfinitiBit/graphbit"
+version = "0.1.0"
 
 [target.'cfg(unix)'.dependencies]
 jemallocator = "0.5"
-
-[features]
-default = []
-cli = []

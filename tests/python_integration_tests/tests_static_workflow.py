@@ -2,7 +2,7 @@
 """Integration tests for GraphBit static workflow functionality."""
 import contextlib
 import os
-from typing import Any, Callable
+from typing import Any
 
 import pytest
 
@@ -129,7 +129,7 @@ class TestWorkflowNodeCreation:
 class TestWorkflowComposition:
     """Integration tests for workflow composition."""
 
-    @pytest.fixture  # type: ignore
+    @pytest.fixture
     def sample_workflow(self) -> Any:
         """Create a sample workflow for testing."""
         workflow = graphbit.PyWorkflow("sample", "Sample workflow for testing")
@@ -189,7 +189,7 @@ class TestWorkflowComposition:
 class TestWorkflowExecution:
     """Integration tests for workflow execution."""
 
-    @pytest.fixture  # type: ignore
+    @pytest.fixture
     def llm_config(self) -> Any:
         """Get LLM config for workflow execution tests."""
         api_key = os.getenv("OPENAI_API_KEY")
@@ -197,7 +197,7 @@ class TestWorkflowExecution:
             pytest.skip("OPENAI_API_KEY not set for workflow execution tests")
         return graphbit.PyLlmConfig.openai(api_key, "gpt-3.5-turbo")
 
-    @pytest.fixture  # type: ignore
+    @pytest.fixture
     def executable_workflow(self, llm_config: Any) -> Any:
         """Create an executable workflow for testing."""
         workflow = graphbit.PyWorkflow("executable", "Executable test workflow")

@@ -42,7 +42,8 @@ repos:
   rev: 6.0.1
   hooks:
   - id: isort
-    args: [--profile=black, --line-length=200]
+    # args: [--profile=black, --line-length=200]
+    args: [--profile=black]
     files: ^(tests/.*\.py|benchmarks/.*\.py|examples/.*\.py|scripts/.*\.py)$
 
   # Python Linting
@@ -63,7 +64,8 @@ repos:
   rev: v1.16.0
   hooks:
   - id: mypy
-    args: [--ignore-missing-imports, --no-strict-optional]
+    # args: [--ignore-missing-imports, --no-strict-optional]
+    args: [--config-file=.mypy.ini]
     files: ^(tests/.*\.py|benchmarks/.*\.py|examples/.*\.py|scripts/.*\.py)$
     additional_dependencies:
     - types-requests
@@ -132,7 +134,8 @@ repos:
 
   # Spell Checking
 - repo: https://github.com/crate-ci/typos
-  rev: v1
+  # rev: v1
+  rev: v1.16.13
   hooks:
   - id: typos
     exclude: ^(Cargo\.lock|poetry\.lock|CHANGELOG\.md)$
@@ -174,10 +177,12 @@ repos:
       # Python tests (fast subset)
   - id: python-test-unit
     name: Python unit tests
-    entry: bash -c 'cd tests/python_integration_tests && python -m pytest -x --tb=short'
+    entry: python -m pytest -x --tb=short
     language: system
     files: ^tests/python_integration_tests/.*\.py$
     pass_filenames: false
+
+
 
       # Build check for Rust
   - id: rust-build-check
@@ -203,14 +208,10 @@ repos:
     files: ^(Cargo\.toml|Cargo\.lock|.*/Cargo\.toml)$
     pass_filenames: false
 
-      # License check
-  - id: license-check
-    name: License header check
-    entry: bash -c 'find src core/src python/src -name "*.rs" -exec grep -L "Copyright\|License\|SPDX" {} + | head -5'
-    language: system
-    files: ^(src/.*\.rs|core/src/.*\.rs|python/src/.*\.rs)$
-    pass_filenames: false
 
+
++# NOTE: Ensure `.secrets.baseline` exists to prevent hook failure
++# Run: detect-secrets scan > .secrets.baseline
 # Configuration for specific hooks
 ci:
   autoupdate_schedule: monthly

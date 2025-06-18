@@ -57,7 +57,7 @@ class TestDynamicGraphConfiguration:
 class TestDynamicGraphAnalytics:
     """Integration tests for dynamic graph analytics."""
 
-    @pytest.fixture  # type: ignore
+    @pytest.fixture
     def mock_analytics(self) -> Optional[Any]:
         """Create mock analytics for testing (would be populated by actual usage)."""
         # In real scenarios, this would come from a DynamicGraphManager
@@ -80,15 +80,16 @@ class TestDynamicGraphAnalytics:
 class TestDynamicGraphManager:
     """Integration tests for dynamic graph manager."""
 
-    @pytest.fixture  # type: ignore
+    @pytest.fixture
     def llm_config(self) -> Any:
         """Get LLM config for dynamic graph tests."""
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             pytest.skip("OPENAI_API_KEY not set for dynamic graph tests")
+            raise RuntimeError("Unreachable after pytest.skip")
         return graphbit.PyLlmConfig.openai(api_key, "gpt-3.5-turbo")
 
-    @pytest.fixture  # type: ignore
+    @pytest.fixture
     def dynamic_config(self) -> Any:
         """Create dynamic graph configuration for testing."""
         config = graphbit.PyDynamicGraphConfig()
@@ -97,7 +98,7 @@ class TestDynamicGraphManager:
         config = config.with_generation_temperature(0.8)
         return config
 
-    @pytest.fixture  # type: ignore
+    @pytest.fixture
     def manager(self, llm_config: Any, dynamic_config: Any) -> Optional[Any]:
         """Create dynamic graph manager for testing."""
         manager = graphbit.PyDynamicGraphManager(llm_config, dynamic_config)
@@ -106,6 +107,7 @@ class TestDynamicGraphManager:
             return manager
         except Exception as e:
             pytest.skip(f"Failed to initialize dynamic graph manager: {e}")
+            raise RuntimeError("Unreachable: pytest.skip triggered")
 
     def test_dynamic_graph_manager_creation(self, llm_config: Any, dynamic_config: Any) -> None:
         """Test dynamic graph manager creation."""
@@ -196,15 +198,15 @@ class TestAutoCompletionResult:
 class TestWorkflowAutoCompletion:
     """Integration tests for workflow auto-completion engine."""
 
-    @pytest.fixture  # type: ignore
+    @pytest.fixture
     def llm_config(self) -> Any:
         """Get LLM config for auto-completion tests."""
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             pytest.skip("OPENAI_API_KEY not set for auto-completion tests")
-        return graphbit.PyLlmConfig.openai(api_key, "gpt-3.5-turbo")
+        return graphbit.PyLlmConfig.openai(api_key or "", "gpt-3.5-turbo")
 
-    @pytest.fixture  # type: ignore
+    @pytest.fixture
     def dynamic_config(self) -> Any:
         """Create dynamic configuration for auto-completion."""
         config = graphbit.PyDynamicGraphConfig()
@@ -237,15 +239,16 @@ class TestWorkflowAutoCompletion:
 class TestDynamicWorkflowIntegration:
     """Integration tests for dynamic workflow integration."""
 
-    @pytest.fixture  # type: ignore
+    @pytest.fixture
     def llm_config(self) -> Any:
         """Get LLM config for integration tests."""
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
-            pytest.skip("OPENAI_API_KEY not set for integration tests")
+            pytest.skip("OPENAI_API_KEY not set for dynamic graph tests")
+            raise RuntimeError("Should not reach here due to pytest.skip")
         return graphbit.PyLlmConfig.openai(api_key, "gpt-3.5-turbo")
 
-    @pytest.fixture  # type: ignore
+    @pytest.fixture
     def dynamic_setup(self, llm_config: Any) -> Optional[Any]:
         """Set up dynamic workflow components."""
         try:
@@ -263,11 +266,13 @@ class TestDynamicWorkflowIntegration:
             }
         except Exception as e:
             pytest.skip(f"Dynamic workflow setup failed: {e}")
+            raise RuntimeError("Unreachable: pytest.skip triggered")
 
     def test_dynamic_workflow_basic_integration(self, dynamic_setup: Optional[Any]) -> None:
         """Test basic integration of dynamic workflow components."""
         if dynamic_setup is None:
             pytest.skip("Dynamic setup not available")
+            return
 
         manager = dynamic_setup["manager"]
         config = dynamic_setup["config"]
@@ -303,7 +308,7 @@ class TestDynamicWorkflowIntegration:
 class TestDynamicWorkflowPerformance:
     """Integration tests for dynamic workflow performance considerations."""
 
-    @pytest.fixture  # type: ignore
+    @pytest.fixture
     def performance_config(self) -> Any:
         """Create performance-optimized dynamic configuration."""
         config = graphbit.PyDynamicGraphConfig()
@@ -336,12 +341,13 @@ class TestDynamicWorkflowPerformance:
 class TestDynamicWorkflowEndToEnd:
     """End-to-end integration tests for dynamic workflows."""
 
-    @pytest.fixture  # type: ignore
+    @pytest.fixture
     def full_setup(self) -> Optional[Any]:
         """Set up complete dynamic workflow environment."""
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             pytest.skip("OPENAI_API_KEY not set for end-to-end tests")
+            raise RuntimeError("Unreachable: pytest.skip triggered")
 
         try:
             # Complete environment setup
@@ -363,11 +369,13 @@ class TestDynamicWorkflowEndToEnd:
             }
         except Exception as e:
             pytest.skip(f"Full setup failed: {e}")
+            raise RuntimeError("Unreachable: pytest.skip triggered")
 
     def test_complete_dynamic_workflow_cycle(self, full_setup: Optional[Any]) -> None:
         """Test complete dynamic workflow creation and management cycle."""
         if full_setup is None:
             pytest.skip("Full setup not available")
+            return
 
         # This would test the complete cycle:
         # 1. Create base workflow

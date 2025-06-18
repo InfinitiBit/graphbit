@@ -3,31 +3,12 @@
 __version__ = "0.1.0"
 
 from .common import BenchmarkMetrics, BenchmarkScenario, FrameworkType
-
-try:
-    from .graphbit_benchmark import GraphBitBenchmark
-except ImportError:
-    GraphBitBenchmark = None  # type: ignore
-
-try:
-    from .langchain_benchmark import LangChainBenchmark
-except ImportError:
-    LangChainBenchmark = None  # type: ignore
-
-try:
-    from .pydantic_ai_benchmark import PydanticAIBenchmark
-except ImportError:
-    PydanticAIBenchmark = None  # type: ignore
-
-try:
-    from .llamaindex_benchmark import LlamaIndexBenchmark
-except ImportError:
-    LlamaIndexBenchmark = None  # type: ignore
-
-try:
-    from .crewai_benchmark import CrewAIBenchmark
-except ImportError:
-    CrewAIBenchmark = None  # type: ignore
+from .crewai_benchmark import CrewAIBenchmark
+from .graphbit_benchmark import GraphBitBenchmark
+from .langchain_benchmark import LangChainBenchmark
+from .langgraph_benchmark import LangGraphBenchmark
+from .llamaindex_benchmark import LlamaIndexBenchmark
+from .pydantic_ai_benchmark import PydanticAIBenchmark
 
 __all__ = [
     "BenchmarkMetrics",
@@ -35,6 +16,7 @@ __all__ = [
     "FrameworkType",
     "GraphBitBenchmark",
     "LangChainBenchmark",
+    "LangGraphBenchmark",
     "PydanticAIBenchmark",
     "LlamaIndexBenchmark",
     "CrewAIBenchmark",

@@ -52,6 +52,20 @@ impl PyLlmConfig {
         }
     }
 
+    #[staticmethod]
+    fn ollama(model: String) -> Self {
+        Self {
+            inner: LlmConfig::ollama(model),
+        }
+    }
+
+    #[staticmethod]
+    fn ollama_with_base_url(model: String, base_url: String) -> Self {
+        Self {
+            inner: LlmConfig::ollama_with_base_url(model, base_url),
+        }
+    }
+
     fn provider_name(&self) -> String {
         self.inner.provider_name().to_string()
     }
@@ -863,7 +877,11 @@ impl PyWorkflowExecutor {
     }
 
     /// Execute workflow asynchronously (returns a coroutine for Python await)
-    fn execute_async<'a>(&self, workflow: &PyWorkflow, py: Python<'a>) -> PyResult<Bound<'a, PyAny>> {
+    fn execute_async<'a>(
+        &self,
+        workflow: &PyWorkflow,
+        py: Python<'a>,
+    ) -> PyResult<Bound<'a, PyAny>> {
         let workflow_clone = workflow.inner.clone();
         // Clone the configuration fields to avoid lifetime issues
         let llm_config = self.llm_config.clone();

@@ -1,40 +1,38 @@
-[package]
-name = "graphbit-core"
-version = "0.1.0"
-edition = "2021"
-authors = ["GraphBit Team"]
-description = "Core engine for GraphBit agentic workflow automation"
-license = "MIT"
-repository = "https://github.com/InfinitiBit/graphbit"
-
 [dependencies]
 anyhow = "1.0"
 async-trait = "0.1"
-chrono = { version = "0.4", features = ["serde"] }
+chrono = {version = "0.4", features = ["serde"]}
 docx-rs = "0.4"
 futures = "0.3"
 lopdf = "0.32"
 petgraph = "0.6"
 rand = "0.8"
 regex = "1.10"
-reqwest = { version = "0.11", features = ["json"] }
-serde = { version = "1.0", features = ["derive"] }
+reqwest = {version = "0.11", features = ["json"]}
+serde = {version = "1.0", features = ["derive"]}
 serde_json = "1.0"
 thiserror = "1.0"
-tokio = { version = "1.38", features = ["full"] }
+tokio = {version = "1.38", features = ["full"]}
 tracing = "0.1"
 tracing-subscriber = "0.3"
-uuid = { version = "1.8", features = ["v4", "v5", "serde"] }
-
-
-[target.'cfg(unix)'.dependencies]
-jemallocator = "0.5"
+uuid = {version = "1.8", features = ["v4", "v5", "serde"]}
 
 [dependencies.pyo3]
+features = ["extension-module"]
 optional = true
 version = "0.24.1"
-features = ["extension-module"]
 
 [features]
 default = []
 python = ["pyo3"]
+
+[package]
+authors = ["GraphBit Team"]
+description = "Core engine for GraphBit agentic workflow automation"
+edition = "2021"
+name = "graphbit-core"
+repository = "https://github.com/InfinitiBit/graphbit"
+version = "0.1.0"
+
+[target.'cfg(unix)'.dependencies]
+jemallocator = "0.5"

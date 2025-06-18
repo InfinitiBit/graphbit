@@ -11,20 +11,20 @@ import graphbit
 class TestOpenAILLM:
     """Integration tests for OpenAI LLM models."""
 
-    @pytest.fixture  # type: ignore
+    @pytest.fixture
     def api_key(self) -> str:
         """Get OpenAI API key from environment."""
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             pytest.skip("OPENAI_API_KEY not set")
-        return api_key
+        return api_key or ""
 
-    @pytest.fixture  # type: ignore
+    @pytest.fixture
     def openai_gpt4_config(self, api_key: str) -> Any:
         """Create OpenAI GPT-4 configuration."""
         return graphbit.PyLlmConfig.openai(api_key, "gpt-4")
 
-    @pytest.fixture  # type: ignore
+    @pytest.fixture
     def openai_gpt35_config(self, api_key: str) -> Any:
         """Create OpenAI GPT-3.5 configuration."""
         return graphbit.PyLlmConfig.openai(api_key, "gpt-3.5-turbo")
@@ -104,15 +104,15 @@ class TestOpenAILLM:
 class TestAnthropicLLM:
     """Integration tests for Anthropic LLM models."""
 
-    @pytest.fixture  # type: ignore
+    @pytest.fixture
     def api_key(self) -> str:
         """Get Anthropic API key from environment."""
         api_key = os.getenv("ANTHROPIC_API_KEY")
         if not api_key:
             pytest.skip("ANTHROPIC_API_KEY not set")
-        return api_key
+        return api_key or ""
 
-    @pytest.fixture  # type: ignore
+    @pytest.fixture
     def anthropic_config(self, api_key: str) -> Any:
         """Create Anthropic configuration."""
         return graphbit.PyLlmConfig.anthropic(api_key, "claude-3-sonnet-20240229")
@@ -171,15 +171,15 @@ class TestAnthropicLLM:
 class TestHuggingFaceLLM:
     """Integration tests for HuggingFace LLM models."""
 
-    @pytest.fixture  # type: ignore
+    @pytest.fixture
     def api_key(self) -> str:
         """Get HuggingFace API key from environment."""
         api_key = os.getenv("HUGGINGFACE_API_KEY")
         if not api_key:
             pytest.skip("HUGGINGFACE_API_KEY not set")
-        return api_key
+        return api_key or ""
 
-    @pytest.fixture  # type: ignore
+    @pytest.fixture
     def hf_config(self, api_key: str) -> Any:
         """Create HuggingFace configuration."""
         return graphbit.PyLlmConfig.huggingface(api_key, "microsoft/DialoGPT-medium")
@@ -325,7 +325,7 @@ class TestAgentCapabilities:
 class TestCrossProviderLLM:
     """Integration tests comparing different LLM providers."""
 
-    @pytest.fixture  # type: ignore
+    @pytest.fixture
     def providers(self) -> Any:
         """Get available LLM providers based on API keys."""
         providers = {}

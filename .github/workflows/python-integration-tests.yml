@@ -2,22 +2,22 @@ name: Python Integration Tests
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
   pull_request:
-    branches: [main, develop]
+    branches: [main]
   schedule:
-    # Run tests daily at 2 AM UTC
   - cron: 0 2 * * *
 
 env:
   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
 jobs:
-  python-integration-tests-ubuntu:
+  python-integration-tests:
     strategy:
       matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: ['3.11']
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
 
     steps:
     - uses: actions/checkout@v4
@@ -37,12 +37,10 @@ jobs:
       with:
         components: rustfmt, clippy
 
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential pkg-config
-
-    - name: Activate conda environment and install Python dependencies
+    # ------------------------------
+    # OS-Specific: Install Python deps
+    - name: Install Python dependencies (bash)
+      if: ${{ runner.os != 'Windows' }}
       shell: bash -l {0}
       run: |
         conda activate graphbit
@@ -50,208 +48,120 @@ jobs:
         poetry config virtualenvs.create false
         poetry install --with dev,benchmarks
 
-    - name: Install maturin
+    - name: Install Python dependencies (pwsh)
+      if: ${{ runner.os == 'Windows' }}
+      shell: pwsh
+      run: |
+        conda activate graphbit
+        pip install poetry
+        poetry config virtualenvs.create false
+        poetry install --with dev,benchmarks
+
+    # ------------------------------
+    # OS-Specific: Install maturin
+    - name: Install maturin (bash)
+      if: ${{ runner.os != 'Windows' }}
       shell: bash -l {0}
       run: |
         conda activate graphbit
         pip install maturin
 
-    - name: Check API Key
+    - name: Install maturin (pwsh)
+      if: ${{ runner.os == 'Windows' }}
+      shell: pwsh
+      run: |
+        conda activate graphbit
+        pip install maturin
+
+    # ------------------------------
+    # OS-Specific: Check API Key
+    - name: Check API Key (bash)
+      if: ${{ runner.os != 'Windows' }}
       shell: bash -l {0}
       run: |
         if [ -z "$OPENAI_API_KEY" ]; then
           echo "ERROR: OPENAI_API_KEY secret is not set"
-          echo "Please add OPENAI_API_KEY as a repository secret"
           exit 1
         fi
 
-    - name: Build Rust components
+    - name: Check API Key (pwsh)
+      if: ${{ runner.os == 'Windows' }}
+      shell: pwsh
+      run: |
+        if (-not $env:OPENAI_API_KEY) {
+          Write-Host "ERROR: OPENAI_API_KEY secret is not set"
+          exit 1
+        }
+
+    # ------------------------------
+    # OS-Specific: Build Rust
+    - name: Build Rust components (bash)
+      if: ${{ runner.os != 'Windows' }}
       shell: bash -l {0}
       run: |
         conda activate graphbit
         cargo build --release
 
-    - name: Build Python bindings
+    - name: Build Rust components (pwsh)
+      if: ${{ runner.os == 'Windows' }}
+      shell: pwsh
+      run: |
+        conda activate graphbit
+        cargo build --release
+
+    # ------------------------------
+    # OS-Specific: Build Python bindings
+    - name: Build Python bindings (bash)
+      if: ${{ runner.os != 'Windows' }}
       shell: bash -l {0}
       run: |
         conda activate graphbit
         cd python
         maturin develop --release
 
-    - name: Run Python Integration Tests
+    - name: Build Python bindings (pwsh)
+      if: ${{ runner.os == 'Windows' }}
+      shell: pwsh
+      run: |
+        conda activate graphbit
+        cd python
+        maturin develop --release
+
+    # ------------------------------
+    # OS-Specific: Run All Tests
+    - name: Run All Python Integration Tests (bash)
+      if: ${{ runner.os != 'Windows' }}
       shell: bash -l {0}
       run: |
         conda activate graphbit
         cd tests/python_integration_tests
         python -m pytest . -v --tb=short --maxfail=5
-
-    - name: Run Static Workflow Tests
-      shell: bash -l {0}
-      run: |
-        conda activate graphbit
-        cd tests/python_integration_tests
         python -m pytest tests_static_workflow.py -v --tb=short
-
-    - name: Run Dynamic Workflow Tests
-      shell: bash -l {0}
-      run: |
-        conda activate graphbit
-        cd tests/python_integration_tests
         python -m pytest tests_dynamic_workflow.py -v --tb=short
-
-    - name: Run LLM Integration Tests
-      shell: bash -l {0}
-      run: |
-        conda activate graphbit
-        cd tests/python_integration_tests
         python -m pytest tests_llm.py -v --tb=short
-
-    - name: Run Embeddings Integration Tests
-      shell: bash -l {0}
-      run: |
-        conda activate graphbit
-        cd tests/python_integration_tests
         python -m pytest tests_embeddings.py -v --tb=short
-
-    - name: Run Test Runner
-      shell: bash -l {0}
-      run: |
-        conda activate graphbit
-        cd tests/python_integration_tests
         python test_runner.py
 
+    - name: Run All Python Integration Tests (pwsh)
+      if: ${{ runner.os == 'Windows' }}
+      shell: pwsh
+      run: |
+        conda activate graphbit
+        cd tests/python_integration_tests
+        python -m pytest . -v --tb=short --maxfail=5
+        python -m pytest tests_static_workflow.py -v --tb=short
+        python -m pytest tests_dynamic_workflow.py -v --tb=short
+        python -m pytest tests_llm.py -v --tb=short
+        python -m pytest tests_embeddings.py -v --tb=short
+        python test_runner.py
+
+    # ------------------------------
     - name: Upload test results
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: python-test-results-${{ matrix.python-version }}
+        name: python-test-results-${{ matrix.os }}-${{ matrix.python-version }}
         path: |
           tests/python_integration_tests/test-results/
           tests/python_integration_tests/*.xml
           tests/python_integration_tests/*.log
-
-  python-integration-tests-macos:
-    runs-on: macos-latest
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-
-    - name: Set up Conda
-      uses: conda-incubator/setup-miniconda@v3
-      with:
-        python-version: '3.11'
-        activate-environment: graphbit
-        environment-file: environment.yml
-        auto-activate-base: false
-
-    - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        components: rustfmt, clippy
-
-    - name: Activate conda environment and install Python dependencies
-      shell: bash -l {0}
-      run: |
-        conda activate graphbit
-        pip install poetry
-        poetry config virtualenvs.create false
-        poetry install --with dev,benchmarks
-
-    - name: Install maturin
-      shell: bash -l {0}
-      run: |
-        conda activate graphbit
-        pip install maturin
-
-    - name: Check API Key
-      shell: bash -l {0}
-      run: |
-        if [ -z "$OPENAI_API_KEY" ]; then
-          echo "ERROR: OPENAI_API_KEY secret is not set"
-          echo "Please add OPENAI_API_KEY as a repository secret"
-          exit 1
-        fi
-
-    - name: Build Rust components
-      shell: bash -l {0}
-      run: |
-        conda activate graphbit
-        cargo build --release
-
-    - name: Build Python bindings
-      shell: bash -l {0}
-      run: |
-        conda activate graphbit
-        cd python
-        maturin develop --release
-
-    - name: Run Python Integration Tests (macOS)
-      shell: bash -l {0}
-      run: |
-        conda activate graphbit
-        cd tests/python_integration_tests
-        python -m pytest . -v --tb=short --maxfail=3
-
-  python-integration-tests-windows:
-    runs-on: windows-latest
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-
-    - name: Set up Conda
-      uses: conda-incubator/setup-miniconda@v3
-      with:
-        python-version: '3.11'
-        activate-environment: graphbit
-        environment-file: environment.yml
-        auto-activate-base: false
-
-    - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        components: rustfmt, clippy
-
-    - name: Activate conda environment and install Python dependencies
-      shell: pwsh
-      run: |
-        conda activate graphbit
-        pip install poetry
-        poetry config virtualenvs.create false
-        poetry install --with dev,benchmarks
-
-    - name: Install maturin
-      shell: pwsh
-      run: |
-        conda activate graphbit
-        pip install maturin
-
-    - name: Check API Key
-      shell: pwsh
-      run: |
-        if (-not $env:OPENAI_API_KEY) {
-          Write-Host "ERROR: OPENAI_API_KEY secret is not set"
-          Write-Host "Please add OPENAI_API_KEY as a repository secret"
-          exit 1
-        }
-
-    - name: Build Rust components
-      shell: pwsh
-      run: |
-        conda activate graphbit
-        cargo build --release
-
-    - name: Build Python bindings
-      shell: pwsh
-      run: |
-        conda activate graphbit
-        cd python
-        maturin develop --release
-
-    - name: Run Python Integration Tests (Windows)
-      shell: pwsh
-      run: |
-        conda activate graphbit
-        cd tests/python_integration_tests
-        python -m pytest . -v --tb=short --maxfail=3
