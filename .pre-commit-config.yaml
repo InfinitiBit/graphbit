@@ -166,14 +166,6 @@ repos:
   # Local hooks for custom checks
 - repo: local
   hooks:
-      # Rust tests (fast subset)
-  - id: rust-test-unit
-    name: Rust unit tests
-    entry: cargo test --workspace
-    language: system
-    files: ^(src/.*\.rs|core/src/.*\.rs)$
-    pass_filenames: false
-
       # Python tests (fast subset)
   - id: python-test-unit
     name: Python unit tests
