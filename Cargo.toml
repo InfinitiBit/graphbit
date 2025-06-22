@@ -1,7 +1,6 @@
 [dependencies]
 anyhow = "1.0"
 chrono = {version = "0.4", features = ["serde"]}
-clap = {version = "4.5", features = ["derive"]}  # CLI-specific dependencies
 futures = "0.3"
 graphbit-core = {path = "core", features = ["python"]}
 num_cpus = "1.16"
@@ -12,12 +11,11 @@ tempfile = "3.10.0"
 tokio = {version = "1.38", features = ["full"]}
 
 [features]
-cli = []
 default = []
 
 [package]
 authors = ["GraphBit Team"]
-description = "Command-line interface for GraphBit agentic workflow automation"
+description = "GraphBit agentic workflow automation framework (library)"
 edition = "2021"
 name = "graphbit"
 publish = false
