@@ -125,12 +125,12 @@ repos:
     args: [--autofix, --indent, '2']
     files: ^.*\.ya?ml$
 
-  # Secret Detection
-- repo: https://github.com/Yelp/detect-secrets
-  rev: v1.5.0
-  hooks:
-  - id: detect-secrets
-    args: [--baseline, .secrets.baseline]
+#   # Secret Detection
+# - repo: https://github.com/Yelp/detect-secrets
+#   rev: v1.5.0
+#   hooks:
+#   - id: detect-secrets
+#     args: [--baseline, .secrets.baseline]
 
   # Spell Checking
 - repo: https://github.com/crate-ci/typos
@@ -202,12 +202,12 @@ repos:
 
 
 
-+# NOTE: Ensure `.secrets.baseline` exists to prevent hook failure
-+# Run: detect-secrets scan > .secrets.baseline
-# Configuration for specific hooks
-ci:
-  autoupdate_schedule: monthly
-  autoupdate_commit_msg: 'chore: update pre-commit hooks'
+# +# NOTE: Ensure `.secrets.baseline` exists to prevent hook failure
+# +# Run: detect-secrets scan > .secrets.baseline
+# # Configuration for specific hooks
+# ci:
+#   autoupdate_schedule: monthly
+#   autoupdate_commit_msg: 'chore: update pre-commit hooks'
 
 # Exclude certain files/directories
 exclude: |

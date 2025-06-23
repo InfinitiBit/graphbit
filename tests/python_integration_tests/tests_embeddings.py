@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Integration tests for GraphBit embeddings functionality."""
+
 import os
 from typing import Any
 
