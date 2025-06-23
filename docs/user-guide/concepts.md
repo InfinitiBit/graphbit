@@ -303,14 +303,7 @@ for i, result in enumerate(results):
     print(f"Workflow {i+1}: {result.execution_time_ms()}ms")
 ```
 
-### Batch Execution
 
-Process multiple workflows efficiently:
-
-```python
-workflows = [workflow1, workflow2, workflow3, workflow4]
-results = executor.execute_batch(workflows)
-```
 
 ### Asynchronous Execution
 

@@ -293,7 +293,7 @@ workflows = [workflow1, workflow2, workflow3]
 contexts = executor.execute_concurrent(workflows)
 
 
-contexts = executor.execute_batch(workflows)
+
 ```
 
 ### PyWorkflow

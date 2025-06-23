@@ -37,11 +37,11 @@ pub mod prelude {
     pub use graphbit_core::{
         agents::{Agent, AgentConfig, AgentTrait},
         embeddings::{EmbeddingProvider, EmbeddingRequest, EmbeddingResponse},
-        graph::{NodeType, WorkflowGraph, WorkflowNode, WorkflowEdge},
+        graph::{NodeType, WorkflowEdge, WorkflowGraph, WorkflowNode},
         llm::{LlmProvider, LlmResponse},
-        types::{WorkflowContext, NodeExecutionResult, WorkflowState},
+        types::{NodeExecutionResult, WorkflowContext, WorkflowState},
         validation::ValidationResult,
         workflow::{Workflow, WorkflowBuilder, WorkflowExecutor},
         GraphBitResult,
     };
-} 
+}

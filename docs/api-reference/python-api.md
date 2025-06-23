@@ -492,12 +492,7 @@ workflows = [workflow1, workflow2, workflow3]
 results = executor.execute_concurrent(workflows)
 ```
 
-##### `execute_batch(workflows: List[PyWorkflow]) -> List[PyWorkflowContext]`
-Execute workflows in batches for efficiency.
 
-```python
-results = executor.execute_batch(workflows)
-```
 
 ##### `execute_concurrent_agent_tasks(prompts: List[str], agent_id: str) -> List[str]`
 Execute multiple prompts with the same agent concurrently.

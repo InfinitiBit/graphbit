@@ -258,47 +258,7 @@ def robust_workflow_example():
 robust_workflow_example()
 ```
 
-## Example 7: Batch Processing
-
-Process multiple items efficiently:
-
-```python
-import graphbit
-import os
-
-def batch_processing_example():
-    graphbit.init()
-    config = graphbit.PyLlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4o-mini")
-    
-    # Create workflow template
-    def create_analysis_workflow():
-        builder = graphbit.PyWorkflowBuilder("Batch Analysis")
-        
-        analyzer = graphbit.PyWorkflowNode.agent_node(
-            name="Batch Analyzer",
-            description="Analyzes batch items",
-            agent_id="batch_analyzer",
-            prompt="Analyze and categorize: {item}"
-        )
-        
-        builder.add_node(analyzer)
-        return builder.build()
-    
-    # Create multiple workflows
-    workflows = [create_analysis_workflow() for _ in range(3)]
-    
-    # Execute in batch
-    executor = graphbit.PyWorkflowExecutor(config)
-    results = executor.execute_batch(workflows)
-    
-    for i, result in enumerate(results):
-        print(f"Batch {i+1}: {result.get_variable('output')}")
-
-# Run batch processing
-batch_processing_example()
-```
-
-## Example 8: Embeddings and Similarity
+## Example 7: Embeddings and Similarity
 
 Use embeddings for semantic search:
 

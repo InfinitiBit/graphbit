@@ -11,8 +11,6 @@ pub mod graph_tests;
 pub mod validation_tests;
 pub mod workflow_tests;
 
-
-
 /// Get API key from environment or provide test default
 pub fn get_test_api_key() -> String {
     std::env::var("OPENAI_API_KEY")
@@ -24,5 +22,3 @@ pub fn get_test_api_key() -> String {
 pub fn get_test_model() -> String {
     std::env::var("TEST_LLM_MODEL").unwrap_or_else(|_| "gpt-3.5-turbo".to_string())
 }
-
-
