@@ -45,6 +45,7 @@ class LangChainBenchmark(BaseBenchmark):
             model=llm_config["model"],
             api_key=SecretStr(api_key),
             temperature=llm_config["temperature"],
+            max_tokens=llm_config["max_tokens"],
         )
 
         self._setup_chains()

@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel
 from pydantic_ai import Agent
 from pydantic_ai.models.openai import OpenAIModel
+from pydantic_ai.settings import ModelSettings
 
 from .common import (
     COMPLEX_WORKFLOW_STEPS,
@@ -63,7 +64,7 @@ class PydanticAIBenchmark(BaseBenchmark):
         if not api_key:
             raise ValueError("OpenAI API key not found in environment or config")
 
-        # Initialize Pydantic AI model
+        # Initialize Pydantic AI model without parameters in constructor
         self.openai_model = OpenAIModel(
             model_name=llm_config["model"],
         )
@@ -76,28 +77,39 @@ class PydanticAIBenchmark(BaseBenchmark):
         if self.openai_model is None:
             raise ValueError("OpenAIModel not initialized")
 
+        # Get standardized configuration for model settings
+        llm_config = get_standard_llm_config(self.config)
+        model_settings = ModelSettings(
+            temperature=llm_config["temperature"],
+            max_tokens=llm_config["max_tokens"],
+        )
+
         self.agents["simple"] = Agent(
             model=self.openai_model,
-            result_type=SimpleResponse,
+            output_type=SimpleResponse,
             system_prompt="You are a helpful AI assistant. Respond with analysis and insights.",
+            model_settings=model_settings,
         )
 
         self.agents["sequential"] = Agent(
             model=self.openai_model,
-            result_type=SequentialResponse,
+            output_type=SequentialResponse,
             system_prompt="You are processing tasks in sequence. Use previous results to inform your response.",
+            model_settings=model_settings,
         )
 
         self.agents["complex"] = Agent(
             model=self.openai_model,
-            result_type=ComplexResponse,
+            output_type=ComplexResponse,
             system_prompt="You are part of a complex workflow. Consider dependencies and context.",
+            model_settings=model_settings,
         )
 
         self.agents["general"] = Agent(
             model=self.openai_model,
-            result_type=str,
+            output_type=str,
             system_prompt="You are a helpful AI assistant.",
+            model_settings=model_settings,
         )
 
     async def teardown(self) -> None:
