@@ -1,0 +1,58 @@
+//! LLM configuration for GraphBit Python bindings
+
+use graphbit_core::llm::LlmConfig as CoreLlmConfig;
+use pyo3::prelude::*;
+use crate::validation::validate_api_key;
+
+#[pyclass]
+#[derive(Clone)]
+pub struct LlmConfig {
+    pub(crate) inner: CoreLlmConfig,
+}
+
+#[pymethods]
+impl LlmConfig {
+    #[staticmethod]
+    #[pyo3(signature = (api_key, model=None))]
+    fn openai(api_key: String, model: Option<String>) -> PyResult<Self> {
+        validate_api_key(&api_key, "OpenAI")?;
+        
+        Ok(Self {
+            inner: CoreLlmConfig::openai(
+                api_key,
+                model.unwrap_or_else(|| "gpt-4o-mini".to_string()),
+            ),
+        })
+    }
+
+    #[staticmethod]
+    #[pyo3(signature = (api_key, model=None))]
+    fn anthropic(api_key: String, model: Option<String>) -> PyResult<Self> {
+        validate_api_key(&api_key, "Anthropic")?;
+        
+        Ok(Self {
+            inner: CoreLlmConfig::anthropic(
+                api_key,
+                model.unwrap_or_else(|| "claude-3-5-sonnet-20241022".to_string()),
+            ),
+        })
+    }
+
+    #[staticmethod]
+    #[pyo3(signature = (model=None))]
+    fn ollama(model: Option<String>) -> Self {
+        Self {
+            inner: CoreLlmConfig::ollama(
+                model.unwrap_or_else(|| "llama3.2".to_string()),
+            ),
+        }
+    }
+
+    fn provider(&self) -> String {
+        self.inner.provider_name().to_string()
+    }
+
+    fn model(&self) -> String {
+        self.inner.model_name().to_string()
+    }
+} 

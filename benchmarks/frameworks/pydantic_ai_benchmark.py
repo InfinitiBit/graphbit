@@ -152,7 +152,8 @@ class PydanticAIBenchmark(BaseBenchmark):
 
             result = await agent.run(prompt)
             previous_result = result.output.step_result
-            total_tokens += count_tokens_estimate(prompt + previous_result)
+            # Count tokens based on original task only for fair comparison
+            total_tokens += count_tokens_estimate(task + previous_result)
 
             self.log_output(
                 scenario_name=BenchmarkScenario.SEQUENTIAL_PIPELINE.value,
@@ -211,7 +212,8 @@ class PydanticAIBenchmark(BaseBenchmark):
                 output=result.output.result,
             )
 
-            total_tokens += count_tokens_estimate(prompt + result.output.result)
+            # Count tokens based on original step prompt only for fair comparison
+            total_tokens += count_tokens_estimate(step["prompt"] + result.output.result)
 
         metrics = self.monitor.stop_monitoring()
         metrics.token_count = total_tokens

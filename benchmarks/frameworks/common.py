@@ -14,9 +14,9 @@ import psutil
 
 # Configure logging
 # Standard LLM Configuration Constants
-DEFAULT_TEMPERATURE = 0.7
-DEFAULT_MAX_TOKENS = 1000
-DEFAULT_MODEL = "gpt-3.5-turbo"
+DEFAULT_TEMPERATURE = 0.1
+DEFAULT_MAX_TOKENS = 2000
+DEFAULT_MODEL = "gpt-4o-mini"
 
 
 class BenchmarkLogger:
@@ -75,7 +75,6 @@ class BenchmarkScenario(Enum):
     COMPLEX_WORKFLOW = "complex_workflow"
     MEMORY_INTENSIVE = "memory_intensive"
     CONCURRENT_TASKS = "concurrent_tasks"
-    HIGH_PERFORMANCE_CONCURRENT = "high_performance_concurrent"
 
 
 @dataclass
@@ -155,7 +154,7 @@ class BaseBenchmark(ABC):
         """Initialize the benchmark with configuration."""
         self.config = config
         self.api_key = config.get("api_key") or config.get("openai_api_key")
-        self.model = config.get("model", "gpt-3.5-turbo")
+        self.model = config.get("model", "gpt-4o-mini")
         self.monitor = PerformanceMonitor()
 
         # Initialize logger
@@ -227,8 +226,6 @@ class BaseBenchmark(ABC):
                 metrics = await self.run_memory_intensive()
             elif scenario == BenchmarkScenario.CONCURRENT_TASKS:
                 metrics = await self.run_concurrent_tasks()
-            elif scenario == BenchmarkScenario.HIGH_PERFORMANCE_CONCURRENT:
-                metrics = await self.run_high_performance_concurrent_tasks()
             else:
                 raise ValueError(f"Unknown scenario: {scenario}")
 

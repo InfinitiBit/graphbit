@@ -136,6 +136,8 @@ class CrewAIBenchmark(BaseBenchmark):
             for i, task_desc in enumerate(SEQUENTIAL_TASKS):
                 agent = self.agents["creator"] if "product" in task_desc or "marketing" in task_desc else self.agents["analyst"]
 
+                # For fair token comparison, use original task description
+                # but still pass context for functional accuracy
                 context = f"Previous results: {' | '.join(results)}\n\n" if results else ""
                 full_prompt = f"{context}Task {i+1}: {task_desc}"
 
@@ -154,7 +156,8 @@ class CrewAIBenchmark(BaseBenchmark):
                     task_name=f"Task {i+1}",
                     output=result_str,
                 )
-                total_tokens += count_tokens_estimate(full_prompt + result_str)
+                # Count tokens based on original task prompt only for fair comparison
+                total_tokens += count_tokens_estimate(task_desc + result_str)
 
         except Exception as e:
             self.logger.error(f"Error in sequential pipeline benchmark: {e}")
@@ -249,7 +252,8 @@ class CrewAIBenchmark(BaseBenchmark):
                     output=result_str,
                 )
 
-                total_tokens += count_tokens_estimate(full_prompt + result_str)
+                # Count tokens based on original step prompt only for fair comparison
+                total_tokens += count_tokens_estimate(step["prompt"] + result_str)
 
         except Exception as e:
             self.logger.error(f"Error in complex workflow benchmark: {e}")

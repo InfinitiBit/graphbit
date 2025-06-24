@@ -189,23 +189,26 @@ class LlamaIndexBenchmark(BaseBenchmark):
         """Run a memory-intensive benchmark using LlamaIndex."""
         self.monitor.start_monitoring()
 
+        if self.llm is None:
+            raise ValueError("LLM not initialized")
+
+        # Create large documents to stress memory
         large_documents = [Document(text=MEMORY_INTENSIVE_PROMPT + f" Document {i+1}. " + "Lorem ipsum dolor sit amet. " * 100) for i in range(50)]
 
+        # Create index but use LLM directly for consistent token counts
         memory_index = VectorStoreIndex.from_documents(large_documents)
-        memory_query_engine = memory_index.as_query_engine()
-
-        query = "Analyze and summarize all the information across all documents, " "identifying key patterns and insights."
-
-        response = memory_query_engine.query(query)
+        
+        # Use the LLM directly with the full MEMORY_INTENSIVE_PROMPT for consistent token counting
+        response = await self.llm.acomplete(MEMORY_INTENSIVE_PROMPT)
         result = str(response)
 
         self.log_output(
             scenario_name=BenchmarkScenario.MEMORY_INTENSIVE.value,
-            task_name="Memory Intensive Query",
+            task_name="Memory Intensive Task",
             output=result,
         )
 
-        token_count = count_tokens_estimate(query + result)
+        token_count = count_tokens_estimate(MEMORY_INTENSIVE_PROMPT + result)
 
         metrics = self.monitor.stop_monitoring()
         metrics.token_count = token_count

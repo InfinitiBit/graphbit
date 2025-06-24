@@ -62,7 +62,7 @@ class ComprehensiveBenchmarkRunner:
         self.verbose = verbose
         self.config: Dict[str, Any] = {
             "api_key": os.environ.get("OPENAI_API_KEY"),
-            "model": "gpt-3.5-turbo",
+            "model": "gpt-4o-mini",
             "log_dir": "logs",
             "results_dir": "results",
         }
@@ -176,7 +176,7 @@ class ComprehensiveBenchmarkRunner:
                     else:
                         print(f"    {key}: {value}")
         else:
-            self.log(f"{scenario_name}: {metrics.execution_time_ms:.0f}ms, {metrics.memory_usage_mb:.1f}MB, {metrics.cpu_usage_percent:.1f}% CPU")
+            self.log(f"{scenario_name}: {metrics.execution_time_ms:.0f}ms, {metrics.memory_usage_mb:.1f}MB, {metrics.cpu_usage_percent:.1f}% CPU, {metrics.token_count} tokens")
 
     async def run_framework_scenario(
         self,
@@ -254,7 +254,7 @@ class ComprehensiveBenchmarkRunner:
         if self.verbose and framework_info["results"]:
             print(f"\n{framework_name} Performance Overview:")
             for scenario_name, metrics in framework_info["results"].items():
-                print(f"  {scenario_name}: {metrics.execution_time_ms:.0f}ms, " f"{metrics.memory_usage_mb:.1f}MB, " f"{metrics.cpu_usage_percent:.1f}% CPU")
+                print(f"  {scenario_name}: {metrics.execution_time_ms:.0f}ms, " f"{metrics.memory_usage_mb:.1f}MB, " f"{metrics.cpu_usage_percent:.1f}% CPU, " f"{metrics.token_count} tokens")
 
     def generate_comparison_report(self) -> None:
         """Generate a comparison report across all frameworks."""
@@ -267,8 +267,8 @@ class ComprehensiveBenchmarkRunner:
         if self.verbose:
             # Summary table (only in verbose mode)
             print("\nFramework Performance Summary:")
-            print(f"{'Framework':<15} {'Scenarios':<12} {'Avg Time (ms)':<15} {'Avg Memory (MB)':<16} {'Avg CPU (%)':<12}")
-            print(f"{'-' * 80}")
+            print(f"{'Framework':<15} {'Scenarios':<12} {'Avg Time (ms)':<15} {'Avg Memory (MB)':<16} {'Avg CPU (%)':<12} {'Avg Tokens':<12}")
+            print(f"{'-' * 95}")
 
             for _framework_type, framework_info in self.frameworks.items():
                 framework_name = framework_info["name"]
@@ -279,17 +279,18 @@ class ComprehensiveBenchmarkRunner:
                     avg_time = sum(m.execution_time_ms for m in results.values()) / scenario_count
                     avg_memory = sum(m.memory_usage_mb for m in results.values()) / scenario_count
                     avg_cpu = sum(m.cpu_usage_percent for m in results.values()) / scenario_count
+                    avg_tokens = sum(m.token_count for m in results.values()) / scenario_count
 
-                    print(f"{framework_name:<15} {scenario_count:<12} {avg_time:<15.1f} {avg_memory:<16.1f} {avg_cpu:<12.1f}")
+                    print(f"{framework_name:<15} {scenario_count:<12} {avg_time:<15.1f} {avg_memory:<16.1f} {avg_cpu:<12.1f} {avg_tokens:<12.0f}")
                 else:
-                    print(f"{framework_name:<15} {'0':<12} {'N/A':<15} {'N/A':<16} {'N/A':<12}")
+                    print(f"{framework_name:<15} {'0':<12} {'N/A':<15} {'N/A':<16} {'N/A':<12} {'N/A':<12}")
 
         # Detailed scenario comparison (always shown)
         print("\nDetailed Scenario Comparison:")
         for _scenario, scenario_name in self.scenarios:
             print(f"\n{scenario_name}:")
-            print(f"{'Framework':<15} {'Time (ms)':<12} {'Memory (MB)':<13} {'CPU (%)':<10} {'Throughput':<12}")
-            print(f"{'-' * 70}")
+            print(f"{'Framework':<15} {'Time (ms)':<12} {'Memory (MB)':<13} {'CPU (%)':<10} {'Tokens':<10} {'Throughput':<12}")
+            print(f"{'-' * 80}")
 
             for _framework_type, framework_info in self.frameworks.items():
                 framework_name = framework_info["name"]
@@ -298,10 +299,10 @@ class ComprehensiveBenchmarkRunner:
                 if scenario_name in results:
                     metrics = results[scenario_name]
                     print(
-                        f"{framework_name:<15} {metrics.execution_time_ms:<12.1f} " f"{metrics.memory_usage_mb:<13.1f} {metrics.cpu_usage_percent:<10.1f} " f"{metrics.throughput_tasks_per_sec:<12.2f}"
+                        f"{framework_name:<15} {metrics.execution_time_ms:<12.1f} " f"{metrics.memory_usage_mb:<13.1f} {metrics.cpu_usage_percent:<10.1f} " f"{metrics.token_count:<10} " f"{metrics.throughput_tasks_per_sec:<12.2f}"
                     )
                 else:
-                    print(f"{framework_name:<15} {'FAILED':<12} {'FAILED':<13} {'FAILED':<10} {'FAILED':<12}")
+                    print(f"{framework_name:<15} {'FAILED':<12} {'FAILED':<13} {'FAILED':<10} {'FAILED':<10} {'FAILED':<12}")
 
         # Error summary
         has_errors = False
