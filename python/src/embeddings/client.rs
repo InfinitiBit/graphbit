@@ -17,10 +17,7 @@ pub struct EmbeddingClient {
 impl EmbeddingClient {
     #[new]
     fn new(config: EmbeddingConfig) -> PyResult<Self> {
-        let service = Arc::new(
-            EmbeddingService::new(config.inner)
-                .map_err(to_py_runtime_error)?,
-        );
+        let service = Arc::new(EmbeddingService::new(config.inner).map_err(to_py_runtime_error)?);
         Ok(Self { service })
     }
 
@@ -50,7 +47,6 @@ impl EmbeddingClient {
 
     #[staticmethod]
     fn similarity(a: Vec<f32>, b: Vec<f32>) -> PyResult<f32> {
-        EmbeddingService::cosine_similarity(&a, &b)
-            .map_err(to_py_runtime_error)
+        EmbeddingService::cosine_similarity(&a, &b).map_err(to_py_runtime_error)
     }
 }

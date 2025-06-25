@@ -2,9 +2,7 @@
 
 use crate::errors::{GraphBitError, GraphBitResult};
 use crate::llm::providers::LlmProviderTrait;
-use crate::llm::{
-    FinishReason, LlmMessage, LlmRequest, LlmResponse, LlmRole, LlmUsage,
-};
+use crate::llm::{FinishReason, LlmMessage, LlmRequest, LlmResponse, LlmRole, LlmUsage};
 use async_trait::async_trait;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
@@ -209,8 +207,6 @@ impl LlmProviderTrait for HuggingFaceProvider {
         Some((0.0001, 0.0001)) // Placeholder values
     }
 }
-
-
 
 #[derive(Debug, Serialize)]
 struct HuggingFaceRequest {

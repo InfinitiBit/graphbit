@@ -3,8 +3,7 @@
 use crate::errors::{GraphBitError, GraphBitResult};
 use crate::llm::providers::LlmProviderTrait;
 use crate::llm::{
-    FinishReason, LlmMessage, LlmRequest, LlmResponse, LlmRole, LlmTool,
-    LlmToolCall, LlmUsage,
+    FinishReason, LlmMessage, LlmRequest, LlmResponse, LlmRole, LlmTool, LlmToolCall, LlmUsage,
 };
 use async_trait::async_trait;
 use reqwest::Client;
@@ -280,8 +279,6 @@ impl LlmProviderTrait for OpenAiProvider {
         }
     }
 }
-
-
 
 // OpenAI API types
 #[derive(Debug, Serialize)]

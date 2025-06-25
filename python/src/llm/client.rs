@@ -173,10 +173,7 @@ impl LlmClient {
             }
 
             let guard = provider.read().await;
-            let response = guard
-                .complete(request)
-                .await
-                .map_err(to_py_error)?;
+            let response = guard.complete(request).await.map_err(to_py_error)?;
 
             Ok(response.content)
         })
@@ -217,10 +214,7 @@ impl LlmClient {
                 }
                 Err(_) => {
                     // Fast fallback to regular completion
-                    let response = guard
-                        .complete(request)
-                        .await
-                        .map_err(to_py_error)?;
+                    let response = guard.complete(request).await.map_err(to_py_error)?;
                     Ok(response.content)
                 }
             }

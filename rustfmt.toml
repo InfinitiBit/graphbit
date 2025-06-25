@@ -1,29 +1,20 @@
 # Rustfmt configuration for GraphBit
 
-color = "Auto"
-condense_wildcard_suffixes = false
-disable_all_formatting = false
+# Basic stable configuration options only
 edition = "2021"
-emit_mode = "Files"
-error_on_line_overflow = false
-error_on_unformatted = false
-force_explicit_abi = true
 hard_tabs = false
-hide_parse_errors = false
-ignore = []
-make_backup = false
 max_width = 100
 merge_derives = true
 newline_style = "Unix"
 remove_nested_parens = true
 reorder_imports = true
 reorder_modules = true
-report_fixme = "Never"
-report_todo = "Never"
-required_version = "1.7.0"
-skip_children = false
 tab_spaces = 4
-unstable_features = false
 use_field_init_shorthand = false
-use_small_heuristics = "Default"
 use_try_shorthand = false
+
+# Note: The following options were removed as they are either:
+# - Unknown configuration options: report_fixme, report_todo
+# - Nightly-only features: color, condense_wildcard_suffixes, error_on_line_overflow,
+# error_on_unformatted, hide_parse_errors, ignore, required_version, skip_children,
+# unstable_features

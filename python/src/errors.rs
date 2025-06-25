@@ -5,7 +5,7 @@ use pyo3::prelude::*;
 /// Convert GraphBit error directly to appropriate Python exception
 pub fn to_py_error(error: graphbit_core::errors::GraphBitError) -> PyErr {
     use graphbit_core::errors::GraphBitError;
-    
+
     match error {
         GraphBitError::Network { .. } => {
             PyErr::new::<pyo3::exceptions::PyConnectionError, _>(error.to_string())

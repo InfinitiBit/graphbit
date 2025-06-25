@@ -42,9 +42,7 @@ impl Workflow {
     }
 
     fn validate(&self) -> PyResult<()> {
-        self.inner
-            .validate()
-            .map_err(to_py_runtime_error)?;
+        self.inner.validate().map_err(to_py_runtime_error)?;
         Ok(())
     }
 }

@@ -635,5 +635,3 @@ pub enum EdgeType {
     /// Error handling edge
     ErrorHandling,
 }
-
-

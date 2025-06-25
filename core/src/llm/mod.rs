@@ -216,8 +216,6 @@ pub struct LlmToolCall {
     pub parameters: serde_json::Value,
 }
 
-
-
 /// Factory for creating LLM providers
 pub struct LlmProviderFactory;
 
@@ -275,7 +273,3 @@ impl LlmProviderFactory {
             .collect::<GraphBitResult<Vec<_>>>()
     }
 }
-
-
-
-

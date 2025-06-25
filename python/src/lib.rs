@@ -21,8 +21,7 @@ pub use workflow::{Executor, Node, Workflow, WorkflowResult};
 #[pyfunction]
 fn init() -> PyResult<()> {
     let _ = runtime::get_runtime(); // Initialize runtime
-    graphbit_core::init()
-        .map_err(errors::to_py_runtime_error)?;
+    graphbit_core::init().map_err(errors::to_py_runtime_error)?;
     Ok(())
 }
 

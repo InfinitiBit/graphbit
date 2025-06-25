@@ -705,8 +705,6 @@ impl EmbeddingService {
     pub async fn get_dimensions(&self) -> GraphBitResult<usize> {
         self.provider.get_embedding_dimensions().await
     }
-
-
 }
 
 #[cfg(test)]

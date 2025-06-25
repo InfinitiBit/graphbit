@@ -443,8 +443,6 @@ impl NodeExecutionResult {
         }
     }
 
-
-
     /// Add metadata to the result
     pub fn with_metadata(mut self, key: String, value: serde_json::Value) -> Self {
         self.metadata.insert(key, value);
