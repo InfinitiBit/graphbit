@@ -6,24 +6,23 @@
 use pyo3::prelude::*;
 
 // Module declarations
-mod runtime;
-mod validation;
+mod embeddings;
 mod errors;
 mod llm;
+mod runtime;
+mod validation;
 mod workflow;
-mod embeddings;
 
 // Re-export all public types and functions
-pub use llm::{LlmConfig, LlmClient};
-pub use workflow::{Node, Workflow, WorkflowResult, Executor};
-pub use embeddings::{EmbeddingConfig, EmbeddingClient};
+pub use embeddings::{EmbeddingClient, EmbeddingConfig};
+pub use llm::{LlmClient, LlmConfig};
+pub use workflow::{Executor, Node, Workflow, WorkflowResult};
 
 #[pyfunction]
 fn init() -> PyResult<()> {
     let _ = runtime::get_runtime(); // Initialize runtime
-    graphbit_core::init().map_err(|e| {
-        PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string())
-    })?;
+    graphbit_core::init()
+        .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
     Ok(())
 }
 
@@ -36,7 +35,7 @@ fn version() -> String {
 fn graphbit(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(init, m)?)?;
     m.add_function(wrap_pyfunction!(version, m)?)?;
-    
+
     m.add_class::<LlmConfig>()?;
     m.add_class::<LlmClient>()?;
     m.add_class::<Node>()?;
@@ -45,6 +44,6 @@ fn graphbit(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<Executor>()?;
     m.add_class::<EmbeddingConfig>()?;
     m.add_class::<EmbeddingClient>()?;
-    
+
     Ok(())
 }

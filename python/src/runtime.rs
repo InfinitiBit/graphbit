@@ -16,4 +16,4 @@ pub fn get_runtime() -> &'static tokio::runtime::Runtime {
             .build()
             .expect("Failed to create GraphBit runtime")
     })
-} 
+}

@@ -1,7 +1,7 @@
 //! LLM module for GraphBit Python bindings
 
-pub mod config;
 pub mod client;
+pub mod config;
 
+pub use client::LlmClient;
 pub use config::LlmConfig;
-pub use client::LlmClient; 

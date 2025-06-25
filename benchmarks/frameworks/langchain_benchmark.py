@@ -5,7 +5,6 @@ import os
 from typing import Any, Dict, Optional
 
 from langchain.prompts import PromptTemplate
-from langchain_openai import ChatOpenAI
 
 from .common import (
     COMPLEX_WORKFLOW_STEPS,
@@ -17,9 +16,10 @@ from .common import (
     BaseBenchmark,
     BenchmarkMetrics,
     BenchmarkScenario,
+    LLMConfig,
+    LLMProvider,
     calculate_throughput,
     count_tokens_estimate,
-    get_standard_llm_config,
 )
 
 
@@ -29,24 +29,69 @@ class LangChainBenchmark(BaseBenchmark):
     def __init__(self, config: Dict[str, Any]):
         """Initialize LangChain benchmark with configuration."""
         super().__init__(config)
-        self.llm: Optional[ChatOpenAI] = None
+        self.llm: Optional[Any] = None
         self.chains: Dict[str, PromptTemplate | Any] = {}
+
+    def _get_llm_params(self) -> tuple[int, float]:
+        """Get max_tokens and temperature from configuration."""
+        llm_config_obj: LLMConfig | None = self.config.get("llm_config")
+        if not llm_config_obj:
+            raise ValueError("LLMConfig not found in configuration")
+        return llm_config_obj.max_tokens, llm_config_obj.temperature
 
     async def setup(self) -> None:
         """Set up LangChain for benchmarking."""
         from pydantic import SecretStr
 
-        llm_config = get_standard_llm_config(self.config)
-        api_key = os.getenv("OPENAI_API_KEY") or llm_config["api_key"]
-        if not api_key:
-            raise ValueError("OpenAI API key not found in environment or config")
+        # Get LLM configuration from config
+        llm_config_obj: LLMConfig | None = self.config.get("llm_config")
+        if not llm_config_obj:
+            raise ValueError("LLMConfig not found in configuration")
 
-        self.llm = ChatOpenAI(
-            model=llm_config["model"],
-            api_key=SecretStr(api_key),
-            temperature=llm_config["temperature"],
-            max_tokens=llm_config["max_tokens"],
-        )
+        max_tokens, temperature = self._get_llm_params()
+
+        if llm_config_obj.provider == LLMProvider.OPENAI:
+            api_key = llm_config_obj.api_key or os.getenv("OPENAI_API_KEY")
+            if not api_key:
+                raise ValueError("OpenAI API key not found in environment or config")
+
+            from langchain_openai import ChatOpenAI
+
+            self.llm = ChatOpenAI(
+                model=llm_config_obj.model,
+                api_key=SecretStr(api_key),
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+
+        elif llm_config_obj.provider == LLMProvider.ANTHROPIC:
+            api_key = llm_config_obj.api_key or os.getenv("ANTHROPIC_API_KEY")
+            if not api_key:
+                raise ValueError("Anthropic API key not found in environment or config")
+
+            from langchain_anthropic import ChatAnthropic
+
+            self.llm = ChatAnthropic(
+                model=llm_config_obj.model,
+                api_key=SecretStr(api_key),
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+
+        elif llm_config_obj.provider == LLMProvider.OLLAMA:
+            base_url = llm_config_obj.base_url or "http://localhost:11434"
+
+            from langchain_ollama import ChatOllama
+
+            self.llm = ChatOllama(
+                model=llm_config_obj.model,
+                base_url=base_url,
+                temperature=temperature,
+                num_predict=max_tokens,
+            )
+
+        else:
+            raise ValueError(f"Unsupported provider for LangChain: {llm_config_obj.provider}")
 
         self._setup_chains()
 

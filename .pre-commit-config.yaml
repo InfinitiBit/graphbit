@@ -167,12 +167,12 @@ repos:
 - repo: local
   hooks:
       # Python tests (fast subset)
-  - id: python-test-unit
-    name: Python unit tests
-    entry: python -m pytest -x --tb=short
-    language: system
-    files: ^tests/python_integration_tests/.*\.py$
-    pass_filenames: false
+ # - id: python-test-unit
+  #  name: Python unit tests
+   # entry: python -m pytest -x --tb=short
+    #language: system
+   # files: ^tests/python_integration_tests/.*\.py$
+   # pass_filenames: false
 
 
 

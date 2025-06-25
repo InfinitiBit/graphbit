@@ -17,7 +17,15 @@ impl Node {
     #[staticmethod]
     #[pyo3(signature = (name, prompt, agent_id=None))]
     fn agent(name: String, prompt: String, agent_id: Option<String>) -> PyResult<Self> {
-        let id = agent_id.unwrap_or_else(|| format!("agent_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+        let id = agent_id.unwrap_or_else(|| {
+            format!(
+                "agent_{}",
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_nanos()
+            )
+        });
         let node = WorkflowNode::new(
             name.clone(),
             format!("Agent: {}", name),
@@ -28,29 +36,29 @@ impl Node {
                 prompt_template: prompt,
             },
         );
-        
+
         Ok(Self { inner: node })
     }
 
     #[staticmethod]
     fn transform(name: String, transformation: String) -> Self {
-        Self { 
+        Self {
             inner: WorkflowNode::new(
                 name.clone(),
                 format!("Transform: {}", name),
                 NodeType::Transform { transformation },
-            )
+            ),
         }
     }
 
     #[staticmethod]
     fn condition(name: String, expression: String) -> Self {
-        Self { 
+        Self {
             inner: WorkflowNode::new(
                 name.clone(),
                 format!("Condition: {}", name),
                 NodeType::Condition { expression },
-            )
+            ),
         }
     }
 
@@ -61,4 +69,4 @@ impl Node {
     fn name(&self) -> String {
         self.inner.name.clone()
     }
-} 
+}

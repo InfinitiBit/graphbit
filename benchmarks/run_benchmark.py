@@ -19,22 +19,31 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
+import click
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 
-# Check if API key is set in environment
-if not os.environ.get("OPENAI_API_KEY"):
-    print("ERROR: OPENAI_API_KEY environment variable is required")
-    print("Please set it using: export OPENAI_API_KEY=your_api_key_here")
-    sys.exit(1)
+# API key will be checked later when actually running benchmarks
 
 # Add the benchmarks directory to Python path
 benchmarks_path = Path(__file__).parent / "frameworks"
 sys.path.insert(0, str(benchmarks_path))
 
 try:
-    from frameworks.common import BaseBenchmark, BenchmarkMetrics, BenchmarkScenario, FrameworkType
+    from frameworks.common import (
+        DEFAULT_MAX_TOKENS,
+        DEFAULT_MODEL,
+        DEFAULT_TEMPERATURE,
+        BaseBenchmark,
+        BenchmarkMetrics,
+        BenchmarkScenario,
+        FrameworkType,
+        LLMConfig,
+        LLMProvider,
+        create_llm_config_from_args,
+        get_provider_models,
+    )
     from frameworks.crewai_benchmark import CrewAIBenchmark
     from frameworks.graphbit_benchmark import GraphBitBenchmark
     from frameworks.langchain_benchmark import LangChainBenchmark
@@ -50,19 +59,25 @@ except ImportError as e:
     print("  - pip install pydantic-ai")
     print("  - pip install llama-index")
     print("  - pip install crewai")
-    print("  - pip install matplotlib seaborn")
+    print("  - pip install matplotlib seaborn click")
     sys.exit(1)
 
 
 class ComprehensiveBenchmarkRunner:
     """Runner for comprehensive framework benchmarks."""
 
-    def __init__(self, verbose: bool = False):
+    def __init__(self, llm_config: LLMConfig, verbose: bool = False):
         """Initialize the benchmark runner with configuration."""
         self.verbose = verbose
+        self.llm_config = llm_config
         self.config: Dict[str, Any] = {
-            "api_key": os.environ.get("OPENAI_API_KEY"),
-            "model": "gpt-4o-mini",
+            "llm_config": llm_config,
+            "provider": llm_config.provider.value,
+            "model": llm_config.model,
+            "temperature": llm_config.temperature,
+            "max_tokens": llm_config.max_tokens,
+            "api_key": llm_config.api_key or os.environ.get("OPENAI_API_KEY"),
+            "base_url": llm_config.base_url,
             "log_dir": "logs",
             "results_dir": "results",
         }
@@ -136,7 +151,7 @@ class ComprehensiveBenchmarkRunner:
     def log(self, message: str, level: str = "INFO") -> None:
         """Log message with timestamp."""
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        print(f"[{timestamp}] {level}: {message}")
+        click.echo(f"[{timestamp}] {level}: {message}")
 
     def log_verbose(self, message: str) -> None:
         """Log verbose message only if verbose mode is enabled."""
@@ -146,35 +161,35 @@ class ComprehensiveBenchmarkRunner:
     def print_framework_header(self, framework_name: str) -> None:
         """Print a header for the framework being tested."""
         if self.verbose:
-            print(f"\n{'=' * 60}")
-            print(f"Running {framework_name} Benchmark")
-            print(f"{'=' * 60}")
+            click.echo(f"\n{'=' * 60}")
+            click.echo(f"Running {framework_name} Benchmark")
+            click.echo(f"{'=' * 60}")
         else:
             self.log(f"Starting {framework_name} benchmark")
 
     def print_scenario_metrics(self, scenario_name: str, metrics: BenchmarkMetrics) -> None:
         """Print benchmark metrics in a formatted way."""
         if self.verbose:
-            print(f"\n{scenario_name} Results:")
-            print(f"  Execution Time: {metrics.execution_time_ms:.2f} ms")
-            print(f"  Memory Usage: {metrics.memory_usage_mb:.2f} MB")
-            print(f"  CPU Usage: {metrics.cpu_usage_percent:.2f}%")
-            print(f"  Token Count: {metrics.token_count}")
-            print(f"  Throughput: {metrics.throughput_tasks_per_sec:.2f} tasks/sec")
-            print(f"  Error Rate: {metrics.error_rate:.2%}")
+            click.echo(f"\n{scenario_name} Results:")
+            click.echo(f"  Execution Time: {metrics.execution_time_ms:.2f} ms")
+            click.echo(f"  Memory Usage: {metrics.memory_usage_mb:.2f} MB")
+            click.echo(f"  CPU Usage: {metrics.cpu_usage_percent:.2f}%")
+            click.echo(f"  Token Count: {metrics.token_count}")
+            click.echo(f"  Throughput: {metrics.throughput_tasks_per_sec:.2f} tasks/sec")
+            click.echo(f"  Error Rate: {metrics.error_rate:.2%}")
             if metrics.concurrent_tasks > 0:
-                print(f"  Concurrent Tasks: {metrics.concurrent_tasks}")
-            print(f"  Setup Time: {metrics.setup_time_ms:.2f} ms")
-            print(f"  Teardown Time: {metrics.teardown_time_ms:.2f} ms")
+                click.echo(f"  Concurrent Tasks: {metrics.concurrent_tasks}")
+            click.echo(f"  Setup Time: {metrics.setup_time_ms:.2f} ms")
+            click.echo(f"  Teardown Time: {metrics.teardown_time_ms:.2f} ms")
 
             # Additional metadata if available
             if metrics.metadata:
-                print("  Metadata:")
+                click.echo("  Metadata:")
                 for key, value in metrics.metadata.items():
                     if isinstance(value, float):
-                        print(f"    {key}: {value:.2f}")
+                        click.echo(f"    {key}: {value:.2f}")
                     else:
-                        print(f"    {key}: {value}")
+                        click.echo(f"    {key}: {value}")
         else:
             self.log(f"{scenario_name}: {metrics.execution_time_ms:.0f}ms, {metrics.memory_usage_mb:.1f}MB, {metrics.cpu_usage_percent:.1f}% CPU, {metrics.token_count} tokens")
 
@@ -299,7 +314,10 @@ class ComprehensiveBenchmarkRunner:
                 if scenario_name in results:
                     metrics = results[scenario_name]
                     print(
-                        f"{framework_name:<15} {metrics.execution_time_ms:<12.1f} " f"{metrics.memory_usage_mb:<13.1f} {metrics.cpu_usage_percent:<10.1f} " f"{metrics.token_count:<10} " f"{metrics.throughput_tasks_per_sec:<12.2f}"
+                        f"{framework_name:<15} {metrics.execution_time_ms:<12.1f} "
+                        f"{metrics.memory_usage_mb:<13.1f} {metrics.cpu_usage_percent:<10.1f} "
+                        f"{metrics.token_count:<10} "
+                        f"{metrics.throughput_tasks_per_sec:<12.2f}"
                     )
                 else:
                     print(f"{framework_name:<15} {'FAILED':<12} {'FAILED':<13} {'FAILED':<10} {'FAILED':<10} {'FAILED':<12}")
@@ -529,14 +547,152 @@ class ComprehensiveBenchmarkRunner:
         self.log(f"Visualizations saved to: {Path(str(self.config['results_dir'])).absolute()}")
 
 
-async def main() -> None:
-    """Run comprehensive benchmarks."""
-    # Check for verbose flag
-    verbose = "--verbose" in sys.argv or "-v" in sys.argv
+@click.command()
+@click.option("--provider", type=click.Choice([p.value for p in LLMProvider], case_sensitive=False), default=LLMProvider.OPENAI.value, help="LLM provider to use for benchmarking", show_default=True)
+@click.option("--model", type=str, default=DEFAULT_MODEL, help="Model name to use for benchmarking", show_default=True)
+@click.option("--temperature", type=float, default=DEFAULT_TEMPERATURE, help="Temperature parameter for LLM", show_default=True)
+@click.option("--max-tokens", type=int, default=DEFAULT_MAX_TOKENS, help="Maximum tokens for LLM responses", show_default=True)
+@click.option("--api-key", type=str, help="API key for the LLM provider (overrides environment variable)")
+@click.option("--base-url", type=str, help="Base URL for custom endpoints (e.g., Ollama)")
+@click.option("--frameworks", type=str, help="Comma-separated list of frameworks to test (e.g., 'graphbit,langchain')")
+@click.option("--scenarios", type=str, help="Comma-separated list of scenarios to run (e.g., 'simple_task,parallel_pipeline')")
+@click.option("--verbose", "-v", is_flag=True, help="Enable verbose output")
+@click.option("--list-models", is_flag=True, help="List available models for the selected provider and exit")
+def main(
+    provider: str,
+    model: str,
+    temperature: float,
+    max_tokens: int,
+    api_key: Optional[str],
+    base_url: Optional[str],
+    frameworks: Optional[str],
+    scenarios: Optional[str],
+    verbose: bool,
+    list_models: bool,
+) -> None:
+    """Run comprehensive benchmarks for AI frameworks.
 
-    runner = ComprehensiveBenchmarkRunner(verbose=verbose)
-    await runner.run_all_benchmarks()
+    This tool benchmarks GraphBit against other popular AI frameworks
+    using configurable LLM providers and models.
+    """
+    if list_models:
+        available_models = get_provider_models(provider)
+        if available_models:
+            click.echo(f"\nAvailable models for {provider}:")
+            for model_name in available_models:
+                click.echo(f"  • {model_name}")
+        else:
+            click.echo(f"No predefined models available for {provider}")
+            click.echo("You can still specify a custom model name.")
+        return
+
+    # Check for API key only when actually running benchmarks
+    if provider in ["openai"] and not (api_key or os.environ.get("OPENAI_API_KEY")):
+        click.echo("Error: OpenAI API key is required", err=True)
+        click.echo("Set it using: export OPENAI_API_KEY=your_api_key_here")
+        click.echo("Or use: --api-key your_api_key_here")
+        return
+    elif provider == "anthropic" and not (api_key or os.environ.get("ANTHROPIC_API_KEY")):
+        click.echo("Error: Anthropic API key is required", err=True)
+        click.echo("Set it using: export ANTHROPIC_API_KEY=your_api_key_here")
+        click.echo("Or use: --api-key your_api_key_here")
+        return
+
+    # Create configuration header
+    click.echo("🚀 " + click.style("GraphBit Framework Benchmark", fg="bright_blue", bold=True))
+    click.echo("=" * 50)
+    click.echo(f"Provider: {click.style(provider, fg='green', bold=True)}")
+    click.echo(f"Model: {click.style(model, fg='green', bold=True)}")
+    click.echo(f"Temperature: {click.style(str(temperature), fg='yellow')}")
+    click.echo(f"Max Tokens: {click.style(str(max_tokens), fg='yellow')}")
+    if base_url:
+        click.echo(f"Base URL: {click.style(base_url, fg='cyan')}")
+    click.echo("=" * 50)
+
+    # Validate model for provider
+    available_models = get_provider_models(provider)
+    if available_models and model not in available_models:
+        click.echo(f" Warning: '{model}' is not in the predefined models for {provider}")
+        click.echo(f"Available models: {', '.join(available_models)}")
+        click.confirm("Continue anyway?", abort=True)
+
+    # Create LLM configuration
+    try:
+        llm_config = create_llm_config_from_args(provider=provider, model=model, temperature=temperature, max_tokens=max_tokens, api_key=api_key, base_url=base_url)
+    except ValueError as e:
+        click.echo(f"Configuration error: {e}", err=True)
+        return
+
+    # Parse framework selection
+    selected_frameworks = None
+    if frameworks:
+        framework_names = [name.strip().lower() for name in frameworks.split(",")]
+        selected_frameworks = []
+        for name in framework_names:
+            try:
+                # Map common names to FrameworkType
+                name_mapping = {
+                    "graphbit": FrameworkType.GRAPHBIT,
+                    "langchain": FrameworkType.LANGCHAIN,
+                    "langgraph": FrameworkType.LANGGRAPH,
+                    "pydantic_ai": FrameworkType.PYDANTIC_AI,
+                    "pydanticai": FrameworkType.PYDANTIC_AI,
+                    "llamaindex": FrameworkType.LLAMAINDEX,
+                    "llama_index": FrameworkType.LLAMAINDEX,
+                    "crewai": FrameworkType.CREWAI,
+                    "crew_ai": FrameworkType.CREWAI,
+                }
+                if name in name_mapping:
+                    selected_frameworks.append(name_mapping[name])
+                else:
+                    framework_type = FrameworkType(name.upper())
+                    selected_frameworks.append(framework_type)
+            except ValueError:
+                click.echo(f"Unknown framework: {name}", err=True)
+                click.echo(f"Available frameworks: {', '.join([f.value.lower() for f in FrameworkType])}")
+                return
+
+    # Parse scenario selection
+    selected_scenarios = None
+    if scenarios:
+        scenario_names = [name.strip().lower() for name in scenarios.split(",")]
+        selected_scenarios = []
+        for name in scenario_names:
+            try:
+                scenario = BenchmarkScenario(name)
+                selected_scenarios.append(scenario)
+            except ValueError:
+                click.echo(f"Unknown scenario: {name}", err=True)
+                click.echo(f"Available scenarios: {', '.join([s.value for s in BenchmarkScenario])}")
+                return
+
+    # Run the benchmark
+    async def run_benchmark():
+        runner = ComprehensiveBenchmarkRunner(llm_config, verbose=verbose)
+
+        # Filter frameworks if specified
+        if selected_frameworks:
+            original_frameworks = runner.frameworks.copy()
+            runner.frameworks = {fw_type: fw_info for fw_type, fw_info in original_frameworks.items() if fw_type in selected_frameworks}
+
+        # Filter scenarios if specified
+        if selected_scenarios:
+            original_scenarios = runner.scenarios.copy()
+            runner.scenarios = [(scenario, name) for scenario, name in original_scenarios if scenario in selected_scenarios]
+
+        await runner.run_all_benchmarks()
+
+    try:
+        asyncio.run(run_benchmark())
+    except KeyboardInterrupt:
+        click.echo("\nBenchmark interrupted by user")
+    except Exception as e:
+        click.echo(f"Benchmark failed: {e}", err=True)
+        if verbose:
+            import traceback
+
+            traceback.print_exc()
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

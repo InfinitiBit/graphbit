@@ -1,8 +1,8 @@
 //! LLM configuration for GraphBit Python bindings
 
+use crate::validation::validate_api_key;
 use graphbit_core::llm::LlmConfig as CoreLlmConfig;
 use pyo3::prelude::*;
-use crate::validation::validate_api_key;
 
 #[pyclass]
 #[derive(Clone)]
@@ -16,7 +16,7 @@ impl LlmConfig {
     #[pyo3(signature = (api_key, model=None))]
     fn openai(api_key: String, model: Option<String>) -> PyResult<Self> {
         validate_api_key(&api_key, "OpenAI")?;
-        
+
         Ok(Self {
             inner: CoreLlmConfig::openai(
                 api_key,
@@ -29,7 +29,7 @@ impl LlmConfig {
     #[pyo3(signature = (api_key, model=None))]
     fn anthropic(api_key: String, model: Option<String>) -> PyResult<Self> {
         validate_api_key(&api_key, "Anthropic")?;
-        
+
         Ok(Self {
             inner: CoreLlmConfig::anthropic(
                 api_key,
@@ -42,9 +42,7 @@ impl LlmConfig {
     #[pyo3(signature = (model=None))]
     fn ollama(model: Option<String>) -> Self {
         Self {
-            inner: CoreLlmConfig::ollama(
-                model.unwrap_or_else(|| "llama3.2".to_string()),
-            ),
+            inner: CoreLlmConfig::ollama(model.unwrap_or_else(|| "llama3.2".to_string())),
         }
     }
 
@@ -55,4 +53,4 @@ impl LlmConfig {
     fn model(&self) -> String {
         self.inner.model_name().to_string()
     }
-} 
+}

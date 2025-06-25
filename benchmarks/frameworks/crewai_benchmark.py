@@ -16,9 +16,10 @@ from .common import (
     BaseBenchmark,
     BenchmarkMetrics,
     BenchmarkScenario,
+    LLMConfig,
+    LLMProvider,
     calculate_throughput,
     count_tokens_estimate,
-    get_standard_llm_config,
 )
 
 
@@ -32,19 +33,57 @@ class CrewAIBenchmark(BaseBenchmark):
         self.agents: Dict[str, Agent] = {}
         self.crews: Dict[str, Crew] = {}
 
+    def _get_llm_params(self) -> tuple[int, float]:
+        """Get max_tokens and temperature from configuration."""
+        llm_config_obj: LLMConfig | None = self.config.get("llm_config")
+        if not llm_config_obj:
+            raise ValueError("LLMConfig not found in configuration")
+        return llm_config_obj.max_tokens, llm_config_obj.temperature
+
     async def setup(self) -> None:
         """Set up CrewAI for benchmarking."""
-        llm_config = get_standard_llm_config(self.config)
-        api_key = os.getenv("OPENAI_API_KEY") or llm_config["api_key"]
-        if not api_key:
-            raise ValueError("OpenAI API key not found in environment or config")
+        llm_config_obj: LLMConfig | None = self.config.get("llm_config")
+        if not llm_config_obj:
+            raise ValueError("LLMConfig not found in configuration")
 
-        self.llm = LLM(
-            model=f"openai/{llm_config['model']}",
-            api_key=api_key,
-            temperature=llm_config["temperature"],
-            max_tokens=llm_config.get("max_tokens", 4000),
-        )
+        max_tokens, temperature = self._get_llm_params()
+
+        if llm_config_obj.provider == LLMProvider.OPENAI:
+            api_key = llm_config_obj.api_key or os.getenv("OPENAI_API_KEY")
+            if not api_key:
+                raise ValueError("OpenAI API key not found in environment or config")
+
+            self.llm = LLM(
+                model=f"openai/{llm_config_obj.model}",
+                api_key=api_key,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+
+        elif llm_config_obj.provider == LLMProvider.ANTHROPIC:
+            api_key = llm_config_obj.api_key or os.getenv("ANTHROPIC_API_KEY")
+            if not api_key:
+                raise ValueError("Anthropic API key not found in environment or config")
+
+            self.llm = LLM(
+                model=f"anthropic/{llm_config_obj.model}",
+                api_key=api_key,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+
+        elif llm_config_obj.provider == LLMProvider.OLLAMA:
+            base_url = llm_config_obj.base_url or "http://localhost:11434"
+
+            self.llm = LLM(
+                model=f"ollama/{llm_config_obj.model}",
+                base_url=base_url,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+
+        else:
+            raise ValueError(f"Unsupported provider for CrewAI: {llm_config_obj.provider}")
 
         self._setup_agents()
 

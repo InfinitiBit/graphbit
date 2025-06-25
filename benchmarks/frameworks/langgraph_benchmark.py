@@ -2,10 +2,9 @@
 
 import asyncio
 import os
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 from langchain.schema import HumanMessage
-from langchain_openai import ChatOpenAI
 from langgraph.graph import END, StateGraph
 from typing_extensions import TypedDict
 
@@ -18,9 +17,10 @@ from .common import (
     SIMPLE_TASK_PROMPT,
     BaseBenchmark,
     BenchmarkMetrics,
+    LLMConfig,
+    LLMProvider,
     calculate_throughput,
     count_tokens_estimate,
-    get_standard_llm_config,
 )
 
 
@@ -47,24 +47,68 @@ class LangGraphBenchmark(BaseBenchmark):
     def __init__(self, config: Dict[str, Any]):
         """Initialize LangGraph benchmark with configuration."""
         super().__init__(config)
-        self.llm: Optional[ChatOpenAI] = None
+        self.llm: Optional[Any] = None
         self.graphs: Dict[str, Any] = {}
+
+    def _get_llm_params(self) -> tuple[int, float]:
+        """Get max_tokens and temperature from configuration."""
+        llm_config_obj: LLMConfig | None = self.config.get("llm_config")
+        if not llm_config_obj:
+            raise ValueError("LLMConfig not found in configuration")
+        return llm_config_obj.max_tokens, llm_config_obj.temperature
 
     async def setup(self) -> None:
         """Set up LangGraph for benchmarking."""
         from pydantic import SecretStr
 
-        llm_config = get_standard_llm_config(self.config)
-        api_key = os.getenv("OPENAI_API_KEY") or llm_config["api_key"]
-        if not api_key:
-            raise ValueError("OpenAI API key not found in environment or config")
+        llm_config_obj: LLMConfig | None = self.config.get("llm_config")
+        if not llm_config_obj:
+            raise ValueError("LLMConfig not found in configuration")
 
-        self.llm = ChatOpenAI(
-            model=llm_config["model"],
-            api_key=SecretStr(api_key),
-            temperature=llm_config["temperature"],
-            max_tokens=llm_config["max_tokens"],
-        )
+        max_tokens, temperature = self._get_llm_params()
+
+        if llm_config_obj.provider == LLMProvider.OPENAI:
+            api_key = llm_config_obj.api_key or os.getenv("OPENAI_API_KEY")
+            if not api_key:
+                raise ValueError("OpenAI API key not found in environment or config")
+
+            from langchain_openai import ChatOpenAI
+
+            self.llm = ChatOpenAI(
+                model=llm_config_obj.model,
+                api_key=SecretStr(api_key),
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+
+        elif llm_config_obj.provider == LLMProvider.ANTHROPIC:
+            api_key = llm_config_obj.api_key or os.getenv("ANTHROPIC_API_KEY")
+            if not api_key:
+                raise ValueError("Anthropic API key not found in environment or config")
+
+            from langchain_anthropic import ChatAnthropic
+
+            self.llm = ChatAnthropic(
+                model=llm_config_obj.model,
+                api_key=SecretStr(api_key),
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+
+        elif llm_config_obj.provider == LLMProvider.OLLAMA:
+            base_url = llm_config_obj.base_url or "http://localhost:11434"
+
+            from langchain_ollama import ChatOllama
+
+            self.llm = ChatOllama(
+                model=llm_config_obj.model,
+                base_url=base_url,
+                temperature=temperature,
+                num_predict=max_tokens,
+            )
+
+        else:
+            raise ValueError(f"Unsupported provider for LangGraph: {llm_config_obj.provider}")
 
         self._setup_graphs()
 
@@ -110,7 +154,7 @@ class LangGraphBenchmark(BaseBenchmark):
             context = " | ".join(context_parts) if context_parts else "None"
 
             prompt = f"Previous results: {context}\n\nNew task: {task}"
-            
+
             if self.llm is None:
                 raise ValueError("LLM not initialized")
             response = self.llm.invoke([HumanMessage(content=prompt)])
@@ -146,7 +190,7 @@ class LangGraphBenchmark(BaseBenchmark):
         graph.add_node("route", route_next_step)
         graph.set_entry_point("process")
         graph.add_edge("process", "route")
-        
+
         def should_continue(state: WorkflowState) -> str:
             steps = list(state["step_data"].keys())
             current_step = state["current_step"]
@@ -158,7 +202,7 @@ class LangGraphBenchmark(BaseBenchmark):
                     return END
             except ValueError:
                 return END
-        
+
         graph.add_conditional_edges("route", should_continue)
 
         self.graphs["sequential"] = graph.compile()
@@ -207,18 +251,18 @@ class LangGraphBenchmark(BaseBenchmark):
         graph.add_node("task3", task3_node)
         graph.add_node("task4", task4_node)
         graph.add_node("collect", collect_results)
-        
+
         def start_parallel(state: WorkflowState) -> WorkflowState:
             return state
 
         graph.add_node("start", start_parallel)
         graph.set_entry_point("start")
-        
+
         graph.add_edge("start", "task1")
         graph.add_edge("start", "task2")
         graph.add_edge("start", "task3")
         graph.add_edge("start", "task4")
-        
+
         graph.add_edge("task1", "collect")
         graph.add_edge("task2", "collect")
         graph.add_edge("task3", "collect")

@@ -18,9 +18,10 @@ from .common import (
     BaseBenchmark,
     BenchmarkMetrics,
     BenchmarkScenario,
+    LLMConfig,
+    LLMProvider,
     calculate_throughput,
     count_tokens_estimate,
-    get_standard_llm_config,
 )
 
 
@@ -30,24 +31,66 @@ class LlamaIndexBenchmark(BaseBenchmark):
     def __init__(self, config: Dict[str, Any]):
         """Initialize LlamaIndex benchmark with configuration."""
         super().__init__(config)
-        self.llm: Optional[OpenAI] = None
+        self.llm: Optional[Any] = None
         self.index: Optional[VectorStoreIndex] = None
         self.query_engine: Optional[Any] = None
         self.chat_engine: Optional[Any] = None
 
+    def _get_llm_params(self) -> tuple[int, float]:
+        """Get max_tokens and temperature from configuration."""
+        llm_config_obj: LLMConfig | None = self.config.get("llm_config")
+        if not llm_config_obj:
+            raise ValueError("LLMConfig not found in configuration")
+        return llm_config_obj.max_tokens, llm_config_obj.temperature
+
     async def setup(self) -> None:
         """Set up LlamaIndex for benchmarking."""
-        llm_config = get_standard_llm_config(self.config)
-        api_key = os.getenv("OPENAI_API_KEY") or llm_config["api_key"]
-        if not api_key:
-            raise ValueError("OpenAI API key not found in environment or config")
+        llm_config_obj: LLMConfig | None = self.config.get("llm_config")
+        if not llm_config_obj:
+            raise ValueError("LLMConfig not found in configuration")
 
-        self.llm = OpenAI(
-            model=llm_config["model"],
-            api_key=api_key,
-            temperature=llm_config["temperature"],
-            max_tokens=llm_config["max_tokens"],
-        )
+        max_tokens, temperature = self._get_llm_params()
+
+        if llm_config_obj.provider == LLMProvider.OPENAI:
+            api_key = llm_config_obj.api_key or os.getenv("OPENAI_API_KEY")
+            if not api_key:
+                raise ValueError("OpenAI API key not found in environment or config")
+
+            self.llm = OpenAI(
+                model=llm_config_obj.model,
+                api_key=api_key,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+
+        elif llm_config_obj.provider == LLMProvider.ANTHROPIC:
+            api_key = llm_config_obj.api_key or os.getenv("ANTHROPIC_API_KEY")
+            if not api_key:
+                raise ValueError("Anthropic API key not found in environment or config")
+
+            from llama_index.llms.anthropic import Anthropic
+
+            self.llm = Anthropic(
+                model=llm_config_obj.model,
+                api_key=api_key,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+
+        elif llm_config_obj.provider == LLMProvider.OLLAMA:
+            base_url = llm_config_obj.base_url or "http://localhost:11434"
+
+            from llama_index.llms.ollama import Ollama
+
+            self.llm = Ollama(
+                model=llm_config_obj.model,
+                base_url=base_url,
+                temperature=temperature,
+                request_timeout=60.0,
+            )
+
+        else:
+            raise ValueError(f"Unsupported provider for LlamaIndex: {llm_config_obj.provider}")
 
         Settings.llm = self.llm
 
@@ -196,8 +239,8 @@ class LlamaIndexBenchmark(BaseBenchmark):
         large_documents = [Document(text=MEMORY_INTENSIVE_PROMPT + f" Document {i+1}. " + "Lorem ipsum dolor sit amet. " * 100) for i in range(50)]
 
         # Create index but use LLM directly for consistent token counts
-        memory_index = VectorStoreIndex.from_documents(large_documents)
-        
+        VectorStoreIndex.from_documents(large_documents)
+
         # Use the LLM directly with the full MEMORY_INTENSIVE_PROMPT for consistent token counting
         response = await self.llm.acomplete(MEMORY_INTENSIVE_PROMPT)
         result = str(response)

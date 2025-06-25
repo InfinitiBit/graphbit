@@ -1,11 +1,9 @@
 //! Embedding configuration for GraphBit Python bindings
 
-use graphbit_core::embeddings::{
-    EmbeddingConfig as CoreEmbeddingConfig, EmbeddingProvider,
-};
+use crate::validation::validate_api_key;
+use graphbit_core::embeddings::{EmbeddingConfig as CoreEmbeddingConfig, EmbeddingProvider};
 use pyo3::prelude::*;
 use std::collections::HashMap;
-use crate::validation::validate_api_key;
 
 #[pyclass]
 #[derive(Clone)]
@@ -19,7 +17,7 @@ impl EmbeddingConfig {
     #[pyo3(signature = (api_key, model=None))]
     fn openai(api_key: String, model: Option<String>) -> PyResult<Self> {
         validate_api_key(&api_key, "OpenAI")?;
-        
+
         Ok(Self {
             inner: CoreEmbeddingConfig {
                 provider: EmbeddingProvider::OpenAI,
@@ -36,7 +34,7 @@ impl EmbeddingConfig {
     #[staticmethod]
     fn huggingface(api_key: String, model: String) -> PyResult<Self> {
         validate_api_key(&api_key, "HuggingFace")?;
-        
+
         Ok(Self {
             inner: CoreEmbeddingConfig {
                 provider: EmbeddingProvider::HuggingFace,
@@ -49,4 +47,4 @@ impl EmbeddingConfig {
             },
         })
     }
-} 
+}

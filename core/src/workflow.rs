@@ -826,8 +826,6 @@ impl WorkflowExecutor {
             .await
     }
 
-
-
     /// Execute concurrent agent tasks with maximum efficiency
     /// This bypasses the workflow system entirely for pure speed
     pub async fn execute_concurrent_agent_tasks(

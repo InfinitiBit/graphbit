@@ -1,11 +1,11 @@
 //! Workflow module for GraphBit Python bindings
 
-pub mod node;
-pub mod workflow;
-pub mod result;
 pub mod executor;
+pub mod node;
+pub mod result;
+pub mod workflow;
 
+pub use executor::Executor;
 pub use node::Node;
-pub use workflow::Workflow;
 pub use result::WorkflowResult;
-pub use executor::Executor; 
+pub use workflow::Workflow;
