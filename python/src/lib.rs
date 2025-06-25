@@ -22,7 +22,7 @@ pub use workflow::{Executor, Node, Workflow, WorkflowResult};
 fn init() -> PyResult<()> {
     let _ = runtime::get_runtime(); // Initialize runtime
     graphbit_core::init()
-        .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
+        .map_err(errors::to_py_runtime_error)?;
     Ok(())
 }
 

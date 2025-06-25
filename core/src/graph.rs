@@ -4,7 +4,7 @@
 //! agentic workflows with proper dependency management and parallel execution.
 
 use crate::errors::{GraphBitError, GraphBitResult};
-use crate::types::NodeId;
+use crate::types::{NodeId, RetryConfig};
 use petgraph::{
     algo::{is_cyclic_directed, toposort},
     graph::{DiGraph, NodeIndex},
@@ -636,50 +636,4 @@ pub enum EdgeType {
     ErrorHandling,
 }
 
-/// Retry configuration for node execution
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RetryConfig {
-    /// Maximum number of retry attempts
-    pub max_attempts: u32,
-    /// Delay between retries in seconds
-    pub delay_seconds: u64,
-    /// Whether to use exponential backoff
-    pub exponential_backoff: bool,
-    /// Maximum delay for exponential backoff
-    pub max_delay_seconds: u64,
-}
 
-impl RetryConfig {
-    /// Create a new retry configuration
-    pub fn new(max_attempts: u32, delay_seconds: u64) -> Self {
-        Self {
-            max_attempts,
-            delay_seconds,
-            exponential_backoff: false,
-            max_delay_seconds: 300, // 5 minutes
-        }
-    }
-
-    /// Enable exponential backoff
-    pub fn with_exponential_backoff(mut self, max_delay_seconds: u64) -> Self {
-        self.exponential_backoff = true;
-        self.max_delay_seconds = max_delay_seconds;
-        self
-    }
-
-    /// Calculate delay for a given attempt
-    pub fn calculate_delay(&self, attempt: u32) -> u64 {
-        if self.exponential_backoff {
-            let delay = self.delay_seconds * 2_u64.pow(attempt.saturating_sub(1));
-            delay.min(self.max_delay_seconds)
-        } else {
-            self.delay_seconds
-        }
-    }
-}
-
-impl Default for RetryConfig {
-    fn default() -> Self {
-        Self::new(3, 1)
-    }
-}

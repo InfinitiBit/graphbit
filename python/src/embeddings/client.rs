@@ -5,6 +5,7 @@ use pyo3::prelude::*;
 use std::sync::Arc;
 
 use super::config::EmbeddingConfig;
+use crate::errors::to_py_runtime_error;
 use crate::runtime::get_runtime;
 
 #[pyclass]
@@ -18,7 +19,7 @@ impl EmbeddingClient {
     fn new(config: EmbeddingConfig) -> PyResult<Self> {
         let service = Arc::new(
             EmbeddingService::new(config.inner)
-                .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?,
+                .map_err(to_py_runtime_error)?,
         );
         Ok(Self { service })
     }
@@ -30,7 +31,7 @@ impl EmbeddingClient {
             let response = service
                 .embed_text(&text)
                 .await
-                .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
+                .map_err(to_py_runtime_error)?;
             Ok(response)
         })
     }
@@ -42,7 +43,7 @@ impl EmbeddingClient {
             let response = service
                 .embed_texts(&texts)
                 .await
-                .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
+                .map_err(to_py_runtime_error)?;
             Ok(response)
         })
     }
@@ -50,6 +51,6 @@ impl EmbeddingClient {
     #[staticmethod]
     fn similarity(a: Vec<f32>, b: Vec<f32>) -> PyResult<f32> {
         EmbeddingService::cosine_similarity(&a, &b)
-            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))
+            .map_err(to_py_runtime_error)
     }
 }

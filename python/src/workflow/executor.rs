@@ -5,23 +5,19 @@ use pyo3::prelude::*;
 use pyo3::types::PyAny;
 
 use super::{result::WorkflowResult, workflow::Workflow};
+use crate::errors::to_py_runtime_error;
 use crate::llm::config::LlmConfig;
 use crate::runtime::get_runtime;
 
 #[pyclass]
-pub struct Executor {
-    _config: LlmConfig,
-}
+pub struct Executor;
 
 #[pymethods]
 impl Executor {
     #[new]
-    fn new(config: LlmConfig) -> Self {
-        Self { _config: config }
+    fn new(_config: LlmConfig) -> Self {
+        Self
     }
-
-    fn timeout(&mut self, _timeout_seconds: u64) {}
-    fn retries(&mut self, _max_retries: u32) {}
 
     fn run(&self, workflow: &Workflow) -> PyResult<WorkflowResult> {
         let workflow_clone = workflow.inner.clone();
@@ -31,7 +27,7 @@ impl Executor {
             let result = executor
                 .execute(workflow_clone)
                 .await
-                .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
+                .map_err(to_py_runtime_error)?;
 
             Ok(WorkflowResult { inner: result })
         })
@@ -45,7 +41,7 @@ impl Executor {
             let result = executor
                 .execute(workflow_clone)
                 .await
-                .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
+                .map_err(to_py_runtime_error)?;
 
             Ok(WorkflowResult { inner: result })
         })

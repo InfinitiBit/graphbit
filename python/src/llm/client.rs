@@ -8,7 +8,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use super::config::LlmConfig;
-use crate::errors::FastError;
+use crate::errors::to_py_error;
 use crate::runtime::get_runtime;
 
 #[pyclass]
@@ -22,7 +22,7 @@ impl LlmClient {
     fn new(config: LlmConfig) -> PyResult<Self> {
         let provider =
             graphbit_core::llm::LlmProviderFactory::create_provider(config.inner.clone())
-                .map_err(|e| FastError::from_graphbit_error(&e).to_py_err())?;
+                .map_err(to_py_error)?;
 
         Ok(Self {
             provider: Arc::new(RwLock::new(provider)),
@@ -53,7 +53,7 @@ impl LlmClient {
             let response = provider_guard
                 .complete(request)
                 .await
-                .map_err(|e| FastError::from_graphbit_error(&e).to_py_err())?;
+                .map_err(to_py_error)?;
 
             Ok(response.content)
         })
@@ -83,7 +83,7 @@ impl LlmClient {
             let response = provider_guard
                 .complete(request)
                 .await
-                .map_err(|e| FastError::from_graphbit_error(&e).to_py_err())?;
+                .map_err(to_py_error)?;
 
             Ok(response.content)
         })
@@ -176,7 +176,7 @@ impl LlmClient {
             let response = guard
                 .complete(request)
                 .await
-                .map_err(|e| FastError::from_graphbit_error(&e).to_py_err())?;
+                .map_err(to_py_error)?;
 
             Ok(response.content)
         })
@@ -220,7 +220,7 @@ impl LlmClient {
                     let response = guard
                         .complete(request)
                         .await
-                        .map_err(|e| FastError::from_graphbit_error(&e).to_py_err())?;
+                        .map_err(to_py_error)?;
                     Ok(response.content)
                 }
             }

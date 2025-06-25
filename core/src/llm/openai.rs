@@ -3,7 +3,7 @@
 use crate::errors::{GraphBitError, GraphBitResult};
 use crate::llm::providers::LlmProviderTrait;
 use crate::llm::{
-    EnhancedLlmProviderTrait, FinishReason, LlmMessage, LlmRequest, LlmResponse, LlmRole, LlmTool,
+    FinishReason, LlmMessage, LlmRequest, LlmResponse, LlmRole, LlmTool,
     LlmToolCall, LlmUsage,
 };
 use async_trait::async_trait;
@@ -281,29 +281,7 @@ impl LlmProviderTrait for OpenAiProvider {
     }
 }
 
-#[async_trait]
-impl EnhancedLlmProviderTrait for OpenAiProvider {
-    fn clone_provider(&self) -> Box<dyn LlmProviderTrait> {
-        Box::new(Self {
-            client: self.client.clone(),
-            api_key: self.api_key.clone(),
-            model: self.model.clone(),
-            base_url: self.base_url.clone(),
-            organization: self.organization.clone(),
-        })
-    }
 
-    async fn get_provider_stats(&self) -> GraphBitResult<serde_json::Value> {
-        Ok(serde_json::json!({
-            "provider_type": "openai",
-            "model": self.model,
-            "base_url": self.base_url,
-            "supports_function_calling": self.supports_function_calling(),
-            "max_context_length": self.max_context_length(),
-            "cost_per_token": self.cost_per_token()
-        }))
-    }
-}
 
 // OpenAI API types
 #[derive(Debug, Serialize)]
@@ -373,6 +351,4 @@ struct OpenAiChoice {
 struct OpenAiUsage {
     prompt_tokens: u32,
     completion_tokens: u32,
-    #[allow(dead_code)]
-    total_tokens: u32,
 }

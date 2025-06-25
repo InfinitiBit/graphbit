@@ -1,6 +1,7 @@
 //! Workflow implementation for GraphBit Python bindings
 
 use super::node::Node;
+use crate::errors::to_py_runtime_error;
 use graphbit_core::{graph::WorkflowEdge, types::NodeId, workflow::Workflow as CoreWorkflow};
 use pyo3::prelude::*;
 
@@ -22,7 +23,7 @@ impl Workflow {
         let node_id = self
             .inner
             .add_node(node.inner)
-            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
+            .map_err(to_py_runtime_error)?;
         Ok(node_id.to_string())
     }
 
@@ -36,14 +37,14 @@ impl Workflow {
 
         self.inner
             .connect_nodes(from_node_id, to_node_id, WorkflowEdge::data_flow())
-            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
+            .map_err(to_py_runtime_error)?;
         Ok(())
     }
 
     fn validate(&self) -> PyResult<()> {
         self.inner
             .validate()
-            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
+            .map_err(to_py_runtime_error)?;
         Ok(())
     }
 }

@@ -13,6 +13,14 @@ use uuid::Uuid;
 // Import error types from the errors module
 use crate::errors::GraphBitResult;
 
+// Common timeout constants to avoid magic numbers
+/// Default timeout for operations (30 seconds)
+pub const DEFAULT_TIMEOUT_MS: u64 = 30_000;
+/// Default recovery timeout for circuit breakers (1 minute)
+pub const DEFAULT_RECOVERY_TIMEOUT_MS: u64 = 60_000;
+/// Default failure window for circuit breakers (5 minutes)
+pub const DEFAULT_FAILURE_WINDOW_MS: u64 = 300_000;
+
 /// Unique identifier for agents
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct AgentId(pub Uuid);
@@ -435,13 +443,7 @@ impl NodeExecutionResult {
         }
     }
 
-    /// Return this result to the pool for reuse
-    pub fn return_to_pool(mut self) {
-        // Clear sensitive data before returning to pool
-        self.output = serde_json::Value::Null;
-        self.error = None;
-        self.metadata.clear();
-    }
+
 
     /// Add metadata to the result
     pub fn with_metadata(mut self, key: String, value: serde_json::Value) -> Self {
@@ -532,7 +534,7 @@ impl Default for RetryConfig {
             max_attempts: 3,
             initial_delay_ms: 1000,
             backoff_multiplier: 2.0,
-            max_delay_ms: 30000,
+            max_delay_ms: DEFAULT_TIMEOUT_MS,
             jitter_factor: 0.1,
             retryable_errors: vec![
                 RetryableErrorType::NetworkError,
@@ -551,7 +553,7 @@ impl RetryConfig {
             max_attempts,
             initial_delay_ms: 1000,
             backoff_multiplier: 2.0,
-            max_delay_ms: 30000,
+            max_delay_ms: DEFAULT_TIMEOUT_MS,
             jitter_factor: 0.1,
             retryable_errors: vec![
                 RetryableErrorType::NetworkError,
@@ -688,9 +690,9 @@ impl Default for CircuitBreakerConfig {
     fn default() -> Self {
         Self {
             failure_threshold: 5,
-            recovery_timeout_ms: 60000, // 1 minute
+            recovery_timeout_ms: DEFAULT_RECOVERY_TIMEOUT_MS,
             success_threshold: 3,
-            failure_window_ms: 300000, // 5 minutes
+            failure_window_ms: DEFAULT_FAILURE_WINDOW_MS,
         }
     }
 }
