@@ -1,672 +1,786 @@
-# Embeddings and Vector Search
+# Embeddings
 
-GraphBit provides powerful embedding capabilities for semantic search, similarity matching, and intelligent document processing. This guide covers embedding generation, vector storage, and search operations within GraphBit workflows.
+GraphBit provides vector embedding capabilities for semantic search, similarity analysis, and other AI-powered text operations. This guide covers configuration, usage, and best practices for working with embeddings.
 
 ## Overview
 
-GraphBit embeddings enable:
-- **Semantic Search**: Find documents based on meaning, not just keywords
-- **Similarity Matching**: Compare documents, text chunks, or data objects
-- **Content Classification**: Categorize content based on semantic features
-- **Recommendation Systems**: Build content and product recommendations
-- **Document Processing**: Intelligent text analysis and extraction
+GraphBit's embedding system supports:
+- **Multiple Providers** - OpenAI and HuggingFace embedding models
+- **Unified Interface** - Consistent API across all providers
+- **Batch Processing** - Efficient processing of multiple texts
+- **Similarity Calculations** - Built-in cosine similarity functions
+- **Production Ready** - Robust error handling and performance optimization
 
-## Basic Embedding Operations
+## Supported Providers
 
-### Generating Embeddings
+### OpenAI Embeddings
+- **text-embedding-3-small** - Fast, cost-effective embeddings
+- **text-embedding-3-large** - Higher quality, more expensive
+- **text-embedding-ada-002** - Legacy model, still supported
+
+### HuggingFace Embeddings
+- **sentence-transformers/all-MiniLM-L6-v2** - Fast, good quality
+- **sentence-transformers/all-mpnet-base-v2** - High quality
+- **sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2** - Multilingual
+
+## Configuration
+
+### OpenAI Configuration
+
+Configure OpenAI embedding provider:
 
 ```python
 import graphbit
-import numpy as np
-import time
 import os
-from typing import List, Dict, Any
 
-def create_embedding_workflow():
-    """Create workflow for generating embeddings from text."""
-    
-    builder = graphbit.PyWorkflowBuilder("Embedding Generation Workflow")
-    
-    # Text preprocessor
-    preprocessor = graphbit.PyWorkflowNode.agent_node(
-        name="Text Preprocessor",
-        description="Preprocesses text for embedding generation",
-        agent_id="text_preprocessor",
-        prompt="""
-        Preprocess this text for embedding generation:
-        
-        Text: {input}
-        
-        Tasks:
-        1. Clean and normalize the text
-        2. Remove noise and irrelevant content
-        3. Extract key semantic content
-        4. Prepare for optimal embedding quality
-        
-        Return the cleaned text ready for embedding.
-        """
-    )
-    
-    # Embedding generator
-    embedding_generator = graphbit.PyWorkflowNode.agent_node(
-        name="Embedding Generator",
-        description="Generates semantic embeddings from text",
-        agent_id="embedding_generator",
-        prompt="""
-        Generate semantic embeddings for this text:
-        
-        Processed Text: {preprocessed_text}
-        
-        Create high-quality embeddings that capture:
-        1. Semantic meaning and context
-        2. Key concepts and relationships
-        3. Domain-specific terminology
-        4. Emotional tone and intent
-        
-        Return embedding vector and metadata.
-        """
-    )
-    
-    # Build embedding workflow
-    prep_id = builder.add_node(preprocessor)
-    gen_id = builder.add_node(embedding_generator)
-    
-    builder.connect(prep_id, gen_id, graphbit.PyWorkflowEdge.data_flow())
-    
-    return builder.build()
+# Initialize GraphBit
+graphbit.init()
 
-def create_batch_embedding_workflow():
-    """Create workflow for batch embedding generation."""
-    
-    builder = graphbit.PyWorkflowBuilder("Batch Embedding Workflow")
-    
-    # Batch splitter
-    splitter = graphbit.PyWorkflowNode.transform_node(
-        name="Text Batch Splitter",
-        description="Splits input into optimal batch sizes",
-        transformation="split"
-    )
-    
-    # Parallel embedding processors
-    embedding_processors = []
-    for i in range(4):  # Process 4 batches in parallel
-        processor = graphbit.PyWorkflowNode.agent_node(
-            name=f"Batch Processor {i+1}",
-            description=f"Processes embedding batch {i+1}",
-            agent_id=f"batch_processor_{i+1}",
-            prompt=f"""
-            Generate embeddings for this batch of texts:
-            
-            Text Batch: {{batch_{i+1}_texts}}
-            
-            For each text in the batch:
-            1. Generate high-quality embeddings
-            2. Maintain consistency across the batch
-            3. Include metadata and quality scores
-            4. Optimize for downstream processing
-            
-            Return batch embeddings with metadata.
-            """
-        )
-        embedding_processors.append(processor)
-    
-    # Batch aggregator
-    aggregator = graphbit.PyWorkflowNode.agent_node(
-        name="Embedding Aggregator",
-        description="Aggregates batch embedding results",
-        agent_id="embedding_aggregator",
-        prompt="""
-        Aggregate embeddings from all batches:
-        
-        Batch Results: {all_batch_results}
-        
-        Combine and organize:
-        1. All embedding vectors
-        2. Metadata and quality scores
-        3. Index mappings
-        4. Summary statistics
-        
-        Return consolidated embedding collection.
-        """
-    )
-    
-    # Build batch embedding workflow
-    split_id = builder.add_node(splitter)
-    proc_ids = [builder.add_node(proc) for proc in embedding_processors]
-    agg_id = builder.add_node(aggregator)
-    
-    # Connect splitter to all processors
-    for proc_id in proc_ids:
-        builder.connect(split_id, proc_id, graphbit.PyWorkflowEdge.data_flow())
-    
-    # Connect all processors to aggregator
-    for proc_id in proc_ids:
-        builder.connect(proc_id, agg_id, graphbit.PyWorkflowEdge.data_flow())
-    
-    return builder.build()
+# Basic OpenAI configuration
+embedding_config = graphbit.EmbeddingConfig.openai(
+    api_key=os.getenv("OPENAI_API_KEY"),
+    model="text-embedding-3-small"  # Optional - defaults to text-embedding-3-small
+)
+
+print(f"Provider: OpenAI")
+print(f"Model: {embedding_config.model}")
 ```
 
-## Vector Storage and Indexing
+#### OpenAI Model Comparison
 
-### Vector Database Integration
+| Model | Dimensions | Performance | Cost | Best For |
+|-------|------------|-------------|------|----------|
+| `text-embedding-3-small` | 1536 | Fast | Low | General purpose, high volume |
+| `text-embedding-3-large` | 3072 | Slower | High | High accuracy requirements |
+| `text-embedding-ada-002` | 1536 | Medium | Medium | Legacy applications |
 
 ```python
-class VectorStore:
-    """Simple vector storage implementation for embeddings."""
+# Model selection examples
+fast_config = graphbit.EmbeddingConfig.openai(
+    api_key=os.getenv("OPENAI_API_KEY"),
+    model="text-embedding-3-small"  # Fast and economical
+)
+
+quality_config = graphbit.EmbeddingConfig.openai(
+    api_key=os.getenv("OPENAI_API_KEY"),
+    model="text-embedding-3-large"  # High quality
+)
+
+legacy_config = graphbit.EmbeddingConfig.openai(
+    api_key=os.getenv("OPENAI_API_KEY"),
+    model="text-embedding-ada-002"  # Legacy compatibility
+)
+```
+
+### HuggingFace Configuration
+
+Configure HuggingFace embedding provider:
+
+```python
+# HuggingFace configuration
+embedding_config = graphbit.EmbeddingConfig.huggingface(
+    api_key=os.getenv("HUGGINGFACE_API_KEY"),
+    model="sentence-transformers/all-MiniLM-L6-v2"
+)
+
+print(f"Provider: HuggingFace")
+print(f"Model: {embedding_config.model}")
+```
+
+#### HuggingFace Model Options
+
+```python
+# Fast, lightweight model
+fast_hf_config = graphbit.EmbeddingConfig.huggingface(
+    api_key=os.getenv("HUGGINGFACE_API_KEY"),
+    model="sentence-transformers/all-MiniLM-L6-v2"
+)
+
+# High quality model
+quality_hf_config = graphbit.EmbeddingConfig.huggingface(
+    api_key=os.getenv("HUGGINGFACE_API_KEY"),
+    model="sentence-transformers/all-mpnet-base-v2"
+)
+
+# Multilingual model
+multilingual_config = graphbit.EmbeddingConfig.huggingface(
+    api_key=os.getenv("HUGGINGFACE_API_KEY"),
+    model="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+)
+```
+
+## Basic Usage
+
+### Creating Embedding Client
+
+```python
+# Create embedding client
+embedding_client = graphbit.EmbeddingClient(embedding_config)
+```
+
+### Single Text Embedding
+
+Generate embeddings for individual texts:
+
+```python
+# Embed single text
+text = "GraphBit is a powerful framework for AI agent workflows"
+vector = embedding_client.embed(text)
+
+print(f"Text: {text}")
+print(f"Vector dimension: {len(vector)}")
+print(f"First 5 values: {vector[:5]}")
+```
+
+### Batch Text Embeddings
+
+Process multiple texts efficiently:
+
+```python
+# Embed multiple texts
+texts = [
+    "Machine learning is transforming industries",
+    "Natural language processing enables computers to understand text", 
+    "Deep learning models require large datasets",
+    "AI ethics is becoming increasingly important",
+    "Transformer architectures revolutionized NLP"
+]
+
+vectors = embedding_client.embed_many(texts)
+
+print(f"Generated {len(vectors)} embeddings")
+for i, (text, vector) in enumerate(zip(texts, vectors)):
+    print(f"Text {i+1}: {text[:50]}...")
+    print(f"Vector dimension: {len(vector)}")
+```
+
+## Similarity Calculations
+
+### Cosine Similarity
+
+Calculate similarity between vectors:
+
+```python
+# Generate embeddings for comparison
+text1 = "Artificial intelligence and machine learning"
+text2 = "AI and ML technologies"
+text3 = "Weather forecast for tomorrow"
+
+vector1 = embedding_client.embed(text1)
+vector2 = embedding_client.embed(text2)
+vector3 = embedding_client.embed(text3)
+
+# Calculate similarities
+similarity_1_2 = graphbit.EmbeddingClient.similarity(vector1, vector2)
+similarity_1_3 = graphbit.EmbeddingClient.similarity(vector1, vector3)
+similarity_2_3 = graphbit.EmbeddingClient.similarity(vector2, vector3)
+
+print(f"Similarity between text1 and text2: {similarity_1_2:.3f}")
+print(f"Similarity between text1 and text3: {similarity_1_3:.3f}")
+print(f"Similarity between text2 and text3: {similarity_2_3:.3f}")
+```
+
+### Finding Most Similar Texts
+
+```python
+def find_most_similar(query_text, candidate_texts, embedding_client, threshold=0.7):
+    """Find most similar texts to a query"""
+    query_vector = embedding_client.embed(query_text)
+    candidate_vectors = embedding_client.embed_many(candidate_texts)
     
-    def __init__(self, dimension=1536):  # OpenAI embedding dimension
-        self.dimension = dimension
-        self.vectors: List[np.ndarray] = []
-        self.metadata: List[Dict[str, Any]] = []
-        self.index_map: Dict[str, int] = {}
+    similarities = []
+    for i, candidate_vector in enumerate(candidate_vectors):
+        similarity = graphbit.EmbeddingClient.similarity(query_vector, candidate_vector)
+        similarities.append((i, candidate_texts[i], similarity))
     
-    def add_embedding(self, vector, metadata=None, doc_id=None):
-        """Add an embedding vector to the store."""
-        
-        if isinstance(vector, list):
-            vector = np.array(vector)
-        
-        if vector.shape[0] != self.dimension:
-            raise ValueError(f"Vector dimension {vector.shape[0]} doesn't match store dimension {self.dimension}")
-        
-        # Normalize vector for cosine similarity
-        normalized_vector = vector / np.linalg.norm(vector)
-        
-        index = len(self.vectors)
-        self.vectors.append(normalized_vector)
-        self.metadata.append(metadata or {})
-        
-        if doc_id:
-            self.index_map[doc_id] = index
-        
-        return index
+    # Sort by similarity (highest first)
+    similarities.sort(key=lambda x: x[2], reverse=True)
     
-    def search_similar(self, query_vector, top_k=5, threshold=0.7):
-        """Search for similar vectors using cosine similarity."""
-        
-        if not self.vectors:
+    # Filter by threshold
+    results = [(text, sim) for _, text, sim in similarities if sim >= threshold]
+    
+    return results
+
+# Example usage
+query = "machine learning algorithms"
+candidates = [
+    "Deep learning neural networks",
+    "Supervised learning models",
+    "Recipe for chocolate cake",
+    "Natural language processing",
+    "Computer vision techniques",
+    "Sports news update"
+]
+
+similar_texts = find_most_similar(query, candidates, embedding_client, threshold=0.5)
+
+print(f"Query: {query}")
+print("Most similar texts:")
+for text, similarity in similar_texts:
+    print(f"- {text} (similarity: {similarity:.3f})")
+```
+
+## Advanced Use Cases
+
+### Semantic Search
+
+Build a semantic search system:
+
+```python
+class SemanticSearch:
+    def __init__(self, embedding_client):
+        self.embedding_client = embedding_client
+        self.documents = []
+        self.document_vectors = []
+    
+    def add_documents(self, documents):
+        """Add documents to the search index"""
+        self.documents.extend(documents)
+        new_vectors = self.embedding_client.embed_many(documents)
+        self.document_vectors.extend(new_vectors)
+        print(f"Added {len(documents)} documents to index")
+    
+    def search(self, query, top_k=5, min_similarity=0.3):
+        """Search for most relevant documents"""
+        if not self.documents:
             return []
         
-        if isinstance(query_vector, list):
-            query_vector = np.array(query_vector)
+        query_vector = self.embedding_client.embed(query)
         
-        # Normalize query vector
-        query_normalized = query_vector / np.linalg.norm(query_vector)
-        
-        # Calculate cosine similarities
+        # Calculate similarities
         similarities = []
-        for i, stored_vector in enumerate(self.vectors):
-            similarity = np.dot(query_normalized, stored_vector)
-            if similarity >= threshold:
-                similarities.append((i, similarity))
+        for i, doc_vector in enumerate(self.document_vectors):
+            similarity = graphbit.EmbeddingClient.similarity(query_vector, doc_vector)
+            if similarity >= min_similarity:
+                similarities.append((i, self.documents[i], similarity))
         
-        # Sort by similarity score (descending)
-        similarities.sort(key=lambda x: x[1], reverse=True)
-        
-        # Return top_k results
-        results = []
-        for i, (index, score) in enumerate(similarities[:top_k]):
-            results.append({
-                "index": index,
-                "similarity": float(score),
-                "metadata": self.metadata[index],
-                "vector": self.vectors[index]
-            })
-        
-        return results
-    
-    def get_stats(self):
-        """Get vector store statistics."""
-        
-        return {
-            "total_vectors": len(self.vectors),
-            "dimension": self.dimension,
-            "memory_usage_mb": len(self.vectors) * self.dimension * 8 / (1024 * 1024),  # Approximate
-            "indexed_documents": len(self.index_map)
-        }
+        # Sort and return top results
+        similarities.sort(key=lambda x: x[2], reverse=True)
+        return similarities[:top_k]
 
-def create_vector_storage_workflow():
-    """Create workflow for storing embeddings in vector database."""
-    
-    builder = graphbit.PyWorkflowBuilder("Vector Storage Workflow")
-    
-    # Vector processor
-    processor = graphbit.PyWorkflowNode.agent_node(
-        name="Vector Processor",
-        description="Processes vectors for storage",
-        agent_id="vector_processor",
-        prompt="""
-        Process embeddings for vector storage:
-        
-        Embeddings: {embeddings}
-        Metadata: {metadata}
-        
-        Prepare for storage:
-        1. Validate vector dimensions
-        2. Normalize vectors if needed
-        3. Enrich metadata
-        4. Generate unique identifiers
-        5. Optimize for search performance
-        
-        Return processed vectors ready for storage.
-        """
-    )
-    
-    builder.add_node(processor)
-    
-    return builder.build()
+# Usage example
+search_engine = SemanticSearch(embedding_client)
+
+# Add documents
+documents = [
+    "GraphBit provides powerful workflow automation for AI agents",
+    "Machine learning models require careful training and validation",
+    "Natural language processing enables text understanding", 
+    "Computer vision analyzes and interprets visual data",
+    "Deep learning uses neural networks with multiple layers",
+    "Data science combines statistics, programming, and domain expertise"
+]
+
+search_engine.add_documents(documents)
+
+# Search
+results = search_engine.search("AI workflow automation", top_k=3)
+
+print("Search Results:")
+for i, (doc_idx, document, similarity) in enumerate(results):
+    print(f"{i+1}. {document} (score: {similarity:.3f})")
 ```
 
-## Semantic Search
+### Document Classification
 
-### Search and Retrieval Workflows
+Use embeddings for document classification:
 
 ```python
-def create_semantic_search_workflow():
-    """Create workflow for semantic search operations."""
+class EmbeddingClassifier:
+    def __init__(self, embedding_client):
+        self.embedding_client = embedding_client
+        self.class_centroids = {}
     
-    builder = graphbit.PyWorkflowBuilder("Semantic Search Workflow")
+    def train(self, labeled_documents):
+        """Train classifier with labeled documents"""
+        class_vectors = {}
+        
+        # Group documents by class
+        for document, label in labeled_documents:
+            if label not in class_vectors:
+                class_vectors[label] = []
+            
+            vector = self.embedding_client.embed(document)
+            class_vectors[label].append(vector)
+        
+        # Calculate centroids for each class
+        for label, vectors in class_vectors.items():
+            # Average the vectors to get centroid
+            centroid = [sum(values) / len(values) for values in zip(*vectors)]
+            self.class_centroids[label] = centroid
+        
+        print(f"Trained classifier with {len(self.class_centroids)} classes")
     
-    # Query processor
-    query_processor = graphbit.PyWorkflowNode.agent_node(
-        name="Query Processor",
-        description="Processes search queries for optimal matching",
-        agent_id="query_processor",
-        prompt="""
-        Process this search query for semantic matching:
+    def predict(self, document):
+        """Predict class for a document"""
+        if not self.class_centroids:
+            raise ValueError("Classifier not trained")
         
-        Query: {query}
-        Search Context: {search_context}
+        doc_vector = self.embedding_client.embed(document)
         
-        Process query:
-        1. Extract key concepts and intent
-        2. Expand with synonyms and related terms
-        3. Identify domain-specific terminology
-        4. Optimize for embedding generation
-        5. Handle multi-language queries if needed
+        best_class = None
+        best_similarity = -1
         
-        Return processed query ready for embedding.
-        """
-    )
-    
-    # Search engine
-    search_engine = graphbit.PyWorkflowNode.agent_node(
-        name="Semantic Search Engine",
-        description="Performs semantic search using embeddings",
-        agent_id="search_engine",
-        prompt="""
-        Perform semantic search using query embeddings:
+        for label, centroid in self.class_centroids.items():
+            similarity = graphbit.EmbeddingClient.similarity(doc_vector, centroid)
+            if similarity > best_similarity:
+                best_similarity = similarity
+                best_class = label
         
-        Query Embeddings: {query_embeddings}
-        Vector Database: {vector_store}
-        Search Parameters: {search_params}
-        
-        Execute search:
-        1. Find semantically similar documents
-        2. Rank by relevance and quality
-        3. Apply filters and constraints
-        4. Diversify results if needed
-        5. Generate relevance scores
-        
-        Return ranked search results with explanations.
-        """
-    )
-    
-    # Build semantic search workflow
-    query_id = builder.add_node(query_processor)
-    search_id = builder.add_node(search_engine)
-    
-    builder.connect(query_id, search_id, graphbit.PyWorkflowEdge.data_flow())
-    
-    return builder.build()
+        return best_class, best_similarity
 
-class SemanticSearchEngine:
-    """High-level semantic search engine using GraphBit workflows."""
-    
-    def __init__(self, vector_store: VectorStore):
-        self.vector_store = vector_store
-        self.search_workflow = create_semantic_search_workflow()
-        self.embedding_workflow = create_embedding_workflow()
-        
-        # Configure executor
-        config = graphbit.PyLlmConfig.openai(
-            api_key=os.getenv("OPENAI_API_KEY"),
-            model="gpt-3.5-turbo"
-        )
-        self.executor = graphbit.PyWorkflowExecutor(config)
-    
-    def add_document(self, text, metadata=None, doc_id=None):
-        """Add a document to the search index."""
-        
-        # Generate embeddings for the document
-        embedding_result = self.executor.execute_with_input(
-            self.embedding_workflow, 
-            {"input": text, "metadata": metadata}
-        )
-        
-        # Extract embedding vector (mock implementation)
-        embedding_vector = self._extract_embedding_from_result(embedding_result)
-        
-        # Store in vector database
-        doc_metadata = metadata or {}
-        doc_metadata.update({
-            "text": text,
-            "doc_id": doc_id,
-            "indexed_at": time.time()
-        })
-        
-        index = self.vector_store.add_embedding(
-            vector=embedding_vector,
-            metadata=doc_metadata,
-            doc_id=doc_id
-        )
-        
-        return index
-    
-    def search(self, query, top_k=5, threshold=0.7):
-        """Search for semantically similar documents."""
-        
-        # Generate query embeddings
-        query_result = self.executor.execute_with_input(
-            self.embedding_workflow,
-            {"input": query}
-        )
-        
-        query_embedding = self._extract_embedding_from_result(query_result)
-        
-        # Perform vector search
-        results = self.vector_store.search_similar(
-            query_vector=query_embedding,
-            top_k=top_k,
-            threshold=threshold
-        )
-        
-        return results
-    
-    def _extract_embedding_from_result(self, result):
-        """Extract embedding vector from workflow result."""
-        # This would parse the actual workflow output format
-        # For demonstration, returning a mock embedding
-        return np.random.rand(1536)  # OpenAI embedding dimension
+# Usage example
+classifier = EmbeddingClassifier(embedding_client)
+
+# Training data
+training_data = [
+    ("Machine learning algorithms for data analysis", "technology"),
+    ("Python programming for web development", "technology"),
+    ("Basketball game highlights and scores", "sports"),
+    ("Football championship final results", "sports"),
+    ("Stock market analysis and trends", "finance"),
+    ("Investment strategies for retirement", "finance"),
+    ("Recipe for homemade pasta sauce", "cooking"),
+    ("Baking techniques for perfect bread", "cooking")
+]
+
+classifier.train(training_data)
+
+# Test classification
+test_documents = [
+    "Artificial intelligence breakthrough in computer vision",
+    "Soccer world cup final match report",
+    "Tips for making delicious pizza at home"
+]
+
+for doc in test_documents:
+    predicted_class, confidence = classifier.predict(doc)
+    print(f"Document: {doc}")
+    print(f"Predicted class: {predicted_class} (confidence: {confidence:.3f})\n")
 ```
 
-## Document Processing with Embeddings
+### Content Recommendation
 
-### Intelligent Document Analysis
-
-```python
-def create_document_processing_workflow():
-    """Create workflow for intelligent document processing using embeddings."""
-    
-    builder = graphbit.PyWorkflowBuilder("Document Processing Workflow")
-    
-    # Document analyzer
-    analyzer = graphbit.PyWorkflowNode.agent_node(
-        name="Document Analyzer",
-        description="Analyzes document structure and content",
-        agent_id="doc_analyzer",
-        prompt="""
-        Analyze this document for intelligent processing:
-        
-        Document: {document}
-        Processing Goals: {goals}
-        
-        Analyze:
-        1. Document structure and sections
-        2. Key topics and themes
-        3. Entity mentions and relationships
-        4. Content quality and relevance
-        5. Processing strategy recommendations
-        
-        Return analysis with processing plan.
-        """
-    )
-    
-    # Content chunker
-    chunker = graphbit.PyWorkflowNode.agent_node(
-        name="Content Chunker",
-        description="Intelligently chunks content for optimal embeddings",
-        agent_id="chunker",
-        prompt="""
-        Chunk document content for optimal embedding generation:
-        
-        Document Analysis: {doc_analysis}
-        Content: {content}
-        
-        Create chunks that:
-        1. Preserve semantic coherence
-        2. Maintain optimal size for embeddings
-        3. Respect document structure
-        4. Include necessary context
-        5. Enable effective retrieval
-        
-        Return semantically coherent chunks with metadata.
-        """
-    )
-    
-    # Build document processing workflow
-    analyze_id = builder.add_node(analyzer)
-    chunk_id = builder.add_node(chunker)
-    
-    builder.connect(analyze_id, chunk_id, graphbit.PyWorkflowEdge.data_flow())
-    
-    return builder.build()
-
-def create_similarity_clustering_workflow():
-    """Create workflow for clustering documents by similarity."""
-    
-    builder = graphbit.PyWorkflowBuilder("Similarity Clustering Workflow")
-    
-    # Similarity calculator
-    similarity_calc = graphbit.PyWorkflowNode.agent_node(
-        name="Similarity Calculator",
-        description="Calculates pairwise document similarities",
-        agent_id="similarity_calc",
-        prompt="""
-        Calculate similarities between document embeddings:
-        
-        Document Embeddings: {embeddings}
-        Similarity Method: {method}
-        
-        Calculate:
-        1. Pairwise similarity matrix
-        2. Nearest neighbor relationships
-        3. Similarity distributions
-        4. Outlier detection
-        5. Clustering hints
-        
-        Return comprehensive similarity analysis.
-        """
-    )
-    
-    # Cluster analyzer
-    cluster_analyzer = graphbit.PyWorkflowNode.agent_node(
-        name="Cluster Analyzer",
-        description="Analyzes and describes document clusters",
-        agent_id="cluster_analyzer",
-        prompt="""
-        Analyze and describe document clusters:
-        
-        Document Clusters: {clusters}
-        Original Documents: {documents}
-        
-        For each cluster:
-        1. Generate descriptive labels
-        2. Identify common themes
-        3. Extract representative documents
-        4. Calculate cluster quality metrics
-        5. Suggest cluster uses
-        
-        Return cluster analysis and recommendations.
-        """
-    )
-    
-    # Build clustering workflow
-    sim_id = builder.add_node(similarity_calc)
-    analyze_id = builder.add_node(cluster_analyzer)
-    
-    builder.connect(sim_id, analyze_id, graphbit.PyWorkflowEdge.data_flow())
-    
-    return builder.build()
-```
-
-## Practical Applications
-
-### Content Recommendation System
+Build a content recommendation system:
 
 ```python
-class ContentRecommendationEngine:
-    """Content recommendation system using embeddings."""
+class ContentRecommender:
+    def __init__(self, embedding_client):
+        self.embedding_client = embedding_client
+        self.content_database = []
+        self.content_vectors = []
     
-    def __init__(self):
-        self.vector_store = VectorStore()
-        self.user_profiles = {}  # User preference embeddings
-        self.content_embeddings = {}  # Content ID to embedding mapping
-        
-        # Workflows
-        self.embedding_workflow = create_embedding_workflow()
-        
-        # Executor
-        config = graphbit.PyLlmConfig.openai(
-            api_key=os.getenv("OPENAI_API_KEY"),
-            model="gpt-3.5-turbo"
-        )
-        self.executor = graphbit.PyWorkflowExecutor(config)
+    def add_content(self, content_items):
+        """Add content items to recommendation database"""
+        self.content_database.extend(content_items)
+        vectors = self.embedding_client.embed_many(content_items)
+        self.content_vectors.extend(vectors)
     
-    def add_content(self, content_id, text, metadata=None):
-        """Add content to the recommendation system."""
-        
-        # Generate content embeddings
-        embedding_result = self.executor.execute_with_input(
-            self.embedding_workflow,
-            {"input": text, "metadata": metadata}
-        )
-        
-        # Store content embedding (mock implementation)
-        embedding_vector = np.random.rand(1536)  # Would extract from actual result
-        
-        self.vector_store.add_embedding(
-            vector=embedding_vector,
-            metadata={"content_id": content_id, "text": text, **(metadata or {})},
-            doc_id=content_id
-        )
-        
-        self.content_embeddings[content_id] = embedding_vector
-        
-        return content_id
-    
-    def get_recommendations(self, user_id, num_recommendations=5):
-        """Get personalized recommendations for a user."""
-        
-        if user_id not in self.user_profiles:
+    def recommend(self, user_interests, num_recommendations=5):
+        """Recommend content based on user interests"""
+        if not self.content_database:
             return []
         
-        user_profile = self.user_profiles[user_id]
-        user_embedding = user_profile["embedding"]
+        # Create user profile vector
+        if isinstance(user_interests, list):
+            interest_vectors = self.embedding_client.embed_many(user_interests)
+            # Average interest vectors to create user profile
+            user_profile = [sum(values) / len(values) for values in zip(*interest_vectors)]
+        else:
+            user_profile = self.embedding_client.embed(user_interests)
         
-        # Find similar content
-        similar_content = self.vector_store.search_similar(
-            query_vector=user_embedding,
-            top_k=num_recommendations * 2,  # Get more for filtering
-            threshold=0.5
-        )
-        
-        # Generate final recommendations
+        # Calculate similarities to all content
         recommendations = []
-        for content in similar_content[:num_recommendations]:
-            recommendations.append({
-                "content_id": content["metadata"]["content_id"],
-                "similarity": content["similarity"],
-                "text": content["metadata"]["text"],
-                "explanation": f"Recommended based on {content['similarity']:.2f} similarity to your preferences"
-            })
+        for i, content_vector in enumerate(self.content_vectors):
+            similarity = graphbit.EmbeddingClient.similarity(user_profile, content_vector)
+            recommendations.append((self.content_database[i], similarity))
         
-        return recommendations
+        # Sort by similarity and return top recommendations
+        recommendations.sort(key=lambda x: x[1], reverse=True)
+        return recommendations[:num_recommendations]
 
-def demo_embedding_system():
-    """Demonstrate complete embedding system."""
+# Usage example
+recommender = ContentRecommender(embedding_client)
+
+# Add content
+content_items = [
+    "Introduction to machine learning algorithms",
+    "Advanced Python programming techniques",
+    "Data visualization with matplotlib",
+    "Natural language processing fundamentals",
+    "Computer vision applications in healthcare",
+    "Web development with Django framework",
+    "Database design and optimization",
+    "Cloud computing platforms comparison",
+    "Cybersecurity best practices guide",
+    "Mobile app development with React Native"
+]
+
+recommender.add_content(content_items)
+
+# Get recommendations
+user_interests = [
+    "Python programming",
+    "machine learning",
+    "data analysis"
+]
+
+recommendations = recommender.recommend(user_interests, num_recommendations=3)
+
+print("Content Recommendations:")
+for content, score in recommendations:
+    print(f"- {content} (relevance: {score:.3f})")
+```
+
+## Performance Optimization
+
+### Batch Processing
+
+Optimize performance with batch operations:
+
+```python
+def process_large_text_collection(texts, embedding_client, batch_size=100):
+    """Process large collections of texts efficiently"""
+    all_vectors = []
     
-    # Initialize recommendation engine
-    engine = ContentRecommendationEngine()
+    # Process in batches
+    for i in range(0, len(texts), batch_size):
+        batch = texts[i:i + batch_size]
+        batch_vectors = embedding_client.embed_many(batch)
+        all_vectors.extend(batch_vectors)
+        
+        print(f"Processed batch {i//batch_size + 1}, texts {i+1}-{min(i+batch_size, len(texts))}")
     
-    # Add sample content
-    contents = [
-        ("doc1", "Introduction to machine learning algorithms and their applications", {"category": "AI", "difficulty": "beginner"}),
-        ("doc2", "Advanced deep learning techniques for computer vision", {"category": "AI", "difficulty": "advanced"}),
-        ("doc3", "Web development with modern JavaScript frameworks", {"category": "Programming", "difficulty": "intermediate"}),
-        ("doc4", "Data visualization best practices and tools", {"category": "Data Science", "difficulty": "intermediate"}),
-        ("doc5", "Cloud computing fundamentals and deployment strategies", {"category": "Infrastructure", "difficulty": "beginner"})
-    ]
+    return all_vectors
+
+# Example with large text collection
+large_text_collection = [f"Document {i} with some sample content" for i in range(1000)]
+vectors = process_large_text_collection(large_text_collection, embedding_client)
+print(f"Generated {len(vectors)} embeddings")
+```
+
+### Caching Embeddings
+
+Implement caching for repeated embeddings:
+
+```python
+import hashlib
+import json
+import os
+
+class CachedEmbeddingClient:
+    def __init__(self, embedding_client, cache_dir="embedding_cache"):
+        self.embedding_client = embedding_client
+        self.cache_dir = cache_dir
+        os.makedirs(cache_dir, exist_ok=True)
     
-    for content_id, text, metadata in contents:
-        engine.add_content(content_id, text, metadata)
-        print(f"Added content: {content_id}")
+    def _get_cache_key(self, text):
+        """Generate cache key for text"""
+        return hashlib.md5(text.encode()).hexdigest()
     
-    return engine
+    def _get_cache_path(self, cache_key):
+        """Get cache file path"""
+        return os.path.join(self.cache_dir, f"{cache_key}.json")
+    
+    def embed(self, text):
+        """Embed text with caching"""
+        cache_key = self._get_cache_key(text)
+        cache_path = self._get_cache_path(cache_key)
+        
+        # Check cache first
+        if os.path.exists(cache_path):
+            with open(cache_path, 'r') as f:
+                return json.load(f)
+        
+        # Generate embedding and cache it
+        vector = self.embedding_client.embed(text)
+        with open(cache_path, 'w') as f:
+            json.dump(vector, f)
+        
+        return vector
+    
+    def embed_many(self, texts):
+        """Embed multiple texts with caching"""
+        vectors = []
+        uncached_texts = []
+        uncached_indices = []
+        
+        # Check cache for all texts
+        for i, text in enumerate(texts):
+            cache_key = self._get_cache_key(text)
+            cache_path = self._get_cache_path(cache_key)
+            
+            if os.path.exists(cache_path):
+                with open(cache_path, 'r') as f:
+                    vectors.append(json.load(f))
+            else:
+                vectors.append(None)  # Placeholder
+                uncached_texts.append(text)
+                uncached_indices.append(i)
+        
+        # Generate embeddings for uncached texts
+        if uncached_texts:
+            uncached_vectors = self.embedding_client.embed_many(uncached_texts)
+            
+            # Cache and insert new embeddings
+            for idx, vector in zip(uncached_indices, uncached_vectors):
+                cache_key = self._get_cache_key(texts[idx])
+                cache_path = self._get_cache_path(cache_key)
+                
+                with open(cache_path, 'w') as f:
+                    json.dump(vector, f)
+                
+                vectors[idx] = vector
+        
+        return vectors
+
+# Usage
+cached_client = CachedEmbeddingClient(embedding_client)
+
+# First call - will generate and cache
+vector1 = cached_client.embed("This text will be cached")
+
+# Second call - will use cache
+vector2 = cached_client.embed("This text will be cached")
+
+print(f"Vectors are identical: {vector1 == vector2}")
+```
+
+## Error Handling
+
+### Robust Embedding Operations
+
+Handle errors gracefully:
+
+```python
+def robust_embedding_operation(texts, embedding_client, max_retries=3):
+    """Perform embedding operation with error handling"""
+    for attempt in range(max_retries):
+        try:
+            if isinstance(texts, str):
+                return embedding_client.embed(texts)
+            else:
+                return embedding_client.embed_many(texts)
+                
+        except Exception as e:
+            print(f"Attempt {attempt + 1} failed: {e}")
+            
+            if attempt == max_retries - 1:
+                print("All attempts failed")
+                raise
+            
+            # Wait before retry
+            import time
+            time.sleep(2 ** attempt)  # Exponential backoff
+
+# Usage
+try:
+    vectors = robust_embedding_operation(
+        ["Text 1", "Text 2", "Text 3"], 
+        embedding_client
+    )
+    print(f"Successfully generated {len(vectors)} embeddings")
+except Exception as e:
+    print(f"Failed to generate embeddings: {e}")
 ```
 
 ## Best Practices
 
-### 1. Embedding Optimization
+### 1. Provider Selection
+
+Choose the right provider and model:
 
 ```python
-def optimize_embeddings_for_domain(domain_type, content_samples):
-    """Optimize embedding generation for specific domains."""
+def get_embedding_config(use_case, budget="medium"):
+    """Select optimal embedding configuration"""
     
-    optimization_strategies = {
-        "technical": {
-            "preprocessing": "preserve_technical_terms",
-            "chunking": "semantic_boundaries",
-            "model_tuning": "technical_vocabulary"
-        },
-        "creative": {
-            "preprocessing": "preserve_style_elements",
-            "chunking": "narrative_structure", 
-            "model_tuning": "creative_patterns"
-        },
-        "scientific": {
-            "preprocessing": "preserve_formulas_citations",
-            "chunking": "logical_sections",
-            "model_tuning": "scientific_terminology"
-        }
+    if use_case == "high_volume" and budget == "low":
+        return graphbit.EmbeddingConfig.openai(
+            api_key=os.getenv("OPENAI_API_KEY"),
+            model="text-embedding-3-small"
+        )
+    elif use_case == "high_accuracy" and budget == "high":
+        return graphbit.EmbeddingConfig.openai(
+            api_key=os.getenv("OPENAI_API_KEY"),
+            model="text-embedding-3-large"
+        )
+    elif use_case == "research" or budget == "free":
+        return graphbit.EmbeddingConfig.huggingface(
+            api_key=os.getenv("HUGGINGFACE_API_KEY"),
+            model="sentence-transformers/all-MiniLM-L6-v2"
+        )
+    else:
+        return graphbit.EmbeddingConfig.openai(
+            api_key=os.getenv("OPENAI_API_KEY"),
+            model="text-embedding-3-small"
+        )
+```
+
+### 2. Text Preprocessing
+
+Preprocess texts for better embeddings:
+
+```python
+import re
+
+def preprocess_text(text):
+    """Preprocess text for better embeddings"""
+    # Remove extra whitespace
+    text = re.sub(r'\s+', ' ', text)
+    
+    # Remove special characters but keep punctuation
+    text = re.sub(r'[^\w\s.,!?-]', '', text)
+    
+    # Trim
+    text = text.strip()
+    
+    return text
+
+def preprocess_texts(texts):
+    """Preprocess multiple texts"""
+    return [preprocess_text(text) for text in texts]
+
+# Usage
+raw_texts = [
+    "  This is   a messy    text!!!  ",
+    "Another text with@#$%weird characters",
+    "\n\tTabbed and newlined text\n"
+]
+
+clean_texts = preprocess_texts(raw_texts)
+vectors = embedding_client.embed_many(clean_texts)
+```
+
+### 3. Similarity Thresholds
+
+Use appropriate similarity thresholds:
+
+```python
+def interpret_similarity(similarity):
+    """Interpret similarity scores"""
+    if similarity >= 0.9:
+        return "Very High"
+    elif similarity >= 0.7:
+        return "High"  
+    elif similarity >= 0.5:
+        return "Medium"
+    elif similarity >= 0.3:
+        return "Low"
+    else:
+        return "Very Low"
+
+# Usage
+similarity_score = 0.75
+interpretation = interpret_similarity(similarity_score)
+print(f"Similarity: {similarity_score:.3f} ({interpretation})")
+```
+
+### 4. Memory Management
+
+Manage memory for large embedding operations:
+
+```python
+def memory_efficient_processing(texts, embedding_client, batch_size=50):
+    """Process embeddings in memory-efficient batches"""
+    results = []
+    
+    for i in range(0, len(texts), batch_size):
+        batch = texts[i:i + batch_size]
+        batch_vectors = embedding_client.embed_many(batch)
+        
+        # Process results immediately rather than storing all
+        for text, vector in zip(batch, batch_vectors):
+            # Do something with each embedding
+            result = process_single_embedding(text, vector)
+            results.append(result)
+        
+        # Clear batch vectors from memory
+        del batch_vectors
+    
+    return results
+
+def process_single_embedding(text, vector):
+    """Process individual embedding"""
+    return {
+        "text": text[:100] + "..." if len(text) > 100 else text,
+        "dimension": len(vector),
+        "magnitude": sum(x*x for x in vector) ** 0.5
     }
+```
+
+## Integration with Workflows
+
+### Embedding-Powered Workflows
+
+Use embeddings in GraphBit workflows:
+
+```python
+def create_embedding_workflow():
+    """Create workflow that uses embeddings for content analysis"""
+    graphbit.init()
     
-    strategy = optimization_strategies.get(domain_type, optimization_strategies["technical"])
+    # Configure LLM for analysis
+    llm_config = graphbit.LlmConfig.openai(
+        api_key=os.getenv("OPENAI_API_KEY"),
+        model="gpt-4o-mini"
+    )
+    
+    # Create workflow
+    workflow = graphbit.Workflow("Embedding-Powered Analysis")
+    
+    # Similarity analyzer node
+    analyzer = graphbit.Node.agent(
+        name="Similarity Analyzer",
+        prompt="""
+        Based on the similarity analysis:
+        - Similar documents found: {similar_docs}
+        - Similarity scores: {similarity_scores}
+        
+        Provide insights about the content relationships and patterns.
+        """,
+        agent_id="similarity_analyzer"
+    )
+    
+    workflow.add_node(analyzer)
+    workflow.validate()
+    
+    # Create executor
+    executor = graphbit.Executor(llm_config, timeout_seconds=60)
+    
+    return workflow, executor
+
+# Combine with embedding analysis
+def analyze_with_embeddings_and_llm(query_text, document_collection):
+    """Combine embeddings and LLM for comprehensive analysis"""
+    
+    # Find similar documents using embeddings
+    query_vector = embedding_client.embed(query_text)
+    doc_vectors = embedding_client.embed_many(document_collection)
+    
+    similarities = []
+    for i, doc_vector in enumerate(doc_vectors):
+        similarity = graphbit.EmbeddingClient.similarity(query_vector, doc_vector)
+        similarities.append((document_collection[i], similarity))
+    
+    # Get top similar documents
+    similarities.sort(key=lambda x: x[1], reverse=True)
+    top_docs = similarities[:3]
+    
+    # Use LLM for deeper analysis
+    workflow, executor = create_embedding_workflow()
+    
+    # Execute workflow with embedding results
+    result = executor.execute(workflow)
     
     return {
-        "domain": domain_type,
-        "strategy": strategy,
-        "recommended_chunk_size": 512 if domain_type == "technical" else 256,
-        "overlap_ratio": 0.1,
-        "quality_threshold": 0.8
+        "similar_documents": top_docs,
+        "llm_analysis": result.output() if result.is_completed() else "Analysis failed"
     }
 ```
 
-### 2. Performance Optimization
+## What's Next
 
-```python
-def optimize_vector_search_performance():
-    """Optimize vector search performance."""
-    
-    optimization_tips = {
-        "indexing": [
-            "Use approximate nearest neighbor (ANN) algorithms for large datasets",
-            "Implement hierarchical indexing for multi-level search",
-            "Consider dimensionality reduction for very high-dimensional embeddings"
-        ],
-        "caching": [
-            "Cache frequently accessed embeddings",
-            "Implement query result caching",
-            "Use embedding compression for storage efficiency"
-        ],
-        "batching": [
-            "Process embeddings in batches for better throughput",
-            "Use parallel processing for independent operations",
-            "Optimize batch sizes based on available memory"
-        ]
-    }
-    
-    return optimization_tips
-```
-
-GraphBit's embedding capabilities enable powerful semantic search, intelligent document processing, and sophisticated content recommendation systems. Use these patterns and workflows to build embedding-powered applications that understand and process content at a semantic level. 
+- Learn about [Performance](performance.md) for optimization techniques
+- Explore [Monitoring](monitoring.md) for production monitoring  
+- Check [Validation](validation.md) for input validation strategies
+- See [LLM Providers](llm-providers.md) for language model integration

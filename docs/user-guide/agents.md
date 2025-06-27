@@ -1,640 +1,716 @@
-# Agent Configuration
+# Agents
 
-Agents are the core AI-powered components in GraphBit workflows. This guide covers how to configure, customize, and optimize agents for different use cases.
+Agents are AI-powered components that execute tasks within GraphBit workflows. This guide covers how to create, configure, and optimize agents for different use cases.
 
-## Agent Basics
+## Overview
 
-### Creating Basic Agents
+In GraphBit, agents are implemented as specialized workflow nodes that:
+- Execute AI tasks using configured LLM providers
+- Process inputs through prompt templates with variable substitution
+- Generate outputs that flow to connected nodes
+- Support different execution contexts and requirements
+
+## Creating Agents
+
+### Basic Agent Creation
 
 ```python
 import graphbit
 
-# Simple agent
-analyzer = graphbit.PyWorkflowNode.agent_node(
+# Initialize GraphBit
+graphbit.init()
+
+# Create a basic agent node
+analyzer = graphbit.Node.agent(
     name="Data Analyzer",
-    description="Analyzes input data for patterns",
-    agent_id="analyzer",
-    prompt="Analyze the following data and identify key patterns: {input}"
+    prompt="Analyze the following data and identify key patterns: {input}",
+    agent_id="analyzer"  # Optional - auto-generated if not provided
+)
+
+# Access agent properties
+print(f"Agent ID: {analyzer.id()}")
+print(f"Agent Name: {analyzer.name()}")
+```
+
+### Agent with Explicit Configuration
+
+```python
+# Agent with explicit ID for referencing
+content_creator = graphbit.Node.agent(
+    name="Content Creator",
+    prompt="Create engaging content about: {topic}",
+    agent_id="content_creator_v1"
+)
+
+# Agent for specific domain
+technical_writer = graphbit.Node.agent(
+    name="Technical Documentation Writer",
+    prompt="""
+    Write comprehensive technical documentation for: {feature}
+    
+    Include:
+    - Overview and purpose
+    - Implementation details
+    - Usage examples
+    - Best practices
+    
+    Feature details: {input}
+    """,
+    agent_id="tech_doc_writer"
 )
 ```
 
-### Agent with Configuration
+## Agent Configuration in Workflows
+
+### Single Agent Workflow
 
 ```python
-# Agent with custom configuration
-writer = graphbit.PyWorkflowNode.agent_node_with_config(
-    name="Creative Writer",
-    description="Writes creative content",
-    agent_id="creative_writer",
-    prompt="Write a creative story about: {topic}",
-    max_tokens=1500,
-    temperature=0.8
+# Create workflow with single agent
+workflow = graphbit.Workflow("Content Analysis")
+
+# Create and add agent
+analyzer = graphbit.Node.agent(
+    name="Content Analyzer",
+    prompt="Analyze this content for sentiment, key themes, and quality: {input}",
+    agent_id="content_analyzer"
 )
+
+analyzer_id = workflow.add_node(analyzer)
+workflow.validate()
+
+# Execute with LLM configuration
+llm_config = graphbit.LlmConfig.openai(
+    api_key="your-openai-key",
+    model="gpt-4o-mini"
+)
+
+executor = graphbit.Executor(llm_config, timeout_seconds=60)
+result = executor.execute(workflow)
 ```
 
-## Agent Properties
-
-### Core Properties
-
-Every agent has these essential properties:
-
-- **Name**: Human-readable identifier
-- **Description**: Purpose and functionality
-- **Agent ID**: Unique identifier for the agent
-- **Prompt**: Template for LLM interaction
-
-### Configuration Parameters
-
-When using `agent_node_with_config()`:
-
-- **max_tokens**: Maximum tokens to generate (default: 1000)
-- **temperature**: Creativity level 0.0-1.0 (default: 0.7)
+### Multi-Agent Workflow
 
 ```python
-# Conservative agent (factual, deterministic)
-fact_checker = graphbit.PyWorkflowNode.agent_node_with_config(
-    name="Fact Checker",
-    description="Verifies factual accuracy",
-    agent_id="fact_checker",
-    prompt="Verify the accuracy of: {content}",
-    max_tokens=800,
-    temperature=0.1  # Low temperature for consistency
+# Create workflow with multiple specialized agents
+workflow = graphbit.Workflow("Multi-Agent Analysis Pipeline")
+
+# Create specialized agents
+sentiment_agent = graphbit.Node.agent(
+    name="Sentiment Analyzer",
+    prompt="Analyze the sentiment of this text (positive/negative/neutral): {input}",
+    agent_id="sentiment_analyzer"
 )
 
-# Creative agent (imaginative, varied)
-storyteller = graphbit.PyWorkflowNode.agent_node_with_config(
-    name="Storyteller",
-    description="Creates engaging stories",
-    agent_id="storyteller",
-    prompt="Tell an engaging story about: {theme}",
-    max_tokens=2000,
-    temperature=0.9  # High temperature for creativity
+topic_agent = graphbit.Node.agent(
+    name="Topic Extractor", 
+    prompt="Extract the main topics and themes from: {input}",
+    agent_id="topic_extractor"
 )
-```
 
-## Agent Capabilities
-
-GraphBit supports different agent capability types:
-
-### Text Processing
-
-```python
-text_capability = graphbit.PyAgentCapability.text_processing()
-
-# Agent specialized in text processing
-text_processor = graphbit.PyWorkflowNode.agent_node(
-    name="Text Processor",
-    description="Processes and transforms text",
-    agent_id="text_processor",
-    prompt="Process this text: {input}"
+summary_agent = graphbit.Node.agent(
+    name="Content Summarizer",
+    prompt="Create a concise summary of: {input}",
+    agent_id="summarizer"
 )
-```
 
-### Data Analysis
-
-```python
-data_capability = graphbit.PyAgentCapability.data_analysis()
-
-# Agent for data analysis tasks
-data_analyst = graphbit.PyWorkflowNode.agent_node(
-    name="Data Analyst",
-    description="Analyzes data patterns",
-    agent_id="data_analyst",
-    prompt="Analyze this dataset: {data}"
+# Aggregation agent
+aggregator = graphbit.Node.agent(
+    name="Analysis Aggregator",
+    prompt="""
+    Combine the following analysis results into a comprehensive report:
+    
+    Sentiment Analysis: {sentiment_output}
+    Topic Analysis: {topic_output}  
+    Summary: {summary_output}
+    
+    Provide an integrated analysis with key insights.
+    """,
+    agent_id="aggregator"
 )
-```
 
-### Decision Making
+# Build workflow
+sentiment_id = workflow.add_node(sentiment_agent)
+topic_id = workflow.add_node(topic_agent)
+summary_id = workflow.add_node(summary_agent)
+agg_id = workflow.add_node(aggregator)
 
-```python
-decision_capability = graphbit.PyAgentCapability.decision_making()
+# Connect nodes for parallel processing then aggregation
+workflow.connect(sentiment_id, agg_id)
+workflow.connect(topic_id, agg_id)
+workflow.connect(summary_id, agg_id)
 
-# Agent for making decisions
-decision_maker = graphbit.PyWorkflowNode.agent_node(
-    name="Decision Maker",
-    description="Makes strategic decisions",
-    agent_id="decision_maker",
-    prompt="Make a decision based on: {criteria}"
-)
-```
-
-### Tool Execution
-
-```python
-tool_capability = graphbit.PyAgentCapability.tool_execution()
-
-# Agent for executing tools
-tool_executor = graphbit.PyWorkflowNode.agent_node(
-    name="Tool Executor",
-    description="Executes various tools",
-    agent_id="tool_executor",
-    prompt="Execute tool for: {task}"
-)
-```
-
-### Custom Capabilities
-
-```python
-# Create custom capability
-domain_expert = graphbit.PyAgentCapability.custom("medical_expert")
-
-# Agent with custom capability
-medical_advisor = graphbit.PyWorkflowNode.agent_node(
-    name="Medical Advisor",
-    description="Provides medical insights",
-    agent_id="medical_advisor",
-    prompt="Provide medical analysis of: {symptoms}"
-)
+workflow.validate()
 ```
 
 ## Prompt Engineering
 
 ### Basic Prompt Structure
 
+Design effective prompts for your agents:
+
 ```python
-prompt = """
-Task: {task_description}
-Context: {context}
-Input: {input_data}
+# Simple, direct prompt
+simple_agent = graphbit.Node.agent(
+    name="Simple Translator",
+    prompt="Translate this text to French: {input}",
+    agent_id="translator"
+)
 
-Please provide a detailed analysis focusing on:
-1. Key findings
-2. Recommendations
-3. Next steps
-
-Format your response as structured text.
-"""
-
-agent = graphbit.PyWorkflowNode.agent_node(
+# Structured prompt with clear instructions
+structured_agent = graphbit.Node.agent(
     name="Structured Analyzer",
-    description="Provides structured analysis",
-    agent_id="structured_analyzer",
-    prompt=prompt
+    prompt="""
+    Task: Analyze the provided text for business insights
+    
+    Text to analyze: {input}
+    
+    Please provide:
+    1. Key business themes identified
+    2. Market opportunities mentioned
+    3. Risk factors highlighted  
+    4. Recommended actions
+    
+    Format your response as a structured analysis.
+    """,
+    agent_id="business_analyzer"
 )
 ```
 
 ### Variable Substitution
 
-Prompts support variable substitution using `{variable_name}`:
+Use variables in prompts for dynamic content:
 
 ```python
 # Multi-variable prompt
-analysis_prompt = """
-Analyze the {data_type} data about {subject}.
+flexible_prompt = """
+Context: You are a {role} expert analyzing {content_type} content.
 
-Context: {background_info}
-Requirements:
+Task: {task_description}
+
+Content to analyze: {input}
+
+Analysis requirements:
 - Focus on {focus_area}
-- Provide {num_insights} key insights
+- Provide {detail_level} analysis
 - Use {tone} tone
-- Format as {output_format}
+- Consider {constraints}
 
-Data: {input}
+Please provide your analysis following these requirements.
 """
 
-analyzer = graphbit.PyWorkflowNode.agent_node(
-    name="Flexible Analyzer",
-    description="Analyzes various data types",
-    agent_id="flex_analyzer",
-    prompt=analysis_prompt
+flexible_agent = graphbit.Node.agent(
+    name="Flexible Content Analyzer",
+    prompt=flexible_prompt,
+    agent_id="flexible_analyzer"
 )
 ```
 
-### Prompt Best Practices
+### Domain-Specific Prompts
 
-#### 1. Be Specific and Clear
-
-```python
-# Good - specific and detailed
-good_prompt = """
-Review this Python code for security vulnerabilities.
-
-Focus on:
-1. SQL injection risks
-2. XSS vulnerabilities  
-3. Authentication issues
-4. Input validation problems
-
-Code: {code}
-
-Provide specific line numbers and remediation steps.
-"""
-
-# Avoid - vague and unclear
-bad_prompt = "Look at this code: {code}"
-```
-
-#### 2. Provide Examples
+Create agents for specific domains:
 
 ```python
-prompt_with_examples = """
-Classify the sentiment of customer feedback.
-
-Examples:
-- "Great product, love it!" → Positive
-- "Terrible experience, waste of money" → Negative  
-- "It's okay, nothing special" → Neutral
-
-Customer feedback: {feedback}
-Classification: 
-"""
-```
-
-#### 3. Define Output Format
-
-```python
-structured_output_prompt = """
-Analyze the business proposal and provide feedback.
-
-Proposal: {proposal}
-
-Respond in JSON format:
-{
-    "overall_score": 1-10,
-    "strengths": ["strength1", "strength2"],
-    "weaknesses": ["weakness1", "weakness2"],
-    "recommendation": "approve/reject/revise",
-    "comments": "detailed feedback"
-}
-"""
-```
-
-## Specialized Agent Types
-
-### Content Agents
-
-```python
-# Content writer
-writer = graphbit.PyWorkflowNode.agent_node_with_config(
-    name="Content Writer",
-    description="Creates marketing content",
-    agent_id="content_writer",
+# Financial analysis agent
+financial_agent = graphbit.Node.agent(
+    name="Financial Analyst",
     prompt="""
-    Write engaging {content_type} about {topic}.
+    As a financial expert, analyze the following financial data:
+    
+    {input}
+    
+    Provide analysis covering:
+    - Revenue trends and patterns
+    - Cost structure analysis
+    - Profitability insights
+    - Risk assessment
+    - Strategic recommendations
+    
+    Use standard financial analysis frameworks in your assessment.
+    """,
+    agent_id="financial_analyst"
+)
+
+# Marketing content agent
+marketing_agent = graphbit.Node.agent(
+    name="Marketing Content Creator",
+    prompt="""
+    Create compelling marketing content for: {product}
     
     Target audience: {audience}
-    Tone: {tone}
-    Length: {length} words
+    Key features: {features}
+    Brand tone: {brand_tone}
     
-    Include a compelling headline and call-to-action.
+    Create:
+    1. Attention-grabbing headline
+    2. Benefit-focused description
+    3. Clear call-to-action
+    4. Key selling points
+    
+    Content: {input}
     """,
-    max_tokens=1500,
-    temperature=0.7
+    agent_id="marketing_creator"
 )
 
-# Content editor
-editor = graphbit.PyWorkflowNode.agent_node_with_config(
-    name="Content Editor",
-    description="Edits and improves content",
-    agent_id="content_editor",
+# Technical documentation agent
+technical_agent = graphbit.Node.agent(
+    name="Technical Documentation Writer",
     prompt="""
-    Edit this content for clarity and engagement:
+    Write clear, comprehensive technical documentation for developers.
     
-    {content}
-    
-    Improve:
-    - Readability and flow
-    - Grammar and style
-    - Engagement level
-    - Structure and organization
-    """,
-    max_tokens=1200,
-    temperature=0.3
-)
-```
-
-### Analysis Agents
-
-```python
-# Data analyzer
-data_analyzer = graphbit.PyWorkflowNode.agent_node(
-    name="Data Analyzer",
-    description="Analyzes numerical data",
-    agent_id="data_analyzer",
-    prompt="""
-    Analyze this dataset and provide insights:
-    
-    {dataset}
+    Topic: {input}
     
     Include:
-    1. Statistical summary
-    2. Key trends and patterns
-    3. Anomalies or outliers
-    4. Recommendations
-    """
+    - Clear overview and purpose
+    - Step-by-step implementation guide
+    - Code examples with explanations
+    - Common pitfalls and solutions
+    - Best practices and recommendations
+    
+    Use clear, professional technical writing style.
+    """,
+    agent_id="tech_writer"
+)
+```
+
+## Agent Specialization Patterns
+
+### Sequential Processing Agents
+
+Create agents that build on each other's work:
+
+```python
+workflow = graphbit.Workflow("Sequential Content Processing")
+
+# Stage 1: Content preparation
+prep_agent = graphbit.Node.agent(
+    name="Content Preparation Agent",
+    prompt="Clean and structure this raw content for further processing: {input}",
+    agent_id="content_prep"
 )
 
-# Sentiment analyzer
-sentiment_analyzer = graphbit.PyWorkflowNode.agent_node(
-    name="Sentiment Analyzer", 
-    description="Analyzes text sentiment",
-    agent_id="sentiment_analyzer",
+# Stage 2: Content analysis
+analysis_agent = graphbit.Node.agent(
+    name="Content Analysis Agent", 
+    prompt="Analyze the prepared content for key insights: {prepared_content}",
+    agent_id="content_analysis"
+)
+
+# Stage 3: Content enhancement
+enhancement_agent = graphbit.Node.agent(
+    name="Content Enhancement Agent",
+    prompt="Enhance the analyzed content with additional details: {analyzed_content}",
+    agent_id="content_enhancement"
+)
+
+# Connect sequentially
+prep_id = workflow.add_node(prep_agent)
+analysis_id = workflow.add_node(analysis_agent)
+enhance_id = workflow.add_node(enhancement_agent)
+
+workflow.connect(prep_id, analysis_id)
+workflow.connect(analysis_id, enhance_id)
+```
+
+### Parallel Specialist Agents
+
+Create specialized agents that work in parallel:
+
+```python
+workflow = graphbit.Workflow("Parallel Content Analysis")
+
+# Input preparation
+input_agent = graphbit.Node.agent(
+    name="Input Processor",
+    prompt="Prepare content for specialized analysis: {input}",
+    agent_id="input_processor"
+)
+
+# Parallel specialists
+seo_agent = graphbit.Node.agent(
+    name="SEO Specialist",
+    prompt="Analyze SEO aspects of: {processed_content}",
+    agent_id="seo_specialist"
+)
+
+readability_agent = graphbit.Node.agent(
+    name="Readability Specialist",
+    prompt="Analyze readability and clarity of: {processed_content}",
+    agent_id="readability_specialist"
+)
+
+compliance_agent = graphbit.Node.agent(
+    name="Compliance Specialist", 
+    prompt="Check compliance and accuracy of: {processed_content}",
+    agent_id="compliance_specialist"
+)
+
+# Results integrator
+integrator = graphbit.Node.agent(
+    name="Results Integrator",
     prompt="""
-    Analyze the sentiment of this text:
+    Integrate specialized analysis results:
     
-    "{text}"
+    SEO Analysis: {seo_output}
+    Readability Analysis: {readability_output}
+    Compliance Analysis: {compliance_output}
+    
+    Provide comprehensive recommendations.
+    """,
+    agent_id="results_integrator"
+)
+
+# Build parallel structure
+input_id = workflow.add_node(input_agent)
+seo_id = workflow.add_node(seo_agent)
+read_id = workflow.add_node(readability_agent)
+comp_id = workflow.add_node(compliance_agent)
+int_id = workflow.add_node(integrator)
+
+# Connect input to all specialists
+workflow.connect(input_id, seo_id)
+workflow.connect(input_id, read_id)
+workflow.connect(input_id, comp_id)
+
+# Connect specialists to integrator
+workflow.connect(seo_id, int_id)
+workflow.connect(read_id, int_id)
+workflow.connect(comp_id, int_id)
+```
+
+## Agent Configuration with Different LLM Providers
+
+### Provider-Optimized Agents
+
+Configure agents for different LLM providers:
+
+```python
+def create_provider_optimized_agents():
+    """Create agents optimized for different providers"""
+    
+    # OpenAI-optimized agent (structured prompts work well)
+    openai_agent = graphbit.Node.agent(
+        name="OpenAI Structured Analyzer",
+        prompt="""
+        Task: Comprehensive content analysis
+        
+        Content: {input}
+        
+        Analysis Framework:
+        1. Content Structure Analysis
+        2. Quality Assessment
+        3. Improvement Recommendations
+        4. Risk Evaluation
+        
+        Provide detailed analysis for each framework component.
+        """,
+        agent_id="openai_analyzer"
+    )
+    
+    # Anthropic-optimized agent (conversational style)
+    anthropic_agent = graphbit.Node.agent(
+        name="Claude Conversational Analyzer",
+        prompt="""
+        I'd like you to analyze this content from multiple perspectives.
+        
+        Content: {input}
+        
+        Please help me understand:
+        - What are the main themes and messages?
+        - How effective is the communication style?
+        - What improvements would you suggest?
+        - Are there any potential issues or concerns?
+        
+        Please be thorough in your analysis and explain your reasoning.
+        """,
+        agent_id="claude_analyzer"
+    )
+    
+    # Ollama-optimized agent (concise prompts for local models)
+    ollama_agent = graphbit.Node.agent(
+        name="Local Model Analyzer",
+        prompt="Analyze this content briefly: {input}",
+        agent_id="local_analyzer"
+    )
+    
+    return {
+        "openai": openai_agent,
+        "anthropic": anthropic_agent,
+        "ollama": ollama_agent
+    }
+```
+
+### Execution with Different Providers
+
+```python
+def execute_with_different_providers(agents, workflow_factory):
+    """Execute same workflow with different providers"""
+    
+    # OpenAI execution
+    openai_config = graphbit.LlmConfig.openai(
+        api_key=os.getenv("OPENAI_API_KEY"),
+        model="gpt-4o-mini"
+    )
+    openai_executor = graphbit.Executor(openai_config, timeout_seconds=60)
+    
+    # Anthropic execution
+    anthropic_config = graphbit.LlmConfig.anthropic(
+        api_key=os.getenv("ANTHROPIC_API_KEY"),
+        model="claude-3-5-sonnet-20241022"
+    )
+    anthropic_executor = graphbit.Executor(anthropic_config, timeout_seconds=120)
+    
+    # Ollama execution
+    ollama_config = graphbit.LlmConfig.ollama(model="llama3.2")
+    ollama_executor = graphbit.Executor(ollama_config, timeout_seconds=180)
+    
+    return {
+        "openai": openai_executor,
+        "anthropic": anthropic_executor,
+        "ollama": ollama_executor
+    }
+```
+
+## Error Handling and Resilience
+
+### Robust Agent Design
+
+Design agents that handle edge cases:
+
+```python
+# Agent with error handling instructions
+robust_agent = graphbit.Node.agent(
+    name="Robust Content Processor",
+    prompt="""
+    Process the following content. If the content is unclear, incomplete, 
+    or problematic, please:
+    
+    1. Identify specific issues
+    2. Provide what analysis is possible
+    3. Suggest what additional information would be helpful
+    4. Indicate confidence level in your analysis
+    
+    Content: {input}
+    
+    If you cannot process the content, explain why and suggest alternatives.
+    """,
+    agent_id="robust_processor"
+)
+
+# Agent with fallback behavior
+fallback_agent = graphbit.Node.agent(
+    name="Fallback Handler",
+    prompt="""
+    This content may have been processed unsuccessfully by a previous agent.
+    
+    Previous result: {previous_output}
+    Original content: {original_input}
+    
+    Please provide a basic analysis of the original content, noting any
+    issues or limitations in your analysis.
+    """,
+    agent_id="fallback_handler"
+)
+```
+
+## Advanced Agent Patterns
+
+### Agent with Context Memory
+
+Create agents that maintain context across processing steps:
+
+```python
+# Context-aware agent
+context_agent = graphbit.Node.agent(
+    name="Context Aware Processor",
+    prompt="""
+    Previous context: {context_history}
+    Current input: {input}
+    Processing step: {step_number}
+    
+    Process the current input while maintaining awareness of the previous context.
+    Update the context for the next processing step.
     
     Provide:
-    - Overall sentiment (positive/negative/neutral)
-    - Confidence score (0-1)
-    - Key emotional indicators
-    - Reasoning for classification
-    """
+    1. Analysis of current input
+    2. Relationship to previous context
+    3. Updated context summary for next steps
+    """,
+    agent_id="context_processor"
 )
 ```
 
-### Domain Expert Agents
+### Quality Control Agents
+
+Create agents that validate and improve outputs:
 
 ```python
-# Technical expert
-tech_expert = graphbit.PyWorkflowNode.agent_node_with_config(
-    name="Technical Expert",
-    description="Provides technical insights",
-    agent_id="tech_expert",
+# Quality validator agent
+validator_agent = graphbit.Node.agent(
+    name="Quality Validator",
     prompt="""
-    As a technical expert, analyze this {technology} implementation:
+    Review the following content for quality:
     
-    {technical_details}
+    Content: {input}
     
     Evaluate:
-    - Architecture quality
-    - Performance implications
-    - Security considerations
-    - Best practices compliance
-    - Improvement recommendations
+    - Accuracy and factual correctness
+    - Clarity and readability
+    - Completeness of information
+    - Logical flow and structure
+    
+    Provide quality score (1-10) and specific improvement suggestions.
     """,
-    max_tokens=2000,
-    temperature=0.2
+    agent_id="quality_validator"
 )
 
-# Business expert
-business_expert = graphbit.PyWorkflowNode.agent_node(
-    name="Business Expert",
-    description="Provides business strategy insights",
-    agent_id="business_expert",
+# Content improver agent
+improver_agent = graphbit.Node.agent(
+    name="Content Improver",
     prompt="""
-    From a business perspective, evaluate this proposal:
+    Improve the following content based on quality feedback:
     
-    {business_proposal}
+    Original content: {original_content}
+    Quality feedback: {quality_feedback}
     
-    Consider:
-    - Market opportunity
-    - Financial viability
-    - Risk assessment
-    - Competitive advantage
-    - Implementation timeline
-    """
+    Provide improved version addressing the specific feedback points.
+    Maintain the core message while enhancing quality.
+    """,
+    agent_id="content_improver"
 )
 ```
 
-## Agent Orchestration
+## Best Practices
 
-### Sequential Agent Chain
-
-```python
-def create_analysis_chain():
-    builder = graphbit.PyWorkflowBuilder("Analysis Chain")
-    
-    # Data collector
-    collector = graphbit.PyWorkflowNode.agent_node(
-        "Data Collector", "Collects relevant data", "collector",
-        "Collect data about: {topic}"
-    )
-    
-    # Data analyzer
-    analyzer = graphbit.PyWorkflowNode.agent_node(
-        "Data Analyzer", "Analyzes collected data", "analyzer", 
-        "Analyze this data: {collected_data}"
-    )
-    
-    # Report generator
-    reporter = graphbit.PyWorkflowNode.agent_node(
-        "Report Generator", "Creates final report", "reporter",
-        "Create a comprehensive report based on: {analysis_results}"
-    )
-    
-    # Chain agents
-    c_id = builder.add_node(collector)
-    a_id = builder.add_node(analyzer)
-    r_id = builder.add_node(reporter)
-    
-    builder.connect(c_id, a_id, graphbit.PyWorkflowEdge.data_flow())
-    builder.connect(a_id, r_id, graphbit.PyWorkflowEdge.data_flow())
-    
-    return builder.build()
-```
-
-### Collaborative Agents
+### 1. Agent Naming and Organization
 
 ```python
-def create_collaborative_workflow():
-    builder = graphbit.PyWorkflowBuilder("Collaborative Review")
-    
-    # Multiple expert agents
-    expert1 = graphbit.PyWorkflowNode.agent_node(
-        "Technical Expert", "Technical review", "tech_expert",
-        "Technical review: {proposal}"
-    )
-    
-    expert2 = graphbit.PyWorkflowNode.agent_node(
-        "Business Expert", "Business review", "biz_expert", 
-        "Business review: {proposal}"
-    )
-    
-    expert3 = graphbit.PyWorkflowNode.agent_node(
-        "Legal Expert", "Legal review", "legal_expert",
-        "Legal review: {proposal}"
-    )
-    
-    # Synthesizer agent
-    synthesizer = graphbit.PyWorkflowNode.agent_node(
-        "Synthesizer", "Combines expert opinions", "synthesizer",
-        """
-        Synthesize these expert reviews:
-        Technical: {tech_review}
-        Business: {business_review}  
-        Legal: {legal_review}
-        
-        Provide consolidated recommendation.
-        """
-    )
-    
-    # Build collaborative structure
-    e1_id = builder.add_node(expert1)
-    e2_id = builder.add_node(expert2)
-    e3_id = builder.add_node(expert3)
-    s_id = builder.add_node(synthesizer)
-    
-    # All experts feed into synthesizer
-    builder.connect(e1_id, s_id, graphbit.PyWorkflowEdge.data_flow())
-    builder.connect(e2_id, s_id, graphbit.PyWorkflowEdge.data_flow())
-    builder.connect(e3_id, s_id, graphbit.PyWorkflowEdge.data_flow())
-    
-    return builder.build()
-```
-
-## Agent Performance Optimization
-
-### Configuration for Different Use Cases
-
-```python
-# High-speed processing (minimal tokens, low temperature)
-fast_agent = graphbit.PyWorkflowNode.agent_node_with_config(
-    name="Fast Processor",
-    description="Quick processing agent",
-    agent_id="fast_processor",
-    prompt="Quick summary: {input}",
-    max_tokens=200,
-    temperature=0.1
+# Good: Descriptive, clear names
+email_spam_detector = graphbit.Node.agent(
+    name="Email Spam Detection Agent",
+    prompt="Analyze this email for spam indicators: {email_content}",
+    agent_id="email_spam_detector_v1"
 )
 
-# High-quality output (more tokens, moderate temperature)
-quality_agent = graphbit.PyWorkflowNode.agent_node_with_config(
-    name="Quality Processor",
-    description="High-quality processing agent", 
-    agent_id="quality_processor",
-    prompt="Detailed analysis: {input}",
-    max_tokens=1500,
-    temperature=0.4
+# Good: Consistent naming convention
+financial_risk_analyzer = graphbit.Node.agent(
+    name="Financial Risk Analysis Agent",
+    prompt="Assess financial risks in: {financial_data}",
+    agent_id="financial_risk_analyzer_v1"
 )
 
-# Creative output (high tokens, high temperature)
-creative_agent = graphbit.PyWorkflowNode.agent_node_with_config(
-    name="Creative Processor",
-    description="Creative processing agent",
-    agent_id="creative_processor", 
-    prompt="Creative interpretation: {input}",
-    max_tokens=2000,
-    temperature=0.8
+# Avoid: Vague names
+agent1 = graphbit.Node.agent(
+    name="Agent 1",
+    prompt="Do something with: {input}",
+    agent_id="a1"
 )
 ```
 
-### Batch Processing with Agents
+### 2. Prompt Design Guidelines
 
 ```python
-# Create multiple instances for batch processing
-def create_batch_agents(num_agents=3):
-    agents = []
-    for i in range(num_agents):
-        agent = graphbit.PyWorkflowNode.agent_node(
-            name=f"Batch Agent {i+1}",
-            description=f"Batch processing agent {i+1}",
-            agent_id=f"batch_agent_{i+1}",
-            prompt="Process batch item: {item}"
-        )
-        agents.append(agent)
+# Good: Clear, specific prompts
+content_analyzer = graphbit.Node.agent(
+    name="Marketing Content Analyzer",
+    prompt="""
+    Analyze this marketing content for effectiveness:
+    
+    Content: {input}
+    
+    Evaluate:
+    1. Target audience alignment
+    2. Message clarity and impact
+    3. Call-to-action effectiveness
+    4. Brand consistency
+    5. Competitive differentiation
+    
+    Provide specific recommendations for improvement.
+    """,
+    agent_id="marketing_content_analyzer"
+)
+
+# Avoid: Vague, unclear prompts
+vague_agent = graphbit.Node.agent(
+    name="Content Thing",
+    prompt="Look at this: {input}",
+    agent_id="vague"
+)
+```
+
+### 3. Agent Composition
+
+```python
+def create_modular_agents():
+    """Create modular, reusable agents"""
+    
+    agents = {}
+    
+    # Base analysis agent
+    agents['base_analyzer'] = graphbit.Node.agent(
+        name="Base Content Analyzer",
+        prompt="Provide basic analysis of: {input}",
+        agent_id="base_analyzer"
+    )
+    
+    # Specialized enhancement agents
+    agents['seo_enhancer'] = graphbit.Node.agent(
+        name="SEO Enhancement Agent",
+        prompt="Enhance SEO aspects of: {analyzed_content}",
+        agent_id="seo_enhancer"
+    )
+    
+    agents['readability_enhancer'] = graphbit.Node.agent(
+        name="Readability Enhancement Agent",
+        prompt="Improve readability of: {analyzed_content}",
+        agent_id="readability_enhancer"
+    )
+    
     return agents
+
+# Usage: Compose agents into workflows as needed
+def create_seo_workflow(agents):
+    workflow = graphbit.Workflow("SEO Content Pipeline")
+    
+    base_id = workflow.add_node(agents['base_analyzer'])
+    seo_id = workflow.add_node(agents['seo_enhancer'])
+    
+    workflow.connect(base_id, seo_id)
+    return workflow
 ```
 
-## Error Handling for Agents
-
-### Robust Agent Configuration
+### 4. Testing and Validation
 
 ```python
-# Agent with error handling context
-robust_agent = graphbit.PyWorkflowNode.agent_node(
-    name="Robust Agent",
-    description="Agent with error handling",
-    agent_id="robust_agent",
-    prompt="""
-    Process this input safely: {input}
+def test_agent_configuration():
+    """Test agent configuration before production use"""
     
-    If the input is invalid or unclear:
-    1. Explain what's wrong
-    2. Suggest corrections
-    3. Provide a safe default response
+    # Create test agent
+    test_agent = graphbit.Node.agent(
+        name="Test Agent",
+        prompt="Test prompt with {input}",
+        agent_id="test_agent"
+    )
     
-    Always provide a response, even for edge cases.
-    """
-)
+    # Validate agent properties
+    assert test_agent.name() == "Test Agent"
+    assert test_agent.id() is not None
+    
+    # Test workflow integration
+    workflow = graphbit.Workflow("Test Workflow")
+    node_id = workflow.add_node(test_agent)
+    
+    try:
+        workflow.validate()
+        print("✅ Agent configuration is valid")
+        return True
+    except Exception as e:
+        print(f"❌ Agent configuration failed: {e}")
+        return False
 ```
 
-### Validation Agents
+## What's Next
 
-```python
-# Input validator agent
-validator = graphbit.PyWorkflowNode.agent_node(
-    name="Input Validator",
-    description="Validates input data",
-    agent_id="validator",
-    prompt="""
-    Validate this input: {input}
-    
-    Check for:
-    - Data completeness
-    - Format correctness
-    - Reasonable values
-    - Security issues
-    
-    Respond with: VALID or INVALID with explanation
-    """
-)
-```
-
-## Agent Best Practices
-
-### 1. Single Responsibility
-Each agent should have one clear purpose:
-
-```python
-# Good - focused responsibility
-email_classifier = graphbit.PyWorkflowNode.agent_node(
-    name="Email Classifier",
-    description="Classifies emails by category",
-    agent_id="email_classifier", 
-    prompt="Classify this email as: spam/important/newsletter/personal\n\nEmail: {email}"
-)
-
-# Avoid - multiple responsibilities
-everything_agent = graphbit.PyWorkflowNode.agent_node(
-    name="Everything Agent",
-    description="Does everything",
-    agent_id="everything",
-    prompt="Do whatever is needed with: {input}"
-)
-```
-
-### 2. Clear Interfaces
-Define clear input/output expectations:
-
-```python
-# Well-defined interface
-code_reviewer = graphbit.PyWorkflowNode.agent_node(
-    name="Code Reviewer",
-    description="Reviews code for quality and security",
-    agent_id="code_reviewer",
-    prompt="""
-    Review this code for quality and security:
-    
-    {code}
-    
-    Provide structured feedback:
-    RATING: 1-10
-    ISSUES: List of problems found
-    SUGGESTIONS: Recommended improvements
-    SECURITY: Security concerns if any
-    """
-)
-```
-
-### 3. Context Awareness
-Include relevant context in prompts:
-
-```python
-context_aware_agent = graphbit.PyWorkflowNode.agent_node(
-    name="Context-Aware Agent",
-    description="Makes decisions with full context",
-    agent_id="context_agent",
-    prompt="""
-    Context: You are a {role} working on {project_type}.
-    Current phase: {project_phase}
-    Constraints: {constraints}
-    
-    Task: {task}
-    
-    Consider the context when providing your response.
-    """
-)
-```
-
-Agents are the powerhouse of GraphBit workflows. By configuring them properly and following best practices, you can create sophisticated AI-powered processing pipelines that are both reliable and effective. 
+- Learn about [Workflow Builder](workflow-builder.md) for complex agent orchestration
+- Explore [LLM Providers](llm-providers.md) for provider-specific optimizations
+- Check [Performance](performance.md) for agent execution optimization
+- See [Validation](validation.md) for agent output validation strategies

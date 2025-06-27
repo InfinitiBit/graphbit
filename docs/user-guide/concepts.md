@@ -4,53 +4,183 @@ Understanding GraphBit's fundamental concepts will help you build powerful AI ag
 
 ## Overview
 
-GraphBit is built around three core concepts:
+GraphBit is built around these core concepts:
 
-1. **Workflows** - Directed graphs that define the execution flow
-2. **Nodes** - Individual processing units (agents, conditions, transforms)
-3. **Agents** - AI-powered components that interact with LLM providers
+1. **Library Initialization** - Setting up the GraphBit environment
+2. **LLM Providers** - Configuring language model clients
+3. **Workflows** - Directed graphs that define the execution flow
+4. **Nodes** - Individual processing units (agents, conditions, transforms)
+5. **Executors** - Engines that run workflows with different performance characteristics
+6. **Embeddings** - Vector embeddings for semantic operations
+
+## Library Initialization
+
+Before using GraphBit, you must initialize the library:
+
+```python
+import graphbit
+
+# Basic initialization
+graphbit.init()
+
+# With custom configuration
+graphbit.init(
+    log_level="info",           # trace, debug, info, warn, error
+    enable_tracing=True,        # Enable detailed logging
+    debug=False                 # Debug mode
+)
+
+# Check system status
+print(f"GraphBit version: {graphbit.version()}")
+print("System info:", graphbit.get_system_info())
+print("Health check:", graphbit.health_check())
+```
+
+### Runtime Configuration
+
+For advanced use cases, configure the async runtime:
+
+```python
+# Configure before init() if needed
+graphbit.configure_runtime(
+    worker_threads=8,           # Number of worker threads
+    max_blocking_threads=16,    # Max blocking thread pool size
+    thread_stack_size_mb=2      # Stack size per thread in MB
+)
+
+graphbit.init()
+```
+
+## LLM Providers
+
+GraphBit supports multiple LLM providers with consistent APIs.
+
+### Provider Configuration
+
+```python
+# OpenAI
+openai_config = graphbit.LlmConfig.openai(
+    api_key="your-openai-key",
+    model="gpt-4o-mini"  # Optional, defaults to gpt-4o-mini
+)
+
+# Anthropic
+anthropic_config = graphbit.LlmConfig.anthropic(
+    api_key="your-anthropic-key", 
+    model="claude-3-5-sonnet-20241022"  # Optional, defaults to claude-3-5-sonnet
+)
+
+# Ollama (local models)
+ollama_config = graphbit.LlmConfig.ollama(
+    model="llama3.2"  # Optional, defaults to llama3.2
+)
+```
+
+### LLM Client Usage
+
+```python
+# Create client
+client = graphbit.LlmClient(openai_config, debug=False)
+
+# Basic completion
+response = client.complete(
+    prompt="Explain quantum computing",
+    max_tokens=500,
+    temperature=0.7
+)
+
+# Async completion
+import asyncio
+async_response = await client.complete_async(
+    prompt="Write a poem about AI",
+    max_tokens=200,
+    temperature=0.9
+)
+
+# Batch processing
+responses = await client.complete_batch(
+    prompts=["Question 1", "Question 2", "Question 3"],
+    max_tokens=100,
+    temperature=0.5,
+    max_concurrency=3
+)
+
+# Chat-style interaction
+chat_response = await client.chat_optimized(
+    messages=[
+        ("user", "Hello, how are you?"),
+        ("assistant", "I'm doing well, thank you!"),
+        ("user", "Can you help me with Python?")
+    ],
+    max_tokens=300
+)
+
+# Streaming responses
+async for chunk in client.complete_stream(
+    prompt="Tell me a story",
+    max_tokens=1000
+):
+    print(chunk, end="", flush=True)
+```
+
+### Client Management
+
+```python
+# Get client statistics
+stats = client.get_stats()
+print(f"Total requests: {stats['total_requests']}")
+print(f"Success rate: {stats['successful_requests'] / stats['total_requests']}")
+
+# Warmup client (pre-initialize connections)
+await client.warmup()
+
+# Reset statistics
+client.reset_stats()
+```
 
 ## Workflows
 
-A **Workflow** is a directed acyclic graph (DAG) that defines how data flows through your AI pipeline.
+A **Workflow** defines the structure and flow of your AI pipeline.
 
-### Workflow Structure
-
-```python
-builder = graphbit.PyWorkflowBuilder("My Workflow")
-builder.description("A sample workflow for processing data")
-workflow = builder.build()
-```
-
-### Key Properties
-
-- **Name**: Human-readable identifier
-- **Description**: Purpose and functionality description
-- **Nodes**: Processing units within the workflow
-- **Edges**: Connections that define data/control flow
-- **Context**: Shared state and variables during execution
-
-### Workflow States
-
-| State | Description |
-|-------|-------------|
-| `Pending` | Workflow created but not started |
-| `Running` | Currently executing |
-| `Completed` | Successfully finished |
-| `Failed` | Encountered an error |
-| `Cancelled` | Manually stopped |
+### Creating Workflows
 
 ```python
-# Check workflow state
-result = executor.execute(workflow)
-print(f"Workflow state: {result.state()}")
-print(f"Is completed: {result.is_completed()}")
-print(f"Is failed: {result.is_failed()}")
+# Create a workflow
+workflow = graphbit.Workflow("My AI Pipeline")
+
+# Add nodes to workflow
+agent_node = graphbit.Node.agent(
+    name="Analyzer",
+    prompt="Analyze this data: {input}",
+    agent_id="analyzer_001"  # Optional
+)
+
+transform_node = graphbit.Node.transform(
+    name="Formatter", 
+    transformation="uppercase"
+)
+
+condition_node = graphbit.Node.condition(
+    name="Quality Check",
+    expression="quality_score > 0.8"
+)
+
+# Add nodes and get their IDs
+agent_id = workflow.add_node(agent_node)
+transform_id = workflow.add_node(transform_node)
+condition_id = workflow.add_node(condition_node)
+
+# Connect nodes
+workflow.connect(agent_id, transform_id)
+workflow.connect(transform_id, condition_id)
+
+# Validate workflow structure
+workflow.validate()
 ```
 
 ## Nodes
 
-**Nodes** are the building blocks of workflows. Each node performs a specific function and can pass data to connected nodes.
+**Nodes** are the building blocks of workflows. Each node performs a specific function.
 
 ### Node Types
 
@@ -58,381 +188,191 @@ print(f"Is failed: {result.is_failed()}")
 Execute AI tasks using LLM providers:
 
 ```python
-analyzer = graphbit.PyWorkflowNode.agent_node(
+# Basic agent node
+analyzer = graphbit.Node.agent(
     name="Data Analyzer",
-    description="Analyzes input data for patterns",
-    agent_id="analyzer",
-    prompt="Analyze the following data and identify key patterns: {input}"
+    prompt="Analyze the following data and identify key patterns: {input}",
+    agent_id="analyzer"  # Optional - auto-generated if not provided
 )
-```
 
-#### 2. Condition Nodes
-Make decisions based on data:
-
-```python
-quality_check = graphbit.PyWorkflowNode.condition_node(
-    name="Quality Gate",
-    description="Checks if quality meets threshold",
-    expression="quality_score > 0.8"
-)
-```
-
-#### 3. Transform Nodes
-Process and transform data:
-
-```python
-# Available transformations: uppercase, lowercase, json_extract, split, join
-formatter = graphbit.PyWorkflowNode.transform_node(
-    name="Format Output",
-    description="Converts to uppercase",
-    transformation="uppercase"
-)
-```
-
-#### 4. Delay Nodes
-Add timing controls:
-
-```python
-rate_limit = graphbit.PyWorkflowNode.delay_node(
-    name="Rate Limiter",
-    description="Prevents API rate limiting",
-    duration_seconds=5
-)
-```
-
-#### 5. Document Loader Nodes
-Load and process documents:
-
-```python
-loader = graphbit.PyWorkflowNode.document_loader_node(
-    name="PDF Loader",
-    description="Loads PDF documents",
-    document_type="pdf",
-    source_path="/path/to/document.pdf"
-)
-```
-
-### Node Properties
-
-Every node has these properties:
-
-```python
 # Access node properties
-print(f"Node ID: {node.id()}")
-print(f"Name: {node.name()}")
-print(f"Description: {node.description()}")
+print(f"Node ID: {analyzer.id()}")
+print(f"Node Name: {analyzer.name()}")
 ```
 
-## Agents
-
-**Agents** are AI-powered components that execute tasks using Large Language Models.
-
-### Agent Configuration
+#### 2. Transform Nodes
+Process and modify data:
 
 ```python
-# Basic agent
-agent = graphbit.PyWorkflowNode.agent_node(
-    name="Content Creator",
-    description="Creates marketing content",
-    agent_id="creator",
-    prompt="Create engaging content about: {topic}"
-)
-
-# Agent with advanced configuration
-agent = graphbit.PyWorkflowNode.agent_node_with_config(
-    name="Technical Writer",
-    description="Writes technical documentation", 
-    agent_id="tech_writer",
-    prompt="Write technical docs for: {feature}",
-    max_tokens=2000,
-    temperature=0.3
+# Text transformation
+formatter = graphbit.Node.transform(
+    name="Text Formatter",
+    transformation="uppercase"  # Available: uppercase, lowercase, etc.
 )
 ```
 
-### Agent Capabilities
-
-GraphBit supports different agent capabilities:
-
-```python
-# Text processing
-text_processor = graphbit.PyAgentCapability.text_processing()
-
-# Data analysis
-data_analyzer = graphbit.PyAgentCapability.data_analysis()
-
-# Tool execution
-tool_executor = graphbit.PyAgentCapability.tool_execution()
-
-# Decision making
-decision_maker = graphbit.PyAgentCapability.decision_making()
-
-# Custom capability
-custom_agent = graphbit.PyAgentCapability.custom("domain_expert")
-```
-
-### Prompt Templates
-
-Agents use prompt templates with variable substitution:
+#### 3. Condition Nodes
+Make decisions based on data evaluation:
 
 ```python
-prompt = """
-Task: Analyze the following {data_type}
-Context: {context}
-Requirements: 
-- Provide {num_insights} key insights
-- Focus on {focus_area}
-- Format as {output_format}
-
-Data: {input}
-"""
-
-agent = graphbit.PyWorkflowNode.agent_node(
-    name="Flexible Analyzer",
-    description="Analyzes various data types",
-    agent_id="flex_analyzer",
-    prompt=prompt
+# Conditional logic
+gate = graphbit.Node.condition(
+    name="Quality Gate",
+    expression="score > 75 and confidence > 0.8"
 )
 ```
 
-## Workflow Edges
+## Workflow Execution
 
-**Edges** define how data flows between nodes in your workflow.
+**Executors** run workflows with different performance characteristics.
 
-### Edge Types
-
-#### 1. Data Flow
-Passes data from one node to another:
+### Executor Types
 
 ```python
-data_edge = graphbit.PyWorkflowEdge.data_flow()
-builder.connect(source_id, target_id, data_edge)
-```
-
-#### 2. Control Flow
-Controls execution order without data transfer:
-
-```python
-control_edge = graphbit.PyWorkflowEdge.control_flow()
-builder.connect(first_id, second_id, control_edge)
-```
-
-#### 3. Conditional Flow
-Executes based on conditions:
-
-```python
-conditional_edge = graphbit.PyWorkflowEdge.conditional("score > 0.5")
-builder.connect(condition_id, success_id, conditional_edge)
-```
-
-## Workflow Context
-
-The **Workflow Context** maintains state and variables throughout execution.
-
-### Working with Context
-
-```python
-# Access workflow information
-context = executor.execute(workflow)
-
-print(f"Workflow ID: {context.workflow_id()}")
-print(f"Execution time: {context.execution_time_ms()}ms")
-
-# Get variables
-output = context.get_variable("output")
-all_vars = context.variables()  # Returns list of (key, value) tuples
-
-# Check status
-if context.is_completed():
-    print("Workflow completed successfully!")
-elif context.is_failed():
-    print("Workflow failed!")
-```
-
-### Variable Flow
-
-Variables automatically flow between connected nodes:
-
-```python
-# Node 1 output becomes Node 2 input
-builder = graphbit.PyWorkflowBuilder("Variable Flow Example")
-
-# First node creates 'analysis' variable
-analyzer = graphbit.PyWorkflowNode.agent_node(
-    name="Analyzer",
-    description="Analyzes input",
-    agent_id="analyzer", 
-    prompt="Analyze: {input}"
+# Standard executor
+executor = graphbit.Executor(
+    config=llm_config,
+    lightweight_mode=False,  # For backward compatibility
+    timeout_seconds=300,     # 5 minutes
+    debug=False
 )
 
-# Second node uses 'analysis' from first node
-summarizer = graphbit.PyWorkflowNode.agent_node(
-    name="Summarizer", 
-    description="Summarizes analysis",
-    agent_id="summarizer",
-    prompt="Summarize this analysis: {analysis}"
+# High-throughput executor (for batch processing)
+high_throughput = graphbit.Executor.new_high_throughput(
+    llm_config=llm_config,
+    timeout_seconds=600,
+    debug=False
 )
 
-# Connect nodes - analysis flows automatically
-id1 = builder.add_node(analyzer)
-id2 = builder.add_node(summarizer)
-builder.connect(id1, id2, graphbit.PyWorkflowEdge.data_flow())
+# Low-latency executor (for real-time applications)
+low_latency = graphbit.Executor.new_low_latency(
+    llm_config=llm_config,
+    timeout_seconds=30,
+    debug=False
+)
+
+# Memory-optimized executor (for resource-constrained environments)
+memory_optimized = graphbit.Executor.new_memory_optimized(
+    llm_config=llm_config,
+    timeout_seconds=300,
+    debug=False
+)
 ```
 
-## Execution Patterns
-
-GraphBit supports different execution patterns for various use cases.
-
-### Sequential Execution
-
-Default execution pattern - nodes execute in dependency order:
+### Execution Modes
 
 ```python
-executor = graphbit.PyWorkflowExecutor(config)
+# Synchronous execution
 result = executor.execute(workflow)
+
+# Check execution results
+if result.is_completed():
+    print("Success:", result.output())
+elif result.is_failed():
+    print("Failed:", result.error())
+
+# Asynchronous execution
+async_result = await executor.run_async(workflow)
 ```
 
-### Concurrent Execution
-
-Execute multiple workflows simultaneously:
+### Executor Configuration
 
 ```python
-workflows = [workflow1, workflow2, workflow3]
-results = executor.execute_concurrent(workflows)
+# Runtime configuration
+executor.configure(
+    timeout_seconds=600,
+    max_retries=5,
+    enable_metrics=True,
+    debug=False
+)
 
-for i, result in enumerate(results):
-    print(f"Workflow {i+1}: {result.execution_time_ms()}ms")
+# Get execution statistics
+stats = executor.get_stats()
+print(f"Total executions: {stats['total_executions']}")
+print(f"Success rate: {stats['successful_executions'] / stats['total_executions']}")
+print(f"Average duration: {stats['average_duration_ms']}ms")
+
+# Reset statistics
+executor.reset_stats()
+
+# Check execution mode
+print(f"Current mode: {executor.get_execution_mode()}")
+
+# Legacy mode support
+executor.set_lightweight_mode(True)  # Enable lightweight mode
+print(f"Lightweight mode: {executor.is_lightweight_mode()}")
 ```
 
+## Embeddings
 
+**Embeddings** provide semantic vector representations for text.
 
-### Asynchronous Execution
-
-Non-blocking execution with Python async/await:
+### Embedding Configuration
 
 ```python
-import asyncio
+# OpenAI embeddings
+embedding_config = graphbit.EmbeddingConfig.openai(
+    api_key="your-openai-key",
+    model="text-embedding-3-small"  # Optional
+)
 
-async def async_workflow():
-    result = await executor.execute_async(workflow)
-    return result
+# HuggingFace embeddings  
+hf_embedding_config = graphbit.EmbeddingConfig.huggingface(
+    api_key="your-hf-key",
+    model="sentence-transformers/all-MiniLM-L6-v2"
+)
+```
 
-# Run async workflow
-result = asyncio.run(async_workflow())
+### Using Embeddings
+
+```python
+# Create embedding client
+embedding_client = graphbit.EmbeddingClient(embedding_config)
+
+# Single text embedding
+vector = embedding_client.embed("This is a sample text")
+print(f"Embedding dimension: {len(vector)}")
+
+# Batch text embeddings
+texts = ["Text 1", "Text 2", "Text 3"]
+vectors = embedding_client.embed_many(texts)
+print(f"Generated {len(vectors)} embeddings")
+
+# Calculate similarity
+similarity = graphbit.EmbeddingClient.similarity(vector1, vector2)
+print(f"Cosine similarity: {similarity}")
 ```
 
 ## Error Handling
 
-GraphBit provides comprehensive error handling mechanisms.
-
-### Workflow Validation
-
-Validate workflows before execution:
+GraphBit provides comprehensive error handling:
 
 ```python
 try:
-    workflow.validate()
-    print("✅ Workflow is valid")
-except Exception as e:
-    print(f"❌ Validation failed: {e}")
-```
-
-### Execution Errors
-
-Handle runtime errors gracefully:
-
-```python
-try:
+    graphbit.init()
+    
+    # Your workflow code here
     result = executor.execute(workflow)
+    
     if result.is_failed():
-        print(f"Workflow failed: {result.get_variable('error')}")
+        print(f"Workflow failed: {result.error()}")
+        
 except Exception as e:
-    print(f"Execution error: {e}")
+    print(f"GraphBit error: {e}")
 ```
 
 ## Best Practices
 
-### 1. Node Naming
-Use descriptive names for nodes:
+1. **Always initialize GraphBit** before using any functionality
+2. **Use appropriate executor types** for your performance requirements
+3. **Handle errors gracefully** and check execution results
+4. **Monitor execution statistics** for performance optimization
+5. **Configure timeouts** appropriate for your use case
+6. **Use warmup** for production clients to reduce cold start latency
 
-```python
-# Good
-content_analyzer = graphbit.PyWorkflowNode.agent_node(
-    name="SEO Content Analyzer",
-    description="Analyzes content for SEO optimization",
-    agent_id="seo_analyzer",
-    prompt="Analyze content for SEO: {content}"
-)
+## What's Next
 
-# Avoid
-node1 = graphbit.PyWorkflowNode.agent_node(
-    name="Node1",
-    description="Does stuff",
-    agent_id="n1", 
-    prompt="Do something: {input}"
-)
-```
-
-### 2. Prompt Design
-Create clear, specific prompts:
-
-```python
-# Good - specific and structured
-prompt = """
-Analyze the following customer feedback for sentiment and key themes.
-
-Customer Feedback: {feedback}
-
-Please provide:
-1. Overall sentiment (positive/negative/neutral)
-2. Key themes mentioned
-3. Specific issues or compliments
-4. Recommended actions
-
-Format your response as JSON with these fields:
-- sentiment
-- themes
-- details  
-- recommendations
-"""
-
-# Avoid - vague and unstructured
-prompt = "Look at this feedback: {feedback}"
-```
-
-### 3. Error Recovery
-Build resilient workflows:
-
-```python
-# Use retry configuration
-executor = graphbit.PyWorkflowExecutor(config) \
-    .with_retry_config(
-        graphbit.PyRetryConfig.default()
-        .with_exponential_backoff(1000, 2.0, 30000)
-    ) \
-    .with_circuit_breaker_config(
-        graphbit.PyCircuitBreakerConfig.default()
-    )
-```
-
-### 4. Resource Management
-Optimize for your use case:
-
-```python
-# High throughput
-executor = graphbit.PyWorkflowExecutor.new_high_throughput(config)
-
-# Low latency  
-executor = graphbit.PyWorkflowExecutor.new_low_latency(config)
-
-# Memory optimized
-executor = graphbit.PyWorkflowExecutor.new_memory_optimized(config)
-```
-
-## Next Steps
-
-Now that you understand GraphBit's core concepts, explore:
-
-- [Workflow Builder](workflow-builder.md) - Build complex workflows
-- [Agent Configuration](agents.md) - Configure AI agents
-- [LLM Providers](llm-providers.md) - Work with different AI providers
-- [API Reference](../api-reference/python-api.md) - Complete API documentation 
+- Learn about [Workflow Builder](workflow-builder.md) for advanced workflow construction
+- Explore [LLM Providers](llm-providers.md) for detailed provider configuration
+- Check [Embeddings](embeddings.md) for semantic operations
+- See [Performance](performance.md) for optimization techniques

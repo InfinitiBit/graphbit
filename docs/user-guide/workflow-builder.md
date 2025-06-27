@@ -1,120 +1,199 @@
 # Workflow Builder
 
-The Workflow Builder is GraphBit's primary tool for creating complex AI agent workflows using a simple, intuitive builder pattern.
+The Workflow Builder in GraphBit provides a simple, direct approach to creating AI agent workflows. Unlike complex builder patterns, GraphBit uses straightforward workflow and node creation methods.
 
 ## Overview
 
-The `PyWorkflowBuilder` class provides a fluent interface for constructing workflows by:
-- Adding nodes (agents, conditions, transforms)
-- Connecting nodes with edges
-- Configuring workflow properties
-- Validating workflow structure
+GraphBit workflows are built using:
+- **Workflow** - Container for nodes and connections
+- **Node** - Individual processing units with different types
+- **Connections** - Links between nodes that define data flow
 
 ## Basic Usage
 
-### Creating a Builder
+### Creating a Workflow
 
 ```python
 import graphbit
 
-# Create a new workflow builder
-builder = graphbit.PyWorkflowBuilder("My Workflow")
-builder.description("A workflow for processing data")
+# Initialize GraphBit
+graphbit.init()
+
+# Create a new workflow
+workflow = graphbit.Workflow("My AI Pipeline")
 ```
 
-### Adding Nodes
+### Creating Nodes
+
+GraphBit supports several node types:
+
+#### Agent Nodes
+Execute AI tasks using LLM providers:
 
 ```python
-# Add an agent node
-analyzer = graphbit.PyWorkflowNode.agent_node(
+# Basic agent node
+analyzer = graphbit.Node.agent(
     name="Data Analyzer",
-    description="Analyzes input data",
-    agent_id="analyzer",
-    prompt="Analyze this data: {input}"
+    prompt="Analyze this data for patterns: {input}",
+    agent_id="analyzer_001"  # Optional - auto-generated if not provided
 )
 
-node_id = builder.add_node(analyzer)
+# Agent with explicit ID
+summarizer = graphbit.Node.agent(
+    name="Content Summarizer", 
+    prompt="Summarize the following content: {analysis}",
+    agent_id="summarizer"
+)
 ```
 
-### Connecting Nodes
+#### Transform Nodes
+Process and modify data:
 
 ```python
-# Connect nodes with data flow
-builder.connect(node1_id, node2_id, graphbit.PyWorkflowEdge.data_flow())
+# Text transformation
+formatter = graphbit.Node.transform(
+    name="Text Formatter",
+    transformation="uppercase"
+)
+
+# Other available transformations
+lowercase_node = graphbit.Node.transform("Lowercase", "lowercase")
+```
+
+#### Condition Nodes
+Make decisions based on data evaluation:
+
+```python
+# Quality check
+quality_gate = graphbit.Node.condition(
+    name="Quality Gate",
+    expression="quality_score > 0.8 and confidence > 0.7"
+)
+
+# Simple condition
+threshold_check = graphbit.Node.condition(
+    name="Threshold Check", 
+    expression="value > 100"
+)
 ```
 
 ### Building the Workflow
 
 ```python
-# Build the final workflow
-workflow = builder.build()
+# Add nodes to workflow and get their IDs
+analyzer_id = workflow.add_node(analyzer)
+formatter_id = workflow.add_node(formatter)
+quality_id = workflow.add_node(quality_gate)
+summarizer_id = workflow.add_node(summarizer)
+
+# Connect nodes to define data flow
+workflow.connect(analyzer_id, formatter_id)
+workflow.connect(formatter_id, quality_id)
+workflow.connect(quality_id, summarizer_id)
+
+# Validate workflow structure
+workflow.validate()
 ```
 
-## Advanced Workflow Patterns
+## Workflow Patterns
 
 ### Sequential Processing
 
 Create linear processing pipelines:
 
 ```python
-builder = graphbit.PyWorkflowBuilder("Sequential Pipeline")
+# Create workflow
+workflow = graphbit.Workflow("Sequential Pipeline")
 
-# Create nodes
-step1 = graphbit.PyWorkflowNode.agent_node("Step 1", "First step", "step1", "Process: {input}")
-step2 = graphbit.PyWorkflowNode.agent_node("Step 2", "Second step", "step2", "Refine: {step1_output}")
-step3 = graphbit.PyWorkflowNode.agent_node("Step 3", "Final step", "step3", "Finalize: {step2_output}")
-
-# Add nodes
-id1 = builder.add_node(step1)
-id2 = builder.add_node(step2)
-id3 = builder.add_node(step3)
-
-# Connect sequentially
-builder.connect(id1, id2, graphbit.PyWorkflowEdge.data_flow())
-builder.connect(id2, id3, graphbit.PyWorkflowEdge.data_flow())
-
-workflow = builder.build()
-```
-
-### Parallel Processing
-
-Create workflows that process multiple branches simultaneously:
-
-```python
-builder = graphbit.PyWorkflowBuilder("Parallel Processing")
-
-# Input node
-input_node = graphbit.PyWorkflowNode.agent_node("Input", "Processes input", "input", "Prepare: {input}")
-
-# Parallel processing branches
-branch1 = graphbit.PyWorkflowNode.agent_node("Branch 1", "First analysis", "branch1", "Analyze A: {input_data}")
-branch2 = graphbit.PyWorkflowNode.agent_node("Branch 2", "Second analysis", "branch2", "Analyze B: {input_data}")
-branch3 = graphbit.PyWorkflowNode.agent_node("Branch 3", "Third analysis", "branch3", "Analyze C: {input_data}")
-
-# Aggregator node
-aggregator = graphbit.PyWorkflowNode.agent_node(
-    "Aggregator", 
-    "Combines results", 
-    "aggregator", 
-    "Combine results: {branch1_output}, {branch2_output}, {branch3_output}"
+# Create processing steps
+step1 = graphbit.Node.agent(
+    name="Input Processor",
+    prompt="Process the initial input: {input}",
+    agent_id="step1"
 )
 
-# Build graph
-input_id = builder.add_node(input_node)
-b1_id = builder.add_node(branch1)
-b2_id = builder.add_node(branch2)
-b3_id = builder.add_node(branch3)
-agg_id = builder.add_node(aggregator)
+step2 = graphbit.Node.agent(
+    name="Data Enricher", 
+    prompt="Enrich the processed data: {step1_output}",
+    agent_id="step2"
+)
 
-# Connect parallel branches
-builder.connect(input_id, b1_id, graphbit.PyWorkflowEdge.data_flow())
-builder.connect(input_id, b2_id, graphbit.PyWorkflowEdge.data_flow())
-builder.connect(input_id, b3_id, graphbit.PyWorkflowEdge.data_flow())
+step3 = graphbit.Node.agent(
+    name="Final Formatter",
+    prompt="Format the final output: {step2_output}",
+    agent_id="step3"
+)
 
-# Aggregate results
-builder.connect(b1_id, agg_id, graphbit.PyWorkflowEdge.data_flow())
-builder.connect(b2_id, agg_id, graphbit.PyWorkflowEdge.data_flow())
-builder.connect(b3_id, agg_id, graphbit.PyWorkflowEdge.data_flow())
+# Add nodes and connect sequentially
+id1 = workflow.add_node(step1)
+id2 = workflow.add_node(step2)
+id3 = workflow.add_node(step3)
+
+workflow.connect(id1, id2)
+workflow.connect(id2, id3)
+
+workflow.validate()
+```
+
+### Parallel Processing Branches
+
+Create workflows with multiple parallel processing paths:
+
+```python
+# Create workflow
+workflow = graphbit.Workflow("Parallel Analysis")
+
+# Input node
+input_processor = graphbit.Node.agent(
+    name="Input Processor",
+    prompt="Prepare data for analysis: {input}",
+    agent_id="input_proc"
+)
+
+# Parallel analysis branches
+sentiment_analyzer = graphbit.Node.agent(
+    name="Sentiment Analyzer",
+    prompt="Analyze sentiment of: {processed_data}",
+    agent_id="sentiment"
+)
+
+topic_analyzer = graphbit.Node.agent(
+    name="Topic Analyzer", 
+    prompt="Extract key topics from: {processed_data}",
+    agent_id="topics"
+)
+
+quality_analyzer = graphbit.Node.agent(
+    name="Quality Analyzer",
+    prompt="Assess content quality of: {processed_data}",
+    agent_id="quality"
+)
+
+# Result aggregator
+aggregator = graphbit.Node.agent(
+    name="Result Aggregator",
+    prompt="Combine analysis results:\nSentiment: {sentiment_output}\nTopics: {topics_output}\nQuality: {quality_output}",
+    agent_id="aggregator"
+)
+
+# Build parallel structure
+input_id = workflow.add_node(input_processor)
+sentiment_id = workflow.add_node(sentiment_analyzer)
+topic_id = workflow.add_node(topic_analyzer)
+quality_id = workflow.add_node(quality_analyzer)
+agg_id = workflow.add_node(aggregator)
+
+# Connect input to all analyzers
+workflow.connect(input_id, sentiment_id)
+workflow.connect(input_id, topic_id)
+workflow.connect(input_id, quality_id)
+
+# Connect all analyzers to aggregator
+workflow.connect(sentiment_id, agg_id)
+workflow.connect(topic_id, agg_id)
+workflow.connect(quality_id, agg_id)
+
+workflow.validate()
 ```
 
 ### Conditional Workflows
@@ -122,278 +201,353 @@ builder.connect(b3_id, agg_id, graphbit.PyWorkflowEdge.data_flow())
 Use condition nodes for dynamic routing:
 
 ```python
-builder = graphbit.PyWorkflowBuilder("Conditional Workflow")
+# Create workflow
+workflow = graphbit.Workflow("Conditional Processing")
 
-# Analyzer
-analyzer = graphbit.PyWorkflowNode.agent_node(
-    "Analyzer", 
-    "Analyzes content quality", 
-    "analyzer", 
-    "Rate quality 1-10: {input}"
+# Content analyzer
+analyzer = graphbit.Node.agent(
+    name="Content Analyzer",
+    prompt="Analyze content quality (score 1-10): {input}",
+    agent_id="analyzer"
 )
 
-# Quality gate
-quality_gate = graphbit.PyWorkflowNode.condition_node(
-    "Quality Gate",
-    "Checks if quality is acceptable",
-    "quality_score >= 7"
+# Quality gate condition
+quality_gate = graphbit.Node.condition(
+    name="Quality Gate",
+    expression="quality_score >= 7"
 )
 
 # High quality path
-approve = graphbit.PyWorkflowNode.agent_node(
-    "Approver", 
-    "Approves high quality content", 
-    "approver", 
-    "Approve: {input}"
+approver = graphbit.Node.agent(
+    name="Content Approver",
+    prompt="Approve high-quality content: {analyzed_content}",
+    agent_id="approver"
 )
 
-# Low quality path
-reject = graphbit.PyWorkflowNode.agent_node(
-    "Rejector", 
-    "Handles low quality content", 
-    "rejector", 
-    "Suggest improvements: {input}"
+# Low quality path  
+improver = graphbit.Node.agent(
+    name="Content Improver",
+    prompt="Suggest improvements for: {analyzed_content}",
+    agent_id="improver"
 )
 
 # Build conditional flow
-analyzer_id = builder.add_node(analyzer)
-gate_id = builder.add_node(quality_gate)
-approve_id = builder.add_node(approve)
-reject_id = builder.add_node(reject)
+analyzer_id = workflow.add_node(analyzer)
+gate_id = workflow.add_node(quality_gate)
+approve_id = workflow.add_node(approver)
+improve_id = workflow.add_node(improver)
 
-builder.connect(analyzer_id, gate_id, graphbit.PyWorkflowEdge.data_flow())
-builder.connect(gate_id, approve_id, graphbit.PyWorkflowEdge.conditional("quality_score >= 7"))
-builder.connect(gate_id, reject_id, graphbit.PyWorkflowEdge.conditional("quality_score < 7"))
+# Connect analyzer to quality gate
+workflow.connect(analyzer_id, gate_id)
+
+# Connect based on conditions (simplified - actual conditional routing 
+# is handled by the executor based on the condition node evaluation)
+workflow.connect(gate_id, approve_id)
+workflow.connect(gate_id, improve_id)
+
+workflow.validate()
 ```
 
-## Data Transformation
+### Data Transformation Pipelines
 
-### Using Transform Nodes
+Combine transform nodes with AI agents:
 
 ```python
-# JSON extraction
-json_extractor = graphbit.PyWorkflowNode.transform_node(
-    "JSON Extractor",
-    "Extracts JSON from text",
-    "json_extract"
+# Create workflow
+workflow = graphbit.Workflow("Data Transformation Pipeline")
+
+# Text preprocessor
+preprocessor = graphbit.Node.transform(
+    name="Text Preprocessor",
+    transformation="lowercase"
 )
 
-# Text transformation
-uppercaser = graphbit.PyWorkflowNode.transform_node(
-    "Uppercaser",
-    "Converts to uppercase",
-    "uppercase"
+# Content processor
+processor = graphbit.Node.agent(
+    name="Content Processor", 
+    prompt="Process the cleaned text: {preprocessed_text}",
+    agent_id="processor"
 )
+
+# Output formatter
+formatter = graphbit.Node.transform(
+    name="Output Formatter",
+    transformation="uppercase"
+)
+
+# Final quality check
+validator = graphbit.Node.condition(
+    name="Output Validator",
+    expression="length > 10"
+)
+
+# Build transformation pipeline
+prep_id = workflow.add_node(preprocessor)
+proc_id = workflow.add_node(processor)
+format_id = workflow.add_node(formatter)
+valid_id = workflow.add_node(validator)
+
+workflow.connect(prep_id, proc_id)
+workflow.connect(proc_id, format_id)
+workflow.connect(format_id, valid_id)
+
+workflow.validate()
+```
+
+## Node Properties and Management
+
+### Accessing Node Information
+
+```python
+# Create a node
+analyzer = graphbit.Node.agent(
+    name="Data Analyzer",
+    prompt="Analyze: {input}",
+    agent_id="analyzer"
+)
+
+# Access node properties
+print(f"Node ID: {analyzer.id()}")
+print(f"Node Name: {analyzer.name()}")
 
 # Add to workflow
-builder.add_node(json_extractor)
-builder.add_node(uppercaser)
+workflow = graphbit.Workflow("Test Workflow")
+node_id = workflow.add_node(analyzer)
+print(f"Workflow Node ID: {node_id}")
 ```
 
-### Available Transformations
+### Node Naming Best Practices
 
-- `uppercase` - Convert text to uppercase
-- `lowercase` - Convert text to lowercase  
-- `json_extract` - Extract JSON objects from text
-- `split` - Split text by delimiter
-- `join` - Join text with delimiter
-
-## Error Handling in Workflows
-
-### Adding Delays
+Use descriptive, clear names for nodes:
 
 ```python
-# Rate limiting delay
-rate_limit = graphbit.PyWorkflowNode.delay_node(
-    "Rate Limiter",
-    "Prevents API rate limiting",
-    5  # 5 seconds
+# Good - descriptive and clear
+email_analyzer = graphbit.Node.agent(
+    name="Email Content Analyzer",
+    prompt="Analyze email for spam indicators: {email_content}",
+    agent_id="email_spam_detector"
 )
 
-builder.add_node(rate_limit)
+# Good - indicates purpose
+quality_gate = graphbit.Node.condition(
+    name="Content Quality Gate",
+    expression="spam_score < 0.3"
+)
+
+# Avoid - vague names
+node1 = graphbit.Node.agent(
+    name="Node1", 
+    prompt="Do something: {input}",
+    agent_id="n1"
+)
 ```
 
-### Validation Points
+## Workflow Execution
+
+### Setting up Execution
 
 ```python
-# Add validation at key points
-validator = graphbit.PyWorkflowNode.condition_node(
-    "Validator",
-    "Validates intermediate results",
-    "result_valid == true"
+# Create LLM configuration
+llm_config = graphbit.LlmConfig.openai(
+    api_key="your-openai-key",
+    model="gpt-4o-mini"
 )
+
+# Create executor
+executor = graphbit.Executor(
+    config=llm_config,
+    timeout_seconds=300,
+    debug=False
+)
+
+# Execute workflow
+result = executor.execute(workflow)
+
+# Check results
+if result.is_completed():
+    print("Success:", result.output())
+elif result.is_failed():
+    print("Failed:", result.error())
+```
+
+### Asynchronous Execution
+
+```python
+import asyncio
+
+async def run_workflow():
+    # Create workflow and executor as above
+    result = await executor.run_async(workflow)
+    return result
+
+# Run asynchronously
+result = asyncio.run(run_workflow())
+```
+
+## Advanced Patterns
+
+### Multi-Stage Processing
+
+```python
+def create_multi_stage_workflow():
+    workflow = graphbit.Workflow("Multi-Stage Processing")
+    
+    # Stage 1: Data Preparation
+    cleaner = graphbit.Node.transform("Data Cleaner", "lowercase")
+    validator = graphbit.Node.condition("Data Validator", "length > 5")
+    
+    # Stage 2: Analysis
+    analyzer = graphbit.Node.agent(
+        name="Content Analyzer",
+        prompt="Analyze cleaned content: {cleaned_data}",
+        agent_id="analyzer"
+    )
+    
+    # Stage 3: Output Processing
+    formatter = graphbit.Node.transform("Output Formatter", "uppercase")
+    finalizer = graphbit.Node.agent(
+        name="Output Finalizer",
+        prompt="Finalize the analysis: {formatted_output}",
+        agent_id="finalizer"
+    )
+    
+    # Build multi-stage pipeline
+    clean_id = workflow.add_node(cleaner)
+    valid_id = workflow.add_node(validator)
+    analyze_id = workflow.add_node(analyzer)
+    format_id = workflow.add_node(formatter)
+    final_id = workflow.add_node(finalizer)
+    
+    # Connect stages
+    workflow.connect(clean_id, valid_id)
+    workflow.connect(valid_id, analyze_id)
+    workflow.connect(analyze_id, format_id)
+    workflow.connect(format_id, final_id)
+    
+    workflow.validate()
+    return workflow
+```
+
+### Error Handling in Workflows
+
+```python
+def create_robust_workflow():
+    workflow = graphbit.Workflow("Robust Processing")
+    
+    try:
+        # Add nodes
+        processor = graphbit.Node.agent(
+            name="Data Processor",
+            prompt="Process: {input}",
+            agent_id="processor"
+        )
+        
+        node_id = workflow.add_node(processor)
+        # Validate before execution
+        workflow.validate()        
+        return workflow
+        
+    except Exception as e:
+        print(f"Workflow creation failed: {e}")
+        return None
 ```
 
 ## Best Practices
 
-### 1. Descriptive Names
+### 1. Workflow Organization
 
 ```python
-# Good
-content_analyzer = graphbit.PyWorkflowNode.agent_node(
-    name="SEO Content Analyzer",
-    description="Analyzes content for SEO optimization",
-    agent_id="seo_analyzer",
-    prompt="Analyze for SEO: {content}"
-)
-
-# Avoid
-node1 = graphbit.PyWorkflowNode.agent_node("Node1", "Does stuff", "n1", "Do: {input}")
-```
-
-### 2. Logical Grouping
-
-```python
-# Group related functionality
-def create_content_analysis_section(builder):
-    analyzer = graphbit.PyWorkflowNode.agent_node(...)
-    validator = graphbit.PyWorkflowNode.condition_node(...)
-    formatter = graphbit.PyWorkflowNode.transform_node(...)
-    
-    # Connect and return IDs
-    return analyzer_id, validator_id, formatter_id
-```
-
-### 3. Error Recovery
-
-```python
-# Add error handling nodes
-error_handler = graphbit.PyWorkflowNode.agent_node(
-    "Error Handler",
-    "Handles processing errors",
-    "error_handler",
-    "Handle error: {error_message}"
-)
-```
-
-### 4. Workflow Validation
-
-```python
-# Always validate before execution
-try:
-    workflow = builder.build()
-    workflow.validate()
-    print("✅ Workflow is valid")
-except Exception as e:
-    print(f"❌ Workflow validation failed: {e}")
-```
-
-## Complex Example: Content Creation Pipeline
-
-```python
-def create_content_creation_workflow():
-    builder = graphbit.PyWorkflowBuilder("Content Creation Pipeline")
-    builder.description("Research → Write → Edit → Review → Publish")
-    
-    # Research phase
-    researcher = graphbit.PyWorkflowNode.agent_node(
-        "Researcher", "Researches topic", "researcher",
-        "Research key points about: {topic}"
-    )
-    
-    # Writing phase
-    writer = graphbit.PyWorkflowNode.agent_node(
-        "Writer", "Writes initial content", "writer",
-        "Write article about {topic} using: {research_data}"
-    )
-    
-    # Editing phase
-    editor = graphbit.PyWorkflowNode.agent_node(
-        "Editor", "Edits for clarity", "editor",
-        "Edit and improve: {draft_content}"
-    )
-    
-    # Quality review
-    reviewer = graphbit.PyWorkflowNode.agent_node(
-        "Reviewer", "Reviews quality", "reviewer",
-        "Review quality and rate 1-10: {edited_content}"
-    )
-    
-    # Quality gate
-    quality_gate = graphbit.PyWorkflowNode.condition_node(
-        "Quality Gate", "Checks quality threshold", "quality_rating >= 8"
-    )
-    
-    # Publication formatter
-    formatter = graphbit.PyWorkflowNode.transform_node(
-        "Formatter", "Formats for publication", "uppercase"
-    )
+# Organize complex workflows into functions
+def create_analysis_workflow():
+    workflow = graphbit.Workflow("Content Analysis")    
+    # Input processing
+    input_node = create_input_processor()    
+    # Analysis stages  
+    sentiment_node = create_sentiment_analyzer()
+    topic_node = create_topic_analyzer()    
+    # Output processing
+    output_node = create_output_formatter()
     
     # Build workflow
-    ids = {}
-    ids['research'] = builder.add_node(researcher)
-    ids['write'] = builder.add_node(writer)
-    ids['edit'] = builder.add_node(editor)
-    ids['review'] = builder.add_node(reviewer)
-    ids['gate'] = builder.add_node(quality_gate)
-    ids['format'] = builder.add_node(formatter)
-    
-    # Connect workflow
-    builder.connect(ids['research'], ids['write'], graphbit.PyWorkflowEdge.data_flow())
-    builder.connect(ids['write'], ids['edit'], graphbit.PyWorkflowEdge.data_flow())
-    builder.connect(ids['edit'], ids['review'], graphbit.PyWorkflowEdge.data_flow())
-    builder.connect(ids['review'], ids['gate'], graphbit.PyWorkflowEdge.data_flow())
-    builder.connect(ids['gate'], ids['format'], graphbit.PyWorkflowEdge.conditional("quality_rating >= 8"))
-    
-    return builder.build()
+    input_id = workflow.add_node(input_node)
+    sentiment_id = workflow.add_node(sentiment_node)
+    topic_id = workflow.add_node(topic_node)
+    output_id = workflow.add_node(output_node)    
+    # Connect nodes
+    workflow.connect(input_id, sentiment_id)
+    workflow.connect(input_id, topic_id)
+    workflow.connect(sentiment_id, output_id)
+    workflow.connect(topic_id, output_id)    
+    workflow.validate()
+    return workflow
 
-# Usage
-workflow = create_content_creation_workflow()
+def create_input_processor():
+    return graphbit.Node.agent(
+        name="Input Processor",
+        prompt="Prepare input for analysis: {input}",
+        agent_id="input_processor"
+    )
 ```
 
-## Workflow Templates
-
-Create reusable workflow templates:
+### 2. Validation and Testing
 
 ```python
-class WorkflowTemplates:
-    @staticmethod
-    def simple_analysis():
-        builder = graphbit.PyWorkflowBuilder("Simple Analysis")
-        analyzer = graphbit.PyWorkflowNode.agent_node(
-            "Analyzer", "Analyzes input", "analyzer", "Analyze: {input}"
+def test_workflow(workflow):
+    """Test workflow structure before execution"""
+    try:
+        workflow.validate()
+        print("✅ Workflow validation passed")
+        return True
+    except Exception as e:
+        print(f"❌ Workflow validation failed: {e}")
+        return False
+
+# Always validate before execution
+workflow = create_analysis_workflow()
+if test_workflow(workflow):
+    result = executor.execute(workflow)
+```
+
+### 3. Resource Management
+
+```python
+# Choose appropriate executor for your use case
+def get_executor_for_workload(workload_type, llm_config):
+    if workload_type == "batch":
+        return graphbit.Executor.new_high_throughput(
+            llm_config=llm_config,
+            timeout_seconds=600
         )
-        builder.add_node(analyzer)
-        return builder.build()
-    
-    @staticmethod
-    def two_step_process():
-        builder = graphbit.PyWorkflowBuilder("Two Step Process")
-        step1 = graphbit.PyWorkflowNode.agent_node("Step 1", "First step", "step1", "Process: {input}")
-        step2 = graphbit.PyWorkflowNode.agent_node("Step 2", "Second step", "step2", "Refine: {step1_output}")
-        
-        id1 = builder.add_node(step1)
-        id2 = builder.add_node(step2)
-        builder.connect(id1, id2, graphbit.PyWorkflowEdge.data_flow())
-        
-        return builder.build()
-
-# Usage
-workflow = WorkflowTemplates.simple_analysis()
+    elif workload_type == "realtime":
+        return graphbit.Executor.new_low_latency(
+            llm_config=llm_config,
+            timeout_seconds=30
+        )
+    elif workload_type == "constrained":
+        return graphbit.Executor.new_memory_optimized(
+            llm_config=llm_config,
+            timeout_seconds=300
+        )
+    else:
+        return graphbit.Executor(
+            config=llm_config,
+            timeout_seconds=300
+        )
 ```
 
-## Troubleshooting
+## Common Patterns Summary
 
-### Common Issues
+| Pattern | Use Case | Example |
+|---------|----------|---------|
+| Sequential | Linear processing | Data cleaning → Analysis → Output |
+| Parallel | Independent analysis | Multiple analyzers running simultaneously |  
+| Conditional | Dynamic routing | Quality gate directing to approval/rejection |
+| Transform | Data preprocessing | Text cleaning and formatting |
+| Multi-stage | Complex pipelines | Preparation → Analysis → Finalization |
 
-1. **Missing Connections**: Ensure all nodes are properly connected
-2. **Circular Dependencies**: GraphBit prevents cycles automatically
-3. **Invalid Conditions**: Check condition expressions for syntax errors
-4. **Node ID Conflicts**: Each node gets a unique ID automatically
+## What's Next
 
-### Debugging Tips
-
-```python
-# Check workflow structure
-print(f"Nodes: {workflow.node_count()}")
-print(f"Edges: {workflow.edge_count()}")
-
-# Validate before execution
-workflow.validate()
-
-# Export to JSON for inspection
-json_str = workflow.to_json()
-print(json_str)
-```
-
-The Workflow Builder provides a powerful, flexible way to create sophisticated AI agent workflows. Start with simple patterns and gradually build more complex orchestrations as needed. 
+- Learn about [LLM Providers](llm-providers.md) for configuring different AI models
+- Explore [Agents](agents.md) for advanced agent configuration
+- Check [Performance](performance.md) for execution optimization
+- See [Validation](validation.md) for workflow validation strategies

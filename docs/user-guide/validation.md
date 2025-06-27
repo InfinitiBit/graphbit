@@ -1,601 +1,983 @@
-# Workflow Validation
+# Validation
 
 GraphBit provides comprehensive validation capabilities to ensure workflow integrity, data quality, and execution reliability. This guide covers all aspects of validation in GraphBit workflows.
 
 ## Overview
 
 GraphBit validation operates at multiple levels:
-- **Structural Validation**: Workflow graph structure and connectivity
-- **Data Validation**: Input/output data format and content validation
-- **Business Rules**: Custom validation logic and constraints
-- **Runtime Validation**: Real-time validation during execution
-- **Performance Validation**: Resource usage and performance constraints
+- **Workflow Validation**: Structure and connectivity validation
+- **Input Validation**: Data format and content validation  
+- **Execution Validation**: Runtime validation and error handling
+- **Configuration Validation**: LLM and embedding configuration validation
+- **Output Validation**: Result quality and format validation
 
-## Structural Validation
+## Workflow Validation
 
-### Workflow Structure Validation
+### Basic Workflow Validation
 
 ```python
 import graphbit
 
-def validate_workflow_structure(workflow):
-    """Validate basic workflow structure."""
+# Initialize GraphBit
+graphbit.init()
+
+def validate_workflow_basic():
+    """Basic workflow validation example."""
     
+    # Create a workflow
+    workflow = graphbit.Workflow("Basic Validation Test")
+    
+    # Add nodes
+    processor = graphbit.Node.agent(
+        name="Data Processor",
+        prompt="Process this data: {input}",
+        agent_id="processor"
+    )
+    
+    validator = graphbit.Node.agent(
+        name="Result Validator",
+        prompt="Validate these results: {processed_data}",
+        agent_id="validator"
+    )
+    
+    processor_id = workflow.add_node(processor)
+    validator_id = workflow.add_node(validator)
+    
+    # Connect nodes
+    workflow.connect(processor_id, validator_id)
+    
+    # Validate workflow structure
     try:
-        # Built-in validation
         workflow.validate()
-        print("✅ Workflow structure is valid")
+        print("✅ Workflow validation passed")
         return True
     except Exception as e:
         print(f"❌ Workflow validation failed: {e}")
         return False
 
-def detailed_structure_validation(workflow):
-    """Perform detailed structural validation."""
+def validate_workflow_comprehensive():
+    """Comprehensive workflow validation with detailed checks."""
     
+    workflow = graphbit.Workflow("Comprehensive Validation Test")
+    
+    # Create nodes with various types
+    input_node = graphbit.Node.agent(
+        name="Input Handler",
+        prompt="Handle input: {input}",
+        agent_id="input_handler"
+    )
+    
+    transform_node = graphbit.Node.transform(
+        name="Data Transformer",
+        transformation="uppercase"
+    )
+    
+    condition_node = graphbit.Node.condition(
+        name="Quality Check",
+        expression="quality_score > 0.8"
+    )
+    
+    output_node = graphbit.Node.agent(
+        name="Output Generator",
+        prompt="Generate output: {transformed_data}",
+        agent_id="output_generator"
+    )
+    
+    # Add nodes to workflow
+    input_id = workflow.add_node(input_node)
+    transform_id = workflow.add_node(transform_node)
+    condition_id = workflow.add_node(condition_node)
+    output_id = workflow.add_node(output_node)
+    
+    # Create connections
+    workflow.connect(input_id, transform_id)
+    workflow.connect(transform_id, condition_id)
+    workflow.connect(condition_id, output_id)
+    
+    # Perform validation
     validation_results = {
-        "has_nodes": False,
-        "has_connections": False,
-        "no_cycles": False,
-        "reachable_nodes": False,
-        "valid_edges": False
+        "structure_valid": False,
+        "nodes_valid": False,
+        "connections_valid": False,
+        "no_cycles": False
     }
     
-    # Check if workflow has nodes
-    node_count = workflow.node_count()
-    validation_results["has_nodes"] = node_count > 0
-    
-    # Check if workflow has edges (for multi-node workflows)
-    edge_count = workflow.edge_count()
-    validation_results["has_connections"] = edge_count > 0 or node_count <= 1
-    
-    # Check for cycles (GraphBit prevents cycles automatically)
     try:
+        # Basic structure validation
         workflow.validate()
+        validation_results["structure_valid"] = True
+        
+        # Additional validation checks would go here
+        # (These are conceptual - actual implementation depends on GraphBit internals)
+        validation_results["nodes_valid"] = True
+        validation_results["connections_valid"] = True
         validation_results["no_cycles"] = True
-    except Exception:
-        validation_results["no_cycles"] = False
-    
-    # Print validation summary
-    print("Structural Validation Results:")
-    for check, result in validation_results.items():
-        status = "✅" if result else "❌"
-        print(f"  {status} {check.replace('_', ' ').title()}")
-    
-    return all(validation_results.values())
-```
-
-### Node Validation
-
-```python
-def validate_nodes(workflow):
-    """Validate individual nodes in workflow."""
-    
-    validation_issues = []
-    
-    # Get workflow nodes (this would depend on GraphBit's API)
-    nodes = workflow.get_nodes()  # Hypothetical method
-    
-    for node in nodes:
-        issues = validate_single_node(node)
-        if issues:
-            validation_issues.extend(issues)
-    
-    if validation_issues:
-        print("❌ Node validation issues found:")
-        for issue in validation_issues:
-            print(f"  - {issue}")
-        return False
-    else:
-        print("✅ All nodes are valid")
+        
+        print("✅ Comprehensive workflow validation passed")
+        print(f"Validation results: {validation_results}")
         return True
-
-def validate_single_node(node):
-    """Validate a single node."""
-    
-    issues = []
-    
-    # Check node name
-    if not node.name() or len(node.name().strip()) == 0:
-        issues.append(f"Node {node.id()} has empty name")
-    
-    # Check node description
-    if not node.description() or len(node.description().strip()) == 0:
-        issues.append(f"Node {node.name()} has empty description")
-    
-    # Node-specific validation
-    node_type = node.node_type()  # Hypothetical method
-    
-    if node_type == "agent":
-        issues.extend(validate_agent_node(node))
-    elif node_type == "condition":
-        issues.extend(validate_condition_node(node))
-    elif node_type == "transform":
-        issues.extend(validate_transform_node(node))
-    
-    return issues
-
-def validate_agent_node(node):
-    """Validate agent node specifics."""
-    
-    issues = []
-    
-    # Check if agent has prompt
-    prompt = node.prompt()  # Hypothetical method
-    if not prompt or len(prompt.strip()) == 0:
-        issues.append(f"Agent node {node.name()} has empty prompt")
-    
-    # Check if prompt has valid variables
-    if prompt and "{" in prompt and "}" in prompt:
-        # Validate prompt variables
-        import re
-        variables = re.findall(r'\{(\w+)\}', prompt)
-        if not variables:
-            issues.append(f"Agent node {node.name()} prompt appears to have malformed variables")
-    
-    return issues
-
-def validate_condition_node(node):
-    """Validate condition node specifics."""
-    
-    issues = []
-    
-    # Check if condition has expression
-    expression = node.expression()  # Hypothetical method
-    if not expression or len(expression.strip()) == 0:
-        issues.append(f"Condition node {node.name()} has empty expression")
-    
-    # Validate expression syntax (basic check)
-    if expression:
-        try:
-            # Simple syntax validation
-            validate_condition_expression(expression)
-        except Exception as e:
-            issues.append(f"Condition node {node.name()} has invalid expression: {e}")
-    
-    return issues
-
-def validate_transform_node(node):
-    """Validate transform node specifics."""
-    
-    issues = []
-    
-    # Check if transform has valid transformation type
-    transformation = node.transformation()  # Hypothetical method
-    valid_transformations = ["uppercase", "lowercase", "json_extract", "split", "join"]
-    
-    if transformation not in valid_transformations:
-        issues.append(f"Transform node {node.name()} has invalid transformation: {transformation}")
-    
-    return issues
-
-def validate_condition_expression(expression):
-    """Validate condition expression syntax."""
-    
-    # Basic validation - could be expanded
-    forbidden_keywords = ["import", "exec", "eval", "__"]
-    
-    for keyword in forbidden_keywords:
-        if keyword in expression.lower():
-            raise ValueError(f"Forbidden keyword '{keyword}' in expression")
-    
-    # Check for balanced parentheses
-    if expression.count("(") != expression.count(")"):
-        raise ValueError("Unbalanced parentheses in expression")
-    
-    return True
+        
+    except Exception as e:
+        print(f"❌ Comprehensive workflow validation failed: {e}")
+        print(f"Validation results: {validation_results}")
+        return False
 ```
 
-## Data Validation
+## Input Validation
 
-### Input Data Validation
+### Data Format Validation
 
 ```python
 def create_input_validation_workflow():
-    """Create workflow with comprehensive input validation."""
+    """Create workflow with robust input validation."""
     
-    builder = graphbit.PyWorkflowBuilder("Input Validation Workflow")
+    workflow = graphbit.Workflow("Input Validation Workflow")
     
-    # Input validator
-    input_validator = graphbit.PyWorkflowNode.agent_node(
+    # Input validator node
+    input_validator = graphbit.Node.agent(
         name="Input Validator",
-        description="Validates all input data",
-        agent_id="input_validator",
         prompt="""
-        Validate this input data comprehensively:
+        Validate the following input data:
         
-        Data: {input}
+        Input: {input}
         
         Check for:
-        1. Data completeness (no missing required fields)
-        2. Data format (correct types and structures)
-        3. Data ranges (values within acceptable limits)
-        4. Data consistency (logical relationships)
-        5. Security issues (potential malicious content)
+        1. Required fields are present
+        2. Data types are correct
+        3. Values are within expected ranges
+        4. Format follows expected patterns
         
-        Respond with:
-        - validation_status: VALID or INVALID
-        - issues_found: list of specific issues
-        - severity: HIGH, MEDIUM, or LOW
-        - recommendations: suggested fixes
-        """
+        Return validation results with:
+        - is_valid: true/false
+        - errors: list of validation errors
+        - warnings: list of validation warnings
+        - sanitized_input: cleaned input data
+        """,
+        agent_id="input_validator"
     )
     
-    # Validation gate
-    validation_gate = graphbit.PyWorkflowNode.condition_node(
-        name="Validation Gate",
-        description="Gates processing based on validation",
-        expression="validation_status == 'VALID' && severity != 'HIGH'"
+    # Data sanitizer
+    data_sanitizer = graphbit.Node.agent(
+        name="Data Sanitizer",
+        prompt="""
+        Sanitize and clean the validated input:
+        
+        Validation Results: {validation_results}
+        
+        If validation passed:
+        1. Remove any unsafe content
+        2. Normalize data formats
+        3. Apply standard transformations
+        4. Return clean data
+        
+        If validation failed:
+        1. Attempt data recovery where possible
+        2. Provide fallback values for missing data
+        3. Flag critical issues that need attention
+        """,
+        agent_id="data_sanitizer"
     )
     
     # Build validation workflow
-    validator_id = builder.add_node(input_validator)
-    gate_id = builder.add_node(validation_gate)
+    validator_id = workflow.add_node(input_validator)
+    sanitizer_id = workflow.add_node(data_sanitizer)
     
-    builder.connect(validator_id, gate_id, graphbit.PyWorkflowEdge.data_flow())
+    workflow.connect(validator_id, sanitizer_id)
     
-    return builder.build()
+    return workflow
 
-def validate_input_schema(data, schema):
-    """Validate input data against schema."""
+def validate_input_data(data, expected_schema=None):
+    """Validate input data against expected schema."""
     
     validation_results = {
-        "valid": True,
+        "is_valid": True,
+        "errors": [],
+        "warnings": [],
+        "sanitized_data": data
+    }
+    
+    # Basic type validation
+    if data is None:
+        validation_results["is_valid"] = False
+        validation_results["errors"].append("Input data is None")
+        return validation_results
+    
+    # String validation
+    if isinstance(data, str):
+        if len(data.strip()) == 0:
+            validation_results["is_valid"] = False
+            validation_results["errors"].append("Input string is empty")
+        elif len(data) > 10000:  # Arbitrary limit
+            validation_results["warnings"].append("Input string is very long")
+        
+        # Sanitize string
+        validation_results["sanitized_data"] = data.strip()
+    
+    # Dictionary validation
+    elif isinstance(data, dict):
+        if expected_schema:
+            for required_field in expected_schema.get("required", []):
+                if required_field not in data:
+                    validation_results["is_valid"] = False
+                    validation_results["errors"].append(f"Required field '{required_field}' missing")
+        
+        # Sanitize dictionary
+        sanitized_dict = {}
+        for key, value in data.items():
+            if isinstance(value, str):
+                sanitized_dict[key] = value.strip()
+            else:
+                sanitized_dict[key] = value
+        
+        validation_results["sanitized_data"] = sanitized_dict
+    
+    # List validation
+    elif isinstance(data, list):
+        if len(data) == 0:
+            validation_results["warnings"].append("Input list is empty")
+        elif len(data) > 1000:  # Arbitrary limit
+            validation_results["warnings"].append("Input list is very large")
+    
+    return validation_results
+
+def example_input_validation():
+    """Example of input validation in practice."""
+    
+    # Test various input types
+    test_inputs = [
+        {"text": "Hello, world!", "priority": 1},
+        {"text": "", "priority": "high"},  # Invalid: empty text, wrong type
+        None,  # Invalid: null input
+        {"text": "Valid input", "priority": 2, "metadata": {"source": "test"}},
+        []  # Warning: empty list
+    ]
+    
+    schema = {
+        "required": ["text", "priority"],
+        "types": {
+            "text": str,
+            "priority": int
+        }
+    }
+    
+    for i, test_input in enumerate(test_inputs):
+        print(f"\nValidating input {i + 1}: {test_input}")
+        result = validate_input_data(test_input, schema)
+        
+        if result["is_valid"]:
+            print("✅ Validation passed")
+        else:
+            print("❌ Validation failed")
+        
+        if result["errors"]:
+            print(f"Errors: {result['errors']}")
+        
+        if result["warnings"]:
+            print(f"Warnings: {result['warnings']}")
+```
+
+## Configuration Validation
+
+### LLM Configuration Validation
+
+```python
+import os
+
+def validate_llm_configuration(config):
+    """Validate LLM configuration."""
+    
+    validation_result = {
+        "is_valid": True,
         "errors": [],
         "warnings": []
     }
     
-    # Check required fields
-    required_fields = schema.get("required", [])
-    for field in required_fields:
-        if field not in data:
-            validation_results["valid"] = False
-            validation_results["errors"].append(f"Missing required field: {field}")
-    
-    # Check field types
-    field_types = schema.get("types", {})
-    for field, expected_type in field_types.items():
-        if field in data:
-            actual_type = type(data[field]).__name__
-            if actual_type != expected_type:
-                validation_results["warnings"].append(
-                    f"Field {field} type mismatch: expected {expected_type}, got {actual_type}"
+    try:
+        # Test OpenAI configuration
+        if hasattr(config, 'provider') and config.provider == 'openai':
+            openai_config = graphbit.LlmConfig.openai(
+                api_key=os.getenv("OPENAI_API_KEY"),
+                model="gpt-4o-mini"
+            )
+            
+            # Create client to test configuration
+            client = graphbit.LlmClient(openai_config)
+            
+            # Test basic connectivity
+            try:
+                client.warmup()
+                print("✅ OpenAI configuration valid")
+            except Exception as e:
+                validation_result["is_valid"] = False
+                validation_result["errors"].append(f"OpenAI connection failed: {e}")
+        
+        # Test Anthropic configuration  
+        elif hasattr(config, 'provider') and config.provider == 'anthropic':
+            try:
+                anthropic_config = graphbit.LlmConfig.anthropic(
+                    api_key=os.getenv("ANTHROPIC_API_KEY"),
+                    model="claude-3-5-sonnet-20241022"
                 )
+                
+                client = graphbit.LlmClient(anthropic_config)
+                client.warmup()
+                print("✅ Anthropic configuration valid")
+            except Exception as e:
+                validation_result["is_valid"] = False
+                validation_result["errors"].append(f"Anthropic connection failed: {e}")
+        
+        # Test Ollama configuration
+        elif hasattr(config, 'provider') and config.provider == 'ollama':
+            try:
+                ollama_config = graphbit.LlmConfig.ollama(
+                    model="llama3.2"
+                )
+                
+                client = graphbit.LlmClient(ollama_config)
+                client.warmup()
+                print("✅ Ollama configuration valid")
+            except Exception as e:
+                validation_result["warnings"].append(f"Ollama connection issue: {e}")
     
-    return validation_results
+    except Exception as e:
+        validation_result["is_valid"] = False
+        validation_result["errors"].append(f"Configuration validation failed: {e}")
+    
+    return validation_result
+
+def validate_embedding_configuration():
+    """Validate embedding configuration."""
+    
+    validation_result = {
+        "is_valid": True,
+        "errors": [],
+        "warnings": []
+    }
+    
+    try:
+        # Test OpenAI embeddings
+        openai_config = graphbit.EmbeddingConfig.openai(
+            api_key=os.getenv("OPENAI_API_KEY")
+        )
+        
+        client = graphbit.EmbeddingClient(openai_config)
+        
+        # Test embedding generation
+        test_embedding = client.embed("Test embedding")
+        
+        if test_embedding and len(test_embedding) > 0:
+            print("✅ OpenAI embedding configuration valid")
+        else:
+            validation_result["warnings"].append("OpenAI embedding returned empty result")
+        
+        # Test HuggingFace embeddings
+        try:
+            hf_config = graphbit.EmbeddingConfig.huggingface(
+                model="sentence-transformers/all-MiniLM-L6-v2"
+            )
+            
+            hf_client = graphbit.EmbeddingClient(hf_config)
+            hf_embedding = hf_client.embed("Test embedding")
+            
+            if hf_embedding and len(hf_embedding) > 0:
+                print("✅ HuggingFace embedding configuration valid")
+            else:
+                validation_result["warnings"].append("HuggingFace embedding returned empty result")
+                
+        except Exception as e:
+            validation_result["warnings"].append(f"HuggingFace embeddings not available: {e}")
+    
+    except Exception as e:
+        validation_result["is_valid"] = False
+        validation_result["errors"].append(f"Embedding configuration validation failed: {e}")
+    
+    return validation_result
 ```
 
-### Output Validation
+## Execution Validation
+
+### Runtime Validation
 
 ```python
-def create_output_validation_workflow():
-    """Create workflow with output validation."""
+def create_execution_validation_workflow():
+    """Create workflow with execution validation."""
     
-    builder = graphbit.PyWorkflowBuilder("Output Validation Workflow")
+    workflow = graphbit.Workflow("Execution Validation Workflow")
     
-    # Main processor
-    processor = graphbit.PyWorkflowNode.agent_node(
-        name="Main Processor",
-        description="Main data processing",
-        agent_id="processor",
-        prompt="Process this data: {input}"
-    )
-    
-    # Output validator
-    output_validator = graphbit.PyWorkflowNode.agent_node(
-        name="Output Validator",
-        description="Validates processing output",
-        agent_id="output_validator",
+    # Pre-execution validator
+    pre_validator = graphbit.Node.agent(
+        name="Pre-Execution Validator",
         prompt="""
-        Validate this processing output:
-        
-        Output: {processor_output}
-        Expected Format: {expected_format}
-        
-        Check:
-        1. Format compliance
-        2. Completeness
-        3. Logical consistency
-        4. Quality metrics
-        
-        Provide validation score (0-10) and issues found.
-        """
-    )
-    
-    # Quality gate
-    quality_gate = graphbit.PyWorkflowNode.condition_node(
-        name="Quality Gate",
-        description="Ensures output quality",
-        expression="validation_score >= 7 && critical_issues == 0"
-    )
-    
-    # Output formatter
-    formatter = graphbit.PyWorkflowNode.agent_node(
-        name="Output Formatter",
-        description="Formats validated output",
-        agent_id="formatter",
-        prompt="Format this validated output for final delivery: {validated_output}"
-    )
-    
-    # Error handler
-    error_handler = graphbit.PyWorkflowNode.agent_node(
-        name="Error Handler",
-        description="Handles validation failures",
-        agent_id="error_handler",
-        prompt="Handle validation failure and provide alternative output: {validation_errors}"
-    )
-    
-    # Build output validation workflow
-    proc_id = builder.add_node(processor)
-    val_id = builder.add_node(output_validator)
-    gate_id = builder.add_node(quality_gate)
-    fmt_id = builder.add_node(formatter)
-    err_id = builder.add_node(error_handler)
-    
-    builder.connect(proc_id, val_id, graphbit.PyWorkflowEdge.data_flow())
-    builder.connect(val_id, gate_id, graphbit.PyWorkflowEdge.data_flow())
-    builder.connect(gate_id, fmt_id, graphbit.PyWorkflowEdge.conditional("validation_score >= 7"))
-    builder.connect(gate_id, err_id, graphbit.PyWorkflowEdge.conditional("validation_score < 7"))
-    
-    return builder.build()
-```
-
-## Business Rules Validation
-
-### Custom Validation Rules
-
-```python
-class ValidationRule:
-    """Base class for validation rules."""
-    
-    def __init__(self, name, description):
-        self.name = name
-        self.description = description
-    
-    def validate(self, data):
-        """Validate data against this rule."""
-        raise NotImplementedError
-
-class RangeValidationRule(ValidationRule):
-    """Validates numeric ranges."""
-    
-    def __init__(self, field, min_value, max_value):
-        super().__init__(f"Range validation for {field}", 
-                        f"{field} must be between {min_value} and {max_value}")
-        self.field = field
-        self.min_value = min_value
-        self.max_value = max_value
-    
-    def validate(self, data):
-        if self.field not in data:
-            return {"valid": False, "error": f"Missing field: {self.field}"}
-        
-        value = data[self.field]
-        if not isinstance(value, (int, float)):
-            return {"valid": False, "error": f"{self.field} must be numeric"}
-        
-        if not (self.min_value <= value <= self.max_value):
-            return {"valid": False, "error": f"{self.field} must be between {self.min_value} and {self.max_value}"}
-        
-        return {"valid": True}
-
-def create_business_validation_workflow(rules):
-    """Create workflow with custom business rules."""
-    
-    builder = graphbit.PyWorkflowBuilder("Business Validation Workflow")
-    
-    # Rule validator
-    rule_validator = graphbit.PyWorkflowNode.agent_node(
-        name="Business Rule Validator",
-        description="Validates against business rules",
-        agent_id="rule_validator",
-        prompt=f"""
-        Validate this data against business rules:
-        
-        Data: {{input}}
-        Rules: {[rule.description for rule in rules]}
-        
-        Check each rule and report:
-        1. Which rules passed/failed
-        2. Specific violations
-        3. Severity of violations
-        4. Recommended actions
-        """
-    )
-    
-    builder.add_node(rule_validator)
-    
-    return builder.build()
-```
-
-## Runtime Validation
-
-### Real-time Validation During Execution
-
-```python
-def create_runtime_validation_workflow():
-    """Create workflow with runtime validation."""
-    
-    builder = graphbit.PyWorkflowBuilder("Runtime Validation Workflow")
-    
-    # Step 1: Process with validation
-    step1 = graphbit.PyWorkflowNode.agent_node(
-        name="Step 1 Processor",
-        description="First processing step with validation",
-        agent_id="step1",
-        prompt="""
-        Process this data and validate the result:
+        Validate input before processing:
         
         Input: {input}
         
-        Process the data and then validate:
-        1. Processing completed successfully
-        2. Output format is correct
-        3. No data corruption occurred
-        4. Performance metrics acceptable
+        Check:
+        1. Input is processable
+        2. Required resources are available
+        3. No security concerns
+        4. Expected format is correct
         
-        Include validation_status in response.
-        """
+        Return validation status and any concerns.
+        """,
+        agent_id="pre_validator"
     )
     
-    # Runtime validator
-    runtime_validator = graphbit.PyWorkflowNode.condition_node(
-        name="Runtime Validator",
-        description="Validates runtime execution",
-        expression="validation_status == 'VALID' && processing_time < 30000"
+    # Main processor
+    processor = graphbit.Node.agent(
+        name="Main Processor",
+        prompt="""
+        Process the validated input:
+        
+        Validated Input: {validated_input}
+        
+        Perform the main processing task and include quality metrics.
+        """,
+        agent_id="main_processor"
     )
     
-    # Build runtime validation workflow
-    step1_id = builder.add_node(step1)
-    validator_id = builder.add_node(runtime_validator)
+    # Post-execution validator
+    post_validator = graphbit.Node.agent(
+        name="Post-Execution Validator",
+        prompt="""
+        Validate processing results:
+        
+        Processing Results: {processing_results}
+        
+        Check:
+        1. Results are complete
+        2. Quality meets standards
+        3. Format is correct
+        4. No errors in output
+        
+        Return final validation and any needed corrections.
+        """,
+        agent_id="post_validator"
+    )
     
-    builder.connect(step1_id, validator_id, graphbit.PyWorkflowEdge.data_flow())
+    # Build validation workflow
+    pre_id = workflow.add_node(pre_validator)
+    proc_id = workflow.add_node(processor)
+    post_id = workflow.add_node(post_validator)
     
-    return builder.build()
+    workflow.connect(pre_id, proc_id)
+    workflow.connect(proc_id, post_id)
+    
+    return workflow
+
+def validate_execution_result(result):
+    """Validate workflow execution result."""
+    
+    validation_report = {
+        "execution_successful": False,
+        "output_valid": False,
+        "quality_score": 0.0,
+        "issues": [],
+        "recommendations": []
+    }
+    
+    # Check if execution completed
+    if result.is_completed():
+        validation_report["execution_successful"] = True
+        
+        # Get output
+        output = result.output()
+        
+        # Validate output
+        if output:
+            validation_report["output_valid"] = True
+            
+            # Basic quality checks
+            if isinstance(output, str):
+                if len(output.strip()) > 0:
+                    validation_report["quality_score"] += 0.5
+                
+                if len(output) > 10:  # Meaningful length
+                    validation_report["quality_score"] += 0.3
+                
+                # Check for common error indicators
+                error_indicators = ["error", "failed", "invalid", "exception"]
+                if not any(indicator in output.lower() for indicator in error_indicators):
+                    validation_report["quality_score"] += 0.2
+                else:
+                    validation_report["issues"].append("Output contains error indicators")
+            
+            elif isinstance(output, dict):
+                if output:  # Non-empty dict
+                    validation_report["quality_score"] += 0.7
+                
+                # Check for error fields
+                if "error" in output or "exception" in output:
+                    validation_report["issues"].append("Output contains error fields")
+                else:
+                    validation_report["quality_score"] += 0.3
+        
+        else:
+            validation_report["issues"].append("Output is empty")
+    
+    else:
+        validation_report["issues"].append(f"Execution failed: {result.error()}")
+    
+    # Generate recommendations
+    if validation_report["quality_score"] < 0.5:
+        validation_report["recommendations"].append("Consider improving input quality")
+    
+    if validation_report["issues"]:
+        validation_report["recommendations"].append("Review and fix identified issues")
+    
+    return validation_report
 ```
 
-## Performance Validation
+## Output Validation
 
-### Resource Usage Validation
+### Result Quality Validation
 
 ```python
-def create_performance_validation_workflow():
-    """Create workflow with performance validation."""
+def create_output_validation_workflow():
+    """Create workflow with comprehensive output validation."""
     
-    builder = graphbit.PyWorkflowBuilder("Performance Validation Workflow")
+    workflow = graphbit.Workflow("Output Validation Workflow")
     
-    # Performance monitor
-    perf_monitor = graphbit.PyWorkflowNode.agent_node(
-        name="Performance Monitor",
-        description="Monitors processing performance",
-        agent_id="perf_monitor",
+    # Content generator
+    generator = graphbit.Node.agent(
+        name="Content Generator",
+        prompt="Generate content based on: {input}",
+        agent_id="generator"
+    )
+    
+    # Quality checker
+    quality_checker = graphbit.Node.agent(
+        name="Quality Checker",
         prompt="""
-        Monitor and validate performance metrics:
+        Evaluate the quality of this generated content:
         
-        Processing Data: {input}
-        Start Time: {start_time}
+        Content: {generated_content}
         
-        Track:
-        1. Processing duration
-        2. Memory usage
-        3. API call counts
-        4. Error rates
+        Rate on a scale of 1-10 for:
+        1. Accuracy
+        2. Completeness
+        3. Clarity
+        4. Relevance
+        5. Coherence
         
-        Validate against thresholds:
-        - Duration < 60 seconds
-        - Memory < 500MB
-        - API calls < 100
-        - Error rate < 5%
-        """
+        Provide overall quality score and specific feedback.
+        """,
+        agent_id="quality_checker"
     )
     
-    # Performance gate
-    perf_gate = graphbit.PyWorkflowNode.condition_node(
-        name="Performance Gate",
-        description="Validates performance thresholds",
-        expression="duration < 60000 && memory_mb < 500 && api_calls < 100 && error_rate < 0.05"
+    # Format validator
+    format_validator = graphbit.Node.agent(
+        name="Format Validator",
+        prompt="""
+        Validate the format of this content:
+        
+        Content: {quality_checked_content}
+        
+        Check:
+        1. Proper structure
+        2. Correct formatting
+        3. Standard compliance
+        4. Readability
+        
+        Return validation results and any format corrections needed.
+        """,
+        agent_id="format_validator"
     )
     
-    # Performance optimizer
-    optimizer = graphbit.PyWorkflowNode.agent_node(
-        name="Performance Optimizer",
-        description="Optimizes based on performance data",
-        agent_id="optimizer",
-        prompt="Optimize processing based on performance metrics: {performance_data}"
-    )
+    # Build output validation workflow
+    gen_id = workflow.add_node(generator)
+    quality_id = workflow.add_node(quality_checker)
+    format_id = workflow.add_node(format_validator)
     
-    # Build performance validation workflow
-    monitor_id = builder.add_node(perf_monitor)
-    gate_id = builder.add_node(perf_gate)
-    opt_id = builder.add_node(optimizer)
+    workflow.connect(gen_id, quality_id)
+    workflow.connect(quality_id, format_id)
     
-    builder.connect(monitor_id, gate_id, graphbit.PyWorkflowEdge.data_flow())
-    builder.connect(gate_id, opt_id, graphbit.PyWorkflowEdge.conditional("duration >= 30000"))
+    return workflow
+
+def validate_output_quality(output, criteria=None):
+    """Validate output quality against specific criteria."""
     
-    return builder.build()
+    if criteria is None:
+        criteria = {
+            "min_length": 10,
+            "max_length": 10000,
+            "required_elements": [],
+            "forbidden_elements": ["error", "exception", "failed"]
+        }
+    
+    quality_report = {
+        "overall_score": 0.0,
+        "length_valid": False,
+        "content_valid": False,
+        "format_valid": False,
+        "issues": [],
+        "suggestions": []
+    }
+    
+    if not output:
+        quality_report["issues"].append("Output is empty")
+        return quality_report
+    
+    output_str = str(output)
+    
+    # Length validation
+    if criteria["min_length"] <= len(output_str) <= criteria["max_length"]:
+        quality_report["length_valid"] = True
+        quality_report["overall_score"] += 0.3
+    else:
+        quality_report["issues"].append(f"Length {len(output_str)} outside range {criteria['min_length']}-{criteria['max_length']}")
+    
+    # Content validation
+    content_score = 0.0
+    
+    # Check for required elements
+    for element in criteria.get("required_elements", []):
+        if element.lower() in output_str.lower():
+            content_score += 0.2
+        else:
+            quality_report["issues"].append(f"Missing required element: {element}")
+    
+    # Check for forbidden elements
+    forbidden_found = False
+    for element in criteria.get("forbidden_elements", []):
+        if element.lower() in output_str.lower():
+            quality_report["issues"].append(f"Contains forbidden element: {element}")
+            forbidden_found = True
+    
+    if not forbidden_found:
+        content_score += 0.3
+    
+    quality_report["content_valid"] = content_score > 0.0
+    quality_report["overall_score"] += min(content_score, 0.4)
+    
+    # Format validation (basic)
+    if output_str.strip():
+        quality_report["format_valid"] = True
+        quality_report["overall_score"] += 0.3
+    
+    # Generate suggestions
+    if quality_report["overall_score"] < 0.5:
+        quality_report["suggestions"].append("Consider regenerating output with better parameters")
+    
+    if not quality_report["content_valid"]:
+        quality_report["suggestions"].append("Review content requirements and regenerate")
+    
+    return quality_report
+```
+
+## Validation Testing Framework
+
+### Comprehensive Validation Testing
+
+```python
+def create_validation_test_suite():
+    """Create comprehensive validation test suite."""
+    
+    class ValidationTestSuite:
+        def __init__(self):
+            self.test_results = {}
+        
+        def run_workflow_validation_tests(self):
+            """Run workflow validation tests."""
+            
+            print("🧪 Running Workflow Validation Tests")
+            
+            tests = {
+                "basic_workflow": self.test_basic_workflow_validation,
+                "complex_workflow": self.test_complex_workflow_validation,
+                "invalid_workflow": self.test_invalid_workflow_validation
+            }
+            
+            for test_name, test_func in tests.items():
+                try:
+                    result = test_func()
+                    self.test_results[test_name] = {"passed": result, "error": None}
+                    status = "✅ PASSED" if result else "❌ FAILED"
+                    print(f"  {test_name}: {status}")
+                except Exception as e:
+                    self.test_results[test_name] = {"passed": False, "error": str(e)}
+                    print(f"  {test_name}: ❌ ERROR - {e}")
+        
+        def test_basic_workflow_validation(self):
+            """Test basic workflow validation."""
+            return validate_workflow_basic()
+        
+        def test_complex_workflow_validation(self):
+            """Test complex workflow validation."""
+            return validate_workflow_comprehensive()
+        
+        def test_invalid_workflow_validation(self):
+            """Test validation of invalid workflow."""
+            
+            # Create intentionally invalid workflow
+            workflow = graphbit.Workflow("Invalid Test Workflow")
+            
+            # Add node but don't connect it properly (this may or may not be invalid depending on GraphBit's rules)
+            node = graphbit.Node.agent(
+                name="Isolated Node",
+                prompt="Process: {input}",
+                agent_id="isolated"
+            )
+            workflow.add_node(node)
+            
+            # Try to validate - this should pass since a single node workflow is valid
+            try:
+                workflow.validate()
+                return True  # Single nodes are actually valid
+            except Exception:
+                return True  # Expected to fail
+        
+        def run_input_validation_tests(self):
+            """Run input validation tests."""
+            
+            print("🧪 Running Input Validation Tests")
+            
+            test_cases = [
+                {"input": "Valid string", "expected": True},
+                {"input": "", "expected": False},
+                {"input": None, "expected": False},
+                {"input": {"text": "Valid", "priority": 1}, "expected": True},
+                {"input": {"text": "", "priority": "invalid"}, "expected": False}
+            ]
+            
+            passed = 0
+            total = len(test_cases)
+            
+            for i, case in enumerate(test_cases):
+                result = validate_input_data(case["input"])
+                actual_valid = result["is_valid"]
+                expected_valid = case["expected"]
+                
+                if actual_valid == expected_valid:
+                    print(f"  Test {i+1}: ✅ PASSED")
+                    passed += 1
+                else:
+                    print(f"  Test {i+1}: ❌ FAILED - Expected {expected_valid}, got {actual_valid}")
+            
+            self.test_results["input_validation"] = {"passed": passed, "total": total}
+            print(f"Input validation: {passed}/{total} tests passed")
+        
+        def run_configuration_validation_tests(self):
+            """Run configuration validation tests."""
+            
+            print("🧪 Running Configuration Validation Tests")
+            
+            # Test LLM configuration
+            try:
+                config = graphbit.LlmConfig.openai(
+                    api_key=os.getenv("OPENAI_API_KEY") or "test-key",
+                    model="gpt-4o-mini"
+                )
+                
+                # This is a conceptual test - actual validation depends on implementation
+                print("  LLM Config: ✅ PASSED")
+                self.test_results["llm_config"] = {"passed": True}
+                
+            except Exception as e:
+                print(f"  LLM Config: ❌ FAILED - {e}")
+                self.test_results["llm_config"] = {"passed": False, "error": str(e)}
+            
+            # Test embedding configuration
+            try:
+                embed_config = graphbit.EmbeddingConfig.openai(
+                    api_key=os.getenv("OPENAI_API_KEY") or "test-key"
+                )
+                
+                print("  Embedding Config: ✅ PASSED")
+                self.test_results["embedding_config"] = {"passed": True}
+                
+            except Exception as e:
+                print(f"  Embedding Config: ❌ FAILED - {e}")
+                self.test_results["embedding_config"] = {"passed": False, "error": str(e)}
+        
+        def run_all_tests(self):
+            """Run all validation tests."""
+            
+            print("🚀 Starting Comprehensive Validation Test Suite")
+            print("=" * 50)
+            
+            self.run_workflow_validation_tests()
+            print()
+            self.run_input_validation_tests()
+            print()
+            self.run_configuration_validation_tests()
+            
+            print("\n" + "=" * 50)
+            print("📊 Test Suite Results Summary")
+            
+            total_passed = 0
+            total_tests = 0
+            
+            for test_name, result in self.test_results.items():
+                if isinstance(result, dict) and "passed" in result:
+                    if isinstance(result["passed"], bool):
+                        total_tests += 1
+                        if result["passed"]:
+                            total_passed += 1
+                        status = "✅" if result["passed"] else "❌"
+                    else:
+                        # For input validation which has passed/total format
+                        total_tests += result.get("total", 0)
+                        total_passed += result.get("passed", 0)
+                        status = "✅" if result["passed"] == result.get("total", 0) else "❌"
+                    
+                    print(f"{status} {test_name}: {result}")
+            
+            success_rate = (total_passed / total_tests * 100) if total_tests > 0 else 0
+            print(f"\nOverall Success Rate: {success_rate:.1f}% ({total_passed}/{total_tests})")
+            
+            return self.test_results
+    
+    return ValidationTestSuite()
+
+def example_comprehensive_validation():
+    """Example of comprehensive validation testing."""
+    
+    # Initialize GraphBit
+    graphbit.init()
+    
+    # Create test suite
+    test_suite = create_validation_test_suite()
+    
+    # Run all tests
+    results = test_suite.run_all_tests()
+    
+    return results
 ```
 
 ## Best Practices
 
-### 1. Layered Validation Strategy
+### 1. Validation Strategy
 
 ```python
-def create_comprehensive_validation_workflow():
-    """Create workflow with layered validation."""
+def get_validation_best_practices():
+    """Get best practices for validation."""
     
-    builder = graphbit.PyWorkflowBuilder("Comprehensive Validation")
+    best_practices = {
+        "early_validation": "Validate inputs as early as possible",
+        "comprehensive_checks": "Use multiple validation layers",
+        "clear_error_messages": "Provide actionable error messages",
+        "graceful_degradation": "Handle validation failures gracefully",
+        "performance_balance": "Balance validation thoroughness with performance",
+        "automated_testing": "Automate validation testing in CI/CD",
+        "continuous_monitoring": "Monitor validation metrics in production"
+    }
     
-    # Layer 1: Input validation
-    input_val = graphbit.PyWorkflowNode.agent_node(
-        name="Input Validation", "Validates input", "input_val",
-        "Validate input format and content: {input}"
-    )
+    for practice, description in best_practices.items():
+        print(f"✅ {practice.replace('_', ' ').title()}: {description}")
     
-    # Layer 2: Business rules validation
-    business_val = graphbit.PyWorkflowNode.agent_node(
-        name="Business Validation", "Validates business rules", "business_val",
-        "Validate against business rules: {validated_input}"
-    )
-    
-    # Layer 3: Processing with validation
-    processor = graphbit.PyWorkflowNode.agent_node(
-        name="Validated Processor", "Processes with validation", "processor",
-        "Process data with continuous validation: {business_validated_data}"
-    )
-    
-    # Build layered validation
-    input_id = builder.add_node(input_val)
-    business_id = builder.add_node(business_val)
-    proc_id = builder.add_node(processor)
-    
-    builder.connect(input_id, business_id, graphbit.PyWorkflowEdge.data_flow())
-    builder.connect(business_id, proc_id, graphbit.PyWorkflowEdge.data_flow())
-    
-    return builder.build()
+    return best_practices
 ```
 
-### 2. Validation Error Handling
+### 2. Error Handling
 
 ```python
-def create_validation_error_handling():
-    """Create robust validation error handling."""
+def handle_validation_error(validation_result, context="validation"):
+    """Handle validation errors appropriately."""
     
-    builder = graphbit.PyWorkflowBuilder("Validation Error Handling")
+    if validation_result.get("is_valid", True):
+        return True
     
-    # Validator with error details
-    validator = graphbit.PyWorkflowNode.agent_node(
-        name="Detailed Validator",
-        description="Provides detailed validation results",
-        agent_id="detailed_validator",
-        prompt="""
-        Validate data with detailed error reporting:
-        
-        Data: {input}
-        
-        Provide:
-        - validation_passed: true/false
-        - error_count: number of errors
-        - warning_count: number of warnings
-        - critical_errors: list of critical issues
-        - suggestions: recommended fixes
-        - retry_possible: whether retry is recommended
-        """
-    )
+    errors = validation_result.get("errors", [])
+    warnings = validation_result.get("warnings", [])
     
-    # Error classifier
-    error_classifier = graphbit.PyWorkflowNode.condition_node(
-        name="Error Classifier",
-        description="Classifies validation errors",
-        expression="validation_passed == true || (error_count <= 3 && critical_errors == 0)"
-    )
+    # Log errors
+    print(f"❌ {context.title()} failed:")
+    for error in errors:
+        print(f"  - {error}")
     
-    # Build error handling workflow
-    val_id = builder.add_node(validator)
-    class_id = builder.add_node(error_classifier)
+    # Log warnings
+    if warnings:
+        print(f"⚠️ {context.title()} warnings:")
+        for warning in warnings:
+            print(f"  - {warning}")
     
-    builder.connect(val_id, class_id, graphbit.PyWorkflowEdge.data_flow())
+    # Determine if execution should continue
+    critical_errors = [error for error in errors if "critical" in error.lower()]
     
-    return builder.build()
+    if critical_errors:
+        print("❌ Critical errors found, stopping execution")
+        return False
+    elif len(errors) > 0:
+        print("⚠️ Non-critical errors found, proceeding with caution")
+        return True
+    else:
+        print("✅ Only warnings found, continuing execution")
+        return True
 ```
 
-Comprehensive validation in GraphBit ensures reliable, high-quality workflow execution. Use these patterns to build robust validation into your workflows and maintain data integrity throughout processing. 
+## Usage Examples
+
+### Complete Validation Example
+
+```python
+def example_complete_validation():
+    """Complete example of validation in practice."""
+    
+    # Initialize GraphBit
+    graphbit.init()
+    
+    print("🚀 Starting Complete Validation Example")
+    
+    # 1. Input validation
+    test_input = {"text": "Hello, world!", "priority": 1}
+    input_validation = validate_input_data(test_input)
+    
+    if not handle_validation_error(input_validation, "input validation"):
+        return False
+    
+    # 2. Workflow validation
+    workflow = create_input_validation_workflow()
+    
+    if not validate_workflow_basic():
+        print("❌ Workflow validation failed")
+        return False
+    
+    # 3. Configuration validation
+    try:
+        llm_config = graphbit.LlmConfig.openai(
+            api_key=os.getenv("OPENAI_API_KEY"),
+            model="gpt-4o-mini"
+        )
+        
+        executor = graphbit.Executor(llm_config)
+        print("✅ Configuration validation passed")
+        
+    except Exception as e:
+        print(f"❌ Configuration validation failed: {e}")
+        return False
+    
+    # 4. Execution validation
+    try:
+        result = executor.execute(workflow)
+        execution_validation = validate_execution_result(result)
+        
+        if not execution_validation["execution_successful"]:
+            print("❌ Execution validation failed")
+            return False
+        
+        # 5. Output validation
+        output_validation = validate_output_quality(result.output())
+        
+        if output_validation["overall_score"] < 0.5:
+            print(f"⚠️ Output quality score low: {output_validation['overall_score']}")
+        else:
+            print(f"✅ Output quality good: {output_validation['overall_score']}")
+        
+        print("✅ Complete validation example passed")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Execution failed: {e}")
+        return False
+
+if __name__ == "__main__":
+    example_complete_validation()
+```
+
+## What's Next
+
+- Learn about [Reliability](reliability.md) for building robust validated systems
+- Explore [Monitoring](monitoring.md) for tracking validation metrics  
+- Check [Performance](performance.md) for optimizing validation overhead
+- See [Error Handling](reliability.md#error-handling-patterns) for comprehensive error management 

@@ -1,566 +1,611 @@
 # LLM Providers
 
-GraphBit supports multiple Large Language Model providers, allowing you to choose the best model for your specific use case. This guide covers configuration, usage, and optimization for each supported provider.
+GraphBit supports multiple Large Language Model providers through a unified client interface. This guide covers configuration, usage, and optimization for each supported provider.
 
 ## Supported Providers
 
-- **OpenAI** - GPT-4, GPT-3.5 Turbo, and other OpenAI models
-- **Anthropic** - Claude 3 family models  
-- **HuggingFace** - Open-source models via HuggingFace API
-- **Ollama** - Local model execution (coming soon)
+GraphBit supports these LLM providers:
+- **OpenAI** - GPT models including GPT-4o, GPT-4o-mini
+- **Anthropic** - Claude models including Claude-3.5-Sonnet  
+- **Ollama** - Local model execution with various open-source models
 
-## OpenAI Configuration
+## Configuration
 
-### Basic Setup
+### OpenAI Configuration
+
+Configure OpenAI provider with API key and model selection:
 
 ```python
 import graphbit
 import os
 
-# Configure OpenAI provider
-config = graphbit.PyLlmConfig.openai(
+# Basic OpenAI configuration
+config = graphbit.LlmConfig.openai(
     api_key=os.getenv("OPENAI_API_KEY"),
-    model="gpt-4o-mini"
+    model="gpt-4o-mini"  # Optional - defaults to gpt-4o-mini
+)
+
+# Access configuration details
+print(f"Provider: {config.provider()}")  # "OpenAI"
+print(f"Model: {config.model()}")        # "gpt-4o-mini"
+```
+
+#### Available OpenAI Models
+
+| Model | Best For | Context Length | Performance |
+|-------|----------|----------------|-------------|
+| `gpt-4o` | Complex reasoning, latest features | 128K | High quality, slower |
+| `gpt-4o-mini` | Balanced performance and cost | 128K | Good quality, faster |
+| `gpt-4-turbo` | High-quality outputs | 128K | High quality |
+| `gpt-3.5-turbo` | Fast, cost-effective tasks | 16K | Fast, economical |
+
+```python
+# Model selection examples
+creative_config = graphbit.LlmConfig.openai(
+    api_key=os.getenv("OPENAI_API_KEY"),
+    model="gpt-4o"  # For creative and complex tasks
+)
+
+production_config = graphbit.LlmConfig.openai(
+    api_key=os.getenv("OPENAI_API_KEY"),
+    model="gpt-4o-mini"  # Balanced for production
+)
+
+fast_config = graphbit.LlmConfig.openai(
+    api_key=os.getenv("OPENAI_API_KEY"),
+    model="gpt-3.5-turbo"  # For high-volume, simple tasks
 )
 ```
 
-### Available Models
+### Anthropic Configuration
 
-| Model | Best For | Context Length | Cost |
-|-------|----------|----------------|------|
-| `gpt-4o` | Complex reasoning, latest features | 128K | High |
-| `gpt-4o-mini` | Balance of performance and cost | 128K | Medium |
-| `gpt-4-turbo` | High-quality outputs | 128K | High |
-| `gpt-3.5-turbo` | Fast, cost-effective | 16K | Low |
-
-### Model Selection Guidelines
+Configure Anthropic provider for Claude models:
 
 ```python
-# For creative tasks
-creative_config = graphbit.PyLlmConfig.openai(
-    os.getenv("OPENAI_API_KEY"),
-    "gpt-4o"  # Best creativity and reasoning
-)
-
-# For production/cost-sensitive
-production_config = graphbit.PyLlmConfig.openai(
-    os.getenv("OPENAI_API_KEY"), 
-    "gpt-4o-mini"  # Good balance
-)
-
-# For high-volume/simple tasks
-volume_config = graphbit.PyLlmConfig.openai(
-    os.getenv("OPENAI_API_KEY"),
-    "gpt-3.5-turbo"  # Most economical
-)
-```
-
-### OpenAI Example Workflow
-
-```python
-def create_openai_workflow():
-    graphbit.init()
-    config = graphbit.PyLlmConfig.openai(
-        os.getenv("OPENAI_API_KEY"),
-        "gpt-4o-mini"
-    )
-    
-    builder = graphbit.PyWorkflowBuilder("OpenAI Analysis")
-    
-    analyzer = graphbit.PyWorkflowNode.agent_node_with_config(
-        name="GPT Analyzer",
-        description="Analyzes content using GPT",
-        agent_id="gpt_analyzer",
-        prompt="Provide detailed analysis of: {input}",
-        max_tokens=1500,
-        temperature=0.3
-    )
-    
-    builder.add_node(analyzer)
-    workflow = builder.build()
-    
-    executor = graphbit.PyWorkflowExecutor(config)
-    return executor.execute(workflow)
-```
-
-## Anthropic Configuration
-
-### Basic Setup
-
-```python
-# Configure Anthropic provider
-config = graphbit.PyLlmConfig.anthropic(
+# Basic Anthropic configuration
+config = graphbit.LlmConfig.anthropic(
     api_key=os.getenv("ANTHROPIC_API_KEY"),
-    model="claude-3-haiku-20240307"
+    model="claude-3-5-sonnet-20241022"  # Optional - defaults to claude-3-5-sonnet-20241022
 )
+
+print(f"Provider: {config.provider()}")  # "Anthropic"
+print(f"Model: {config.model()}")        # "claude-3-5-sonnet-20241022"
 ```
 
-### Available Models
+#### Available Anthropic Models
 
 | Model | Best For | Context Length | Speed |
 |-------|----------|----------------|-------|
-| `claude-3-opus-20240229` | Most capable, complex tasks | 200K | Slow |
-| `claude-3-sonnet-20240229` | Balanced performance | 200K | Medium |
-| `claude-3-haiku-20240307` | Fast, cost-effective | 200K | Fast |
-
-### Model Selection for Anthropic
+| `claude-3-opus-20240229` | Most capable, complex analysis | 200K | Slowest, highest quality |
+| `claude-3-sonnet-20240229` | Balanced performance | 200K | Medium speed and quality |
+| `claude-3-haiku-20240307` | Fast, cost-effective | 200K | Fastest, good quality |
+| `claude-3-5-sonnet-20241022` | Latest, improved reasoning | 200K | Good speed, high quality |
 
 ```python
-# For complex analysis
-complex_config = graphbit.PyLlmConfig.anthropic(
-    os.getenv("ANTHROPIC_API_KEY"),
-    "claude-3-opus-20240229"
+# Model selection for different use cases
+complex_config = graphbit.LlmConfig.anthropic(
+    api_key=os.getenv("ANTHROPIC_API_KEY"),
+    model="claude-3-opus-20240229"  # For complex analysis
 )
 
-# For balanced workloads
-balanced_config = graphbit.PyLlmConfig.anthropic(
-    os.getenv("ANTHROPIC_API_KEY"),
-    "claude-3-sonnet-20240229"
+balanced_config = graphbit.LlmConfig.anthropic(
+    api_key=os.getenv("ANTHROPIC_API_KEY"),
+    model="claude-3-5-sonnet-20241022"  # For balanced workloads
 )
 
-# For speed and cost efficiency
-fast_config = graphbit.PyLlmConfig.anthropic(
-    os.getenv("ANTHROPIC_API_KEY"),
-    "claude-3-haiku-20240307"
+fast_config = graphbit.LlmConfig.anthropic(
+    api_key=os.getenv("ANTHROPIC_API_KEY"),
+    model="claude-3-haiku-20240307"  # For speed and efficiency
 )
 ```
 
-### Anthropic Example Workflow
+### Ollama Configuration
+
+Configure Ollama for local model execution:
+
+```python
+# Basic Ollama configuration (no API key required)
+config = graphbit.LlmConfig.ollama(
+    model="llama3.2"  # Optional - defaults to llama3.2
+)
+
+print(f"Provider: {config.provider()}")  # "Ollama"
+print(f"Model: {config.model()}")        # "llama3.2"
+
+# Other popular models
+mistral_config = graphbit.LlmConfig.ollama(model="mistral")
+codellama_config = graphbit.LlmConfig.ollama(model="codellama")
+phi_config = graphbit.LlmConfig.ollama(model="phi")
+```
+
+## LLM Client Usage
+
+### Creating and Using Clients
+
+```python
+# Create client with configuration
+client = graphbit.LlmClient(config, debug=False)
+
+# Basic text completion
+response = client.complete(
+    prompt="Explain the concept of machine learning",
+    max_tokens=500,     # Optional - controls response length
+    temperature=0.7     # Optional - controls randomness (0.0-1.0)
+)
+
+print(f"Response: {response}")
+```
+
+### Asynchronous Operations
+
+GraphBit provides async methods for non-blocking operations:
+
+```python
+import asyncio
+
+async def async_completion():
+    # Async completion
+    response = await client.complete_async(
+        prompt="Write a short story about AI",
+        max_tokens=300,
+        temperature=0.8
+    )
+    return response
+
+# Run async operation
+response = asyncio.run(async_completion())
+```
+
+### Batch Processing
+
+Process multiple prompts efficiently:
+
+```python
+async def batch_processing():
+    prompts = [
+        "Summarize quantum computing",
+        "Explain blockchain technology", 
+        "Describe neural networks",
+        "What is machine learning?"
+    ]
+    
+    responses = await client.complete_batch(
+        prompts=prompts,
+        max_tokens=200,
+        temperature=0.5,
+        max_concurrency=3  # Process 3 at a time
+    )
+    
+    for i, response in enumerate(responses):
+        print(f"Response {i+1}: {response}")
+
+asyncio.run(batch_processing())
+```
+
+### Chat-Style Interactions
+
+Use chat-optimized methods for conversational interactions:
+
+```python
+async def chat_example():
+    # Chat with message history
+    response = await client.chat_optimized(
+        messages=[
+            ("user", "Hello, how are you?"),
+            ("assistant", "I'm doing well, thank you!"),
+            ("user", "Can you help me with Python programming?"),
+            ("user", "Specifically, how do I handle exceptions?")
+        ],
+        max_tokens=400,
+        temperature=0.3
+    )
+    
+    print(f"Chat response: {response}")
+
+asyncio.run(chat_example())
+```
+
+### Streaming Responses
+
+Get real-time streaming responses:
+
+```python
+async def streaming_example():
+    print("Streaming response:")
+    
+    async for chunk in client.complete_stream(
+        prompt="Tell me a detailed story about space exploration",
+        max_tokens=1000,
+        temperature=0.7
+    ):
+        print(chunk, end="", flush=True)
+    
+    print("\n--- Stream complete ---")
+
+asyncio.run(streaming_example())
+```
+
+## Client Management and Monitoring
+
+### Client Statistics
+
+Monitor client performance and usage:
+
+```python
+# Get comprehensive statistics
+stats = client.get_stats()
+
+print(f"Total requests: {stats['total_requests']}")
+print(f"Successful requests: {stats['successful_requests']}")
+print(f"Failed requests: {stats['failed_requests']}")
+print(f"Average response time: {stats['average_response_time_ms']}ms")
+print(f"Circuit breaker state: {stats['circuit_breaker_state']}")
+print(f"Client uptime: {stats['uptime']}")
+
+# Calculate success rate
+if stats['total_requests'] > 0:
+    success_rate = stats['successful_requests'] / stats['total_requests']
+    print(f"Success rate: {success_rate:.2%}")
+```
+
+### Client Warmup
+
+Pre-initialize connections for better performance:
+
+```python
+async def warmup_client():
+    # Warmup client to reduce cold start latency
+    await client.warmup()
+    print("Client warmed up and ready")
+
+# Warmup before production use
+asyncio.run(warmup_client())
+```
+
+### Reset Statistics
+
+Reset client statistics for monitoring periods:
+
+```python
+# Reset statistics
+client.reset_stats()
+print("Client statistics reset")
+```
+
+## Provider-Specific Examples
+
+### OpenAI Workflow Example
+
+```python
+def create_openai_workflow():
+    """Create workflow using OpenAI"""
+    # Initialize GraphBit
+    graphbit.init()
+    
+    # Configure OpenAI
+    config = graphbit.LlmConfig.openai(
+        api_key=os.getenv("OPENAI_API_KEY"),
+        model="gpt-4o-mini"
+    )
+    
+    # Create workflow
+    workflow = graphbit.Workflow("OpenAI Analysis Pipeline")
+    
+    # Create analyzer node
+    analyzer = graphbit.Node.agent(
+        name="GPT Content Analyzer",
+        prompt="Analyze the following content for sentiment, key themes, and quality:\n\n{input}",
+        agent_id="gpt_analyzer"
+    )
+    
+    # Add to workflow
+    analyzer_id = workflow.add_node(analyzer)
+    workflow.validate()
+    
+    # Create executor and run
+    executor = graphbit.Executor(config, timeout_seconds=60)
+    return workflow, executor
+
+# Usage
+workflow, executor = create_openai_workflow()
+result = executor.execute(workflow)
+```
+
+### Anthropic Workflow Example
 
 ```python
 def create_anthropic_workflow():
+    """Create workflow using Anthropic Claude"""
     graphbit.init()
-    config = graphbit.PyLlmConfig.anthropic(
-        os.getenv("ANTHROPIC_API_KEY"),
-        "claude-3-sonnet-20240229"
+    
+    # Configure Anthropic
+    config = graphbit.LlmConfig.anthropic(
+        api_key=os.getenv("ANTHROPIC_API_KEY"),
+        model="claude-3-5-sonnet-20241022"
     )
     
-    builder = graphbit.PyWorkflowBuilder("Claude Analysis")
+    # Create workflow
+    workflow = graphbit.Workflow("Claude Analysis Pipeline")
     
-    analyzer = graphbit.PyWorkflowNode.agent_node(
-        name="Claude Analyzer",
-        description="Analyzes content using Claude",
-        agent_id="claude_analyzer",
+    # Create analyzer with detailed prompt
+    analyzer = graphbit.Node.agent(
+        name="Claude Content Analyzer",
         prompt="""
         Analyze the following content with attention to:
-        - Factual accuracy
-        - Logical structure  
-        - Potential biases
-        - Recommendations
+        - Factual accuracy and logical consistency
+        - Potential biases or assumptions
+        - Clarity and structure
+        - Key insights and recommendations
         
         Content: {input}
-        """
+        
+        Provide your analysis in a structured format.
+        """,
+        agent_id="claude_analyzer"
     )
     
-    builder.add_node(analyzer)
-    workflow = builder.build()
+    workflow.add_node(analyzer)
+    workflow.validate()
     
-    executor = graphbit.PyWorkflowExecutor(config)
-    return executor.execute(workflow)
+    # Create executor with longer timeout for Claude
+    executor = graphbit.Executor(config, timeout_seconds=120)
+    return workflow, executor
+
+# Usage
+workflow, executor = create_anthropic_workflow()
 ```
 
-## HuggingFace Configuration
-
-### Basic Setup
+### Ollama Workflow Example
 
 ```python
-# Configure HuggingFace provider
-config = graphbit.PyLlmConfig.huggingface(
-    api_key=os.getenv("HUGGINGFACE_API_KEY"),
-    model="microsoft/DialoGPT-medium"
+def create_ollama_workflow():
+    """Create workflow using local Ollama models"""
+    graphbit.init()
+    
+    # Configure Ollama (no API key needed)
+    config = graphbit.LlmConfig.ollama(model="llama3.2")
+    
+    # Create workflow
+    workflow = graphbit.Workflow("Local LLM Pipeline")
+    
+    # Create analyzer optimized for local models
+    analyzer = graphbit.Node.agent(
+        name="Local Model Analyzer",
+        prompt="Analyze this text briefly: {input}",
+        agent_id="local_analyzer"
+    )
+    
+    workflow.add_node(analyzer)
+    workflow.validate()
+    
+    # Create executor with longer timeout for local processing
+    executor = graphbit.Executor(config, timeout_seconds=180)
+    return workflow, executor
+
+# Usage
+workflow, executor = create_ollama_workflow()
+```
+
+## Performance Optimization
+
+### Timeout Configuration
+
+Configure appropriate timeouts for different providers:
+
+```python
+# OpenAI - typically faster
+openai_executor = graphbit.Executor(
+    openai_config, 
+    timeout_seconds=60
+)
+
+# Anthropic - may need more time
+anthropic_executor = graphbit.Executor(
+    anthropic_config, 
+    timeout_seconds=120
+)
+
+# Ollama - local processing may be slower
+ollama_executor = graphbit.Executor(
+    ollama_config, 
+    timeout_seconds=180
 )
 ```
 
-### Popular Models
+### Executor Types for Different Providers
 
-| Model | Type | Best For |
-|-------|------|----------|
-| `microsoft/DialoGPT-medium` | Conversational | Dialog systems |
-| `bigscience/bloom-560m` | General | General text generation |
-| `google/flan-t5-base` | Instruction-following | Task-specific prompts |
-| `EleutherAI/gpt-j-6B` | General | Open-source GPT alternative |
-
-### HuggingFace Example
+Choose appropriate executor types based on provider characteristics:
 
 ```python
-def create_huggingface_workflow():
-    graphbit.init()
-    config = graphbit.PyLlmConfig.huggingface(
-        os.getenv("HUGGINGFACE_API_KEY"),
-        "microsoft/DialoGPT-medium"
-    )
-    
-    builder = graphbit.PyWorkflowBuilder("HuggingFace Chat")
-    
-    chatbot = graphbit.PyWorkflowNode.agent_node(
-        name="HF Chatbot",
-        description="Conversational agent using HuggingFace",
-        agent_id="hf_chatbot",
-        prompt="Respond conversationally to: {input}"
-    )
-    
-    builder.add_node(chatbot)
-    workflow = builder.build()
-    
-    executor = graphbit.PyWorkflowExecutor(config)
-    return executor.execute(workflow)
+# High-throughput for cloud providers
+cloud_executor = graphbit.Executor.new_high_throughput(
+    llm_config=openai_config,
+    timeout_seconds=60
+)
+
+# Low-latency for fast providers
+realtime_executor = graphbit.Executor.new_low_latency(
+    llm_config=anthropic_config,
+    timeout_seconds=30
+)
+
+# Memory-optimized for local models
+local_executor = graphbit.Executor.new_memory_optimized(
+    llm_config=ollama_config,
+    timeout_seconds=180
+)
 ```
 
-## Multi-Provider Workflows
+## Error Handling
 
-### Provider Comparison
+### Provider-Specific Error Handling
 
 ```python
-def compare_providers():
-    graphbit.init()
-    
-    # Configure multiple providers
-    openai_config = graphbit.PyLlmConfig.openai(
-        os.getenv("OPENAI_API_KEY"), "gpt-4o-mini"
-    )
-    
-    anthropic_config = graphbit.PyLlmConfig.anthropic(
-        os.getenv("ANTHROPIC_API_KEY"), "claude-3-haiku-20240307"
-    )
-    
-    # Create executors for each provider
-    openai_executor = graphbit.PyWorkflowExecutor(openai_config)
-    anthropic_executor = graphbit.PyWorkflowExecutor(anthropic_config)
-    
-    # Create simple analysis workflow
-    def create_analysis_workflow():
-        builder = graphbit.PyWorkflowBuilder("Provider Comparison")
-        analyzer = graphbit.PyWorkflowNode.agent_node(
-            "Analyzer", "Analyzes input", "analyzer", 
-            "Analyze and provide 3 key insights about: {input}"
+def robust_llm_usage():
+    try:
+        # Initialize and configure
+        graphbit.init()
+        config = graphbit.LlmConfig.openai(
+            api_key=os.getenv("OPENAI_API_KEY")
         )
-        builder.add_node(analyzer)
-        return builder.build()
-    
-    workflow = create_analysis_workflow()
-    
-    # Execute with different providers
-    openai_result = openai_executor.execute(workflow)
-    anthropic_result = anthropic_executor.execute(workflow)
-    
-    print(f"OpenAI result: {openai_result.get_variable('output')}")
-    print(f"Anthropic result: {anthropic_result.get_variable('output')}")
-    
-    return {
-        "openai": openai_result,
-        "anthropic": anthropic_result
-    }
+        client = graphbit.LlmClient(config)
+        
+        # Execute with error handling
+        response = client.complete(
+            prompt="Test prompt",
+            max_tokens=100
+        )
+        
+        return response
+        
+    except Exception as e:
+        print(f"LLM operation failed: {e}")
+        return None
 ```
 
-### Provider-Specific Workflows
+### Workflow Error Handling
 
 ```python
-def create_specialized_workflows():
-    """Create workflows optimized for different providers."""
-    
-    # OpenAI - Good for creative tasks
-    def openai_creative_workflow():
-        config = graphbit.PyLlmConfig.openai(
-            os.getenv("OPENAI_API_KEY"), "gpt-4o"
-        )
-        builder = graphbit.PyWorkflowBuilder("Creative Writing")
+def execute_with_error_handling(workflow, executor):
+    try:
+        result = executor.execute(workflow)
         
-        writer = graphbit.PyWorkflowNode.agent_node_with_config(
-            name="Creative Writer",
-            description="Writes creative content",
-            agent_id="creative_writer",
-            prompt="Write a creative story about: {topic}",
-            max_tokens=2000,
-            temperature=0.8
-        )
-        
-        builder.add_node(writer)
-        return graphbit.PyWorkflowExecutor(config), builder.build()
-    
-    # Anthropic - Good for analysis
-    def anthropic_analysis_workflow():
-        config = graphbit.PyLlmConfig.anthropic(
-            os.getenv("ANTHROPIC_API_KEY"), "claude-3-sonnet-20240229"
-        )
-        builder = graphbit.PyWorkflowBuilder("Detailed Analysis")
-        
-        analyzer = graphbit.PyWorkflowNode.agent_node(
-            name="Deep Analyzer",
-            description="Provides detailed analysis",
-            agent_id="deep_analyzer",
-            prompt="""
-            Provide a comprehensive analysis of: {input}
+        if result.is_completed():
+            return result.output()
+        elif result.is_failed():
+            error_msg = result.error()
+            print(f"Workflow failed: {error_msg}")
+            return None
             
-            Consider:
-            - Multiple perspectives
-            - Potential implications
-            - Evidence and reasoning
-            - Limitations and uncertainties
-            """
-        )
-        
-        builder.add_node(analyzer)
-        return graphbit.PyWorkflowExecutor(config), builder.build()
-    
-    return {
-        "creative": openai_creative_workflow(),
-        "analysis": anthropic_analysis_workflow()
-    }
-```
-
-## Provider-Specific Optimizations
-
-### OpenAI Optimizations
-
-```python
-# Optimize for OpenAI characteristics
-def optimize_for_openai():
-    config = graphbit.PyLlmConfig.openai(
-        os.getenv("OPENAI_API_KEY"), "gpt-4o-mini"
-    )
-    
-    # Use structured prompts for better results
-    structured_agent = graphbit.PyWorkflowNode.agent_node(
-        name="Structured Processor",
-        description="Uses structured prompts for OpenAI",
-        agent_id="structured_processor",
-        prompt="""
-        Task: {task}
-        
-        Instructions:
-        1. Analyze the input carefully
-        2. Consider multiple angles
-        3. Provide specific examples
-        4. Conclude with actionable insights
-        
-        Input: {input}
-        
-        Response:
-        """
-    )
-    
-    return structured_agent
-```
-
-### Anthropic Optimizations
-
-```python
-# Optimize for Anthropic characteristics  
-def optimize_for_anthropic():
-    config = graphbit.PyLlmConfig.anthropic(
-        os.getenv("ANTHROPIC_API_KEY"), "claude-3-sonnet-20240229"
-    )
-    
-    # Use conversational style for better results
-    conversational_agent = graphbit.PyWorkflowNode.agent_node(
-        name="Conversational Processor",
-        description="Uses conversational style for Anthropic",
-        agent_id="conversational_processor",
-        prompt="""
-        I'd like you to help me understand this topic: {input}
-        
-        Please explain it clearly, considering:
-        - What are the key concepts?
-        - How do they relate to each other?
-        - What are the practical implications?
-        - Are there any important nuances or caveats?
-        
-        Feel free to use examples to illustrate your points.
-        """
-    )
-    
-    return conversational_agent
-```
-
-## Error Handling and Fallbacks
-
-### Provider Fallback Strategy
-
-```python
-class ProviderFallback:
-    def __init__(self):
-        self.providers = [
-            ("OpenAI", graphbit.PyLlmConfig.openai(
-                os.getenv("OPENAI_API_KEY"), "gpt-4o-mini"
-            )),
-            ("Anthropic", graphbit.PyLlmConfig.anthropic(
-                os.getenv("ANTHROPIC_API_KEY"), "claude-3-haiku-20240307"
-            )),
-        ]
-    
-    def execute_with_fallback(self, workflow):
-        """Try providers in order until one succeeds."""
-        for provider_name, config in self.providers:
-            try:
-                executor = graphbit.PyWorkflowExecutor(config)
-                result = executor.execute(workflow)
-                
-                if result.is_completed():
-                    print(f"✅ Success with {provider_name}")
-                    return result
-                    
-            except Exception as e:
-                print(f"❌ {provider_name} failed: {e}")
-                continue
-        
-        raise Exception("All providers failed")
-
-# Usage
-fallback = ProviderFallback()
-result = fallback.execute_with_fallback(workflow)
-```
-
-### Rate Limiting Handling
-
-```python
-def create_rate_limited_executor(config):
-    """Create executor with rate limiting considerations."""
-    
-    return graphbit.PyWorkflowExecutor(config) \
-        .with_retry_config(
-            graphbit.PyRetryConfig.default()
-            .with_exponential_backoff(2000, 2.0, 60000)  # Longer delays
-            .with_jitter(0.3)  # More jitter for rate limits
-        ) \
-        .with_circuit_breaker_config(
-            graphbit.PyCircuitBreakerConfig(10, 120000)  # Higher threshold
-        )
+    except Exception as e:
+        print(f"Execution error: {e}")
+        return None
 ```
 
 ## Best Practices
 
 ### 1. Provider Selection
 
-Choose providers based on your needs:
+Choose providers based on your requirements:
 
 ```python
-# For creative tasks
-creative_config = graphbit.PyLlmConfig.openai(
-    os.getenv("OPENAI_API_KEY"), "gpt-4o"
-)
-
-# For analytical tasks
-analytical_config = graphbit.PyLlmConfig.anthropic(
-    os.getenv("ANTHROPIC_API_KEY"), "claude-3-sonnet-20240229"
-)
-
-# For cost-effective tasks
-economical_config = graphbit.PyLlmConfig.openai(
-    os.getenv("OPENAI_API_KEY"), "gpt-3.5-turbo"
-)
-```
-
-### 2. Cost Optimization
-
-```python
-# Use shorter prompts for expensive models
-cost_optimized_agent = graphbit.PyWorkflowNode.agent_node_with_config(
-    name="Cost Optimized",
-    description="Optimized for cost",
-    agent_id="cost_optimized",
-    prompt="Summarize: {input}",  # Short, direct prompt
-    max_tokens=500,  # Limit output tokens
-    temperature=0.1  # Low temperature for consistency
-)
-```
-
-### 3. Performance Optimization
-
-```python
-# Use faster models for real-time applications
-realtime_config = graphbit.PyLlmConfig.anthropic(
-    os.getenv("ANTHROPIC_API_KEY"), "claude-3-haiku-20240307"  # Fastest Claude
-)
-
-# Optimize executor for speed
-speed_executor = graphbit.PyWorkflowExecutor.new_low_latency(realtime_config)
-```
-
-### 4. Quality vs Speed Trade-offs
-
-```python
-def choose_config_for_use_case(use_case):
-    """Choose optimal config based on use case."""
-    
-    configs = {
-        "research": graphbit.PyLlmConfig.anthropic(
-            os.getenv("ANTHROPIC_API_KEY"), "claude-3-opus-20240229"
-        ),
-        "content": graphbit.PyLlmConfig.openai(
-            os.getenv("OPENAI_API_KEY"), "gpt-4o"
-        ),
-        "chat": graphbit.PyLlmConfig.openai(
-            os.getenv("OPENAI_API_KEY"), "gpt-3.5-turbo"
-        ),
-        "analysis": graphbit.PyLlmConfig.anthropic(
-            os.getenv("ANTHROPIC_API_KEY"), "claude-3-sonnet-20240229"
+def get_optimal_config(use_case):
+    """Select optimal provider for use case"""
+    if use_case == "creative":
+        return graphbit.LlmConfig.openai(
+            api_key=os.getenv("OPENAI_API_KEY"),
+            model="gpt-4o"
         )
-    }
-    
-    return configs.get(use_case, configs["chat"])
+    elif use_case == "analytical":
+        return graphbit.LlmConfig.anthropic(
+            api_key=os.getenv("ANTHROPIC_API_KEY"),
+            model="claude-3-5-sonnet-20241022"
+        )
+    elif use_case == "local":
+        return graphbit.LlmConfig.ollama(model="llama3.2")
+    else:
+        return graphbit.LlmConfig.openai(
+            api_key=os.getenv("OPENAI_API_KEY"),
+            model="gpt-4o-mini"
+        )
 ```
 
-## Monitoring and Costs
+### 2. API Key Management
 
-### Usage Tracking
+Securely manage API keys:
 
 ```python
-def track_provider_usage():
-    """Track usage across different providers."""
-    
-    import time
-    
-    usage_stats = {
-        "openai": {"requests": 0, "total_time": 0},
-        "anthropic": {"requests": 0, "total_time": 0}
-    }
-    
-    def track_execution(provider_name, executor, workflow):
-        start_time = time.time()
-        result = executor.execute(workflow)
-        end_time = time.time()
-        
-        usage_stats[provider_name]["requests"] += 1
-        usage_stats[provider_name]["total_time"] += (end_time - start_time)
-        
-        return result
-    
-    return track_execution, usage_stats
-```
-
-## Troubleshooting
-
-### Common Issues
-
-1. **API Key Issues**
-```python
-# Verify API keys are set
 import os
-if not os.getenv("OPENAI_API_KEY"):
-    print("❌ OPENAI_API_KEY not set")
-if not os.getenv("ANTHROPIC_API_KEY"):
-    print("❌ ANTHROPIC_API_KEY not set")
+from pathlib import Path
+
+def get_api_key(provider):
+    """Securely retrieve API keys"""
+    key_mapping = {
+        "openai": "OPENAI_API_KEY",
+        "anthropic": "ANTHROPIC_API_KEY"
+    }
+    
+    env_var = key_mapping.get(provider)
+    if not env_var:
+        raise ValueError(f"Unknown provider: {provider}")
+    
+    api_key = os.getenv(env_var)
+    if not api_key:
+        raise ValueError(f"Missing {env_var} environment variable")
+    
+    return api_key
+
+# Usage
+try:
+    openai_config = graphbit.LlmConfig.openai(
+        api_key=get_api_key("openai")
+    )
+except ValueError as e:
+    print(f"Configuration error: {e}")
 ```
 
-2. **Rate Limiting**
+### 3. Client Reuse
+
+Reuse clients for better performance:
+
 ```python
-# Handle rate limits with proper retry configuration
-rate_limit_config = graphbit.PyRetryConfig.default() \
-    .with_exponential_backoff(5000, 2.0, 120000)
+class LLMManager:
+    def __init__(self):
+        self.clients = {}
+    
+    def get_client(self, provider, model=None):
+        """Get or create client for provider"""
+        key = f"{provider}_{model or 'default'}"
+        
+        if key not in self.clients:
+            if provider == "openai":
+                config = graphbit.LlmConfig.openai(
+                    api_key=get_api_key("openai"),
+                    model=model
+                )
+            elif provider == "anthropic":
+                config = graphbit.LlmConfig.anthropic(
+                    api_key=get_api_key("anthropic"),
+                    model=model
+                )
+            elif provider == "ollama":
+                config = graphbit.LlmConfig.ollama(model=model)
+            else:
+                raise ValueError(f"Unknown provider: {provider}")
+            
+            self.clients[key] = graphbit.LlmClient(config)
+        
+        return self.clients[key]
+
+# Usage
+llm_manager = LLMManager()
+openai_client = llm_manager.get_client("openai", "gpt-4o-mini")
 ```
 
-3. **Model Availability**
+### 4. Monitoring and Logging
+
+Monitor LLM usage and performance:
+
 ```python
-# Use fallback models if primary model is unavailable
-def create_fallback_config():
-    try:
-        return graphbit.PyLlmConfig.openai(
-            os.getenv("OPENAI_API_KEY"), "gpt-4o"
-        )
-    except:
-        return graphbit.PyLlmConfig.openai(
-            os.getenv("OPENAI_API_KEY"), "gpt-3.5-turbo"
-        )
+def monitor_llm_usage(client, operation_name):
+    """Monitor LLM client usage"""
+    stats_before = client.get_stats()
+    
+    # Perform operation here
+    
+    stats_after = client.get_stats()
+    
+    requests_made = stats_after['total_requests'] - stats_before['total_requests']
+    print(f"{operation_name}: {requests_made} requests made")
+    
+    if stats_after['total_requests'] > 0:
+        success_rate = stats_after['successful_requests'] / stats_after['total_requests']
+        print(f"Overall success rate: {success_rate:.2%}")
 ```
 
-GraphBit's multi-provider support gives you flexibility to choose the best model for each task while maintaining consistent workflow patterns across all providers. 
+## What's Next
+
+- Learn about [Embeddings](embeddings.md) for vector operations
+- Explore [Workflow Builder](workflow-builder.md) for complex workflows
+- Check [Performance](performance.md) for optimization techniques
+- See [Monitoring](monitoring.md) for production monitoring
