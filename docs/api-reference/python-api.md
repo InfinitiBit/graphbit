@@ -1,21 +1,34 @@
 # Python API Reference
 
-Complete reference for GraphBit's Python API. This document covers all classes, methods, and their usage.
+Complete reference for GraphBit's Python API. This document covers all classes, methods, and their usage based on the actual Python binding implementation.
 
 ## Module: `graphbit`
 
 ### Core Functions
 
-#### `init()`
-Initialize the GraphBit library with default configuration.
+#### `init(log_level=None, enable_tracing=None, debug=None)`
+Initialize the GraphBit library with optional configuration.
 
 ```python
 import graphbit
+
+# Basic initialization
 graphbit.init()
+
+# With debugging enabled
+graphbit.init(debug=True)
+
+# With custom log level and tracing
+graphbit.init(log_level="info", enable_tracing=True)
 ```
 
+**Parameters**:
+- `log_level` (str, optional): Log level ("trace", "debug", "info", "warn", "error"). Default: "warn"
+- `enable_tracing` (bool, optional): Enable tracing. Default: False
+- `debug` (bool, optional): Enable debug mode (alias for enable_tracing). Default: False
+
 **Returns**: `None`  
-**Raises**: `GraphBitError` if initialization fails
+**Raises**: `RuntimeError` if initialization fails
 
 #### `version()`
 Get the current GraphBit version.
@@ -27,153 +40,491 @@ print(f"GraphBit version: {version}")
 
 **Returns**: `str` - Version string (e.g., "0.1.0")
 
+#### `get_system_info()`
+Get comprehensive system information and health status.
+
+```python
+info = graphbit.get_system_info()
+print(f"CPU count: {info['cpu_count']}")
+print(f"Runtime initialized: {info['runtime_initialized']}")
+```
+
+**Returns**: `dict` - Dictionary containing:
+- `version`: GraphBit version
+- `python_binding_version`: Python binding version
+- `runtime_uptime_seconds`: Runtime uptime
+- `runtime_worker_threads`: Number of worker threads
+- `cpu_count`: Number of CPU cores
+- `runtime_initialized`: Runtime initialization status
+- `memory_allocator`: Memory allocator type
+- `build_target`: Build target
+- `build_profile`: Build profile (debug/release)
+
+#### `health_check()`
+Perform comprehensive health checks.
+
+```python
+health = graphbit.health_check()
+if health['overall_healthy']:
+    print("System is healthy")
+else:
+    print("System has issues")
+```
+
+**Returns**: `dict` - Dictionary containing health status information
+
+#### `configure_runtime(worker_threads=None, max_blocking_threads=None, thread_stack_size_mb=None)`
+Configure the global runtime with custom settings (advanced).
+
+```python
+# Configure runtime before init()
+graphbit.configure_runtime(worker_threads=8, max_blocking_threads=16)
+graphbit.init()
+```
+
+**Parameters**:
+- `worker_threads` (int, optional): Number of worker threads
+- `max_blocking_threads` (int, optional): Maximum blocking threads
+- `thread_stack_size_mb` (int, optional): Thread stack size in MB
+
+#### `shutdown()`
+Gracefully shutdown the library (for testing and cleanup).
+
+```python
+graphbit.shutdown()
+```
+
 ---
 
 ## LLM Configuration
 
-### `PyLlmConfig`
+### `LlmConfig`
 
 Configuration class for Large Language Model providers.
 
 #### Static Methods
 
-##### `PyLlmConfig.openai(api_key: str, model: str) -> PyLlmConfig`
+##### `LlmConfig.openai(api_key, model=None)`
 Create OpenAI provider configuration.
 
 ```python
-config = graphbit.PyLlmConfig.openai("sk-...", "gpt-4o-mini")
+config = graphbit.LlmConfig.openai("sk-...", "gpt-4o-mini")
+# With default model
+config = graphbit.LlmConfig.openai("sk-...")  # Uses gpt-4o-mini
 ```
 
 **Parameters**:
 - `api_key` (str): OpenAI API key
-- `model` (str): Model name (e.g., "gpt-4", "gpt-3.5-turbo")
+- `model` (str, optional): Model name. Default: "gpt-4o-mini"
 
-**Returns**: `PyLlmConfig` instance
+**Returns**: `LlmConfig` instance
 
-##### `PyLlmConfig.anthropic(api_key: str, model: str) -> PyLlmConfig`
+##### `LlmConfig.anthropic(api_key, model=None)`
 Create Anthropic provider configuration.
 
 ```python
-config = graphbit.PyLlmConfig.anthropic("sk-ant-...", "claude-3-sonnet-20240229")
+config = graphbit.LlmConfig.anthropic("sk-ant-...", "claude-3-5-sonnet-20241022")
+# With default model
+config = graphbit.LlmConfig.anthropic("sk-ant-...")  # Uses claude-3-5-sonnet-20241022
 ```
 
 **Parameters**:
 - `api_key` (str): Anthropic API key
-- `model` (str): Model name (e.g., "claude-3-sonnet-20240229")
+- `model` (str, optional): Model name. Default: "claude-3-5-sonnet-20241022"
 
-**Returns**: `PyLlmConfig` instance
+**Returns**: `LlmConfig` instance
 
-##### `PyLlmConfig.huggingface(api_key: str, model: str) -> PyLlmConfig`
-Create HuggingFace provider configuration.
+##### `LlmConfig.ollama(model=None)`
+Create Ollama provider configuration.
 
 ```python
-config = graphbit.PyLlmConfig.huggingface("hf_...", "microsoft/DialoGPT-medium")
+config = graphbit.LlmConfig.ollama("llama3.2")
+# With default model
+config = graphbit.LlmConfig.ollama()  # Uses llama3.2
+```
+
+**Parameters**:
+- `model` (str, optional): Model name. Default: "llama3.2"
+
+**Returns**: `LlmConfig` instance
+
+#### Instance Methods
+
+##### `provider()`
+Get the provider name.
+
+```python
+provider = config.provider()  # "openai", "anthropic", "ollama"
+```
+
+##### `model()`
+Get the model name.
+
+```python
+model = config.model()  # "gpt-4o-mini", "claude-3-5-sonnet-20241022", etc.
+```
+
+---
+
+## LLM Client
+
+### `LlmClient`
+
+Production-grade LLM client with resilience patterns.
+
+#### Constructor
+
+##### `LlmClient(config, debug=None)`
+Create a new LLM client.
+
+```python
+client = graphbit.LlmClient(config)
+# With debugging
+client = graphbit.LlmClient(config, debug=True)
+```
+
+**Parameters**:
+- `config` (LlmConfig): LLM configuration
+- `debug` (bool, optional): Enable debug mode. Default: False
+
+#### Methods
+
+##### `complete(prompt, max_tokens=None, temperature=None)`
+Synchronous completion with resilience.
+
+```python
+response = client.complete("Write a short story about a robot")
+print(response)
+
+# With parameters
+response = client.complete(
+    "Explain quantum computing",
+    max_tokens=500,
+    temperature=0.7
+)
+```
+
+**Parameters**:
+- `prompt` (str): Input prompt
+- `max_tokens` (int, optional): Maximum tokens to generate (1-100000)
+- `temperature` (float, optional): Sampling temperature (0.0-2.0)
+
+**Returns**: `str` - Generated text
+**Raises**: `ValueError` for invalid parameters
+
+##### `complete_async(prompt, max_tokens=None, temperature=None)`
+Asynchronous completion with full resilience.
+
+```python
+import asyncio
+
+async def generate():
+    response = await client.complete_async("Tell me a joke")
+    return response
+
+result = asyncio.run(generate())
+```
+
+**Parameters**: Same as `complete()`
+**Returns**: `Awaitable[str]` - Generated text
+
+##### `complete_batch(prompts, max_tokens=None, temperature=None, max_concurrency=None)`
+Ultra-fast batch processing with controlled concurrency.
+
+```python
+import asyncio
+
+prompts = [
+    "Summarize AI trends",
+    "Explain blockchain",
+    "Describe quantum computing"
+]
+
+async def batch_generate():
+    responses = await client.complete_batch(prompts, max_concurrency=5)
+    return responses
+
+results = asyncio.run(batch_generate())
+```
+
+**Parameters**:
+- `prompts` (List[str]): List of prompts (max 1000)
+- `max_tokens` (int, optional): Maximum tokens per prompt
+- `temperature` (float, optional): Sampling temperature
+- `max_concurrency` (int, optional): Maximum concurrent requests. Default: CPU count * 2
+
+**Returns**: `Awaitable[List[str]]` - List of generated responses
+
+##### `chat_optimized(messages, max_tokens=None, temperature=None)`
+Optimized chat completion with message validation.
+
+```python
+import asyncio
+
+messages = [
+    ("system", "You are a helpful assistant"),
+    ("user", "What is Python?"),
+    ("assistant", "Python is a programming language"),
+    ("user", "Tell me more about its features")
+]
+
+async def chat():
+    response = await client.chat_optimized(messages)
+    return response
+
+result = asyncio.run(chat())
+```
+
+**Parameters**:
+- `messages` (List[Tuple[str, str]]): List of (role, content) tuples
+- `max_tokens` (int, optional): Maximum tokens to generate
+- `temperature` (float, optional): Sampling temperature
+
+**Returns**: `Awaitable[str]` - Generated response
+
+##### `complete_stream(prompt, max_tokens=None, temperature=None)`
+Stream completion (alias for async complete).
+
+```python
+import asyncio
+
+async def stream():
+    response = await client.complete_stream("Write a poem")
+    return response
+
+result = asyncio.run(stream())
+```
+
+##### `get_stats()`
+Get comprehensive client statistics.
+
+```python
+stats = client.get_stats()
+print(f"Total requests: {stats['total_requests']}")
+print(f"Success rate: {stats['success_rate']}")
+print(f"Average response time: {stats['average_response_time_ms']}ms")
+```
+
+**Returns**: `dict` - Dictionary containing performance metrics
+
+##### `warmup()`
+Warm up the client to avoid initialization overhead.
+
+```python
+import asyncio
+
+async def prepare():
+    await client.warmup()
+    print("Client warmed up")
+
+asyncio.run(prepare())
+```
+
+##### `reset_stats()`
+Reset client statistics.
+
+```python
+client.reset_stats()
+```
+
+---
+
+## Embeddings
+
+### `EmbeddingConfig`
+
+Configuration for embedding providers.
+
+#### Static Methods
+
+##### `EmbeddingConfig.openai(api_key, model=None)`
+Create OpenAI embeddings configuration.
+
+```python
+config = graphbit.EmbeddingConfig.openai("sk-...", "text-embedding-3-small")
+# With default model
+config = graphbit.EmbeddingConfig.openai("sk-...")  # Uses text-embedding-3-small
+```
+
+**Parameters**:
+- `api_key` (str): OpenAI API key
+- `model` (str, optional): Model name. Default: "text-embedding-3-small"
+
+##### `EmbeddingConfig.huggingface(api_key, model)`
+Create HuggingFace embeddings configuration.
+
+```python
+config = graphbit.EmbeddingConfig.huggingface("hf_...", "sentence-transformers/all-MiniLM-L6-v2")
 ```
 
 **Parameters**:
 - `api_key` (str): HuggingFace API token
 - `model` (str): Model name from HuggingFace hub
 
-**Returns**: `PyLlmConfig` instance
+### `EmbeddingClient`
 
-#### Instance Methods
-
-##### `provider_name() -> str`
-Get the provider name.
-
-```python
-provider = config.provider_name()  # "openai", "anthropic", "huggingface"
-```
-
-##### `model_name() -> str`
-Get the model name.
-
-```python
-model = config.model_name()  # "gpt-4", "claude-3-sonnet", etc.
-```
-
----
-
-## Workflow Building
-
-### `PyWorkflowBuilder`
-
-Builder class for creating workflows using the builder pattern.
+Client for generating text embeddings.
 
 #### Constructor
 
-##### `PyWorkflowBuilder(name: str)`
-Create a new workflow builder.
+##### `EmbeddingClient(config)`
+Create embedding client.
 
 ```python
-builder = graphbit.PyWorkflowBuilder("My Workflow")
+client = graphbit.EmbeddingClient(config)
 ```
-
-**Parameters**:
-- `name` (str): Workflow name
 
 #### Methods
 
-##### `description(description: str) -> None`
-Set workflow description.
+##### `embed(text)`
+Generate embedding for single text.
 
 ```python
-builder.description("A workflow for processing customer feedback")
+embedding = client.embed("Hello world")
+print(f"Embedding dimension: {len(embedding)}")
 ```
 
 **Parameters**:
-- `description` (str): Workflow description
+- `text` (str): Input text
 
-##### `add_node(node: PyWorkflowNode) -> str`
+**Returns**: `List[float]` - Embedding vector
+
+##### `embed_many(texts)`
+Generate embeddings for multiple texts.
+
+```python
+texts = ["Text 1", "Text 2", "Text 3"]
+embeddings = client.embed_many(texts)
+print(f"Generated {len(embeddings)} embeddings")
+```
+
+**Parameters**:
+- `texts` (List[str]): List of input texts
+
+**Returns**: `List[List[float]]` - List of embedding vectors
+
+##### `similarity(a, b)` (static)
+Calculate cosine similarity between two embeddings.
+
+```python
+similarity = graphbit.EmbeddingClient.similarity(embed1, embed2)
+print(f"Similarity: {similarity}")
+```
+
+**Parameters**:
+- `a` (List[float]): First embedding vector
+- `b` (List[float]): Second embedding vector
+
+**Returns**: `float` - Cosine similarity (-1.0 to 1.0)
+
+---
+
+## Workflow Components
+
+### `Node`
+
+Factory class for creating different types of workflow nodes.
+
+#### Static Methods
+
+##### `Node.agent(name, prompt, agent_id=None)`
+Create an AI agent node.
+
+```python
+agent = graphbit.Node.agent(
+    name="Content Analyzer",
+    prompt="Analyze the sentiment of: {input}",
+    agent_id="analyzer"  # Optional, auto-generated if not provided
+)
+```
+
+**Parameters**:
+- `name` (str): Human-readable node name
+- `prompt` (str): LLM prompt template with variables
+- `agent_id` (str, optional): Unique agent identifier. Auto-generated if not provided
+
+**Returns**: `Node` instance
+
+##### `Node.transform(name, transformation)`
+Create a data transformation node.
+
+```python
+transformer = graphbit.Node.transform(
+    name="Uppercase",
+    transformation="uppercase"
+)
+```
+
+**Parameters**:
+- `name` (str): Node name
+- `transformation` (str): Transformation type
+
+**Returns**: `Node` instance
+
+##### `Node.condition(name, expression)`
+Create a condition node for branching logic.
+
+```python
+condition = graphbit.Node.condition(
+    name="Quality Check",
+    expression="quality_score > 0.8"
+)
+```
+
+**Parameters**:
+- `name` (str): Node name
+- `expression` (str): Boolean expression to evaluate
+
+**Returns**: `Node` instance
+
+#### Instance Methods
+
+##### `id()`
+Get the node ID.
+
+##### `name()`
+Get the node name.
+
+### `Workflow`
+
+Represents a complete workflow.
+
+#### Constructor
+
+##### `Workflow(name)`
+Create a new workflow.
+
+```python
+workflow = graphbit.Workflow("My Workflow")
+```
+
+#### Methods
+
+##### `add_node(node)`
 Add a node to the workflow.
 
 ```python
-node_id = builder.add_node(my_node)
+node_id = workflow.add_node(my_node)
+print(f"Added node with ID: {node_id}")
 ```
 
 **Parameters**:
-- `node` (PyWorkflowNode): Node to add
+- `node` (Node): Node to add
 
 **Returns**: `str` - Unique node ID
 
-##### `connect(from_id: str, to_id: str, edge: PyWorkflowEdge) -> None`
-Connect two nodes with an edge.
+##### `connect(from_id, to_id)`
+Connect two nodes.
 
 ```python
-builder.connect(node1_id, node2_id, graphbit.PyWorkflowEdge.data_flow())
+workflow.connect(node1_id, node2_id)
 ```
 
 **Parameters**:
 - `from_id` (str): Source node ID
-- `to_id` (str): Target node ID  
-- `edge` (PyWorkflowEdge): Edge defining the connection
+- `to_id` (str): Target node ID
 
-##### `build() -> PyWorkflow`
-Build the final workflow.
-
-```python
-workflow = builder.build()
-```
-
-**Returns**: `PyWorkflow` instance  
-**Raises**: `ValueError` if workflow is invalid
-
-### `PyWorkflow`
-
-Represents a complete workflow ready for execution.
-
-#### Constructor
-
-##### `PyWorkflow(name: str, description: str)`
-Create a new workflow directly (rarely used - prefer builder).
-
-```python
-workflow = graphbit.PyWorkflow("Test", "A test workflow")
-```
-
-#### Methods
-
-##### `validate() -> None`
+##### `validate()`
 Validate the workflow structure.
 
 ```python
@@ -184,347 +535,45 @@ except Exception as e:
     print(f"Invalid workflow: {e}")
 ```
 
-**Raises**: `ValueError` if workflow is invalid
+### `WorkflowResult`
 
-##### `id() -> str`
-Get the workflow ID.
-
-##### `name() -> str`
-Get the workflow name.
-
-##### `description() -> str`
-Get the workflow description.
-
-##### `node_count() -> int`
-Get the number of nodes.
-
-##### `edge_count() -> int`
-Get the number of edges.
-
-##### `to_json() -> str`
-Serialize workflow to JSON.
-
-```python
-json_str = workflow.to_json()
-```
-
-##### `from_json(json_str: str) -> PyWorkflow`
-Deserialize workflow from JSON.
-
-```python
-workflow = graphbit.PyWorkflow.from_json(json_string)
-```
-
----
-
-## Workflow Nodes
-
-### `PyWorkflowNode`
-
-Factory class for creating different types of workflow nodes.
-
-#### Static Methods
-
-##### `agent_node(name: str, description: str, agent_id: str, prompt: str) -> PyWorkflowNode`
-Create an AI agent node.
-
-```python
-agent = graphbit.PyWorkflowNode.agent_node(
-    name="Content Analyzer",
-    description="Analyzes content for sentiment",
-    agent_id="analyzer",
-    prompt="Analyze the sentiment of: {input}"
-)
-```
-
-**Parameters**:
-- `name` (str): Human-readable node name
-- `description` (str): Node description
-- `agent_id` (str): Unique agent identifier
-- `prompt` (str): LLM prompt template with variables
-
-##### `agent_node_with_config(name: str, description: str, agent_id: str, prompt: str, max_tokens: int, temperature: float) -> PyWorkflowNode`
-Create an agent node with advanced configuration.
-
-```python
-agent = graphbit.PyWorkflowNode.agent_node_with_config(
-    name="Creative Writer",
-    description="Writes creative content",
-    agent_id="writer",
-    prompt="Write a story about: {topic}",
-    max_tokens=1000,
-    temperature=0.8
-)
-```
-
-**Parameters**:
-- `name` (str): Node name
-- `description` (str): Node description
-- `agent_id` (str): Agent identifier
-- `prompt` (str): Prompt template
-- `max_tokens` (int): Maximum tokens to generate
-- `temperature` (float): Creativity level (0.0-1.0)
-
-##### `condition_node(name: str, description: str, expression: str) -> PyWorkflowNode`
-Create a condition node for branching logic.
-
-```python
-condition = graphbit.PyWorkflowNode.condition_node(
-    name="Quality Check",
-    description="Checks if quality score is acceptable",
-    expression="quality_score > 0.8"
-)
-```
-
-**Parameters**:
-- `name` (str): Node name
-- `description` (str): Node description
-- `expression` (str): Boolean expression to evaluate
-
-##### `transform_node(name: str, description: str, transformation: str) -> PyWorkflowNode`
-Create a data transformation node.
-
-```python
-transformer = graphbit.PyWorkflowNode.transform_node(
-    name="Uppercase",
-    description="Converts text to uppercase",
-    transformation="uppercase"
-)
-```
-
-**Parameters**:
-- `name` (str): Node name
-- `description` (str): Node description
-- `transformation` (str): Transformation type
-
-**Available transformations**:
-- `"uppercase"` - Convert to uppercase
-- `"lowercase"` - Convert to lowercase
-- `"json_extract"` - Extract JSON from text
-- `"split"` - Split text by delimiter
-- `"join"` - Join text with delimiter
-
-##### `delay_node(name: str, description: str, duration_seconds: int) -> PyWorkflowNode`
-Create a delay node for timing control.
-
-```python
-delay = graphbit.PyWorkflowNode.delay_node(
-    name="Rate Limit",
-    description="Prevents API rate limiting",
-    duration_seconds=5
-)
-```
-
-**Parameters**:
-- `name` (str): Node name
-- `description` (str): Node description
-- `duration_seconds` (int): Delay duration in seconds
-
-##### `document_loader_node(name: str, description: str, document_type: str, source_path: str) -> PyWorkflowNode`
-Create a document loader node.
-
-```python
-loader = graphbit.PyWorkflowNode.document_loader_node(
-    name="PDF Loader",
-    description="Loads PDF documents",
-    document_type="pdf",
-    source_path="/path/to/document.pdf"
-)
-```
-
-**Parameters**:
-- `name` (str): Node name
-- `description` (str): Node description
-- `document_type` (str): Document type ("pdf", "txt", "docx")
-- `source_path` (str): Path to document
-
-#### Instance Methods
-
-##### `id() -> str`
-Get the node ID.
-
-##### `name() -> str`
-Get the node name.
-
-##### `description() -> str`
-Get the node description.
-
----
-
-## Workflow Edges
-
-### `PyWorkflowEdge`
-
-Defines connections between workflow nodes.
-
-#### Static Methods
-
-##### `data_flow() -> PyWorkflowEdge`
-Create a data flow edge that passes data between nodes.
-
-```python
-edge = graphbit.PyWorkflowEdge.data_flow()
-```
-
-##### `control_flow() -> PyWorkflowEdge`
-Create a control flow edge that controls execution order.
-
-```python
-edge = graphbit.PyWorkflowEdge.control_flow()
-```
-
-##### `conditional(condition: str) -> PyWorkflowEdge`
-Create a conditional edge that executes based on a condition.
-
-```python
-edge = graphbit.PyWorkflowEdge.conditional("score > 0.5")
-```
-
-**Parameters**:
-- `condition` (str): Boolean condition expression
-
----
-
-## Workflow Execution
-
-### `PyWorkflowExecutor`
-
-Executes workflows with configurable performance and reliability settings.
-
-#### Constructors
-
-##### `PyWorkflowExecutor(llm_config: PyLlmConfig)`
-Create a basic executor.
-
-```python
-executor = graphbit.PyWorkflowExecutor(config)
-```
-
-##### `PyWorkflowExecutor.new_high_throughput(llm_config: PyLlmConfig) -> PyWorkflowExecutor`
-Create executor optimized for high throughput.
-
-```python
-executor = graphbit.PyWorkflowExecutor.new_high_throughput(config)
-```
-
-##### `PyWorkflowExecutor.new_low_latency(llm_config: PyLlmConfig) -> PyWorkflowExecutor`
-Create executor optimized for low latency.
-
-```python
-executor = graphbit.PyWorkflowExecutor.new_low_latency(config)
-```
-
-##### `PyWorkflowExecutor.new_memory_optimized(llm_config: PyLlmConfig) -> PyWorkflowExecutor`
-Create executor optimized for memory usage.
-
-```python
-executor = graphbit.PyWorkflowExecutor.new_memory_optimized(config)
-```
-
-#### Configuration Methods
-
-##### `with_max_node_execution_time(timeout_ms: int) -> PyWorkflowExecutor`
-Set maximum execution time per node.
-
-```python
-executor = executor.with_max_node_execution_time(30000)  # 30 seconds
-```
-
-##### `with_fail_fast(fail_fast: bool) -> PyWorkflowExecutor`
-Enable or disable fail-fast behavior.
-
-```python
-executor = executor.with_fail_fast(True)
-```
-
-##### `with_retry_config(retry_config: PyRetryConfig) -> PyWorkflowExecutor`
-Add retry configuration.
-
-```python
-retry_config = graphbit.PyRetryConfig.default()
-executor = executor.with_retry_config(retry_config)
-```
-
-##### `with_circuit_breaker_config(config: PyCircuitBreakerConfig) -> PyWorkflowExecutor`
-Add circuit breaker configuration.
-
-```python
-cb_config = graphbit.PyCircuitBreakerConfig.default()
-executor = executor.with_circuit_breaker_config(cb_config)
-```
-
-##### `without_retries() -> PyWorkflowExecutor`
-Disable retry logic.
-
-```python
-executor = executor.without_retries()
-```
-
-#### Execution Methods
-
-##### `execute(workflow: PyWorkflow) -> PyWorkflowContext`
-Execute a workflow synchronously.
-
-```python
-result = executor.execute(workflow)
-```
-
-**Returns**: `PyWorkflowContext` - Execution result
-
-##### `execute_async(workflow: PyWorkflow) -> Awaitable[PyWorkflowContext]`
-Execute a workflow asynchronously.
-
-```python
-import asyncio
-
-async def run_workflow():
-    result = await executor.execute_async(workflow)
-    return result
-
-result = asyncio.run(run_workflow())
-```
-
-##### `execute_concurrent(workflows: List[PyWorkflow]) -> List[PyWorkflowContext]`
-Execute multiple workflows concurrently.
-
-```python
-workflows = [workflow1, workflow2, workflow3]
-results = executor.execute_concurrent(workflows)
-```
-
-
-
-##### `execute_concurrent_agent_tasks(prompts: List[str], agent_id: str) -> List[str]`
-Execute multiple prompts with the same agent concurrently.
-
-```python
-prompts = ["Analyze A", "Analyze B", "Analyze C"]
-results = executor.execute_concurrent_agent_tasks(prompts, "analyzer")
-```
-
----
-
-## Workflow Context
-
-### `PyWorkflowContext`
-
-Contains workflow execution results and state.
+Contains workflow execution results.
 
 #### Methods
 
-##### `workflow_id() -> str`
-Get the workflow ID.
-
-##### `state() -> str`
-Get the workflow state ("completed", "failed", "running", etc.).
-
-##### `is_completed() -> bool`
+##### `is_success()`
 Check if workflow completed successfully.
 
-##### `is_failed() -> bool`
+```python
+if result.is_success():
+    print("Workflow completed successfully")
+```
+
+##### `is_failed()`
 Check if workflow failed.
 
-##### `get_variable(key: str) -> Optional[str]`
+```python
+if result.is_failed():
+    print("Workflow failed")
+```
+
+##### `state()`
+Get the workflow state.
+
+```python
+state = result.state()
+print(f"Workflow state: {state}")
+```
+
+##### `execution_time_ms()`
+Get execution time in milliseconds.
+
+```python
+time_ms = result.execution_time_ms()
+print(f"Executed in {time_ms}ms")
+```
+
+##### `get_variable(key)`
 Get a variable value.
 
 ```python
@@ -533,215 +582,157 @@ if output:
     print(f"Result: {output}")
 ```
 
-##### `variables() -> List[Tuple[str, str]]`
-Get all variables as key-value pairs.
+##### `get_all_variables()`
+Get all variables as a dictionary.
 
 ```python
-all_vars = result.variables()
-for key, value in all_vars:
+all_vars = result.get_all_variables()
+for key, value in all_vars.items():
     print(f"{key}: {value}")
 ```
 
-##### `execution_time_ms() -> int`
-Get execution time in milliseconds.
+##### `variables()`
+Get all variables as a list of tuples.
 
 ```python
-time_ms = result.execution_time_ms()
-print(f"Executed in {time_ms}ms")
+vars_list = result.variables()
+for key, value in vars_list:
+    print(f"{key}: {value}")
 ```
 
 ---
 
-## Reliability Configuration
+## Workflow Execution
 
-### `PyRetryConfig`
+### `Executor`
 
-Configuration for retry behavior.
+Production-grade workflow executor with comprehensive features.
 
 #### Constructors
 
-##### `PyRetryConfig(max_attempts: int)`
-Create retry configuration.
+##### `Executor(config, lightweight_mode=None, timeout_seconds=None, debug=None)`
+Create a basic executor.
 
 ```python
-retry_config = graphbit.PyRetryConfig(3)  # Max 3 attempts
-```
-
-##### `PyRetryConfig.default() -> PyRetryConfig`
-Create default retry configuration.
-
-```python
-retry_config = graphbit.PyRetryConfig.default()
-```
-
-#### Methods
-
-##### `with_exponential_backoff(initial_delay_ms: int, multiplier: float, max_delay_ms: int) -> PyRetryConfig`
-Configure exponential backoff.
-
-```python
-retry_config = retry_config.with_exponential_backoff(
-    initial_delay_ms=1000,
-    multiplier=2.0,
-    max_delay_ms=30000
+executor = graphbit.Executor(llm_config)
+# With configuration
+executor = graphbit.Executor(
+    llm_config, 
+    lightweight_mode=False,
+    timeout_seconds=300,
+    debug=True
 )
 ```
 
-##### `with_jitter(jitter_factor: float) -> PyRetryConfig`
-Add jitter to retry delays.
+**Parameters**:
+- `config` (LlmConfig): LLM configuration
+- `lightweight_mode` (bool, optional): Enable lightweight mode (low latency)
+- `timeout_seconds` (int, optional): Execution timeout (1-3600 seconds)
+- `debug` (bool, optional): Enable debug mode
+
+##### `Executor.new_high_throughput(llm_config, timeout_seconds=None, debug=None)` (static)
+Create executor optimized for high throughput.
 
 ```python
-retry_config = retry_config.with_jitter(0.1)  # 10% jitter
+executor = graphbit.Executor.new_high_throughput(llm_config)
 ```
 
-##### `max_attempts() -> int`
-Get maximum retry attempts.
-
-##### `initial_delay_ms() -> int`
-Get initial delay in milliseconds.
-
-### `PyCircuitBreakerConfig`
-
-Configuration for circuit breaker pattern.
-
-#### Constructors
-
-##### `PyCircuitBreakerConfig(failure_threshold: int, recovery_timeout_ms: int)`
-Create circuit breaker configuration.
+##### `Executor.new_low_latency(llm_config, timeout_seconds=None, debug=None)` (static)
+Create executor optimized for low latency.
 
 ```python
-cb_config = graphbit.PyCircuitBreakerConfig(5, 60000)  # 5 failures, 60s recovery
+executor = graphbit.Executor.new_low_latency(llm_config, timeout_seconds=30)
 ```
 
-##### `PyCircuitBreakerConfig.default() -> PyCircuitBreakerConfig`
-Create default circuit breaker configuration.
+##### `Executor.new_memory_optimized(llm_config, timeout_seconds=None, debug=None)` (static)
+Create executor optimized for memory usage.
 
 ```python
-cb_config = graphbit.PyCircuitBreakerConfig.default()
+executor = graphbit.Executor.new_memory_optimized(llm_config)
 ```
 
-#### Methods
+#### Configuration Methods
 
-##### `failure_threshold() -> int`
-Get failure threshold.
-
-##### `recovery_timeout_ms() -> int`
-Get recovery timeout in milliseconds.
-
----
-
-## Embeddings
-
-### `PyEmbeddingConfig`
-
-Configuration for embedding providers.
-
-#### Static Methods
-
-##### `PyEmbeddingConfig.openai(api_key: str, model: str) -> PyEmbeddingConfig`
-Create OpenAI embeddings configuration.
+##### `configure(timeout_seconds=None, max_retries=None, enable_metrics=None, debug=None)`
+Configure the executor with new settings.
 
 ```python
-config = graphbit.PyEmbeddingConfig.openai("sk-...", "text-embedding-ada-002")
+executor.configure(
+    timeout_seconds=600,
+    max_retries=5,
+    enable_metrics=True,
+    debug=False
+)
 ```
 
-##### `PyEmbeddingConfig.huggingface(api_key: str, model: str) -> PyEmbeddingConfig`
-Create HuggingFace embeddings configuration.
+##### `set_lightweight_mode(enabled)`
+Legacy method for backward compatibility.
 
 ```python
-config = graphbit.PyEmbeddingConfig.huggingface("hf_...", "sentence-transformers/all-MiniLM-L6-v2")
+executor.set_lightweight_mode(True)
 ```
 
-#### Methods
-
-##### `with_base_url(base_url: str) -> PyEmbeddingConfig`
-Set custom base URL.
-
-##### `with_timeout(timeout_seconds: int) -> PyEmbeddingConfig`
-Set request timeout.
-
-##### `with_max_batch_size(max_batch_size: int) -> PyEmbeddingConfig`
-Set maximum batch size.
-
-##### `provider_name() -> str`
-Get provider name.
-
-##### `model_name() -> str`
-Get model name.
-
-### `PyEmbeddingService`
-
-Service for generating text embeddings.
-
-#### Constructor
-
-##### `PyEmbeddingService(config: PyEmbeddingConfig)`
-Create embedding service.
+##### `is_lightweight_mode()`
+Check if lightweight mode is enabled.
 
 ```python
-service = graphbit.PyEmbeddingService(config)
+is_lightweight = executor.is_lightweight_mode()
 ```
 
-#### Methods
+#### Execution Methods
 
-##### `embed_text(text: str) -> Awaitable[List[float]]`
-Generate embedding for single text.
+##### `execute(workflow)`
+Execute a workflow synchronously.
+
+```python
+result = executor.execute(workflow)
+if result.is_success():
+    print("Success!")
+```
+
+**Parameters**:
+- `workflow` (Workflow): Workflow to execute
+
+**Returns**: `WorkflowResult` - Execution result
+
+##### `run_async(workflow)`
+Execute a workflow asynchronously.
 
 ```python
 import asyncio
 
-async def get_embedding():
-    embedding = await service.embed_text("Hello world")
-    return embedding
+async def run_workflow():
+    result = await executor.run_async(workflow)
+    return result
 
-embedding = asyncio.run(get_embedding())
+result = asyncio.run(run_workflow())
 ```
 
-##### `embed_texts(texts: List[str]) -> Awaitable[List[List[float]]]`
-Generate embeddings for multiple texts.
+#### Statistics Methods
+
+##### `get_stats()`
+Get comprehensive execution statistics.
 
 ```python
-async def get_embeddings():
-    texts = ["Text 1", "Text 2", "Text 3"]
-    embeddings = await service.embed_texts(texts)
-    return embeddings
+stats = executor.get_stats()
+print(f"Total executions: {stats['total_executions']}")
+print(f"Success rate: {stats['success_rate']}")
+print(f"Average duration: {stats['average_duration_ms']}ms")
 ```
 
-##### `cosine_similarity(a: List[float], b: List[float]) -> float`
-Calculate cosine similarity between two embeddings.
+##### `reset_stats()`
+Reset execution statistics.
 
 ```python
-similarity = graphbit.PyEmbeddingService.cosine_similarity(embed1, embed2)
-print(f"Similarity: {similarity}")
+executor.reset_stats()
 ```
 
----
-
-## Agent Capabilities
-
-### `PyAgentCapability`
-
-Represents different agent capabilities.
-
-#### Static Methods
-
-##### `text_processing() -> PyAgentCapability`
-Text processing capability.
-
-##### `data_analysis() -> PyAgentCapability`
-Data analysis capability.
-
-##### `tool_execution() -> PyAgentCapability`
-Tool execution capability.
-
-##### `decision_making() -> PyAgentCapability`
-Decision making capability.
-
-##### `custom(name: str) -> PyAgentCapability`
-Custom capability.
+##### `get_execution_mode()`
+Get the current execution mode.
 
 ```python
-custom_cap = graphbit.PyAgentCapability.custom("domain_expert")
+mode = executor.get_execution_mode()
+print(f"Execution mode: {mode}")
 ```
 
 ---
@@ -753,7 +744,6 @@ GraphBit uses standard Python exceptions:
 - `ValueError` - Invalid parameters or workflow structure
 - `RuntimeError` - Execution errors
 - `TimeoutError` - Operation timeouts
-- `ConnectionError` - Network/API errors
 
 ```python
 try:
@@ -766,6 +756,8 @@ except Exception as e:
     print(f"Unexpected error: {e}")
 ```
 
+---
+
 ## Usage Examples
 
 ### Basic Workflow
@@ -773,36 +765,99 @@ except Exception as e:
 import graphbit
 import os
 
-# Initialize and configure
+# Initialize
 graphbit.init()
-config = graphbit.PyLlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4o-mini")
 
-# Build workflow
-builder = graphbit.PyWorkflowBuilder("Analysis")
-agent = graphbit.PyWorkflowNode.agent_node(
-    "Analyzer", "Analyzes data", "analyzer", "Analyze: {input}"
+# Configure LLM
+config = graphbit.LlmConfig.openai(os.getenv("OPENAI_API_KEY"))
+
+# Create workflow
+workflow = graphbit.Workflow("Analysis Workflow")
+agent = graphbit.Node.agent(
+    "Analyzer", 
+    "Analyze the following text: {input}"
 )
-builder.add_node(agent)
-workflow = builder.build()
+node_id = workflow.add_node(agent)
+workflow.validate()
 
 # Execute
-executor = graphbit.PyWorkflowExecutor(config)
+executor = graphbit.Executor(config)
 result = executor.execute(workflow)
-print(result.get_variable("output"))
+
+if result.is_success():
+    output = result.get_variable("output")
+    print(f"Analysis result: {output}")
 ```
 
-### Advanced Configuration
+### Advanced LLM Usage
 ```python
-# Create executor with full configuration
-executor = graphbit.PyWorkflowExecutor(config) \
-    .with_retry_config(
-        graphbit.PyRetryConfig.default()
-        .with_exponential_backoff(1000, 2.0, 30000)
-        .with_jitter(0.1)
-    ) \
-    .with_circuit_breaker_config(
-        graphbit.PyCircuitBreakerConfig.default()
-    ) \
-    .with_max_node_execution_time(30000) \
-    .with_fail_fast(False)
+# Create client with debugging
+client = graphbit.LlmClient(config, debug=True)
+
+# Batch processing
+prompts = [
+    "Summarize: AI is transforming industries",
+    "Explain: Machine learning algorithms",
+    "Analyze: The future of automation"
+]
+
+import asyncio
+async def process_batch():
+    responses = await client.complete_batch(prompts, max_concurrency=3)
+    return responses
+
+results = asyncio.run(process_batch())
+
+# Chat conversation
+messages = [
+    ("system", "You are a helpful AI assistant"),
+    ("user", "What is machine learning?"),
+    ("assistant", "Machine learning is a subset of AI..."),
+    ("user", "Can you give me an example?")
+]
+
+async def chat():
+    response = await client.chat_optimized(messages, temperature=0.7)
+    return response
+
+chat_result = asyncio.run(chat())
+```
+
+### High-Performance Execution
+```python
+# Create high-throughput executor
+executor = graphbit.Executor.new_high_throughput(
+    llm_config, 
+    timeout_seconds=600,
+    debug=False
+)
+
+# Configure for production
+executor.configure(
+    timeout_seconds=300,
+    max_retries=3,
+    enable_metrics=True
+)
+
+# Execute workflow
+result = executor.execute(workflow)
+
+# Monitor performance
+stats = executor.get_stats()
+print(f"Execution stats: {stats}")
+```
+
+### Embeddings Usage
+```python
+# Configure embeddings
+embed_config = graphbit.EmbeddingConfig.openai(os.getenv("OPENAI_API_KEY"))
+embed_client = graphbit.EmbeddingClient(embed_config)
+
+# Generate embeddings
+texts = ["Hello world", "Goodbye world", "Machine learning"]
+embeddings = embed_client.embed_many(texts)
+
+# Calculate similarity
+similarity = graphbit.EmbeddingClient.similarity(embeddings[0], embeddings[1])
+print(f"Similarity between texts: {similarity}")
 ``` 
