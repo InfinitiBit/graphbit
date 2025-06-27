@@ -90,15 +90,18 @@ make integration-test           # Integration tests
 
 GraphBit uses a three-tier architecture:
 
-- **Python API**: PyO3 bindings with async support
+- **Python API**: PyO3 bindings with async support and production-grade features
 - **CLI Tool**: Project management and execution
-- **Rust Core**: Workflow engine, agents, LLM providers
+- **Rust Core**: High-performance workflow engine, agents, LLM providers
 
 Key components:
+- **Python Bindings**: Production-ready PyO3 bindings with comprehensive error handling, circuit breakers, and performance monitoring
 - **Workflow Engine**: Graph execution and dependency management
 - **Agent System**: AI-powered processing components
-- **LLM Providers**: Multi-provider abstraction (OpenAI, Anthropic, etc.)
+- **LLM Providers**: Multi-provider abstraction (OpenAI, Anthropic, Ollama, etc.)
 - **Type System**: Strong typing with comprehensive validation
+
+For detailed Python bindings architecture, see [Python Bindings Architecture](python-bindings.md).
 
 ## Coding Standards
 

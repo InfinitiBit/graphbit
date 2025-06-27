@@ -42,31 +42,47 @@ result = executor.execute(workflow)
 
 ### 2. PyO3 Bindings Layer
 
-PyO3 provides seamless interoperability between Python and Rust:
+PyO3 provides seamless interoperability between Python and Rust with production-grade features:
 
 ```rust
 // Python class exposed via PyO3
 #[pyclass]
-pub struct PyWorkflowBuilder {
-    builder: WorkflowBuilder,
+pub struct LlmClient {
+    provider: Arc<RwLock<Box<dyn LlmProviderTrait>>>,
+    circuit_breaker: Arc<CircuitBreaker>,
+    config: ClientConfig,
+    stats: Arc<RwLock<ClientStats>>,
 }
 
 #[pymethods]
-impl PyWorkflowBuilder {
+impl LlmClient {
     #[new]
-    pub fn new(name: String) -> Self {
-        Self {
-            builder: WorkflowBuilder::new(name),
-        }
+    fn new(config: LlmConfig, debug: Option<bool>) -> PyResult<Self> {
+        // Production-grade initialization with error handling
+    }
+    
+    fn complete(&self, prompt: String, max_tokens: Option<u32>) -> PyResult<String> {
+        // High-performance completion with resilience patterns
     }
 }
 ```
 
-**Responsibilities:**
-- Type conversion between Python and Rust
-- Memory management across language boundaries
-- Error handling and exception mapping
-- API surface exposure
+**Key Features:**
+- **Type Safety**: Comprehensive input validation and type checking
+- **Memory Management**: Proper resource cleanup across language boundaries
+- **Error Handling**: Structured error types mapped to Python exceptions
+- **Async Support**: Full async/await compatibility with Tokio runtime
+- **Performance**: Zero-copy operations and optimized data structures
+- **Observability**: Built-in metrics, tracing, and health monitoring
+
+**Module Structure:**
+- `lib.rs`: Global initialization and system management
+- `runtime.rs`: Optimized Tokio runtime management
+- `errors.rs`: Comprehensive error handling and conversion
+- `llm/`: LLM provider integration with resilience patterns
+- `embeddings/`: Embedding provider support
+- `workflow/`: Workflow execution engine
+- `validation.rs`: Input validation utilities
 
 ### 3. Rust Core Engine
 
