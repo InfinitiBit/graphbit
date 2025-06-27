@@ -22,95 +22,143 @@ def create_data_processing_pipeline():
     """Creates a comprehensive data processing workflow."""
     
     # Initialize GraphBit
-    graphbit.init()
+    graphbit.init(enable_tracing=True)
     
     # Configure LLM
-    config = graphbit.PyLlmConfig.openai(
+    config = graphbit.LlmConfig.openai(
         api_key=os.getenv("OPENAI_API_KEY"),
         model="gpt-4o-mini"
     )
     
-    # Create workflow builder
-    builder = graphbit.PyWorkflowBuilder("Data Processing Pipeline")
-    builder.description("Comprehensive data analysis and insight generation")
+    # Create executor
+    executor = graphbit.Executor(config, timeout_seconds=180, debug=True)
+    
+    # Create workflow
+    workflow = graphbit.Workflow("Data Processing Pipeline")
     
     # 1. Data Validator
-    validator = graphbit.PyWorkflowNode.agent_node(
+    validator = graphbit.Node.agent(
         name="Data Validator",
-        description="Validates and cleans input data",
-        agent_id="data_validator",
-        prompt="""
-        Validate this dataset and check for:
-        - Data completeness
-        - Format consistency  
-        - Obvious errors or outliers
-        - Missing values
-        
-        Dataset: {input}
-        
-        Provide:
-        - Validation status (VALID/INVALID)
-        - Issues found
-        - Recommended fixes
-        - Cleaned data if possible
-        """
+        prompt="""Validate this dataset and check for:
+- Data completeness
+- Format consistency  
+- Obvious errors or outliers
+- Missing values
+
+Dataset: {input_data}
+
+Provide:
+- Validation status (VALID/INVALID)
+- Issues found
+- Recommended fixes
+- Cleaned data if possible
+
+Format response as JSON with validation_status, issues, and cleaned_data fields.
+""",
+        agent_id="data_validator"
     )
     
     # 2. Statistical Analyzer
-    stats_analyzer = graphbit.PyWorkflowNode.agent_node_with_config(
+    stats_analyzer = graphbit.Node.agent(
         name="Statistical Analyzer",
-        description="Performs statistical analysis of the data",
-        agent_id="stats_analyzer",
-        prompt="""
-        Perform comprehensive statistical analysis on this dataset:
-        
-        {validated_data}
-        
-        Calculate and provide:
-        - Descriptive statistics (mean, median, mode, std dev)
-        - Distribution analysis
-        - Correlation analysis
-        - Trend identification
-        - Statistical significance tests where applicable
-        
-        Format as JSON with clear structure.
-        """,
-        max_tokens=2000,
-        temperature=0.2
+        prompt="""Perform comprehensive statistical analysis on this dataset:
+
+{validated_data}
+
+Calculate and provide:
+- Descriptive statistics (mean, median, mode, std dev)
+- Distribution analysis
+- Correlation analysis
+- Trend identification
+- Statistical significance tests where applicable
+
+Format as JSON with clear structure including summary_stats, correlations, and trends.
+""",
+        agent_id="stats_analyzer"
     )
     
     # 3. Pattern Detector  
-    pattern_detector = graphbit.PyWorkflowNode.agent_node(
+    pattern_detector = graphbit.Node.agent(
         name="Pattern Detector",
-        description="Identifies patterns and anomalies in data",
-        agent_id="pattern_detector",
-        prompt="""
-        Analyze this data for patterns and anomalies:
-        
-        Statistical Analysis: {stats_results}
-        Original Data: {validated_data}
-        
-        Identify:
-        - Recurring patterns
-        - Seasonal trends
-        - Anomalies and outliers
-        - Clustering or groupings
-        - Predictive indicators
-        
-        Explain the significance of each finding.
-        """
+        prompt="""Analyze this data for patterns and anomalies:
+
+Statistical Analysis: {stats_results}
+Original Data: {validated_data}
+
+Identify:
+- Recurring patterns
+- Seasonal trends
+- Anomalies and outliers
+- Clustering or groupings
+- Predictive indicators
+
+Explain the significance of each finding.
+Format as JSON with patterns, anomalies, and insights fields.
+""",
+        agent_id="pattern_detector"
     )
     
-    # Build workflow
-    validator_id = builder.add_node(validator)
-    stats_id = builder.add_node(stats_analyzer)
-    pattern_id = builder.add_node(pattern_detector)
+    # 4. Insight Generator
+    insight_generator = graphbit.Node.agent(
+        name="Insight Generator",
+        prompt="""Generate actionable insights based on this analysis:
+
+Statistical Analysis: {stats_results}
+Pattern Analysis: {pattern_results}
+Original Data: {validated_data}
+
+Create:
+- Key business insights
+- Actionable recommendations
+- Risk assessments
+- Opportunities identified
+- Next steps
+
+Focus on practical, implementable insights.
+""",
+        agent_id="insight_generator"
+    )
     
-    # Connect processing path
-    builder.connect(validator_id, stats_id, graphbit.PyWorkflowEdge.data_flow())
-    builder.connect(stats_id, pattern_id, graphbit.PyWorkflowEdge.data_flow())
+    # 5. Report Generator
+    report_generator = graphbit.Node.agent(
+        name="Report Generator",
+        prompt="""Create a comprehensive data analysis report:
+
+Data Validation: {validation_results}
+Statistical Analysis: {stats_results}
+Pattern Analysis: {pattern_results}
+Insights: {insights}
+
+Format as a professional report with:
+- Executive summary
+- Data quality assessment
+- Key findings
+- Statistical highlights
+- Actionable recommendations
+- Appendices with detailed analysis
+
+Use clear, business-friendly language.
+""",
+        agent_id="report_generator"
+    )
     
-    return builder.build()
+    # Add nodes to workflow
+    validator_id = workflow.add_node(validator)
+    stats_id = workflow.add_node(stats_analyzer)
+    pattern_id = workflow.add_node(pattern_detector)
+    insight_id = workflow.add_node(insight_generator)
+    report_id = workflow.add_node(report_generator)
+    
+    # Connect processing pipeline
+    workflow.connect(validator_id, stats_id)
+    workflow.connect(stats_id, pattern_id)
+    workflow.connect(pattern_id, insight_id)
+    workflow.connect(insight_id, report_id)
+    
+    # Validate workflow
+    workflow.validate()
+    
+    return executor, workflow
 
 def main():
     """Execute the data processing pipeline."""
@@ -124,33 +172,40 @@ def main():
             {"month": "Apr", "sales": 22000, "region": "North", "product": "A"},
             {"month": "May", "sales": 19000, "region": "South", "product": "B"},
             {"month": "Jun", "sales": 25000, "region": "North", "product": "A"},
-        ]
+            {"month": "Jul", "sales": 16000, "region": "East", "product": "C"},
+            {"month": "Aug", "sales": 21000, "region": "North", "product": "A"},
+            {"month": "Sep", "sales": 14000, "region": "South", "product": "B"},
+            {"month": "Oct", "sales": 26000, "region": "North", "product": "A"},
+            {"month": "Nov", "sales": 20000, "region": "East", "product": "C"},
+            {"month": "Dec", "sales": 28000, "region": "North", "product": "A"}
+        ],
+        "metadata": {
+            "source": "CRM System",
+            "period": "2024",
+            "currency": "USD"
+        }
     }
     
     # Create workflow
-    workflow = create_data_processing_pipeline()
-    
-    # Configure executor
-    config = graphbit.PyLlmConfig.openai(
-        api_key=os.getenv("OPENAI_API_KEY"),
-        model="gpt-4o-mini"
-    )
-    
-    executor = graphbit.PyWorkflowExecutor(config)
+    executor, workflow = create_data_processing_pipeline()
     
     # Execute workflow
     print("🚀 Starting data processing pipeline...")
     
-    context = graphbit.PyExecutionContext()
-    context.set_variable("input", json.dumps(sample_data))
+    result = executor.execute(workflow)
     
-    result = executor.execute_with_context(workflow, context)
-    
-    if result.is_completed():
+    if result.is_success():
         print("✅ Data processing completed successfully!")
         print("📊 Analysis Report:")
-        print("=" * 50)
-        print(result.get_variable("output"))
+        print("=" * 60)
+        print(result.get_output())
+        
+        # Get execution statistics
+        stats = executor.get_stats()
+        print(f"\nExecution Stats:")
+        print(f"Total executions: {stats.get('total_executions', 0)}")
+        print(f"Success rate: {stats.get('successful_executions', 0)}/{stats.get('total_executions', 0)}")
+        print(f"Average duration: {stats.get('average_duration_ms', 0):.2f}ms")
     else:
         print("❌ Data processing failed:")
         print(result.get_error())
@@ -181,401 +236,442 @@ if __name__ == "__main__":
 
 This example shows how GraphBit can handle complex data processing tasks with reliability and scalability.
 
-## Advanced Features
+## Advanced Examples
 
 ### Batch Data Processing
 
 ```python
-def create_batch_processor():
-    """Process multiple datasets in parallel."""
+import graphbit
+import os
+import asyncio
+
+async def process_multiple_datasets_async():
+    """Process multiple datasets asynchronously."""
     
-    builder = graphbit.PyWorkflowBuilder("Batch Data Processor")
+    graphbit.init()
     
-    # Create multiple processing branches
-    processors = []
-    for i in range(3):
-        processor = graphbit.PyWorkflowNode.agent_node(
-            name=f"Data Processor {i+1}",
-            description=f"Processes batch {i+1}",
-            agent_id=f"processor_{i+1}",
-            prompt=f"Process dataset batch {i+1}: {{batch_{i+1}_data}}"
-        )
-        processors.append(processor)
-    
-    # Aggregator
-    aggregator = graphbit.PyWorkflowNode.agent_node(
-        name="Results Aggregator",
-        description="Combines batch processing results",
-        agent_id="aggregator",
-        prompt="""
-        Combine these batch processing results:
-        
-        Batch 1: {processor_1_output}
-        Batch 2: {processor_2_output}  
-        Batch 3: {processor_3_output}
-        
-        Provide:
-        - Combined statistics
-        - Cross-batch patterns
-        - Consolidated insights
-        """
+    config = graphbit.LlmConfig.openai(
+        api_key=os.getenv("OPENAI_API_KEY"),
+        model="gpt-4o-mini"
     )
     
-    # Build parallel processing
-    processor_ids = [builder.add_node(p) for p in processors]
-    agg_id = builder.add_node(aggregator)
+    # Use high-throughput executor for batch processing
+    executor = graphbit.Executor.new_high_throughput(
+        config,
+        timeout_seconds=120,
+        debug=False
+    )
     
-    # Connect all processors to aggregator
-    for proc_id in processor_ids:
-        builder.connect(proc_id, agg_id, graphbit.PyWorkflowEdge.data_flow())
+    # Create simple analysis workflow
+    workflow = graphbit.Workflow("Batch Data Analyzer")
     
-    return builder.build()
+    analyzer = graphbit.Node.agent(
+        name="Batch Analyzer",
+        prompt="""Analyze this dataset quickly:
+
+Data: {dataset}
+
+Provide:
+- Quick summary statistics
+- Key trends
+- Notable patterns
+- Recommendations
+
+Keep analysis concise but actionable.
+""",
+        agent_id="batch_analyzer"
+    )
+    
+    workflow.add_node(analyzer)
+    workflow.validate()
+    
+    # Execute asynchronously
+    result = await executor.run_async(workflow)
+    
+    if result.is_success():
+        return result.get_output()
+    else:
+        return f"Error: {result.get_error()}"
+
+# Usage
+# result = asyncio.run(process_multiple_datasets_async())
 ```
 
-### Real-time Data Stream Processing
+### Time Series Analysis
 
 ```python
-def create_streaming_processor():
-    """Process streaming data in real-time."""
+def create_time_series_pipeline():
+    """Create specialized pipeline for time series data."""
     
-    builder = graphbit.PyWorkflowBuilder("Streaming Data Processor")
+    graphbit.init()
     
-    # Stream validator
-    validator = graphbit.PyWorkflowNode.agent_node(
-        name="Stream Validator",
-        description="Validates streaming data",
-        agent_id="stream_validator",
-        prompt="""
-        Validate this streaming data point:
-        
-        {stream_data}
-        
-        Check for:
-        - Data completeness
-        - Format validity
-        - Value ranges
-        - Timestamp accuracy
-        """
+    config = graphbit.LlmConfig.openai(
+        api_key=os.getenv("OPENAI_API_KEY"),
+        model="gpt-4o-mini"
     )
     
-    # Anomaly detector
-    anomaly_detector = graphbit.PyWorkflowNode.agent_node(
-        name="Anomaly Detector",
-        description="Detects anomalies in real-time",
-        agent_id="anomaly_detector",
-        prompt="""
-        Analyze this data point for anomalies:
-        
-        Current Data: {validated_stream}
-        Historical Context: {historical_data}
-        
-        Detect:
-        - Statistical anomalies
-        - Pattern deviations  
-        - Trend breaks
-        - Threshold violations
-        """
+    executor = graphbit.Executor(config, debug=True)
+    workflow = graphbit.Workflow("Time Series Analysis")
+    
+    # Trend Analyzer
+    trend_analyzer = graphbit.Node.agent(
+        name="Trend Analyzer",
+        prompt="""Analyze trends in this time series data:
+
+{time_series_data}
+
+Identify:
+- Overall trend direction (up/down/stable)
+- Seasonality patterns
+- Cyclical behavior
+- Growth rates
+- Trend changes or breakpoints
+
+Provide quantitative analysis where possible.
+""",
+        agent_id="trend_analyzer"
     )
     
-    # Alert generator
-    alert_generator = graphbit.PyWorkflowNode.condition_node(
-        name="Alert Generator",
-        description="Generates alerts for significant anomalies",
-        expression="anomaly_score > 0.8 || critical_threshold_exceeded == true"
+    # Forecast Generator
+    forecaster = graphbit.Node.agent(
+        name="Forecaster",
+        prompt="""Based on this trend analysis, generate forecasts:
+
+Trend Analysis: {trend_analysis}
+Historical Data: {time_series_data}
+
+Create:
+- Short-term forecast (next 3 periods)
+- Medium-term forecast (next 6-12 periods)
+- Confidence intervals
+- Key assumptions
+- Risk factors
+
+Explain methodology and limitations.
+""",
+        agent_id="forecaster"
     )
     
-    # Rate limiter
-    rate_limiter = graphbit.PyWorkflowNode.delay_node(
-        name="Rate Limiter",
-        description="Prevents excessive processing",
-        duration_seconds=1
-    )
+    trend_id = workflow.add_node(trend_analyzer)
+    forecast_id = workflow.add_node(forecaster)
     
-    # Build streaming pipeline
-    val_id = builder.add_node(validator)
-    anom_id = builder.add_node(anomaly_detector)
-    alert_id = builder.add_node(alert_generator)
-    rate_id = builder.add_node(rate_limiter)
+    workflow.connect(trend_id, forecast_id)
+    workflow.validate()
     
-    builder.connect(val_id, rate_id, graphbit.PyWorkflowEdge.data_flow())
-    builder.connect(rate_id, anom_id, graphbit.PyWorkflowEdge.data_flow())
-    builder.connect(anom_id, alert_id, graphbit.PyWorkflowEdge.data_flow())
-    
-    return builder.build()
+    return executor, workflow
+
+# Usage
+executor, workflow = create_time_series_pipeline()
+result = executor.execute(workflow)
 ```
 
 ### Data Quality Assessment
 
 ```python
-def create_quality_assessor():
-    """Comprehensive data quality assessment."""
+def create_data_quality_pipeline():
+    """Create pipeline focused on data quality assessment."""
     
-    builder = graphbit.PyWorkflowBuilder("Data Quality Assessor")
+    graphbit.init()
     
-    # Completeness checker
-    completeness_checker = graphbit.PyWorkflowNode.agent_node(
-        name="Completeness Checker",
-        description="Checks data completeness",
-        agent_id="completeness_checker",
-        prompt="""
-        Assess data completeness:
-        
-        {dataset}
-        
-        Analyze:
-        - Missing value percentage
-        - Null patterns
-        - Required field coverage
-        - Data density by segment
-        
-        Score: 0-10
-        """
-    )
-    
-    # Accuracy validator
-    accuracy_validator = graphbit.PyWorkflowNode.agent_node(
-        name="Accuracy Validator",
-        description="Validates data accuracy",
-        agent_id="accuracy_validator",
-        prompt="""
-        Validate data accuracy:
-        
-        {dataset}
-        
-        Check:
-        - Value ranges
-        - Format consistency
-        - Business rule compliance
-        - Cross-field validation
-        
-        Score: 0-10
-        """
-    )
-    
-    # Consistency analyzer
-    consistency_analyzer = graphbit.PyWorkflowNode.agent_node(
-        name="Consistency Analyzer",
-        description="Analyzes data consistency",
-        agent_id="consistency_analyzer",
-        prompt="""
-        Analyze data consistency:
-        
-        {dataset}
-        
-        Evaluate:
-        - Format standardization
-        - Naming conventions
-        - Unit consistency
-        - Referential integrity
-        
-        Score: 0-10
-        """
-    )
-    
-    # Quality synthesizer
-    synthesizer = graphbit.PyWorkflowNode.agent_node(
-        name="Quality Synthesizer",
-        description="Combines quality assessments",
-        agent_id="quality_synthesizer",
-        prompt="""
-        Synthesize data quality assessment:
-        
-        Completeness: {completeness_output}
-        Accuracy: {accuracy_output}
-        Consistency: {consistency_output}
-        
-        Provide:
-        - Overall quality score
-        - Key issues summary
-        - Improvement recommendations
-        - Quality trend analysis
-        """
-    )
-    
-    # Build quality assessment pipeline
-    comp_id = builder.add_node(completeness_checker)
-    acc_id = builder.add_node(accuracy_validator)
-    cons_id = builder.add_node(consistency_analyzer)
-    synth_id = builder.add_node(synthesizer)
-    
-    # Parallel quality checks
-    builder.connect(comp_id, synth_id, graphbit.PyWorkflowEdge.data_flow())
-    builder.connect(acc_id, synth_id, graphbit.PyWorkflowEdge.data_flow())
-    builder.connect(cons_id, synth_id, graphbit.PyWorkflowEdge.data_flow())
-    
-    return builder.build()
-```
-
-## Integration Examples
-
-### Database Integration
-
-```python
-import sqlite3
-import pandas as pd
-
-def process_database_data():
-    """Process data directly from database."""
-    
-    # Connect to database
-    conn = sqlite3.connect('analytics.db')
-    
-    # Query data
-    query = """
-    SELECT 
-        date, 
-        sales_amount, 
-        region, 
-        product_category,
-        customer_segment
-    FROM sales_data 
-    WHERE date >= date('now', '-30 days')
-    """
-    
-    df = pd.read_sql_query(query, conn)
-    
-    # Convert to JSON for processing
-    data_json = df.to_json(orient='records')
-    
-    # Create and execute workflow
-    workflow = create_data_processing_pipeline()
-    
-    config = graphbit.PyLlmConfig.openai(
+    config = graphbit.LlmConfig.openai(
         api_key=os.getenv("OPENAI_API_KEY"),
         model="gpt-4o-mini"
     )
     
-    executor = graphbit.PyWorkflowExecutor(config)
+    executor = graphbit.Executor(config)
+    workflow = graphbit.Workflow("Data Quality Assessment")
     
-    context = graphbit.PyExecutionContext()
-    context.set_variable("input", data_json)
+    # Completeness Checker
+    completeness_checker = graphbit.Node.agent(
+        name="Completeness Checker",
+        prompt="""Assess data completeness:
+
+Dataset: {input_data}
+
+Check for:
+- Missing values per field
+- Data coverage gaps
+- Incomplete records
+- Empty or null fields
+
+Rate completeness (1-10) and provide recommendations.
+""",
+        agent_id="completeness_checker"
+    )
     
-    result = executor.execute_with_context(workflow, context)
+    # Consistency Checker
+    consistency_checker = graphbit.Node.agent(
+        name="Consistency Checker",
+        prompt="""Check data consistency:
+
+Dataset: {input_data}
+
+Examine:
+- Format consistency
+- Value range consistency
+- Cross-field validation
+- Data type consistency
+- Naming convention adherence
+
+Rate consistency (1-10) and identify issues.
+""",
+        agent_id="consistency_checker"
+    )
     
-    conn.close()
-    return result
+    # Accuracy Assessor
+    accuracy_assessor = graphbit.Node.agent(
+        name="Accuracy Assessor",
+        prompt="""Assess data accuracy:
+
+Dataset: {input_data}
+Completeness Report: {completeness_report}
+Consistency Report: {consistency_report}
+
+Evaluate:
+- Logical value ranges
+- Cross-validation checks
+- Outlier detection
+- Business rule compliance
+
+Provide accuracy score and recommendations.
+""",
+        agent_id="accuracy_assessor"
+    )
+    
+    # Quality Score Calculator
+    quality_calculator = graphbit.Node.agent(
+        name="Quality Calculator",
+        prompt="""Calculate overall data quality score:
+
+Completeness: {completeness_report}
+Consistency: {consistency_report}
+Accuracy: {accuracy_report}
+
+Provide:
+- Overall quality score (1-10)
+- Quality grade (A-F)
+- Priority improvement areas
+- Action plan for quality improvement
+
+Create executive summary of data quality.
+""",
+        agent_id="quality_calculator"
+    )
+    
+    complete_id = workflow.add_node(completeness_checker)
+    consistent_id = workflow.add_node(consistency_checker)
+    accurate_id = workflow.add_node(accuracy_assessor)
+    quality_id = workflow.add_node(quality_calculator)
+    
+    # Run completeness and consistency in parallel, then accuracy, then quality
+    workflow.connect(complete_id, accurate_id)
+    workflow.connect(consistent_id, accurate_id)
+    workflow.connect(accurate_id, quality_id)
+    
+    workflow.validate()
+    
+    return executor, workflow
+
+# Usage
+executor, workflow = create_data_quality_pipeline()
+result = executor.execute(workflow)
 ```
 
-### CSV File Processing
+## Using Alternative LLM Providers
+
+### Anthropic Claude for Data Analysis
 
 ```python
-def process_csv_files(file_paths):
-    """Process multiple CSV files."""
+def create_anthropic_data_pipeline():
+    """Create data pipeline using Anthropic Claude."""
     
-    results = []
+    graphbit.init()
     
-    for file_path in file_paths:
-        # Read CSV
-        df = pd.read_csv(file_path)
-        data_json = df.to_json(orient='records')
-        
-        # Process with GraphBit
-        workflow = create_data_processing_pipeline()
-        
-        config = graphbit.PyLlmConfig.openai(
-            api_key=os.getenv("OPENAI_API_KEY"),
-            model="gpt-4o-mini"
-        )
-        
-        executor = graphbit.PyWorkflowExecutor(config)
-        
-        context = graphbit.PyExecutionContext()
-        context.set_variable("input", data_json)
-        context.set_variable("file_name", file_path)
-        
-        result = executor.execute_with_context(workflow, context)
-        results.append({
-            'file': file_path,
-            'result': result
-        })
+    config = graphbit.LlmConfig.anthropic(
+        api_key=os.getenv("ANTHROPIC_API_KEY"),
+        model="claude-3-5-sonnet-20241022"
+    )
     
-    return results
+    executor = graphbit.Executor(config, debug=True)
+    workflow = graphbit.Workflow("Claude Data Analyzer")
+    
+    analyzer = graphbit.Node.agent(
+        name="Claude Analyzer",
+        prompt="""Analyze this dataset with Claude's analytical capabilities:
+
+{dataset}
+
+Provide comprehensive analysis including:
+- Statistical summary
+- Pattern recognition
+- Anomaly detection
+- Insights and recommendations
+
+Use Claude's strong reasoning for deep insights.
+""",
+        agent_id="claude_analyzer"
+    )
+    
+    workflow.add_node(analyzer)
+    workflow.validate()
+    
+    return executor, workflow
+
+# Usage
+executor, workflow = create_anthropic_data_pipeline()
+result = executor.execute(workflow)
 ```
 
-## Performance Optimization
-
-### Caching Results
+### Local Ollama for Private Data
 
 ```python
-def create_cached_processor():
-    """Data processor with result caching."""
+def create_ollama_data_pipeline():
+    """Create data pipeline using local Ollama for sensitive data."""
     
-    import hashlib
-    import pickle
+    graphbit.init()
     
-    cache = {}
+    # No API key needed for local Ollama
+    config = graphbit.LlmConfig.ollama("llama3.2")
     
-    def get_cache_key(data):
-        return hashlib.md5(str(data).encode()).hexdigest()
+    executor = graphbit.Executor(
+        config,
+        timeout_seconds=240,  # Longer timeout for local processing
+        debug=True
+    )
     
-    def cached_analysis(data):
-        cache_key = get_cache_key(data)
-        
-        if cache_key in cache:
-            print("📋 Using cached result")
-            return cache[cache_key]
-        
-        # Process with GraphBit
-        workflow = create_data_processing_pipeline()
-        
-        config = graphbit.PyLlmConfig.openai(
-            api_key=os.getenv("OPENAI_API_KEY"),
-            model="gpt-4o-mini"
-        )
-        
-        executor = graphbit.PyWorkflowExecutor(config)
-        
-        context = graphbit.PyExecutionContext()
-        context.set_variable("input", json.dumps(data))
-        
-        result = executor.execute_with_context(workflow, context)
-        
-        # Cache result
-        cache[cache_key] = result
-        
-        return result
+    workflow = graphbit.Workflow("Private Data Analyzer")
     
-    return cached_analysis
+    analyzer = graphbit.Node.agent(
+        name="Local Analyzer",
+        prompt="""Analyze this sensitive dataset locally:
+
+{dataset}
+
+Provide:
+- Basic statistics
+- Key patterns
+- Security considerations
+- Privacy-preserving insights
+
+Keep analysis secure and local.
+""",
+        agent_id="local_analyzer"
+    )
+    
+    workflow.add_node(analyzer)
+    workflow.validate()
+    
+    return executor, workflow
+
+# Usage
+executor, workflow = create_ollama_data_pipeline()
+result = executor.execute(workflow)
 ```
 
-### Parallel Processing
+## Embeddings for Similarity Analysis
 
 ```python
-import concurrent.futures
+def create_embedding_analysis_pipeline():
+    """Create pipeline using embeddings for similarity analysis."""
+    
+    graphbit.init()
+    
+    # Configure embeddings
+    embedding_config = graphbit.EmbeddingConfig.openai(
+        api_key=os.getenv("OPENAI_API_KEY"),
+        model="text-embedding-3-small"
+    )
+    
+    embedding_client = graphbit.EmbeddingClient(embedding_config)
+    
+    # Sample text data
+    texts = [
+        "Revenue increased by 15% this quarter",
+        "Sales performance exceeded expectations",
+        "Customer satisfaction scores improved",
+        "Market share declined in key segments",
+        "Operating expenses rose significantly"
+    ]
+    
+    # Generate embeddings
+    embeddings = embedding_client.embed_many(texts)
+    
+    # Calculate similarities
+    similarities = []
+    for i in range(len(embeddings)):
+        for j in range(i + 1, len(embeddings)):
+            similarity = graphbit.EmbeddingClient.similarity(
+                embeddings[i], 
+                embeddings[j]
+            )
+            similarities.append({
+                "text1": texts[i],
+                "text2": texts[j],
+                "similarity": similarity
+            })
+    
+    # Find most similar pairs
+    similarities.sort(key=lambda x: x["similarity"], reverse=True)
+    
+    print("🔍 Most Similar Text Pairs:")
+    for sim in similarities[:3]:
+        print(f"Similarity: {sim['similarity']:.3f}")
+        print(f"Text 1: {sim['text1']}")
+        print(f"Text 2: {sim['text2']}")
+        print("-" * 40)
 
-def process_datasets_parallel(datasets):
-    """Process multiple datasets in parallel."""
-    
-    def process_single_dataset(data):
-        workflow = create_data_processing_pipeline()
-        
-        config = graphbit.PyLlmConfig.openai(
-            api_key=os.getenv("OPENAI_API_KEY"),
-            model="gpt-4o-mini"
-        )
-        
-        executor = graphbit.PyWorkflowExecutor(config)
-        
-        context = graphbit.PyExecutionContext()
-        context.set_variable("input", json.dumps(data))
-        
-        return executor.execute_with_context(workflow, context)
-    
-    # Process in parallel
-    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
-        futures = [executor.submit(process_single_dataset, data) for data in datasets]
-        results = [future.result() for future in concurrent.futures.as_completed(futures)]
-    
-    return results
+# Usage
+create_embedding_analysis_pipeline()
 ```
 
-## Best Practices
+## System Health and Monitoring
 
-1. **Data Validation**: Always validate input data before processing
-2. **Quality Gates**: Use condition nodes to ensure quality standards
-3. **Error Handling**: Include alternative paths for edge cases
-4. **Performance**: Cache results and use parallel processing when possible
-5. **Monitoring**: Track processing times and success rates
-6. **Documentation**: Document data formats and processing steps
+```python
+def monitor_data_processing_health():
+    """Monitor GraphBit health during data processing."""
+    
+    graphbit.init()
+    
+    # Check system health
+    health = graphbit.health_check()
+    print("Health Check:")
+    for key, value in health.items():
+        print(f"  {key}: {value}")
+    
+    # Get system info
+    info = graphbit.get_system_info()
+    print("\nSystem Information:")
+    for key, value in info.items():
+        print(f"  {key}: {value}")
+    
+    # Check version
+    version = graphbit.version()
+    print(f"\nVersion: {version}")
+    
+    return health["overall_healthy"]
 
-This data processing workflow demonstrates how GraphBit can handle complex analytical tasks with reliability and scalability, making it ideal for business intelligence and data science applications. 
+# Usage
+if monitor_data_processing_health():
+    print("System ready for data processing")
+else:
+    print("System issues detected")
+```
+
+## Key Benefits
+
+### Flexibility
+- **Multiple Analysis Types**: Statistical, pattern, quality, time series
+- **Multiple LLM Providers**: OpenAI, Anthropic, Ollama support
+- **Execution Modes**: Sync, async, batch processing
+
+### Reliability
+- **Error Handling**: Comprehensive error reporting
+- **Health Monitoring**: System health checks
+- **Performance Tracking**: Built-in execution statistics
+
+### Security
+- **Local Processing**: Ollama for sensitive data
+- **Privacy-Preserving**: Keep data processing local when needed
+- **Embedding Analysis**: Semantic similarity without exposing content
+
+This example demonstrates GraphBit's capabilities for building robust, flexible data processing workflows that can handle various analysis tasks with reliability and performance optimization. 

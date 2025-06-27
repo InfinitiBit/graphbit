@@ -21,152 +21,146 @@ from typing import Optional
 class ContentGenerationPipeline:
     def __init__(self, api_key: str, model: str = "gpt-4o-mini"):
         """Initialize the content generation pipeline."""
-        graphbit.init()
-        self.config = graphbit.PyLlmConfig.openai(api_key, model)
+        # Initialize GraphBit
+        graphbit.init(log_level="info", enable_tracing=True)
         
-        # Create executor with reliability features
-        self.executor = graphbit.PyWorkflowExecutor(self.config) \
-            .with_retry_config(graphbit.PyRetryConfig.default()) \
-            .with_circuit_breaker_config(graphbit.PyCircuitBreakerConfig.default())
+        # Create LLM configuration
+        self.llm_config = graphbit.LlmConfig.openai(api_key, model)
+        
+        # Create executor with custom settings
+        self.executor = graphbit.Executor(
+            self.llm_config,
+            timeout_seconds=300,  # 5 minutes
+            debug=True
+        )
     
-    def create_workflow(self, content_type: str = "article") -> graphbit.PyWorkflow:
+    def create_workflow(self, content_type: str = "article") -> graphbit.Workflow:
         """Create the content generation workflow."""
-        builder = graphbit.PyWorkflowBuilder("Content Generation Pipeline")
-        builder.description(f"Complete {content_type} generation with research, writing, and editing")
+        # Create workflow
+        workflow = graphbit.Workflow("Content Generation Pipeline")
         
         # Stage 1: Research Agent
-        researcher = graphbit.PyWorkflowNode.agent_node(
+        researcher = graphbit.Node.agent(
             name="Research Specialist",
-            description="Conducts comprehensive research on the topic",
-            agent_id="researcher",
-            prompt="""
-            Research the topic: {topic}
-            
-            Please provide:
-            1. Key facts and statistics
-            2. Current trends and developments
-            3. Expert opinions or quotes
-            4. Relevant examples or case studies
-            5. Important considerations or nuances
-            
-            Focus on accuracy and credibility. Cite sources where possible.
-            Format as structured research notes.
-            """
+            prompt="""Research the topic: {topic}
+
+Please provide:
+1. Key facts and statistics
+2. Current trends and developments
+3. Expert opinions or quotes
+4. Relevant examples or case studies
+5. Important considerations or nuances
+
+Focus on accuracy and credibility. Cite sources where possible.
+Format as structured research notes.
+""",
+            agent_id="researcher"
         )
         
         # Stage 2: Content Writer
-        writer = graphbit.PyWorkflowNode.agent_node_with_config(
+        writer = graphbit.Node.agent(
             name="Content Writer",
-            description="Creates engaging content based on research",
-            agent_id="writer",
-            prompt="""
-            Write a comprehensive {content_type} about: {topic}
-            
-            Based on this research: {research_data}
-            
-            Requirements:
-            - Target length: {target_length} words
-            - Tone: {tone}
-            - Audience: {audience}
-            - Include relevant examples and data from research
-            - Use engaging headlines and subheadings
-            - Ensure logical flow and structure
-            
-            Create compelling, informative content that captures reader attention.
-            """,
-            max_tokens=2000,
-            temperature=0.7
+            prompt="""Write a comprehensive {content_type} about: {topic}
+
+Based on this research: {research_data}
+
+Requirements:
+- Target length: {target_length} words
+- Tone: {tone}
+- Audience: {audience}
+- Include relevant examples and data from research
+- Use engaging headlines and subheadings
+- Ensure logical flow and structure
+
+Create compelling, informative content that captures reader attention.
+""",
+            agent_id="writer"
         )
         
         # Stage 3: Editor
-        editor = graphbit.PyWorkflowNode.agent_node_with_config(
+        editor = graphbit.Node.agent(
             name="Content Editor",
-            description="Edits and improves content for clarity and engagement",
-            agent_id="editor",
-            prompt="""
-            Edit and improve the following {content_type}:
-            
-            {draft_content}
-            
-            Focus on:
-            - Clarity and readability
-            - Flow and structure
-            - Engaging language
-            - Grammar and style
-            - Consistency in tone
-            - Compelling headlines
-            
-            Maintain the core message while making it more engaging and polished.
-            """,
-            max_tokens=2000,
-            temperature=0.3
+            prompt="""Edit and improve the following {content_type}:
+
+{draft_content}
+
+Focus on:
+- Clarity and readability
+- Flow and structure
+- Engaging language
+- Grammar and style
+- Consistency in tone
+- Compelling headlines
+
+Maintain the core message while making it more engaging and polished.
+""",
+            agent_id="editor"
         )
         
         # Stage 4: Quality Reviewer
-        reviewer = graphbit.PyWorkflowNode.agent_node(
+        reviewer = graphbit.Node.agent(
             name="Quality Reviewer",
-            description="Reviews content for accuracy and completeness",
-            agent_id="reviewer",
-            prompt="""
-            Review this {content_type} for quality and accuracy:
-            
-            {edited_content}
-            
-            Provide feedback on:
-            1. Factual accuracy
-            2. Completeness of coverage
-            3. Logical flow
-            4. Audience appropriateness
-            5. Areas for improvement
-            
-            Rate overall quality (1-10) and provide specific suggestions.
-            """
+            prompt="""Review this {content_type} for quality and accuracy:
+
+{edited_content}
+
+Provide feedback on:
+1. Factual accuracy
+2. Completeness of coverage
+3. Logical flow
+4. Audience appropriateness
+5. Areas for improvement
+
+Rate overall quality (1-10) and provide specific suggestions.
+If quality is 7 or above, mark as APPROVED, otherwise mark as NEEDS_REVISION.
+""",
+            agent_id="reviewer"
         )
         
         # Stage 5: Quality Gate (Condition Node)
-        quality_gate = graphbit.PyWorkflowNode.condition_node(
+        quality_gate = graphbit.Node.condition(
             name="Quality Gate",
-            description="Checks if content meets quality standards",
             expression="quality_rating >= 7"
         )
         
         # Stage 6: Final Formatter
-        formatter = graphbit.PyWorkflowNode.agent_node(
+        formatter = graphbit.Node.agent(
             name="Content Formatter",
-            description="Formats content for final publication",
-            agent_id="formatter",
-            prompt="""
-            Format this content for publication:
-            
-            {final_content}
-            
-            Apply:
-            - Professional formatting
-            - Proper headings hierarchy
-            - Bullet points where appropriate
-            - Clear paragraph breaks
-            - Call-to-action if needed
-            
-            Output clean, publication-ready content.
-            """
+            prompt="""Format this content for publication:
+
+{approved_content}
+
+Apply:
+- Professional formatting
+- Proper headings hierarchy
+- Bullet points where appropriate
+- Clear paragraph breaks
+- Call-to-action if needed
+
+Output clean, publication-ready content.
+""",
+            agent_id="formatter"
         )
         
-        # Build the workflow graph
-        research_id = builder.add_node(researcher)
-        writer_id = builder.add_node(writer)
-        editor_id = builder.add_node(editor)
-        reviewer_id = builder.add_node(reviewer)
-        quality_id = builder.add_node(quality_gate)
-        formatter_id = builder.add_node(formatter)
+        # Add nodes to workflow
+        research_id = workflow.add_node(researcher)
+        writer_id = workflow.add_node(writer)
+        editor_id = workflow.add_node(editor)
+        reviewer_id = workflow.add_node(reviewer)
+        quality_id = workflow.add_node(quality_gate)
+        formatter_id = workflow.add_node(formatter)
         
         # Connect the workflow: Research → Write → Edit → Review → Quality Check → Format
-        builder.connect(research_id, writer_id, graphbit.PyWorkflowEdge.data_flow())
-        builder.connect(writer_id, editor_id, graphbit.PyWorkflowEdge.data_flow())
-        builder.connect(editor_id, reviewer_id, graphbit.PyWorkflowEdge.data_flow())
-        builder.connect(reviewer_id, quality_id, graphbit.PyWorkflowEdge.data_flow())
-        builder.connect(quality_id, formatter_id, graphbit.PyWorkflowEdge.conditional("quality_rating >= 7"))
+        workflow.connect(research_id, writer_id)
+        workflow.connect(writer_id, editor_id)
+        workflow.connect(editor_id, reviewer_id)
+        workflow.connect(reviewer_id, quality_id)
+        workflow.connect(quality_id, formatter_id)
         
-        return builder.build()
+        # Validate workflow
+        workflow.validate()
+        
+        return workflow
     
     def generate_content(
         self,
@@ -183,368 +177,309 @@ class ContentGenerationPipeline:
         # Create workflow
         workflow = self.create_workflow(content_type)
         
-        # Set input variables
-        input_vars = {
-            "topic": topic,
-            "content_type": content_type,
-            "target_length": target_length,
-            "tone": tone,
-            "audience": audience
-        }
+        # Execute workflow with input context
+        result = self.executor.execute(workflow)
         
-        try:
-            # Execute workflow
-            result = self.executor.execute(workflow)
+        if result.is_success():
+            execution_time = result.execution_time_ms()
+            print(f"Content generation completed in {execution_time}ms")
             
-            if result.is_completed():
-                print(f"✅ Content generation completed in {result.execution_time_ms()}ms")
-                
-                return {
-                    "success": True,
-                    "content": result.get_variable("output"),
-                    "research": result.get_variable("research_data"),
-                    "quality_score": result.get_variable("quality_rating"),
-                    "execution_time": result.execution_time_ms()
-                }
-            else:
-                print(f"❌ Content generation failed")
-                return {
-                    "success": False,
-                    "error": "Workflow execution failed",
-                    "execution_time": result.execution_time_ms()
-                }
-                
-        except Exception as e:
-            print(f"❌ Error during content generation: {e}")
-            return {"success": False, "error": str(e)}
+            return {
+                "status": "success",
+                "content": result.get_output(),
+                "execution_time_ms": execution_time,
+                "workflow_stats": self.executor.get_stats()
+            }
+        else:
+            error_msg = result.get_error()
+            print(f"Content generation failed: {error_msg}")
+            
+            return {
+                "status": "error",
+                "error": error_msg,
+                "workflow_stats": self.executor.get_stats()
+            }
 
-# Usage Example
+# Example usage
 def main():
-    # Initialize pipeline
+    """Run the content generation pipeline."""
+    
+    # Set up API key (you can also set OPENAI_API_KEY environment variable)
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         print("❌ Please set OPENAI_API_KEY environment variable")
         return
     
-    pipeline = ContentGenerationPipeline(api_key)
+    # Create pipeline
+    pipeline = ContentGenerationPipeline(api_key, "gpt-4o-mini")
     
-    # Generate different types of content
-    topics = [
-        {
-            "topic": "The Future of Artificial Intelligence in Healthcare",
-            "content_type": "article",
-            "target_length": 1200,
-            "tone": "informative",
-            "audience": "healthcare professionals"
-        },
-        {
-            "topic": "10 Tips for Remote Work Productivity",
-            "content_type": "blog post",
-            "target_length": 800,
-            "tone": "friendly",
-            "audience": "remote workers"
-        },
-        {
-            "topic": "Sustainable Energy Solutions for Small Businesses",
-            "content_type": "guide",
-            "target_length": 1500,
-            "tone": "professional",
-            "audience": "business owners"
-        }
-    ]
+    # Generate content
+    result = pipeline.generate_content(
+        topic="Sustainable Energy Solutions",
+        content_type="blog post",
+        target_length=1200,
+        tone="informative yet engaging",
+        audience="technology enthusiasts"
+    )
     
-    for content_request in topics:
-        print(f"\n{'='*50}")
-        print(f"Generating: {content_request['topic']}")
-        print(f"{'='*50}")
-        
-        result = pipeline.generate_content(**content_request)
-        
-        if result["success"]:
-            print(f"\n📄 Generated Content:")
-            print("-" * 30)
-            print(result["content"][:500] + "..." if len(result["content"]) > 500 else result["content"])
-            print(f"\n📊 Quality Score: {result.get('quality_score', 'N/A')}")
-            print(f"⏱️  Execution Time: {result['execution_time']}ms")
-        else:
-            print(f"\n❌ Failed: {result['error']}")
+    # Display results
+    if result["status"] == "success":
+        print("\nGenerated Content:")
+        print("=" * 60)
+        print(result["content"])
+        print("\nPerformance Stats:")
+        print(f"Execution time: {result['execution_time_ms']}ms")
+    else:
+        print(f"\nGeneration failed: {result['error']}")
 
 if __name__ == "__main__":
     main()
 ```
 
+## Alternative: Using Different LLM Providers
+
+### Using Anthropic Claude
+
+```python
+import graphbit
+import os
+
+def create_anthropic_pipeline():
+    """Create pipeline using Anthropic Claude."""
+    graphbit.init()
+    
+    # Configure for Anthropic
+    config = graphbit.LlmConfig.anthropic(
+        api_key=os.getenv("ANTHROPIC_API_KEY"),
+        model="claude-3-5-sonnet-20241022"
+    )
+    
+    executor = graphbit.Executor(config, debug=True)
+    
+    # Create simple workflow
+    workflow = graphbit.Workflow("Anthropic Content Generator")
+    
+    writer = graphbit.Node.agent(
+        name="Claude Writer",
+        prompt="""Write a comprehensive article about: {topic}
+
+Requirements:
+- Length: {word_count} words
+- Tone: {tone}
+- Include practical examples
+- Structure with clear headings
+
+Create engaging, well-researched content.
+""",
+        agent_id="claude_writer"
+    )
+    
+    workflow.add_node(writer)
+    workflow.validate()
+    
+    return executor, workflow
+
+# Usage
+executor, workflow = create_anthropic_pipeline()
+result = executor.execute(workflow)
+```
+
+### Using Local Ollama Models
+
+```python
+import graphbit
+
+def create_ollama_pipeline():
+    """Create pipeline using local Ollama models."""
+    graphbit.init()
+    
+    # Configure for Ollama (no API key needed)
+    config = graphbit.LlmConfig.ollama("llama3.2")
+    
+    executor = graphbit.Executor(
+        config,
+        timeout_seconds=180,  # Longer timeout for local inference
+        debug=True
+    )
+    
+    workflow = graphbit.Workflow("Local Content Generator")
+    
+    writer = graphbit.Node.agent(
+        name="Llama Writer",
+        prompt="""Write about: {topic}
+
+Keep it concise but informative.
+Focus on practical insights.
+""",
+        agent_id="llama_writer"
+    )
+    
+    workflow.add_node(writer)
+    workflow.validate()
+    
+    return executor, workflow
+
+# Usage
+executor, workflow = create_ollama_pipeline()
+result = executor.execute(workflow)
+```
+
 ## Advanced Features
 
-### Parallel Content Generation
-
-Generate multiple pieces of content simultaneously:
+### High-Performance Content Generation
 
 ```python
-def batch_generate_content(pipeline, topics_list):
-    """Generate multiple pieces of content in parallel."""
+import graphbit
+import os
+
+def create_high_performance_pipeline():
+    """Create optimized pipeline for high-throughput content generation."""
+    graphbit.init()
     
-    workflows = []
-    for topic_config in topics_list:
-        workflow = pipeline.create_workflow(topic_config["content_type"])
-        workflows.append(workflow)
-    
-    # Execute all workflows concurrently
-    results = pipeline.executor.execute_concurrent(workflows)
-    
-    return [
-        {
-            "topic": topics_list[i]["topic"],
-            "result": result,
-            "success": result.is_completed()
-        }
-        for i, result in enumerate(results)
-    ]
-
-# Usage
-topics_batch = [
-    {"topic": "AI in Education", "content_type": "article"},
-    {"topic": "Climate Change Solutions", "content_type": "blog post"},
-    {"topic": "Cryptocurrency Basics", "content_type": "guide"}
-]
-
-batch_results = batch_generate_content(pipeline, topics_batch)
-```
-
-### Content Templates
-
-Create reusable content templates:
-
-```python
-class ContentTemplates:
-    """Predefined content generation templates."""
-    
-    @staticmethod
-    def blog_post_template():
-        return {
-            "content_type": "blog post",
-            "target_length": 800,
-            "tone": "conversational",
-            "audience": "general readers"
-        }
-    
-    @staticmethod
-    def technical_article_template():
-        return {
-            "content_type": "technical article",
-            "target_length": 1500,
-            "tone": "professional",
-            "audience": "developers"
-        }
-    
-    @staticmethod
-    def marketing_copy_template():
-        return {
-            "content_type": "marketing copy",
-            "target_length": 400,
-            "tone": "persuasive",
-            "audience": "potential customers"
-        }
-
-# Usage with templates
-template = ContentTemplates.blog_post_template()
-result = pipeline.generate_content("Machine Learning Trends", **template)
-```
-
-### Custom Quality Metrics
-
-Implement custom quality assessment:
-
-```python
-def create_advanced_quality_workflow():
-    """Create workflow with advanced quality metrics."""
-    
-    # Advanced Quality Reviewer
-    advanced_reviewer = graphbit.PyWorkflowNode.agent_node(
-        name="Advanced Quality Reviewer",
-        description="Comprehensive quality assessment",
-        agent_id="advanced_reviewer",
-        prompt="""
-        Evaluate this content comprehensively:
-        
-        {content}
-        
-        Assess and rate (1-10) each criteria:
-        1. Accuracy of information
-        2. Clarity and readability
-        3. Engagement level
-        4. Structure and flow
-        5. Audience appropriateness
-        6. Originality
-        7. Completeness
-        8. Grammar and style
-        
-        Provide overall score and detailed feedback.
-        Format response as JSON with scores and comments.
-        """
+    config = graphbit.LlmConfig.openai(
+        api_key=os.getenv("OPENAI_API_KEY"),
+        model="gpt-4o-mini"  # Faster model for high throughput
     )
     
-    return advanced_reviewer
-```
-
-### SEO Optimization Stage
-
-Add SEO optimization to your content pipeline:
-
-```python
-def add_seo_optimization(builder):
-    """Add SEO optimization stage to workflow."""
-    
-    seo_optimizer = graphbit.PyWorkflowNode.agent_node(
-        name="SEO Optimizer",
-        description="Optimizes content for search engines",
-        agent_id="seo_optimizer",
-        prompt="""
-        Optimize this content for SEO:
-        
-        {content}
-        Target keyword: {target_keyword}
-        
-        Apply SEO best practices:
-        1. Include target keyword naturally
-        2. Optimize headings (H1, H2, H3)
-        3. Add meta description suggestion
-        4. Improve content structure
-        5. Suggest internal linking opportunities
-        6. Ensure keyword density (1-2%)
-        
-        Maintain readability while improving SEO.
-        """
+    # Use high-throughput executor
+    executor = graphbit.Executor.new_high_throughput(
+        config,
+        timeout_seconds=60,  # Shorter timeout
+        debug=False  # Disable debug for performance
     )
     
-    return seo_optimizer
+    return executor
+
+def create_low_latency_pipeline():
+    """Create pipeline optimized for low latency."""
+    graphbit.init()
+    
+    config = graphbit.LlmConfig.openai(
+        api_key=os.getenv("OPENAI_API_KEY"),
+        model="gpt-4o-mini"
+    )
+    
+    # Use low-latency executor
+    executor = graphbit.Executor.new_low_latency(
+        config,
+        timeout_seconds=30,  # Very short timeout
+        debug=False
+    )
+    
+    return executor
+
+def create_memory_optimized_pipeline():
+    """Create pipeline optimized for memory usage."""
+    graphbit.init()
+    
+    config = graphbit.LlmConfig.openai(
+        api_key=os.getenv("OPENAI_API_KEY"),
+        model="gpt-4o-mini"
+    )
+    
+    # Use memory-optimized executor
+    executor = graphbit.Executor.new_memory_optimized(
+        config,
+        timeout_seconds=120,
+        debug=False
+    )
+    
+    return executor
 ```
 
-## Error Handling and Recovery
-
-Implement robust error handling:
+### Async Content Generation
 
 ```python
-class RobustContentPipeline(ContentGenerationPipeline):
-    """Enhanced pipeline with error recovery."""
-    
-    def __init__(self, api_key: str, model: str = "gpt-4o-mini"):
-        super().__init__(api_key, model)
-        
-        # Enhanced retry configuration
-        self.executor = self.executor.with_retry_config(
-            graphbit.PyRetryConfig.default()
-            .with_exponential_backoff(2000, 2.0, 60000)  # 2s, 4s, 8s, 16s, 32s, 60s max
-            .with_jitter(0.2)  # Add 20% jitter
-        )
-    
-    def generate_with_fallback(self, topic: str, **kwargs):
-        """Generate content with fallback options."""
-        
-        # Try with GPT-4 first
-        try:
-            return self.generate_content(topic, **kwargs)
-        except Exception as e:
-            print(f"⚠️  GPT-4 failed, trying GPT-3.5-turbo: {e}")
-            
-            # Fallback to GPT-3.5-turbo
-            self.config = graphbit.PyLlmConfig.openai(
-                os.getenv("OPENAI_API_KEY"), 
-                "gpt-3.5-turbo"
-            )
-            self.executor = graphbit.PyWorkflowExecutor(self.config)
-            
-            try:
-                return self.generate_content(topic, **kwargs)
-            except Exception as e2:
-                print(f"❌ Both models failed: {e2}")
-                return {"success": False, "error": f"All models failed: {e2}"}
-```
+import graphbit
+import asyncio
+import os
 
-## Performance Monitoring
-
-Track and optimize performance:
-
-```python
-import time
-from typing import List, Dict
-
-class PerformanceMonitor:
-    """Monitor content generation performance."""
+async def generate_content_async():
+    """Generate content asynchronously."""
+    graphbit.init()
     
-    def __init__(self):
-        self.metrics = []
+    config = graphbit.LlmConfig.openai(
+        api_key=os.getenv("OPENAI_API_KEY"),
+        model="gpt-4o-mini"
+    )
     
-    def track_generation(self, topic: str, result: dict):
-        """Track generation metrics."""
-        self.metrics.append({
-            "topic": topic,
-            "success": result["success"],
-            "execution_time": result.get("execution_time", 0),
-            "quality_score": result.get("quality_score"),
-            "timestamp": time.time()
-        })
+    executor = graphbit.Executor(config)
     
-    def get_stats(self) -> Dict:
-        """Get performance statistics."""
-        if not self.metrics:
-            return {}
-        
-        successful = [m for m in self.metrics if m["success"]]
-        
-        return {
-            "total_generations": len(self.metrics),
-            "success_rate": len(successful) / len(self.metrics),
-            "avg_execution_time": sum(m["execution_time"] for m in successful) / len(successful) if successful else 0,
-            "avg_quality_score": sum(m.get("quality_score", 0) for m in successful) / len(successful) if successful else 0
-        }
+    # Create workflow
+    workflow = graphbit.Workflow("Async Content Generator")
+    
+    writer = graphbit.Node.agent(
+        name="Async Writer",
+        prompt="Write a brief article about: {topic}",
+        agent_id="async_writer"
+    )
+    
+    workflow.add_node(writer)
+    workflow.validate()
+    
+    # Execute asynchronously
+    result = await executor.run_async(workflow)
+    
+    if result.is_success():
+        print("Async generation completed")
+        return result.get_output()
+    else:
+        print(f"Async generation failed: {result.get_error()}")
+        return None
 
 # Usage
-monitor = PerformanceMonitor()
-pipeline = ContentGenerationPipeline(os.getenv("OPENAI_API_KEY"))
+async def main_async():
+    content = await generate_content_async()
+    if content:
+        print(f"Generated: {content}")
 
-for topic in ["AI Ethics", "Remote Work", "Climate Change"]:
-    result = pipeline.generate_content(topic)
-    monitor.track_generation(topic, result)
-
-print("Performance Stats:", monitor.get_stats())
+# Run async
+# asyncio.run(main_async())
 ```
 
-## Best Practices
+## System Information and Health Checks
 
-### 1. Prompt Engineering
-- Use specific, detailed prompts
-- Include examples and context
-- Define clear output formats
-- Test and iterate on prompts
+```python
+import graphbit
 
-### 2. Quality Control
-- Implement multi-stage review
-- Use quality gates and conditions
-- Set minimum quality thresholds
-- Include human review for critical content
+def check_system_health():
+    """Check GraphBit system health and capabilities."""
+    graphbit.init()
+    
+    # Get system information
+    system_info = graphbit.get_system_info()
+    print("System Information:")
+    for key, value in system_info.items():
+        print(f"  {key}: {value}")
+    
+    # Perform health check
+    health_status = graphbit.health_check()
+    print(f"\nHealth Status:")
+    for key, value in health_status.items():
+        print(f"  {key}: {value}")
+    
+    # Check version
+    version = graphbit.version()
+    print(f"\nGraphBit Version: {version}")
 
-### 3. Performance Optimization
-- Use appropriate model sizes
-- Implement caching for repeated requests
-- Batch similar requests
-- Monitor and optimize execution times
+# Usage
+check_system_health()
+```
 
-### 4. Error Handling
-- Implement retry logic
-- Use circuit breakers
-- Provide fallback models
-- Log errors for analysis
+## Key Features
 
-## Customization Options
+### Content Pipeline Components
+- **Research Agent**: Gathers comprehensive information on topics
+- **Content Writer**: Creates initial drafts based on research
+- **Editor**: Improves clarity, flow, and engagement
+- **Quality Reviewer**: Ensures accuracy and completeness
+- **Formatter**: Prepares content for publication
 
-The content generation pipeline can be customized for different use cases:
+### Reliability Features
+- **Multiple LLM Providers**: OpenAI, Anthropic, Ollama support
+- **Execution Modes**: High-throughput, low-latency, memory-optimized
+- **Error Handling**: Comprehensive error reporting and recovery
+- **Performance Monitoring**: Built-in execution statistics
+- **Health Checks**: System health and capability monitoring
 
-- **Blog Posts**: Conversational tone, engaging hooks
-- **Technical Documentation**: Precise language, step-by-step instructions
-- **Marketing Copy**: Persuasive language, clear CTAs
-- **Academic Papers**: Formal tone, citations, methodology
-- **Social Media**: Concise format, engaging visuals
-
-Modify the prompts, add specialized agents, or adjust the workflow structure to match your specific content generation needs.
-
-This example demonstrates how GraphBit's flexible architecture enables building sophisticated, production-ready content generation systems with reliability, quality control, and performance optimization built-in. 
+This example demonstrates GraphBit's capabilities for building production-ready content generation workflows with reliability, performance, and flexibility. 
