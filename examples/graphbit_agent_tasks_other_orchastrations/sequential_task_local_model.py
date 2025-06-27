@@ -44,46 +44,49 @@ def extract_output(context, agent_id: str, fallback_name="Task") -> str:
 
 
 def run_sequential_pipeline_mistral():
-    """Run a sequential pipeline with Mistral using Graphbit, executing a series of tasks with dependencies."""
-    print("[LOG]  Starting Sequential Pipeline with Mistral (context-chained)...")
-    os.environ["OLLAMA_MODEL"] = "mistral"
-    model = os.getenv("OLLAMA_MODEL", "mistral")
+    """Run a sequential pipeline with llama3.2 using Graphbit, executing a series of tasks with dependencies."""
+    print("[LOG]  Starting Sequential Pipeline with llama3.2 (context-chained)...")
+    os.environ["OLLAMA_MODEL"] = "llama3.2"
+    model = os.getenv("OLLAMA_MODEL", "llama3.2")
 
     graphbit.init()
     print(f"[LOG] Using Ollama model: {model}")
-    llm_config = graphbit.PyLlmConfig.ollama(model)
+    llm_config = graphbit.LlmConfig.ollama(model)
 
-    executor = (
-        graphbit.PyWorkflowExecutor.new_high_throughput(llm_config)
-        .with_max_node_execution_time(15000)
-        .with_fail_fast(False)
-        .with_retry_config(graphbit.PyRetryConfig(max_attempts=2).with_exponential_backoff(initial_delay_ms=100, multiplier=1.5, max_delay_ms=3000))
-        .with_circuit_breaker_config(graphbit.PyCircuitBreakerConfig(failure_threshold=3, recovery_timeout_ms=15000))
-    )
+    # Create executor with high throughput mode and configure timeout
+    executor = graphbit.Executor.new_high_throughput(llm_config, timeout_seconds=60)
+    # Configure additional settings
+    executor.configure(timeout_seconds=60, max_retries=2, enable_metrics=True, debug=True)
 
-    agent_id = str(uuid.uuid4())
-    builder = graphbit.PyWorkflowBuilder("Sequential Pipeline Workflow")
-    builder.description("Chained 4-task pipeline with dependency")
+    # Create workflow directly (no builder pattern in Python bindings)
+    workflow = graphbit.Workflow("Sequential Pipeline Workflow")
 
     previous_node_id = None
     total_tokens = 0
+    node_ids = []
 
+    # Create nodes for each task
     for i, task in enumerate(SEQUENTIAL_TASKS):
         print(f"[DEBUG] Adding node for Task {i+1}: {task}")
-        node = graphbit.PyWorkflowNode.agent_node(
+        
+        # Generate unique agent ID for each step
+        agent_id = str(uuid.uuid4())
+        
+        node = graphbit.Node.agent(
             name=f"Step {i+1}",
-            description=f"Executes step {i+1}",
-            agent_id=agent_id,
             prompt=task,
+            agent_id=agent_id
         )
-        node_id = builder.add_node(node)
+        
+        node_id = workflow.add_node(node)
+        node_ids.append(node_id)
 
+        # Connect to previous node to create sequential flow
         if previous_node_id is not None:
-            builder.connect(previous_node_id, node_id, graphbit.PyWorkflowEdge.data_flow())
+            workflow.connect(previous_node_id, node_id)
 
         previous_node_id = node_id
 
-    workflow = builder.build()
     workflow.validate()
 
     result = executor.execute(workflow)
@@ -96,12 +99,14 @@ def run_sequential_pipeline_mistral():
     variables = result.variables()
     print("\n[LOG]  Step-by-step outputs:\n" + "-" * 60)
 
+    # Extract outputs for each step
     for i, (_key, _value) in enumerate(variables):
-        output = extract_output(result, agent_id, f"Step {i+1}")
-        prompt = SEQUENTIAL_TASKS[i]
-        tokens = count_tokens_estimate(prompt + output)
-        total_tokens += tokens
-        print(f"\nStep {i+1}: {prompt}\n→ {output}\n[Tokens: {tokens}]")
+        if i < len(SEQUENTIAL_TASKS):
+            output = extract_output(result, f"agent_{i}", f"Step {i+1}")
+            prompt = SEQUENTIAL_TASKS[i]
+            tokens = count_tokens_estimate(prompt + output)
+            total_tokens += tokens
+            print(f"\nStep {i+1}: {prompt}\n→ {output}\n[Tokens: {tokens}]")
 
     print("\n" + "-" * 60)
     print(f"[LOG]  Total tokens used: {total_tokens}")
