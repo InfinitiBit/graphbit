@@ -1,4 +1,4 @@
-"""Run a simple task using Mistral model via Ollama with Graphbit."""
+"""Run a simple task using llama3.2 model via Ollama with Graphbit."""
 
 import os
 import uuid
@@ -6,7 +6,7 @@ import uuid
 import graphbit
 
 SIMPLE_TASK_PROMPT = (
-    "You’ve discovered a mysterious journal entry from a time traveler. "
+    "You've discovered a mysterious journal entry from a time traveler. "
     "Summarize what you can infer about their journey and its impact:\n"
     "'March 14, 3024: Landed in Neo-Rome. Artificial sun powered by quantum batteries. "
     "Warned them about the fusion instability. Might have changed history—again.'"
@@ -47,37 +47,30 @@ def extract_output(context, agent_id: str, fallback_name="Task") -> str:
     return f"{fallback_name} completed successfully, but no detailed output was captured."
 
 
-def run_simple_task_mistral():
-    """Run a simple task using Mistral model via Ollama with Graphbit."""
-    print("[LOG]  Starting Simple Task with Mistral (Ollama)...")
-    os.environ["OLLAMA_MODEL"] = "mistral"  # enforce if not already set
-    model = os.getenv("OLLAMA_MODEL", "mistral")
+def run_simple_task_local():
+    """Run a simple task using llama3.2 model via Ollama with Graphbit."""
+    print("[LOG]  Starting Simple Task with llama3.2 (Ollama)...")
+    os.environ["OLLAMA_MODEL"] = "llama3.2"  # use available model
+    model = os.getenv("OLLAMA_MODEL", "llama3.2")
 
     graphbit.init()
 
     print(f"[LOG] Using Ollama model: {model}")
-    llm_config = graphbit.PyLlmConfig.ollama(model)
+    llm_config = graphbit.LlmConfig.ollama(model)
 
-    executor = (
-        graphbit.PyWorkflowExecutor.new_low_latency(llm_config)
-        .with_max_node_execution_time(10000)
-        .with_fail_fast(True)
-        .with_circuit_breaker_config(graphbit.PyCircuitBreakerConfig(failure_threshold=3, recovery_timeout_ms=15000))
-    )
+    executor = graphbit.Executor.new_low_latency(llm_config)
 
     agent_id = str(uuid.uuid4())
 
-    builder = graphbit.PyWorkflowBuilder("Simple Task Workflow")
-    builder.description("Single task benchmark using Mistral")
+    workflow = graphbit.Workflow("Simple Task Workflow")
 
-    node = graphbit.PyWorkflowNode.agent_node(
-        name="Task Executor",
-        description="Executes simple summarization task",
-        agent_id=agent_id,
+    node = graphbit.Node.agent(
+        name="Task Executor", 
         prompt=SIMPLE_TASK_PROMPT,
+        agent_id=agent_id
     )
-    builder.add_node(node)
-    workflow = builder.build()
+    
+    workflow.add_node(node)
     workflow.validate()
 
     result = executor.execute(workflow)
@@ -96,4 +89,4 @@ def run_simple_task_mistral():
 
 
 if __name__ == "__main__":
-    run_simple_task_mistral()
+    run_simple_task_local()
