@@ -8,35 +8,47 @@ use crate::llm::{
 use async_trait::async_trait;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 
-/// Ollama API provider
+/// Ollama API provider with performance optimizations
 pub struct OllamaProvider {
     client: Client,
     model: String,
     base_url: String,
+    /// Cache to avoid repeated model availability checks
+    model_verified: Arc<RwLock<bool>>,
 }
 
 impl OllamaProvider {
     /// Create a new Ollama provider
     pub fn new(model: String) -> GraphBitResult<Self> {
-        let client = Client::new();
+        let client = Client::builder()
+            .timeout(std::time::Duration::from_secs(120))  // Reasonable timeout
+            .build()
+            .map_err(|e| GraphBitError::llm_provider("ollama", format!("Failed to create HTTP client: {}", e)))?;
         let base_url = "http://localhost:11434".to_string();
 
         Ok(Self {
             client,
             model,
             base_url,
+            model_verified: Arc::new(RwLock::new(false)),
         })
     }
 
     /// Create a new Ollama provider with custom base URL
     pub fn with_base_url(model: String, base_url: String) -> GraphBitResult<Self> {
-        let client = Client::new();
+        let client = Client::builder()
+            .timeout(std::time::Duration::from_secs(120))
+            .build()
+            .map_err(|e| GraphBitError::llm_provider("ollama", format!("Failed to create HTTP client: {}", e)))?;
 
         Ok(Self {
             client,
             model,
             base_url,
+            model_verified: Arc::new(RwLock::new(false)),
         })
     }
 
@@ -153,11 +165,22 @@ impl OllamaProvider {
         Ok(models_response.models.into_iter().map(|m| m.name).collect())
     }
 
-    /// Pull a model if it doesn't exist
+    /// Pull a model if it doesn't exist - OPTIMIZED VERSION
     pub async fn ensure_model(&self) -> GraphBitResult<()> {
-        // First check if model exists
+        // Fast path: check cache first to avoid repeated API calls
+        {
+            let verified = self.model_verified.read().await;
+            if *verified {
+                return Ok(());
+            }
+        }
+
+        // Check if model exists (only if not cached)
         let models = self.list_models().await?;
         if models.iter().any(|m| m == &self.model) {
+            // Cache the result to avoid future checks
+            let mut verified = self.model_verified.write().await;
+            *verified = true;
             return Ok(());
         }
 
@@ -191,6 +214,10 @@ impl OllamaProvider {
             ));
         }
 
+        // Cache successful model verification
+        let mut verified = self.model_verified.write().await;
+        *verified = true;
+
         Ok(())
     }
 }
@@ -206,8 +233,16 @@ impl LlmProviderTrait for OllamaProvider {
     }
 
     async fn complete(&self, request: LlmRequest) -> GraphBitResult<LlmResponse> {
-        // Ensure model is available
-        self.ensure_model().await?;
+        // PERFORMANCE OPTIMIZATION: Only ensure model on first call, not every call
+        // Check cache first before making expensive API calls
+        {
+            let verified = self.model_verified.read().await;
+            if !*verified {
+                // Only do the expensive model check if we haven't verified before
+                drop(verified); // Release read lock before acquiring write lock
+                self.ensure_model().await?;
+            }
+        }
 
         let url = format!("{}/api/chat", self.base_url);
 

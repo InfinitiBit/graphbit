@@ -187,7 +187,7 @@ class BaseBenchmark(ABC):
     def __init__(self, config: Dict[str, Any]):
         """Initialize the benchmark with configuration."""
         self.config = config
-        self.api_key = config.get("api_key") or config.get("openai_api_key")
+        self.api_key = config.get("api_key")
         self.model = config.get("model", "gpt-4o-mini")
         self.monitor = PerformanceMonitor()
 
@@ -414,7 +414,7 @@ def get_standard_llm_config(config: Dict[str, Any]) -> Dict[str, Any]:
         "model": config.get("model", DEFAULT_MODEL),
         "temperature": config.get("temperature", DEFAULT_TEMPERATURE),
         "max_tokens": config.get("max_tokens", DEFAULT_MAX_TOKENS),
-        "api_key": config.get("api_key") or config.get("openai_api_key"),
+        "api_key": config.get("api_key"),
     }
 
 

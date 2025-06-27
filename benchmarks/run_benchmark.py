@@ -70,13 +70,22 @@ class ComprehensiveBenchmarkRunner:
         """Initialize the benchmark runner with configuration."""
         self.verbose = verbose
         self.llm_config = llm_config
+        # Get appropriate API key based on provider
+        api_key = llm_config.api_key
+        if not api_key:
+            if llm_config.provider == LLMProvider.OPENAI:
+                api_key = os.environ.get("OPENAI_API_KEY")
+            elif llm_config.provider == LLMProvider.ANTHROPIC:
+                api_key = os.environ.get("ANTHROPIC_API_KEY")
+            # For ollama and huggingface, no API key is typically needed
+        
         self.config: Dict[str, Any] = {
             "llm_config": llm_config,
             "provider": llm_config.provider.value,
             "model": llm_config.model,
             "temperature": llm_config.temperature,
             "max_tokens": llm_config.max_tokens,
-            "api_key": llm_config.api_key or os.environ.get("OPENAI_API_KEY"),
+            "api_key": api_key,
             "base_url": llm_config.base_url,
             "log_dir": "logs",
             "results_dir": "results",
@@ -172,8 +181,8 @@ class ComprehensiveBenchmarkRunner:
         if self.verbose:
             click.echo(f"\n{scenario_name} Results:")
             click.echo(f"  Execution Time: {metrics.execution_time_ms:.2f} ms")
-            click.echo(f"  Memory Usage: {metrics.memory_usage_mb:.2f} MB")
-            click.echo(f"  CPU Usage: {metrics.cpu_usage_percent:.2f}%")
+            click.echo(f"  Memory Usage: {metrics.memory_usage_mb:.3f} MB")
+            click.echo(f"  CPU Usage: {metrics.cpu_usage_percent:.3f}%")
             click.echo(f"  Token Count: {metrics.token_count}")
             click.echo(f"  Throughput: {metrics.throughput_tasks_per_sec:.2f} tasks/sec")
             click.echo(f"  Error Rate: {metrics.error_rate:.2%}")
@@ -187,11 +196,11 @@ class ComprehensiveBenchmarkRunner:
                 click.echo("  Metadata:")
                 for key, value in metrics.metadata.items():
                     if isinstance(value, float):
-                        click.echo(f"    {key}: {value:.2f}")
+                        click.echo(f"    {key}: {value:.3f}")
                     else:
                         click.echo(f"    {key}: {value}")
         else:
-            self.log(f"{scenario_name}: {metrics.execution_time_ms:.0f}ms, {metrics.memory_usage_mb:.1f}MB, {metrics.cpu_usage_percent:.1f}% CPU, {metrics.token_count} tokens")
+            self.log(f"{scenario_name}: {metrics.execution_time_ms:.0f}ms, {metrics.memory_usage_mb:.3f}MB, {metrics.cpu_usage_percent:.3f}% CPU, {metrics.token_count} tokens")
 
     async def run_framework_scenario(
         self,
@@ -269,7 +278,7 @@ class ComprehensiveBenchmarkRunner:
         if self.verbose and framework_info["results"]:
             print(f"\n{framework_name} Performance Overview:")
             for scenario_name, metrics in framework_info["results"].items():
-                print(f"  {scenario_name}: {metrics.execution_time_ms:.0f}ms, " f"{metrics.memory_usage_mb:.1f}MB, " f"{metrics.cpu_usage_percent:.1f}% CPU, " f"{metrics.token_count} tokens")
+                print(f"  {scenario_name}: {metrics.execution_time_ms:.0f}ms, " f"{metrics.memory_usage_mb:.3f}MB, " f"{metrics.cpu_usage_percent:.3f}% CPU, " f"{metrics.token_count} tokens")
 
     def generate_comparison_report(self) -> None:
         """Generate a comparison report across all frameworks."""
@@ -296,7 +305,7 @@ class ComprehensiveBenchmarkRunner:
                     avg_cpu = sum(m.cpu_usage_percent for m in results.values()) / scenario_count
                     avg_tokens = sum(m.token_count for m in results.values()) / scenario_count
 
-                    print(f"{framework_name:<15} {scenario_count:<12} {avg_time:<15.1f} {avg_memory:<16.1f} {avg_cpu:<12.1f} {avg_tokens:<12.0f}")
+                    print(f"{framework_name:<15} {scenario_count:<12} {avg_time:<15.1f} {avg_memory:<16.3f} {avg_cpu:<12.3f} {avg_tokens:<12.0f}")
                 else:
                     print(f"{framework_name:<15} {'0':<12} {'N/A':<15} {'N/A':<16} {'N/A':<12} {'N/A':<12}")
 
@@ -315,7 +324,7 @@ class ComprehensiveBenchmarkRunner:
                     metrics = results[scenario_name]
                     print(
                         f"{framework_name:<15} {metrics.execution_time_ms:<12.1f} "
-                        f"{metrics.memory_usage_mb:<13.1f} {metrics.cpu_usage_percent:<10.1f} "
+                        f"{metrics.memory_usage_mb:<13.3f} {metrics.cpu_usage_percent:<10.3f} "
                         f"{metrics.token_count:<10} "
                         f"{metrics.throughput_tasks_per_sec:<12.2f}"
                     )
@@ -466,8 +475,8 @@ class ComprehensiveBenchmarkRunner:
                     [
                         _fw_name,
                         f"{avg_exec:.0f}",
-                        f"{avg_memory:.1f}",
-                        f"{avg_cpu:.1f}",
+                        f"{avg_memory:.3f}",
+                        f"{avg_cpu:.3f}",
                         f"{avg_throughput:.2f}",
                         f"{success_rate:.1f}%",
                     ]
@@ -511,12 +520,18 @@ class ComprehensiveBenchmarkRunner:
         self.log(f"Testing {len(self.frameworks)} frameworks with {len(self.scenarios)} scenarios each")
         self.log(f"Model: {self.config['model']}")
 
-        # Verify API key
-        if not self.config["api_key"]:
-            self.log("OPENAI_API_KEY not found in environment!", "ERROR")
+        # Verify API key for providers that require it
+        provider = self.llm_config.provider
+        if provider in [LLMProvider.OPENAI, LLMProvider.ANTHROPIC] and not self.config["api_key"]:
+            provider_name = provider.value.upper()
+            self.log(f"{provider_name}_API_KEY not found in environment!", "ERROR")
             sys.exit(1)
+        elif self.config["api_key"]:
+            provider_name = provider.value.upper()
+            self.log_verbose(f"{provider_name}_API_KEY configured")
         else:
-            self.log_verbose("OPENAI_API_KEY configured")
+            # For providers that don't need API keys (ollama, huggingface)
+            self.log_verbose(f"Using {provider.value} provider (no API key required)")
 
         overall_start_time = time.time()
 

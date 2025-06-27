@@ -107,6 +107,16 @@ impl LlmConfig {
     }
 }
 
+impl Default for LlmConfig {
+    /// Default configuration uses Ollama with llama3.2 model for local development
+    fn default() -> Self {
+        Self::Ollama {
+            model: "llama3.2".to_string(),
+            base_url: None,
+        }
+    }
+}
+
 /// Trait that all LLM providers must implement
 #[async_trait]
 pub trait LlmProviderTrait: Send + Sync {

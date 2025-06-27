@@ -138,6 +138,8 @@ pub struct WorkflowExecutor {
     circuit_breakers: Arc<RwLock<HashMap<crate::types::AgentId, CircuitBreaker>>>,
     /// Global circuit breaker configuration
     circuit_breaker_config: CircuitBreakerConfig,
+    /// Default LLM configuration for auto-generated agents
+    default_llm_config: Option<crate::llm::LlmConfig>,
 }
 
 impl WorkflowExecutor {
@@ -154,6 +156,7 @@ impl WorkflowExecutor {
             default_retry_config: Some(RetryConfig::default()),
             circuit_breakers: Arc::new(RwLock::new(HashMap::with_capacity(8))),
             circuit_breaker_config: CircuitBreakerConfig::default(),
+            default_llm_config: None,
         }
     }
 
@@ -170,6 +173,7 @@ impl WorkflowExecutor {
             default_retry_config: Some(RetryConfig::default()),
             circuit_breakers: Arc::new(RwLock::new(HashMap::with_capacity(8))),
             circuit_breaker_config: CircuitBreakerConfig::default(),
+            default_llm_config: None,
         }
     }
 
@@ -186,6 +190,7 @@ impl WorkflowExecutor {
             default_retry_config: None, // No retries for low latency
             circuit_breakers: Arc::new(RwLock::new(HashMap::with_capacity(8))),
             circuit_breaker_config: CircuitBreakerConfig::default(),
+            default_llm_config: None,
         }
     }
 
@@ -202,6 +207,7 @@ impl WorkflowExecutor {
             default_retry_config: Some(RetryConfig::default()),
             circuit_breakers: Arc::new(RwLock::new(HashMap::with_capacity(4))),
             circuit_breaker_config: CircuitBreakerConfig::default(),
+            default_llm_config: None,
         }
     }
 
@@ -232,6 +238,12 @@ impl WorkflowExecutor {
     /// Set circuit breaker configuration
     pub fn with_circuit_breaker_config(mut self, config: CircuitBreakerConfig) -> Self {
         self.circuit_breaker_config = config;
+        self
+    }
+
+    /// Set default LLM configuration for auto-generated agents
+    pub fn with_default_llm_config(mut self, llm_config: crate::llm::LlmConfig) -> Self {
+        self.default_llm_config = Some(llm_config);
         self
     }
 
@@ -292,7 +304,7 @@ impl WorkflowExecutor {
         // Validate workflow before execution
         workflow.validate()?;
 
-        // Extract and register agents concurrently if possible
+        // PERFORMANCE FIX: Auto-register agents for all agent nodes found in workflow
         let agent_ids = extract_agent_ids_from_workflow(&workflow);
         if agent_ids.is_empty() {
             return Err(GraphBitError::validation(
@@ -301,9 +313,33 @@ impl WorkflowExecutor {
             ));
         }
 
-        // Pre-warm circuit breakers for all agents
+        // Auto-register missing agents to prevent lookup failures
         for agent_id_str in &agent_ids {
             if let Ok(agent_id) = AgentId::from_string(agent_id_str) {
+                // Check if agent is already registered
+                let agent_exists = {
+                    let agents_guard = self.agents.read().await;
+                    agents_guard.contains_key(&agent_id)
+                };
+
+                // If agent doesn't exist, create and register a default agent
+                if !agent_exists {
+                    // Create default agent configuration for this workflow
+                    let default_config = crate::agents::AgentConfig::new(
+                        format!("Agent_{}", agent_id_str),
+                        "Auto-generated agent for workflow execution",
+                        self.default_llm_config.clone().unwrap_or_default(),
+                    ).with_id(agent_id.clone());
+
+                    // Try to create agent - if it fails, continue (will use fallback execution)
+                    if let Ok(agent) = crate::agents::Agent::new(default_config).await {
+                        let mut agents_guard = self.agents.write().await;
+                        agents_guard.insert(agent_id.clone(), Arc::new(agent));
+                        tracing::debug!("Auto-registered agent: {}", agent_id);
+                    }
+                }
+
+                // Pre-warm circuit breakers for all agents
                 let _ = self.get_circuit_breaker(&agent_id).await;
             }
         }

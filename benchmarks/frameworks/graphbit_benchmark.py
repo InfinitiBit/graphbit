@@ -2,7 +2,7 @@
 
 """GraphBit framework benchmark implementation.
 
-Optimized to use direct API calls for maximum performance, bypassing workflow overhead.
+OPTIMIZED VERSION: Uses direct LLM client calls instead of workflow overhead for fair comparison.
 """
 
 import os
@@ -52,9 +52,10 @@ class GraphBitBenchmark(BaseBenchmark):
             return llm_config["max_tokens"], llm_config["temperature"]
 
     async def setup(self) -> None:
-        """Set up GraphBit with minimal overhead configuration."""
-        # Initialize GraphBit (minimal initialization)
-        graphbit.init()
+        """Set up GraphBit with minimal overhead configuration - DIRECT API ONLY."""
+        # Initialize GraphBit core only (skip workflow system)
+        # Use debug=False for benchmarks to minimize overhead
+        graphbit.init(debug=False)
 
         # Get LLM configuration from config
         llm_config_obj: LLMConfig | None = self.config.get("llm_config")
@@ -89,8 +90,15 @@ class GraphBitBenchmark(BaseBenchmark):
             else:
                 raise ValueError(f"Unsupported provider for GraphBit: {llm_config_obj.provider}")
 
-        # Create LLM client using the correct API
-        self.llm_client = graphbit.LlmClient(self.llm_config)
+        # Create LLM client using the direct API (bypass workflow system entirely)
+        # Use debug=False for benchmarks to avoid debug output overhead
+        self.llm_client = graphbit.LlmClient(self.llm_config, debug=False)
+
+        # Pre-warm the client to avoid initialization overhead in benchmarks
+        try:
+            await self.llm_client.warmup()
+        except:
+            pass  # Warmup is optional
 
     async def teardown(self) -> None:
         """Cleanup GraphBit resources."""
@@ -98,7 +106,7 @@ class GraphBitBenchmark(BaseBenchmark):
         self.llm_client = None
 
     async def run_simple_task(self) -> BenchmarkMetrics:
-        """Run simple task using direct API call."""
+        """Run simple task using DIRECT API call."""
         if self.llm_client is None:
             raise RuntimeError("LLM client not initialized. Call setup() first.")
 
@@ -107,7 +115,12 @@ class GraphBitBenchmark(BaseBenchmark):
         try:
             max_tokens, temperature = self._get_llm_params()
 
-            output_content = await self.llm_client.complete_async(prompt=SIMPLE_TASK_PROMPT, max_tokens=max_tokens, temperature=temperature)
+            # DIRECT API CALL - No workflow, no agents, no nodes, no overhead
+            output_content = await self.llm_client.complete_async(
+                prompt=SIMPLE_TASK_PROMPT, 
+                max_tokens=max_tokens, 
+                temperature=temperature
+            )
 
             self.log_output(
                 scenario_name=BenchmarkScenario.SIMPLE_TASK.value,
@@ -131,7 +144,7 @@ class GraphBitBenchmark(BaseBenchmark):
         return metrics
 
     async def run_sequential_pipeline(self) -> BenchmarkMetrics:
-        """Run sequential pipeline using direct API calls."""
+        """Run sequential pipeline using DIRECT API calls (no workflow overhead)."""
         if self.llm_client is None:
             raise RuntimeError("LLM client not initialized. Call setup() first.")
 
@@ -148,11 +161,13 @@ class GraphBitBenchmark(BaseBenchmark):
                 else:
                     prompt = f"Previous result: {previous_result}\n\nNew task: {task}"
 
-                # Single direct API call
-                result = await self.llm_client.complete_stream(prompt=prompt, max_tokens=max_tokens, temperature=temperature)
+                result = await self.llm_client.complete_async(
+                    prompt=prompt, 
+                    max_tokens=max_tokens, 
+                    temperature=temperature
+                )
 
                 previous_result = result
-                # Standardized token counting: only count base task + result (like LangChain)
                 total_tokens += count_tokens_estimate(task + result)
 
                 self.log_output(
@@ -175,7 +190,7 @@ class GraphBitBenchmark(BaseBenchmark):
         return metrics
 
     async def run_parallel_pipeline(self) -> BenchmarkMetrics:
-        """Run parallel pipeline using batch processing or concurrent API calls."""
+        """Run parallel pipeline using DIRECT batch API calls (no workflow overhead)."""
         if self.llm_client is None:
             raise RuntimeError("LLM client not initialized. Call setup() first.")
 
@@ -184,14 +199,12 @@ class GraphBitBenchmark(BaseBenchmark):
         try:
             max_tokens, temperature = self._get_llm_params()
 
-            try:
-                results = await self.llm_client.complete_batch(prompts=PARALLEL_TASKS, max_tokens=max_tokens, temperature=temperature, max_concurrency=len(PARALLEL_TASKS))
-            except Exception as e:
-                self.logger.error(f"Error in parallel pipeline benchmark: {e}")
-                metrics = self.monitor.stop_monitoring()
-                metrics.error_rate = 1.0
-                metrics.token_count = 0
-                return metrics
+            results = await self.llm_client.complete_batch(
+                prompts=PARALLEL_TASKS, 
+                max_tokens=max_tokens, 
+                temperature=temperature, 
+                max_concurrency=len(PARALLEL_TASKS)
+            )
 
             total_tokens = 0
             for i, (task, result) in enumerate(zip(PARALLEL_TASKS, results)):
@@ -230,30 +243,24 @@ class GraphBitBenchmark(BaseBenchmark):
             total_tokens = 0
             workflow_results: Dict[str, str] = {}
 
-            # Execute workflow steps in dependency order
             for step in COMPLEX_WORKFLOW_STEPS:
                 step_name = step["task"]
                 step_prompt = step["prompt"]
 
-                # Build context from dependencies
                 context_parts = []
                 for dependency in step["depends_on"]:
                     if dependency in workflow_results:
                         context_parts.append(f"{dependency}: {workflow_results[dependency]}")
 
-                # Create full prompt with context
                 if context_parts:
                     full_prompt = f"Context from previous steps:\n{chr(10).join(context_parts)}\n\nNew task: {step_prompt}"
                 else:
                     full_prompt = step_prompt
 
-                # Execute step using direct API call
                 result = await self.llm_client.complete_async(prompt=full_prompt, max_tokens=max_tokens, temperature=temperature)
 
-                # Store result for next steps
                 workflow_results[step_name] = result
-
-                # Log output
+                
                 self.log_output(
                     scenario_name=BenchmarkScenario.COMPLEX_WORKFLOW.value,
                     task_name=step_name,

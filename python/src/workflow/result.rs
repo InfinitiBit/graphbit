@@ -9,10 +9,44 @@ pub struct WorkflowResult {
     pub(crate) inner: WorkflowContext,
 }
 
+impl WorkflowResult {
+    /// Create a new workflow result
+    pub fn new(context: WorkflowContext) -> Self {
+        Self { inner: context }
+    }
+}
+
 #[pymethods]
 impl WorkflowResult {
     fn is_success(&self) -> bool {
         matches!(self.inner.state, WorkflowState::Completed)
+    }
+
+    fn is_failed(&self) -> bool {
+        matches!(self.inner.state, WorkflowState::Failed { .. })
+    }
+
+    fn state(&self) -> String {
+        format!("{:?}", self.inner.state)
+    }
+
+    fn execution_time_ms(&self) -> u64 {
+        // Use the built-in execution duration calculation
+        self.inner.execution_duration_ms().unwrap_or(0)
+    }
+
+    fn variables(&self) -> Vec<(String, String)> {
+        self.inner
+            .variables
+            .iter()
+            .filter_map(|(k, v)| {
+                if let Ok(s) = serde_json::to_string(v) {
+                    Some((k.clone(), s.trim_matches('"').to_string()))
+                } else {
+                    Some((k.clone(), v.to_string()))
+                }
+            })
+            .collect()
     }
 
     fn get_variable(&self, key: &str) -> Option<String> {

@@ -6,6 +6,7 @@ use graphbit_core::{graph::WorkflowEdge, types::NodeId, workflow::Workflow as Co
 use pyo3::prelude::*;
 
 #[pyclass]
+#[derive(Clone)]
 pub struct Workflow {
     pub(crate) inner: CoreWorkflow,
 }
