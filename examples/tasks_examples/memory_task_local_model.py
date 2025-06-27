@@ -1,4 +1,4 @@
-"""This example demonstrates how to run a memory-intensive task using the Mistral model with Ollama."""
+"""This example demonstrates how to run a memory-intensive task using the Llama 3.2 model with Ollama."""
 
 import os
 import uuid
@@ -71,37 +71,39 @@ def extract_output(context, agent_id: str, fallback_name="Task") -> str:
     return f"{fallback_name} completed successfully, but no detailed output was captured."
 
 
-def run_memory_intensive_mistral():
-    """Run a memory-intensive task using the Mistral model with Ollama."""
-    print("[LOG]  Running Memory-Intensive Task with Mistral...")
-    os.environ["OLLAMA_MODEL"] = "mistral"
-    model = os.getenv("OLLAMA_MODEL", "mistral")
+def run_memory_intensive_llama():
+    """Run a memory-intensive task using the Llama 3.2 model with Ollama."""
+    print("[LOG]  Running Memory-Intensive Task with Llama 3.2...")
+    os.environ["OLLAMA_MODEL"] = "llama3.2"
+    model = os.getenv("OLLAMA_MODEL", "llama3.2")
 
     graphbit.init()
     print(f"[LOG] Using Ollama model: {model}")
-    llm_config = graphbit.PyLlmConfig.ollama(model)
+    llm_config = graphbit.LlmConfig.ollama(model)
 
-    executor = (
-        graphbit.PyWorkflowExecutor.new_memory_optimized(llm_config)
-        .with_max_node_execution_time(60000)
-        .with_fail_fast(False)
-        .with_retry_config(graphbit.PyRetryConfig(max_attempts=3).with_exponential_backoff(initial_delay_ms=100, multiplier=1.5, max_delay_ms=3000))
-        .with_circuit_breaker_config(graphbit.PyCircuitBreakerConfig(failure_threshold=3, recovery_timeout_ms=15000))
+    # Create memory-optimized executor with extended timeout for large prompts
+    executor = graphbit.Executor.new_memory_optimized(llm_config, timeout_seconds=300)
+    
+    # Configure additional settings for memory-intensive tasks
+    executor.configure(
+        timeout_seconds=300, 
+        max_retries=3, 
+        enable_metrics=True, 
+        debug=False
     )
 
     agent_id = str(uuid.uuid4())
-    builder = graphbit.PyWorkflowBuilder("Memory Intensive Workflow")
-    builder.description("Runs one task with large input")
 
-    node = graphbit.PyWorkflowNode.agent_node(
+    # Create workflow directly
+    workflow = graphbit.Workflow("Memory Intensive Workflow")
+
+    node = graphbit.Node.agent(
         name="Memory Intensive Task",
-        description="Analyzes large dataset",
-        agent_id=agent_id,
         prompt=MEMORY_INTENSIVE_PROMPT,
+        agent_id=agent_id
     )
-    builder.add_node(node)
-
-    workflow = builder.build()
+    
+    workflow.add_node(node)
     workflow.validate()
 
     result = executor.execute(workflow)
@@ -120,4 +122,4 @@ def run_memory_intensive_mistral():
 
 
 if __name__ == "__main__":
-    run_memory_intensive_mistral()
+    run_memory_intensive_llama()
