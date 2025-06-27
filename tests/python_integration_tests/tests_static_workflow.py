@@ -66,7 +66,7 @@ class TestWorkflowComposition:
         """Create a sample workflow for testing."""
         workflow = graphbit.Workflow("sample")
 
-        # Add some nodes
+        # Add some nodes (the fixture provides a basic workflow setup)
         agent1 = graphbit.Node.agent("agent1", "Start processing", "agent_001")
         condition1 = graphbit.Node.condition("condition1", "quality_score > 0.5")
         transform1 = graphbit.Node.transform("transform1", "uppercase")
@@ -88,13 +88,26 @@ class TestWorkflowComposition:
 
     def test_workflow_connection_creation(self, sample_workflow: Any) -> None:
         """Test creating connections between nodes."""
-        # Create connections between nodes
+        # Instead of using the sample workflow, create our own nodes with known IDs
+        workflow = graphbit.Workflow("connection_test")
+        
+        # Create nodes
+        agent1 = graphbit.Node.agent("agent1", "Start processing", "agent_001")
+        condition1 = graphbit.Node.condition("condition1", "quality_score > 0.5")
+        transform1 = graphbit.Node.transform("transform1", "uppercase")
+
+        # Add nodes and capture their IDs
+        agent1_id = workflow.add_node(agent1)
+        condition1_id = workflow.add_node(condition1)
+        transform1_id = workflow.add_node(transform1)
+
+        # Create connections between nodes using the returned IDs
         try:
             # Connect agent1 to condition1
-            sample_workflow.connect("agent1", "condition1")
+            workflow.connect(agent1_id, condition1_id)
 
             # Connect condition1 to transform1
-            sample_workflow.connect("condition1", "transform1")
+            workflow.connect(condition1_id, transform1_id)
 
         except (ValueError, RuntimeError) as e:
             pytest.skip(f"Connection creation test skipped: {e}")
@@ -187,13 +200,13 @@ class TestWorkflowValidation:
         agent1 = graphbit.Node.agent("agent1", "First step", "agent_001")
         agent2 = graphbit.Node.agent("agent2", "Second step", "agent_002")
 
-        # Add nodes to workflow
-        workflow.add_node(agent1)
-        workflow.add_node(agent2)
+        # Add nodes to workflow and get their IDs
+        agent1_id = workflow.add_node(agent1)
+        agent2_id = workflow.add_node(agent2)
 
-        # Connect them
+        # Connect them using the returned IDs
         try:
-            workflow.connect("agent1", "agent2")
+            workflow.connect(agent1_id, agent2_id)
             workflow.validate()
         except (ValueError, RuntimeError) as e:
             pytest.skip(f"Connected nodes validation test skipped: {e}")
