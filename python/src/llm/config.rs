@@ -40,7 +40,11 @@ impl LlmConfig {
 
     #[staticmethod]
     #[pyo3(signature = (api_key, model=None, base_url=None))]
-    fn huggingface(api_key: String, model: Option<String>, base_url: Option<String>) -> PyResult<Self> {
+    fn huggingface(
+        api_key: String,
+        model: Option<String>,
+        base_url: Option<String>,
+    ) -> PyResult<Self> {
         validate_api_key(&api_key, "HuggingFace")?;
 
         let mut config = CoreLlmConfig::huggingface(
@@ -49,7 +53,11 @@ impl LlmConfig {
         );
 
         // Set custom base URL if provided
-        if let CoreLlmConfig::HuggingFace { base_url: ref mut url, .. } = config {
+        if let CoreLlmConfig::HuggingFace {
+            base_url: ref mut url,
+            ..
+        } = config
+        {
             *url = base_url;
         }
 

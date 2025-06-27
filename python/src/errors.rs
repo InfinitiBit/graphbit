@@ -1,5 +1,5 @@
 //! Production-grade error handling for GraphBit Python bindings
-//! 
+//!
 //! This module provides comprehensive error handling with proper error context,
 //! structured error types, and integration with logging systems.
 
@@ -13,21 +13,41 @@ pub enum PythonBindingError {
     /// Core library error
     Core(String),
     /// Configuration error with context
-    Configuration { message: String, field: Option<String> },
+    Configuration {
+        message: String,
+        field: Option<String>,
+    },
     /// Runtime error with operation context
     Runtime { message: String, operation: String },
     /// Network error with retry information
     Network { message: String, retry_count: u32 },
     /// Authentication error with provider context
-    Authentication { message: String, provider: Option<String> },
+    Authentication {
+        message: String,
+        provider: Option<String>,
+    },
     /// Validation error with field-specific details
-    Validation { message: String, field: String, value: Option<String> },
+    Validation {
+        message: String,
+        field: String,
+        value: Option<String>,
+    },
     /// Rate limiting error with backoff information
-    RateLimit { message: String, retry_after: Option<u64> },
+    RateLimit {
+        message: String,
+        retry_after: Option<u64>,
+    },
     /// Timeout error with operation details
-    Timeout { message: String, operation: String, duration_ms: u64 },
+    Timeout {
+        message: String,
+        operation: String,
+        duration_ms: u64,
+    },
     /// Resource exhaustion error
-    ResourceExhausted { message: String, resource_type: String },
+    ResourceExhausted {
+        message: String,
+        resource_type: String,
+    },
 }
 
 impl fmt::Display for PythonBindingError {
@@ -44,7 +64,10 @@ impl fmt::Display for PythonBindingError {
             PythonBindingError::Runtime { message, operation } => {
                 write!(f, "Runtime error during '{}': {}", operation, message)
             }
-            PythonBindingError::Network { message, retry_count } => {
+            PythonBindingError::Network {
+                message,
+                retry_count,
+            } => {
                 write!(f, "Network error (attempt {}): {}", retry_count, message)
             }
             PythonBindingError::Authentication { message, provider } => {
@@ -54,24 +77,50 @@ impl fmt::Display for PythonBindingError {
                     write!(f, "Authentication error: {}", message)
                 }
             }
-            PythonBindingError::Validation { message, field, value } => {
+            PythonBindingError::Validation {
+                message,
+                field,
+                value,
+            } => {
                 if let Some(value) = value {
-                    write!(f, "Validation error for field '{}' with value '{}': {}", field, value, message)
+                    write!(
+                        f,
+                        "Validation error for field '{}' with value '{}': {}",
+                        field, value, message
+                    )
                 } else {
                     write!(f, "Validation error for field '{}': {}", field, message)
                 }
             }
-            PythonBindingError::RateLimit { message, retry_after } => {
+            PythonBindingError::RateLimit {
+                message,
+                retry_after,
+            } => {
                 if let Some(retry_after) = retry_after {
-                    write!(f, "Rate limit exceeded (retry after {}s): {}", retry_after, message)
+                    write!(
+                        f,
+                        "Rate limit exceeded (retry after {}s): {}",
+                        retry_after, message
+                    )
                 } else {
                     write!(f, "Rate limit exceeded: {}", message)
                 }
             }
-            PythonBindingError::Timeout { message, operation, duration_ms } => {
-                write!(f, "Timeout in '{}' after {}ms: {}", operation, duration_ms, message)
+            PythonBindingError::Timeout {
+                message,
+                operation,
+                duration_ms,
+            } => {
+                write!(
+                    f,
+                    "Timeout in '{}' after {}ms: {}",
+                    operation, duration_ms, message
+                )
             }
-            PythonBindingError::ResourceExhausted { message, resource_type } => {
+            PythonBindingError::ResourceExhausted {
+                message,
+                resource_type,
+            } => {
                 write!(f, "Resource exhausted ({}): {}", resource_type, message)
             }
         }
@@ -86,37 +135,27 @@ pub fn to_py_error(error: graphbit_core::errors::GraphBitError) -> PyErr {
     error!("GraphBit error in Python binding: {}", error);
 
     let python_error = match error {
-        GraphBitError::Network { message, .. } => {
-            PythonBindingError::Network { 
-                message: message.clone(), 
-                retry_count: 1 
-            }
-        }
-        GraphBitError::Authentication { message, .. } => {
-            PythonBindingError::Authentication { 
-                message: message.clone(), 
-                provider: None 
-            }
-        }
-        GraphBitError::RateLimit { .. } => {
-            PythonBindingError::RateLimit { 
-                message: "Rate limit exceeded".to_string(), 
-                retry_after: None 
-            }
-        }
-        GraphBitError::Validation { message, .. } => {
-            PythonBindingError::Validation { 
-                message: message.clone(), 
-                field: "unknown".to_string(),
-                value: None
-            }
-        }
-        GraphBitError::Configuration { message, .. } => {
-            PythonBindingError::Configuration { 
-                message: message.clone(), 
-                field: None 
-            }
-        }
+        GraphBitError::Network { message, .. } => PythonBindingError::Network {
+            message: message.clone(),
+            retry_count: 1,
+        },
+        GraphBitError::Authentication { message, .. } => PythonBindingError::Authentication {
+            message: message.clone(),
+            provider: None,
+        },
+        GraphBitError::RateLimit { .. } => PythonBindingError::RateLimit {
+            message: "Rate limit exceeded".to_string(),
+            retry_after: None,
+        },
+        GraphBitError::Validation { message, .. } => PythonBindingError::Validation {
+            message: message.clone(),
+            field: "unknown".to_string(),
+            value: None,
+        },
+        GraphBitError::Configuration { message, .. } => PythonBindingError::Configuration {
+            message: message.clone(),
+            field: None,
+        },
         _ => PythonBindingError::Core(error.to_string()),
     };
 
@@ -154,8 +193,11 @@ pub fn python_error_to_py_err(error: PythonBindingError) -> PyErr {
 /// Enhanced utility function to convert any error to PyErr with context
 pub fn to_py_runtime_error<E: std::fmt::Display>(error: E) -> PyErr {
     let error_msg = error.to_string();
-    warn!("Converting runtime error to Python exception: {}", error_msg);
-    
+    warn!(
+        "Converting runtime error to Python exception: {}",
+        error_msg
+    );
+
     // Check for common error patterns and map to appropriate exceptions
     if error_msg.contains("timeout") || error_msg.contains("deadline") {
         PyErr::new::<pyo3::exceptions::PyTimeoutError, _>(error_msg)

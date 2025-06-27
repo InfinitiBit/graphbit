@@ -1,12 +1,12 @@
 //! Production-grade Tokio runtime optimized for GraphBit Python bindings
-//! 
+//!
 //! This module provides a highly optimized, configurable async runtime with
 //! proper resource management, monitoring, and graceful shutdown capabilities.
 
 use std::sync::OnceLock;
 use std::time::Duration;
 use tokio::runtime::{Builder, Runtime};
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 
 /// Production-grade runtime configuration
 #[derive(Debug, Clone)]
@@ -53,68 +53,68 @@ impl GraphBitRuntime {
     /// Create a new runtime with the given configuration
     pub fn new(config: RuntimeConfig) -> Result<Self, std::io::Error> {
         info!("Creating GraphBit runtime with config: {:?}", config);
-        
+
         let mut builder = Builder::new_multi_thread();
-        
+
         // Configure worker threads
         if let Some(workers) = config.worker_threads {
             builder.worker_threads(workers);
             info!("Runtime configured with {} worker threads", workers);
         }
-        
+
         // Configure thread stack size
         if let Some(stack_size) = config.thread_stack_size {
             builder.thread_stack_size(stack_size);
         }
-        
+
         // Configure thread naming
         builder.thread_name(&config.thread_name_prefix);
-        
+
         // Configure thread keep alive
         if let Some(keep_alive) = config.thread_keep_alive {
             builder.thread_keep_alive(keep_alive);
         }
-        
+
         // Configure blocking thread pool
         if config.enable_blocking_pool {
             if let Some(max_blocking) = config.max_blocking_threads {
                 builder.max_blocking_threads(max_blocking);
             }
         }
-        
+
         // Enable all runtime features
         builder.enable_all();
-        
+
         // Build the runtime
         let runtime = builder.build().map_err(|e| {
             error!("Failed to create GraphBit runtime: {}", e);
             e
         })?;
-        
+
         info!("GraphBit runtime created successfully");
-        
+
         Ok(Self {
             runtime,
             config,
             created_at: std::time::Instant::now(),
         })
     }
-    
+
     /// Get a reference to the underlying runtime
     pub fn runtime(&self) -> &Runtime {
         &self.runtime
     }
-    
+
     /// Get runtime configuration
     pub fn config(&self) -> &RuntimeConfig {
         &self.config
     }
-    
+
     /// Get runtime uptime
     pub fn uptime(&self) -> Duration {
         self.created_at.elapsed()
     }
-    
+
     /// Get runtime statistics (placeholder for future metrics)
     pub fn stats(&self) -> RuntimeStats {
         RuntimeStats {
@@ -158,15 +158,15 @@ pub fn init_runtime_with_config(config: RuntimeConfig) -> Result<(), std::io::Er
         warn!("Runtime already initialized, ignoring new configuration");
         return Ok(());
     }
-    
+
     let runtime = GraphBitRuntime::new(config)?;
     GRAPHBIT_RUNTIME.set(runtime).map_err(|_| {
         std::io::Error::new(
             std::io::ErrorKind::AlreadyExists,
-            "Runtime already initialized"
+            "Runtime already initialized",
         )
     })?;
-    
+
     Ok(())
 }
 
@@ -192,7 +192,7 @@ pub fn shutdown_runtime() {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_runtime_config_default() {
         let config = RuntimeConfig::default();
@@ -200,7 +200,7 @@ mod tests {
         assert!(config.thread_stack_size.is_some());
         assert!(config.enable_blocking_pool);
     }
-    
+
     #[test]
     fn test_runtime_creation() {
         let config = RuntimeConfig::default();

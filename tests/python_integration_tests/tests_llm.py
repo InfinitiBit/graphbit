@@ -83,11 +83,7 @@ class TestOpenAILLM:
 
         # Create a simple agent node
         try:
-            agent_node = graphbit.Node.agent(
-                "test_agent",
-                "Respond with 'Hello from OpenAI'",
-                "agent_001"
-            )
+            agent_node = graphbit.Node.agent("test_agent", "Respond with 'Hello from OpenAI'", "agent_001")
             node_id = workflow.add_node(agent_node)
             assert node_id is not None
 
@@ -167,11 +163,7 @@ class TestAnthropicLLM:
 
         # Create a simple agent node
         try:
-            agent_node = graphbit.Node.agent(
-                "test_agent",
-                "Respond with 'Hello from Claude'",
-                "agent_002"
-            )
+            agent_node = graphbit.Node.agent("test_agent", "Respond with 'Hello from Claude'", "agent_002")
             node_id = workflow.add_node(agent_node)
             assert node_id is not None
 
@@ -251,11 +243,7 @@ class TestHuggingFaceLLM:
 
         # Create a simple agent node
         try:
-            agent_node = graphbit.Node.agent(
-                "test_agent",
-                "Respond with 'Hello from HuggingFace'",
-                "agent_003"
-            )
+            agent_node = graphbit.Node.agent("test_agent", "Respond with 'Hello from HuggingFace'", "agent_003")
             node_id = workflow.add_node(agent_node)
             assert node_id is not None
 
@@ -316,25 +304,21 @@ class TestCrossProviderLLM:
     def providers(self) -> Any:
         """Create configurations for available providers."""
         configs = {}
-        
+
         if os.getenv("OPENAI_API_KEY"):
-            configs["openai"] = graphbit.LlmConfig.openai(
-                os.getenv("OPENAI_API_KEY"), "gpt-3.5-turbo"
-            )
-        
+            configs["openai"] = graphbit.LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-3.5-turbo")
+
         if os.getenv("ANTHROPIC_API_KEY"):
-            configs["anthropic"] = graphbit.LlmConfig.anthropic(
-                os.getenv("ANTHROPIC_API_KEY"), "claude-3-sonnet-20240229"
-            )
+            configs["anthropic"] = graphbit.LlmConfig.anthropic(os.getenv("ANTHROPIC_API_KEY"), "claude-3-sonnet-20240229")
 
         configs["ollama"] = graphbit.LlmConfig.ollama("llama3.2")
-        
+
         return configs
 
     def test_multi_provider_executor_creation(self, providers: Any) -> None:
         """Test creating executors with multiple providers."""
         executors = {}
-        
+
         for provider_name, config in providers.items():
             try:
                 executor = graphbit.Executor(config)
@@ -349,7 +333,7 @@ class TestCrossProviderLLM:
     def test_multi_provider_client_creation(self, providers: Any) -> None:
         """Test creating clients with multiple providers."""
         clients = {}
-        
+
         for provider_name, config in providers.items():
             try:
                 client = graphbit.LlmClient(config)
@@ -363,14 +347,14 @@ class TestCrossProviderLLM:
 
     def test_cross_provider_configuration_compatibility(self, providers: Any) -> None:
         """Test configuration compatibility across providers."""
-        for provider_name, config in providers.items():
+        for _provider_name, config in providers.items():
             # Test that all providers support basic configuration methods
-            assert hasattr(config, 'provider')
-            assert hasattr(config, 'model')
-            
+            assert hasattr(config, "provider")
+            assert hasattr(config, "model")
+
             provider = config.provider()
             model = config.model()
-            
+
             assert isinstance(provider, str)
             assert isinstance(model, str)
             assert len(provider) > 0

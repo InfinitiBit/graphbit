@@ -78,7 +78,7 @@ class ComprehensiveBenchmarkRunner:
             elif llm_config.provider == LLMProvider.ANTHROPIC:
                 api_key = os.environ.get("ANTHROPIC_API_KEY")
             # For ollama and huggingface, no API key is typically needed
-        
+
         self.config: Dict[str, Any] = {
             "llm_config": llm_config,
             "provider": llm_config.provider.value,

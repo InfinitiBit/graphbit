@@ -329,7 +329,8 @@ impl WorkflowExecutor {
                         format!("Agent_{}", agent_id_str),
                         "Auto-generated agent for workflow execution",
                         self.default_llm_config.clone().unwrap_or_default(),
-                    ).with_id(agent_id.clone());
+                    )
+                    .with_id(agent_id.clone());
 
                     // Try to create agent - if it fails, continue (will use fallback execution)
                     if let Ok(agent) = crate::agents::Agent::new(default_config).await {

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Integration tests for GraphBit workflow builder functionality."""
+import contextlib
 import os
 from typing import Any
 
@@ -14,75 +15,69 @@ class TestWorkflowBuilder:
     def test_sequential_workflow_building(self) -> None:
         """Test building sequential workflows."""
         workflow = graphbit.Workflow("sequential_test")
-        
+
         # Build a sequential processing workflow
         nodes = []
         for i in range(3):
             agent = graphbit.Node.agent(f"step_{i}", f"Process step {i}", f"seq_{i:03d}")
             node_id = workflow.add_node(agent)
             nodes.append((agent, node_id))
-        
+
         # Connect nodes sequentially
-        try:
+        with contextlib.suppress(ValueError, RuntimeError):
             for i in range(len(nodes) - 1):
                 workflow.connect(nodes[i][0].id(), nodes[i + 1][0].id())
-        except Exception:
-            # Connection may not be implemented
-            pass
-        
+
         assert len(nodes) == 3
 
     def test_parallel_workflow_building(self) -> None:
         """Test building parallel workflows."""
         workflow = graphbit.Workflow("parallel_test")
-        
+
         # Create entry point
         entry = graphbit.Node.agent("entry", "Start parallel processing", "entry_001")
         workflow.add_node(entry)
-        
+
         # Create parallel processing branches
         parallel_agents = []
         for i in range(3):
             agent = graphbit.Node.agent(f"parallel_{i}", f"Parallel task {i}", f"par_{i:03d}")
             workflow.add_node(agent)
             parallel_agents.append(agent)
-        
+
         # Create merge point
         merge = graphbit.Node.agent("merge", "Merge parallel results", "merge_001")
         workflow.add_node(merge)
-        
+
         # Connect parallel structure
-        try:
+        with contextlib.suppress(ValueError, RuntimeError):
             # Connect entry to all parallel agents
             for agent in parallel_agents:
                 workflow.connect(entry.id(), agent.id())
-            
+
             # Connect all parallel agents to merge
             for agent in parallel_agents:
                 workflow.connect(agent.id(), merge.id())
-        except Exception:
-            # Parallel connections may not be implemented
-            pass
 
     def test_conditional_workflow_building(self) -> None:
         """Test building conditional workflows."""
         workflow = graphbit.Workflow("conditional_test")
-        
+
         # Create decision tree structure
         entry = graphbit.Node.agent("entry", "Start processing", "entry_001")
         workflow.add_node(entry)
-        
+
         # Create condition nodes
         condition1 = graphbit.Node.condition("check_priority", "priority == 'high'")
         condition2 = graphbit.Node.condition("check_type", "type == 'urgent'")
         workflow.add_node(condition1)
         workflow.add_node(condition2)
-        
+
         # Create processing branches
         high_priority = graphbit.Node.agent("high_priority", "Handle high priority", "high_001")
         urgent_processing = graphbit.Node.agent("urgent", "Handle urgent items", "urgent_001")
         normal_processing = graphbit.Node.agent("normal", "Handle normal items", "normal_001")
-        
+
         workflow.add_node(high_priority)
         workflow.add_node(urgent_processing)
         workflow.add_node(normal_processing)
@@ -94,41 +89,35 @@ class TestWorkflowValidation:
     def test_empty_workflow_validation(self) -> None:
         """Test validation of empty workflows."""
         workflow = graphbit.Workflow("empty")
-        
-        try:
+
+        with contextlib.suppress(ValueError, RuntimeError):
             workflow.validate()
-        except Exception:
-            # Empty workflow validation may fail
-            pass
 
     def test_single_node_workflow_validation(self) -> None:
         """Test validation of single node workflows."""
         workflow = graphbit.Workflow("single_node")
-        
+
         agent = graphbit.Node.agent("solo", "Solo processing", "solo_001")
         workflow.add_node(agent)
-        
-        try:
+
+        with contextlib.suppress(ValueError, RuntimeError):
             workflow.validate()
-        except Exception:
-            # Single node validation may fail depending on requirements
-            pass
 
     def test_connected_workflow_validation(self) -> None:
         """Test validation of connected workflows."""
         workflow = graphbit.Workflow("connected")
-        
+
         # Create connected workflow
         agent1 = graphbit.Node.agent("first", "First step", "first_001")
         agent2 = graphbit.Node.agent("second", "Second step", "second_001")
-        
+
         workflow.add_node(agent1)
         workflow.add_node(agent2)
-        
+
         try:
             workflow.connect(agent1.id(), agent2.id())
             workflow.validate()
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             pytest.skip(f"Connected workflow validation skipped: {e}")
 
 
@@ -147,22 +136,22 @@ class TestWorkflowExecution:
     def test_simple_workflow_execution(self, llm_config: Any) -> None:
         """Test executing simple workflows."""
         workflow = graphbit.Workflow("simple_execution")
-        
+
         # Create simple workflow
         agent = graphbit.Node.agent("processor", "Process the input", "proc_001")
         workflow.add_node(agent)
-        
+
         try:
             # Validate and execute
             workflow.validate()
-            
+
             executor = graphbit.Executor(llm_config)
             result = executor.execute(workflow)
-            
+
             assert result is not None
             assert isinstance(result, graphbit.WorkflowResult)
-            
-        except Exception as e:
+
+        except (ValueError, RuntimeError) as e:
             pytest.skip(f"Simple workflow execution skipped: {e}")
 
 
@@ -174,7 +163,7 @@ class TestWorkflowComponents:
         # Basic agent
         agent1 = graphbit.Node.agent("basic", "Basic processing", "basic_001")
         assert agent1.name() == "basic"
-        
+
         # Agent with auto ID
         agent2 = graphbit.Node.agent("auto", "Auto ID processing")
         assert agent2.name() == "auto"
@@ -186,7 +175,7 @@ class TestWorkflowComponents:
             ("complex", "status == 'active' and priority >= 5"),
             ("boolean", "is_valid"),
         ]
-        
+
         for name, expression in conditions:
             condition = graphbit.Node.condition(name, expression)
             assert condition.name() == name
@@ -198,7 +187,7 @@ class TestWorkflowComponents:
             ("parse", "parse_json"),
             ("format", "format_date"),
         ]
-        
+
         for name, operation in transforms:
             transform = graphbit.Node.transform(name, operation)
             assert transform.name() == name

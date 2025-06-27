@@ -44,12 +44,12 @@ class TestAsyncExecutor:
         try:
             # Validate workflow
             simple_workflow.validate()
-            
+
             # Execute workflow
             result = executor.execute(simple_workflow)
             assert result is not None
             assert isinstance(result, graphbit.WorkflowResult)
-            
+
         except Exception as e:
             pytest.skip(f"Async workflow execution skipped: {e}")
 
@@ -59,11 +59,11 @@ class TestAsyncExecutor:
         # Test high throughput mode
         ht_executor = graphbit.Executor.new_high_throughput(llm_config)
         assert ht_executor is not None
-        
+
         # Test low latency mode
         ll_executor = graphbit.Executor.new_low_latency(llm_config)
         assert ll_executor is not None
-        
+
         # Test memory optimized mode
         mo_executor = graphbit.Executor.new_memory_optimized(llm_config)
         assert mo_executor is not None

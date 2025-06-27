@@ -33,26 +33,26 @@ class TestWorkflowContext:
         try:
             executor = graphbit.Executor(llm_config)
             test_workflow.validate()
-            
+
             result = executor.execute(test_workflow)
             assert result is not None
             assert isinstance(result, graphbit.WorkflowResult)
-            
+
             # Test result properties
             assert isinstance(result.is_success(), bool)
             assert isinstance(result.is_failed(), bool)
             assert isinstance(result.state(), str)
             assert isinstance(result.execution_time_ms(), int)
-            
+
         except Exception as e:
             pytest.skip(f"Workflow result test skipped: {e}")
 
     def test_workflow_result_interface(self) -> None:
         """Test workflow result interface methods."""
         # This tests the interface without requiring execution
-        assert hasattr(graphbit, 'WorkflowResult')
-        
+        assert hasattr(graphbit, "WorkflowResult")
+
         # Test that WorkflowResult class has expected methods
-        expected_methods = ['is_success', 'is_failed', 'state', 'execution_time_ms', 'variables']
+        expected_methods = ["is_success", "is_failed", "state", "execution_time_ms", "variables"]
         for method in expected_methods:
             assert hasattr(graphbit.WorkflowResult, method)

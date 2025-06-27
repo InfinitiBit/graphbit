@@ -1,5 +1,5 @@
 //! Production-grade LLM client for GraphBit Python bindings
-//! 
+//!
 //! This module provides a robust, high-performance LLM client with:
 //! - Connection pooling and reuse
 //! - Circuit breaker pattern for resilience
@@ -16,10 +16,10 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 use tokio::time::timeout;
-use tracing::{debug, info, warn, instrument};
+use tracing::{debug, info, instrument, warn};
 
 use super::config::LlmConfig;
-use crate::errors::{to_py_error, timeout_error, validation_error};
+use crate::errors::{timeout_error, to_py_error, validation_error};
 use crate::runtime::get_runtime;
 
 /// Client configuration for production environments
@@ -76,7 +76,9 @@ struct CircuitBreaker {
 impl CircuitBreaker {
     fn new(config: ClientConfig) -> Self {
         Self {
-            state: Arc::new(RwLock::new(CircuitBreakerState::Closed { failure_count: 0 })),
+            state: Arc::new(RwLock::new(CircuitBreakerState::Closed {
+                failure_count: 0,
+            })),
             config,
         }
     }
@@ -120,16 +122,22 @@ impl CircuitBreaker {
             CircuitBreakerState::Closed { failure_count } => {
                 let new_count = failure_count + 1;
                 if new_count >= self.config.circuit_breaker_threshold {
-                    *state = CircuitBreakerState::Open { opened_at: Instant::now() };
+                    *state = CircuitBreakerState::Open {
+                        opened_at: Instant::now(),
+                    };
                     if self.config.debug {
-                    warn!("Circuit breaker opened due to {} failures", new_count);
-                }
+                        warn!("Circuit breaker opened due to {} failures", new_count);
+                    }
                 } else {
-                    *state = CircuitBreakerState::Closed { failure_count: new_count };
+                    *state = CircuitBreakerState::Closed {
+                        failure_count: new_count,
+                    };
                 }
             }
             CircuitBreakerState::HalfOpen => {
-                *state = CircuitBreakerState::Open { opened_at: Instant::now() };
+                *state = CircuitBreakerState::Open {
+                    opened_at: Instant::now(),
+                };
                 if self.config.debug {
                     warn!("Circuit breaker reopened after failed recovery attempt");
                 }
@@ -169,28 +177,29 @@ impl LlmClient {
     fn new(config: LlmConfig, debug: Option<bool>) -> PyResult<Self> {
         let mut client_config = ClientConfig::default();
         client_config.debug = debug.unwrap_or(false);
-        
+
         // Optimize timeout based on provider type
         match &config.inner {
             graphbit_core::llm::providers::LlmConfig::Ollama { .. } => {
                 // Ollama needs more time for local inference
                 client_config.request_timeout = Duration::from_secs(180);
-            },
-            graphbit_core::llm::providers::LlmConfig::OpenAI { .. } |
-            graphbit_core::llm::providers::LlmConfig::Anthropic { .. } => {
+            }
+            graphbit_core::llm::providers::LlmConfig::OpenAI { .. }
+            | graphbit_core::llm::providers::LlmConfig::Anthropic { .. } => {
                 // Cloud APIs are typically faster
                 client_config.request_timeout = Duration::from_secs(60);
-            },
+            }
             _ => {
                 // Keep default for other providers
             }
         }
-        
-        let provider = graphbit_core::llm::LlmProviderFactory::create_provider(config.inner.clone())
-            .map_err(to_py_error)?;
+
+        let provider =
+            graphbit_core::llm::LlmProviderFactory::create_provider(config.inner.clone())
+                .map_err(to_py_error)?;
 
         let circuit_breaker = Arc::new(CircuitBreaker::new(client_config.clone()));
-        
+
         let stats = Arc::new(RwLock::new(ClientStats {
             total_requests: 0,
             successful_requests: 0,
@@ -226,18 +235,30 @@ impl LlmClient {
     ) -> PyResult<Bound<'a, PyAny>> {
         // Validate input
         if prompt.is_empty() {
-            return Err(validation_error("prompt", Some(&prompt), "Prompt cannot be empty"));
+            return Err(validation_error(
+                "prompt",
+                Some(&prompt),
+                "Prompt cannot be empty",
+            ));
         }
-        
+
         if let Some(tokens) = max_tokens {
             if tokens == 0 || tokens > 100000 {
-                return Err(validation_error("max_tokens", Some(&tokens.to_string()), "Max tokens must be between 1 and 100000"));
+                return Err(validation_error(
+                    "max_tokens",
+                    Some(&tokens.to_string()),
+                    "Max tokens must be between 1 and 100000",
+                ));
             }
         }
-        
+
         if let Some(temp) = temperature {
             if temp < 0.0 || temp > 2.0 {
-                return Err(validation_error("temperature", Some(&temp.to_string()), "Temperature must be between 0.0 and 2.0"));
+                return Err(validation_error(
+                    "temperature",
+                    Some(&temp.to_string()),
+                    "Temperature must be between 0.0 and 2.0",
+                ));
             }
         }
 
@@ -255,7 +276,8 @@ impl LlmClient {
                 prompt,
                 max_tokens,
                 temperature,
-            ).await
+            )
+            .await
         })
     }
 
@@ -270,7 +292,11 @@ impl LlmClient {
     ) -> PyResult<String> {
         // Validate input
         if prompt.is_empty() {
-            return Err(validation_error("prompt", Some(&prompt), "Prompt cannot be empty"));
+            return Err(validation_error(
+                "prompt",
+                Some(&prompt),
+                "Prompt cannot be empty",
+            ));
         }
 
         let provider = Arc::clone(&self.provider);
@@ -287,7 +313,8 @@ impl LlmClient {
                 prompt,
                 max_tokens,
                 temperature,
-            ).await
+            )
+            .await
         })
     }
 
@@ -304,11 +331,19 @@ impl LlmClient {
     ) -> PyResult<Bound<'a, PyAny>> {
         // Validate batch size
         if prompts.is_empty() {
-            return Err(validation_error("prompts", None, "Prompts list cannot be empty"));
+            return Err(validation_error(
+                "prompts",
+                None,
+                "Prompts list cannot be empty",
+            ));
         }
-        
+
         if prompts.len() > 1000 {
-            return Err(validation_error("prompts", Some(&prompts.len().to_string()), "Batch size cannot exceed 1000"));
+            return Err(validation_error(
+                "prompts",
+                Some(&prompts.len().to_string()),
+                "Batch size cannot exceed 1000",
+            ));
         }
 
         let provider = Arc::clone(&self.provider);
@@ -323,7 +358,7 @@ impl LlmClient {
                 if prompt.is_empty() {
                     continue; // Skip empty prompts
                 }
-                
+
                 let mut req = LlmRequest::new(prompt);
                 if let Some(tokens) = max_tokens {
                     req = req.with_max_tokens(tokens);
@@ -341,7 +376,11 @@ impl LlmClient {
             });
 
             if config.debug {
-                info!("Processing batch of {} requests with concurrency {}", requests.len(), concurrency);
+                info!(
+                    "Processing batch of {} requests with concurrency {}",
+                    requests.len(),
+                    concurrency
+                );
             }
 
             // High-performance streaming with buffered execution and resilience
@@ -351,7 +390,7 @@ impl LlmClient {
                     let circuit_breaker = Arc::clone(&circuit_breaker);
                     let stats = Arc::clone(&stats);
                     let config = config.clone();
-                    
+
                     async move {
                         Self::execute_request_with_resilience(
                             provider,
@@ -359,7 +398,8 @@ impl LlmClient {
                             stats,
                             config,
                             request,
-                        ).await
+                        )
+                        .await
                     }
                 })
                 .buffer_unordered(concurrency)
@@ -373,8 +413,8 @@ impl LlmClient {
                     Ok(response) => responses.push(response.content),
                     Err(e) => {
                         if config.debug {
-                        warn!("Batch request failed: {}", e);
-                    }
+                            warn!("Batch request failed: {}", e);
+                        }
                         responses.push(format!("Error: {}", e));
                     }
                 }
@@ -396,7 +436,11 @@ impl LlmClient {
     ) -> PyResult<Bound<'a, PyAny>> {
         // Validate messages
         if messages.is_empty() {
-            return Err(validation_error("messages", None, "Messages list cannot be empty"));
+            return Err(validation_error(
+                "messages",
+                None,
+                "Messages list cannot be empty",
+            ));
         }
 
         let provider = Arc::clone(&self.provider);
@@ -411,7 +455,7 @@ impl LlmClient {
                 if content.is_empty() {
                     continue; // Skip empty messages
                 }
-                
+
                 let message = match role.as_str() {
                     "system" => LlmMessage::system(content),
                     "assistant" => LlmMessage::assistant(content),
@@ -421,7 +465,11 @@ impl LlmClient {
             }
 
             if llm_messages.is_empty() {
-                return Err(validation_error("messages", None, "No valid messages found"));
+                return Err(validation_error(
+                    "messages",
+                    None,
+                    "No valid messages found",
+                ));
             }
 
             let mut request = LlmRequest::with_messages(llm_messages);
@@ -432,13 +480,9 @@ impl LlmClient {
                 request = request.with_temperature(temp);
             }
 
-            Self::execute_request_with_resilience(
-                provider,
-                circuit_breaker,
-                stats,
-                config,
-                request,
-            ).await.map(|response| response.content)
+            Self::execute_request_with_resilience(provider, circuit_breaker, stats, config, request)
+                .await
+                .map(|response| response.content)
         })
     }
 
@@ -459,15 +503,17 @@ impl LlmClient {
         let stats = get_runtime().block_on(async {
             let mut stats = self.stats.read().await.clone();
             stats.uptime = self.created_at.elapsed();
-            
+
             // Get circuit breaker state
             let cb_state = self.circuit_breaker.state.read().await;
             stats.circuit_breaker_state = match *cb_state {
-                CircuitBreakerState::Closed { failure_count } => format!("Closed (failures: {})", failure_count),
+                CircuitBreakerState::Closed { failure_count } => {
+                    format!("Closed (failures: {})", failure_count)
+                }
                 CircuitBreakerState::Open { .. } => "Open".to_string(),
                 CircuitBreakerState::HalfOpen => "HalfOpen".to_string(),
             };
-            
+
             stats
         });
 
@@ -475,17 +521,18 @@ impl LlmClient {
         dict.set_item("total_requests", stats.total_requests)?;
         dict.set_item("successful_requests", stats.successful_requests)?;
         dict.set_item("failed_requests", stats.failed_requests)?;
-        dict.set_item("success_rate", 
-            if stats.total_requests > 0 { 
-                stats.successful_requests as f64 / stats.total_requests as f64 
-            } else { 
-                0.0 
-            }
+        dict.set_item(
+            "success_rate",
+            if stats.total_requests > 0 {
+                stats.successful_requests as f64 / stats.total_requests as f64
+            } else {
+                0.0
+            },
         )?;
         dict.set_item("average_response_time_ms", stats.average_response_time_ms)?;
         dict.set_item("circuit_breaker_state", stats.circuit_breaker_state)?;
         dict.set_item("uptime_seconds", stats.uptime.as_secs())?;
-        
+
         Ok(dict)
     }
 
@@ -496,24 +543,29 @@ impl LlmClient {
         let debug = self.config.debug; // Capture debug flag before async move
 
         pyo3_async_runtimes::tokio::future_into_py(py, async move {
-            warmed_up.get_or_init(|| async {
-                if debug {
-                    info!("Warming up LLM client...");
-                }
-                let test_request = LlmRequest::new("Hello".to_string()).with_max_tokens(1);
-                let guard = provider.read().await;
-                
-                if let Err(e) = guard.complete(test_request).await {
+            warmed_up
+                .get_or_init(|| async {
                     if debug {
-                        warn!("Warmup request failed (this is expected for some providers): {}", e);
+                        info!("Warming up LLM client...");
                     }
-                }
-                
-                if debug {
-                    info!("LLM client warmup completed");
-                }
-            }).await;
-            
+                    let test_request = LlmRequest::new("Hello".to_string()).with_max_tokens(1);
+                    let guard = provider.read().await;
+
+                    if let Err(e) = guard.complete(test_request).await {
+                        if debug {
+                            warn!(
+                                "Warmup request failed (this is expected for some providers): {}",
+                                e
+                            );
+                        }
+                    }
+
+                    if debug {
+                        info!("LLM client warmup completed");
+                    }
+                })
+                .await;
+
             Ok("Client warmed up successfully".to_string())
         })
     }
@@ -556,7 +608,8 @@ impl LlmClient {
             stats,
             config,
             request,
-        ).await?;
+        )
+        .await?;
 
         Ok(response.content)
     }
@@ -570,7 +623,7 @@ impl LlmClient {
         request: LlmRequest,
     ) -> Result<graphbit_core::llm::LlmResponse, PyErr> {
         let start_time = Instant::now();
-        
+
         // Update stats
         {
             let mut stats_guard = stats.write().await;
@@ -580,7 +633,7 @@ impl LlmClient {
         // Check circuit breaker
         if !circuit_breaker.can_execute().await {
             return Err(PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-                "Circuit breaker is open, request rejected"
+                "Circuit breaker is open, request rejected",
             ));
         }
 
@@ -591,35 +644,35 @@ impl LlmClient {
             if config.debug {
                 debug!("Executing LLM request (attempt {})", attempt + 1);
             }
-            
-            let result = timeout(
-                config.request_timeout,
-                async {
-                    let guard = provider.read().await;
-                    guard.complete(request.clone()).await
-                }
-            ).await;
+
+            let result = timeout(config.request_timeout, async {
+                let guard = provider.read().await;
+                guard.complete(request.clone()).await
+            })
+            .await;
 
             match result {
                 Ok(Ok(response)) => {
                     // Success - update stats and circuit breaker
                     let duration = start_time.elapsed();
-                    
+
                     {
                         let mut stats_guard = stats.write().await;
                         stats_guard.successful_requests += 1;
-                        
+
                         // Update average response time (simple moving average)
                         let total_requests = stats_guard.total_requests as f64;
-                        stats_guard.average_response_time_ms = 
-                            (stats_guard.average_response_time_ms * (total_requests - 1.0) + duration.as_millis() as f64) / total_requests;
+                        stats_guard.average_response_time_ms =
+                            (stats_guard.average_response_time_ms * (total_requests - 1.0)
+                                + duration.as_millis() as f64)
+                                / total_requests;
                     }
-                    
+
                     circuit_breaker.record_success().await;
                     if config.debug {
                         info!("LLM request completed successfully in {:?}", duration);
                     }
-                    
+
                     return Ok(response);
                 }
                 Ok(Err(e)) => {
@@ -631,12 +684,16 @@ impl LlmClient {
                 }
                 Err(_) => {
                     if config.debug {
-                        warn!("LLM request timed out (attempt {}) after {:?}", attempt + 1, config.request_timeout);
+                        warn!(
+                            "LLM request timed out (attempt {}) after {:?}",
+                            attempt + 1,
+                            config.request_timeout
+                        );
                     }
                     let timeout_err = timeout_error(
                         "llm_request",
                         config.request_timeout.as_millis() as u64,
-                        "Request timed out"
+                        "Request timed out",
                     );
                     last_error = Some(timeout_err);
                     circuit_breaker.record_failure().await;

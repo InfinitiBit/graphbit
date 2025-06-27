@@ -24,9 +24,14 @@ impl OllamaProvider {
     /// Create a new Ollama provider
     pub fn new(model: String) -> GraphBitResult<Self> {
         let client = Client::builder()
-            .timeout(std::time::Duration::from_secs(120))  // Reasonable timeout
+            .timeout(std::time::Duration::from_secs(120)) // Reasonable timeout
             .build()
-            .map_err(|e| GraphBitError::llm_provider("ollama", format!("Failed to create HTTP client: {}", e)))?;
+            .map_err(|e| {
+                GraphBitError::llm_provider(
+                    "ollama",
+                    format!("Failed to create HTTP client: {}", e),
+                )
+            })?;
         let base_url = "http://localhost:11434".to_string();
 
         Ok(Self {
@@ -42,7 +47,12 @@ impl OllamaProvider {
         let client = Client::builder()
             .timeout(std::time::Duration::from_secs(120))
             .build()
-            .map_err(|e| GraphBitError::llm_provider("ollama", format!("Failed to create HTTP client: {}", e)))?;
+            .map_err(|e| {
+                GraphBitError::llm_provider(
+                    "ollama",
+                    format!("Failed to create HTTP client: {}", e),
+                )
+            })?;
 
         Ok(Self {
             client,

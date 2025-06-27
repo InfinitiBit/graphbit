@@ -24,5 +24,5 @@ class TestValidationResult:
         workflow.connect(id2, id1)
 
         # This should raise an exception during validation
-        with pytest.raises(Exception):  # More general exception for now
+        with pytest.raises((ValueError, RuntimeError)):
             workflow.validate()

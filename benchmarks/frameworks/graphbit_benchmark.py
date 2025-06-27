@@ -5,6 +5,7 @@
 OPTIMIZED VERSION: Uses direct LLM client calls instead of workflow overhead for fair comparison.
 """
 
+import contextlib
 import os
 import sys
 from typing import Dict
@@ -95,10 +96,10 @@ class GraphBitBenchmark(BaseBenchmark):
         self.llm_client = graphbit.LlmClient(self.llm_config, debug=False)
 
         # Pre-warm the client to avoid initialization overhead in benchmarks
-        try:
-            await self.llm_client.warmup()
-        except:
-            pass  # Warmup is optional
+        with contextlib.suppress(Exception):
+            # Warmup is optional
+            if self.llm_client is not None:
+                await self.llm_client.warmup()
 
     async def teardown(self) -> None:
         """Cleanup GraphBit resources."""
@@ -116,11 +117,7 @@ class GraphBitBenchmark(BaseBenchmark):
             max_tokens, temperature = self._get_llm_params()
 
             # DIRECT API CALL - No workflow, no agents, no nodes, no overhead
-            output_content = await self.llm_client.complete_async(
-                prompt=SIMPLE_TASK_PROMPT, 
-                max_tokens=max_tokens, 
-                temperature=temperature
-            )
+            output_content = await self.llm_client.complete_async(prompt=SIMPLE_TASK_PROMPT, max_tokens=max_tokens, temperature=temperature)
 
             self.log_output(
                 scenario_name=BenchmarkScenario.SIMPLE_TASK.value,
@@ -161,11 +158,7 @@ class GraphBitBenchmark(BaseBenchmark):
                 else:
                     prompt = f"Previous result: {previous_result}\n\nNew task: {task}"
 
-                result = await self.llm_client.complete_async(
-                    prompt=prompt, 
-                    max_tokens=max_tokens, 
-                    temperature=temperature
-                )
+                result = await self.llm_client.complete_async(prompt=prompt, max_tokens=max_tokens, temperature=temperature)
 
                 previous_result = result
                 total_tokens += count_tokens_estimate(task + result)
@@ -199,12 +192,7 @@ class GraphBitBenchmark(BaseBenchmark):
         try:
             max_tokens, temperature = self._get_llm_params()
 
-            results = await self.llm_client.complete_batch(
-                prompts=PARALLEL_TASKS, 
-                max_tokens=max_tokens, 
-                temperature=temperature, 
-                max_concurrency=len(PARALLEL_TASKS)
-            )
+            results = await self.llm_client.complete_batch(prompts=PARALLEL_TASKS, max_tokens=max_tokens, temperature=temperature, max_concurrency=len(PARALLEL_TASKS))
 
             total_tokens = 0
             for i, (task, result) in enumerate(zip(PARALLEL_TASKS, results)):
@@ -260,7 +248,7 @@ class GraphBitBenchmark(BaseBenchmark):
                 result = await self.llm_client.complete_async(prompt=full_prompt, max_tokens=max_tokens, temperature=temperature)
 
                 workflow_results[step_name] = result
-                
+
                 self.log_output(
                     scenario_name=BenchmarkScenario.COMPLEX_WORKFLOW.value,
                     task_name=step_name,

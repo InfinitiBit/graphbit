@@ -1,23 +1,23 @@
 //! Python bindings for the GraphBit agentic workflow automation framework
-//! 
+//!
 //! This module provides comprehensive Python bindings with:
 //! - Robust error handling and validation
 //! - Performance monitoring and metrics
 //! - Configurable logging and tracing
 //! - Resource management and cleanup
 //! - Thread-safe operations
-//! 
+//!
 //! # Usage
-//! 
+//!
 //! ```python
 //! import graphbit
-//! 
+//!
 //! # Initialize the library
 //! graphbit.init()
-//! 
+//!
 //! # Check version
 //! print(f"GraphBit version: {graphbit.version()}")
-//! 
+//!
 //! # Create and configure components
 //! config = graphbit.LlmConfig("openai", api_key="your-key")
 //! client = graphbit.LlmClient(config)
@@ -30,7 +30,6 @@
     rust_2018_idioms,
     unreachable_pub,
     bad_style,
-
     dead_code,
     improper_ctypes,
     non_shorthand_field_patterns,
@@ -38,7 +37,6 @@
     overflowing_literals,
     path_statements,
     patterns_in_fns_without_body,
-
     unconditional_recursion,
     unused,
     unused_allocation,
@@ -50,7 +48,7 @@
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use std::sync::Once;
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 
 // Module declarations
 mod embeddings;
@@ -69,7 +67,7 @@ pub use workflow::{Executor, Node, Workflow, WorkflowResult};
 static INIT: Once = Once::new();
 
 /// Initialize the GraphBit library with production-grade configuration
-/// 
+///
 /// This function should be called once before using any other GraphBit functionality.
 /// It sets up:
 /// - Logging and tracing infrastructure
@@ -78,16 +76,20 @@ static INIT: Once = Once::new();
 /// - Resource management
 #[pyfunction]
 #[pyo3(signature = (log_level=None, enable_tracing=None, debug=None))]
-fn init(log_level: Option<String>, enable_tracing: Option<bool>, debug: Option<bool>) -> PyResult<()> {
+fn init(
+    log_level: Option<String>,
+    enable_tracing: Option<bool>,
+    debug: Option<bool>,
+) -> PyResult<()> {
     let mut init_result = Ok(());
-    
+
     INIT.call_once(|| {
         // Initialize logging if tracing is enabled
         // Default to false for tracing to reduce debug output
         let enable_tracing = enable_tracing.or(debug).unwrap_or(false);
         if enable_tracing {
             let log_level = log_level.unwrap_or_else(|| "warn".to_string());
-            
+
             // Initialize tracing subscriber for production logging
             let subscriber = tracing_subscriber::FmtSubscriber::builder()
                 .with_max_level(match log_level.as_str() {
@@ -103,21 +105,24 @@ fn init(log_level: Option<String>, enable_tracing: Option<bool>, debug: Option<b
                 .with_file(false) // Disable file info for performance
                 .with_line_number(false) // Disable line numbers for performance
                 .finish();
-            
+
             if let Err(e) = tracing::subscriber::set_global_default(subscriber) {
                 eprintln!("Warning: Failed to set tracing subscriber: {}", e);
             } else {
-                info!("GraphBit Python bindings - tracing initialized with level: {}", log_level);
+                info!(
+                    "GraphBit Python bindings - tracing initialized with level: {}",
+                    log_level
+                );
             }
         }
-        
+
         // Initialize the core library
         match graphbit_core::init() {
             Ok(_) => {
                 if enable_tracing {
                     info!("GraphBit core library initialized successfully");
                 }
-                
+
                 // Initialize runtime to ensure it's ready
                 let _ = runtime::get_runtime();
                 if enable_tracing {
@@ -130,12 +135,12 @@ fn init(log_level: Option<String>, enable_tracing: Option<bool>, debug: Option<b
             }
         }
     });
-    
+
     init_result
 }
 
 /// Get the current version of GraphBit
-/// 
+///
 /// Returns the version string of the GraphBit core library.
 #[pyfunction]
 fn version() -> String {
@@ -143,7 +148,7 @@ fn version() -> String {
 }
 
 /// Get comprehensive system information and health status
-/// 
+///
 /// Returns a dictionary containing:
 /// - Version information
 /// - Runtime statistics
@@ -152,37 +157,47 @@ fn version() -> String {
 #[pyfunction]
 fn get_system_info(py: Python<'_>) -> PyResult<Bound<'_, PyDict>> {
     let dict = PyDict::new(py);
-    
+
     // Version information
     dict.set_item("version", version())?;
     dict.set_item("python_binding_version", env!("CARGO_PKG_VERSION"))?;
-    
+
     // Runtime information
     if let Some(stats) = runtime::get_runtime_stats() {
         dict.set_item("runtime_uptime_seconds", stats.uptime.as_secs())?;
         dict.set_item("runtime_worker_threads", stats.worker_threads)?;
         dict.set_item("runtime_max_blocking_threads", stats.max_blocking_threads)?;
     }
-    
+
     // System information
     dict.set_item("cpu_count", num_cpus::get())?;
     dict.set_item("runtime_initialized", runtime::is_runtime_initialized())?;
-    
+
     // Memory allocator information
     #[cfg(target_os = "linux")]
     dict.set_item("memory_allocator", "jemalloc")?;
     #[cfg(not(target_os = "linux"))]
     dict.set_item("memory_allocator", "system")?;
-    
+
     // Build information
-    dict.set_item("build_target", std::env::var("TARGET").unwrap_or_else(|_| "unknown".to_string()))?;
-    dict.set_item("build_profile", if cfg!(debug_assertions) { "debug" } else { "release" })?;
-    
+    dict.set_item(
+        "build_target",
+        std::env::var("TARGET").unwrap_or_else(|_| "unknown".to_string()),
+    )?;
+    dict.set_item(
+        "build_profile",
+        if cfg!(debug_assertions) {
+            "debug"
+        } else {
+            "release"
+        },
+    )?;
+
     Ok(dict)
 }
 
 /// Validate the current environment and configuration
-/// 
+///
 /// Performs comprehensive health checks including:
 /// - Runtime status
 /// - Memory availability
@@ -192,7 +207,7 @@ fn get_system_info(py: Python<'_>) -> PyResult<Bound<'_, PyDict>> {
 fn health_check(py: Python<'_>) -> PyResult<Bound<'_, PyDict>> {
     let dict = PyDict::new(py);
     let mut overall_healthy = true;
-    
+
     // Check runtime health
     let runtime_healthy = runtime::is_runtime_initialized();
     dict.set_item("runtime_healthy", runtime_healthy)?;
@@ -200,7 +215,7 @@ fn health_check(py: Python<'_>) -> PyResult<Bound<'_, PyDict>> {
         overall_healthy = false;
         warn!("Runtime is not properly initialized");
     }
-    
+
     // Check if we can get runtime stats
     if let Some(stats) = runtime::get_runtime_stats() {
         dict.set_item("runtime_uptime_ok", stats.uptime.as_secs() > 0)?;
@@ -209,7 +224,7 @@ fn health_check(py: Python<'_>) -> PyResult<Bound<'_, PyDict>> {
         dict.set_item("runtime_stats_available", false)?;
         overall_healthy = false;
     }
-    
+
     // Memory check (basic)
     let available_memory_mb = if let Ok(sys_info) = sys_info::mem_info() {
         dict.set_item("total_memory_mb", sys_info.total / 1024)?;
@@ -219,28 +234,28 @@ fn health_check(py: Python<'_>) -> PyResult<Bound<'_, PyDict>> {
         dict.set_item("memory_info_available", false)?;
         1024 // Assume 1GB if we can't detect
     };
-    
+
     let memory_healthy = available_memory_mb > 100; // At least 100MB
     dict.set_item("memory_healthy", memory_healthy)?;
     if !memory_healthy {
         overall_healthy = false;
         warn!("Low available memory: {} MB", available_memory_mb);
     }
-    
+
     dict.set_item("overall_healthy", overall_healthy)?;
     dict.set_item("timestamp", chrono::Utc::now().timestamp())?;
-    
+
     if overall_healthy {
         info!("Health check passed");
     } else {
         warn!("Health check failed - some components are unhealthy");
     }
-    
+
     Ok(dict)
 }
 
 /// Configure the global runtime with custom settings
-/// 
+///
 /// This is an advanced function that allows customization of the async runtime.
 /// It should be called before `init()` if custom configuration is needed.
 #[pyfunction]
@@ -258,16 +273,15 @@ fn configure_runtime(
         thread_keep_alive: Some(std::time::Duration::from_secs(10)),
         thread_name_prefix: "graphbit-py".to_string(),
     };
-    
-    runtime::init_runtime_with_config(config)
-        .map_err(errors::to_py_runtime_error)?;
-    
+
+    runtime::init_runtime_with_config(config).map_err(errors::to_py_runtime_error)?;
+
     info!("Runtime configured with custom settings");
     Ok(())
 }
 
 /// Gracefully shutdown the library (for testing and cleanup)
-/// 
+///
 /// This function cleans up resources and shuts down background threads.
 /// It's primarily intended for testing and should not be called in normal usage.
 #[pyfunction]
@@ -278,7 +292,7 @@ fn shutdown() -> PyResult<()> {
 }
 
 /// The main Python module definition
-/// 
+///
 /// This exposes all GraphBit functionality to Python with proper organization
 /// and comprehensive error handling.
 #[pymodule]
@@ -294,13 +308,13 @@ fn graphbit(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // LLM classes
     m.add_class::<LlmConfig>()?;
     m.add_class::<LlmClient>()?;
-    
+
     // Workflow classes
     m.add_class::<Node>()?;
     m.add_class::<Workflow>()?;
     m.add_class::<WorkflowResult>()?;
     m.add_class::<Executor>()?;
-    
+
     // Embedding classes
     m.add_class::<EmbeddingConfig>()?;
     m.add_class::<EmbeddingClient>()?;
@@ -308,7 +322,10 @@ fn graphbit(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // Module metadata
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     m.add("__author__", "GraphBit Team")?;
-    m.add("__description__", "Production-grade Python bindings for GraphBit agentic workflow automation")?;
+    m.add(
+        "__description__",
+        "Production-grade Python bindings for GraphBit agentic workflow automation",
+    )?;
 
     Ok(())
 }

@@ -156,7 +156,7 @@ class TestEmbeddingUtilities:
         """Test cosine similarity error handling with zero vectors."""
         vec1 = [0.0, 0.0, 0.0]
         vec2 = [1.0, 0.0, 0.0]
-        
+
         # Should handle zero vector gracefully (may return error or special value)
         try:
             similarity = graphbit.EmbeddingClient.similarity(vec1, vec2)
@@ -175,19 +175,13 @@ class TestCrossProviderEmbeddings:
     def providers(self) -> Any:
         """Create embedding configurations for available providers."""
         configs = {}
-        
+
         if os.getenv("OPENAI_API_KEY"):
-            configs["openai"] = graphbit.EmbeddingConfig.openai(
-                api_key=os.getenv("OPENAI_API_KEY"), 
-                model="text-embedding-3-small"
-            )
-        
+            configs["openai"] = graphbit.EmbeddingConfig.openai(api_key=os.getenv("OPENAI_API_KEY"), model="text-embedding-3-small")
+
         if os.getenv("HUGGINGFACE_API_KEY"):
-            configs["huggingface"] = graphbit.EmbeddingConfig.huggingface(
-                api_key=os.getenv("HUGGINGFACE_API_KEY"),
-                model="sentence-transformers/all-MiniLM-L6-v2"
-            )
-        
+            configs["huggingface"] = graphbit.EmbeddingConfig.huggingface(api_key=os.getenv("HUGGINGFACE_API_KEY"), model="sentence-transformers/all-MiniLM-L6-v2")
+
         return configs
 
     def test_cross_provider_embedding_comparison(self, providers: Any) -> None:
@@ -197,7 +191,7 @@ class TestCrossProviderEmbeddings:
 
         text = "Machine learning is transforming the world"
         embeddings = {}
-        
+
         # Generate embeddings from all providers
         for provider_name, config in providers.items():
             try:
@@ -213,11 +207,9 @@ class TestCrossProviderEmbeddings:
             for j in range(i + 1, len(provider_names)):
                 provider1 = provider_names[i]
                 provider2 = provider_names[j]
-                
+
                 try:
-                    similarity = graphbit.EmbeddingClient.similarity(
-                        embeddings[provider1], embeddings[provider2]
-                    )
+                    similarity = graphbit.EmbeddingClient.similarity(embeddings[provider1], embeddings[provider2])
                     # Different providers may have different embedding spaces
                     # but similarity should be a valid float
                     assert isinstance(similarity, float)
@@ -230,26 +222,21 @@ class TestCrossProviderEmbeddings:
         if not providers:
             pytest.skip("No providers available")
 
-        texts = [
-            "Artificial intelligence",
-            "Natural language processing", 
-            "Computer vision",
-            "Machine learning algorithms"
-        ]
-        
+        texts = ["Artificial intelligence", "Natural language processing", "Computer vision", "Machine learning algorithms"]
+
         for provider_name, config in providers.items():
             try:
                 client = graphbit.EmbeddingClient(config)
                 embeddings = client.embed_many(texts)
-                
+
                 assert len(embeddings) == len(texts)
                 assert all(isinstance(emb, list) for emb in embeddings)
                 assert all(len(emb) > 0 for emb in embeddings)
-                
+
                 # All embeddings should have the same dimension
                 dimensions = [len(emb) for emb in embeddings]
                 assert len(set(dimensions)) == 1, f"Inconsistent dimensions for {provider_name}"
-                
+
             except Exception as e:
                 pytest.fail(f"Batch processing failed for {provider_name}: {e}")
 

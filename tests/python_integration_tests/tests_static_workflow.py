@@ -24,11 +24,8 @@ class TestStaticWorkflowCreation:
         workflow = graphbit.Workflow("validation_test")
 
         # Test empty workflow validation - should not fail
-        try:
+        with contextlib.suppress(ValueError, RuntimeError):
             workflow.validate()
-        except Exception as e:
-            # Empty workflow validation may fail, which is acceptable
-            pass
 
         assert workflow is not None
 
@@ -85,7 +82,7 @@ class TestWorkflowComposition:
         # Add another node
         new_agent = graphbit.Node.agent("agent2", "Continue processing", "agent_002")
         node_id = sample_workflow.add_node(new_agent)
-        
+
         assert node_id is not None
         assert isinstance(node_id, str)
 
@@ -96,20 +93,17 @@ class TestWorkflowComposition:
             # Connect agent1 to condition1
             sample_workflow.connect("agent1", "condition1")
 
-            # Connect condition1 to transform1  
+            # Connect condition1 to transform1
             sample_workflow.connect("condition1", "transform1")
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             pytest.skip(f"Connection creation test skipped: {e}")
 
     def test_workflow_structure_validation(self, sample_workflow: Any) -> None:
         """Test workflow structure validation."""
         # Test that workflow structure can be validated
-        try:
+        with contextlib.suppress(ValueError, RuntimeError):
             sample_workflow.validate()
-        except Exception as e:
-            # Validation may fail for incomplete workflows, which is acceptable
-            pass
 
 
 class TestWorkflowExecution:
@@ -127,11 +121,11 @@ class TestWorkflowExecution:
     def executable_workflow(self) -> Any:
         """Create a simple executable workflow."""
         workflow = graphbit.Workflow("executable_test")
-        
+
         # Create a simple agent node
         agent_node = graphbit.Node.agent("test_agent", "Say hello", "agent_001")
         workflow.add_node(agent_node)
-        
+
         return workflow
 
     @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="Requires OpenAI API key")
@@ -140,11 +134,11 @@ class TestWorkflowExecution:
         try:
             executor = graphbit.Executor(llm_config)
             assert executor is not None
-            
+
             # Validate the workflow
             executable_workflow.validate()
-            
-        except Exception as e:
+
+        except (ValueError, RuntimeError) as e:
             pytest.fail(f"Workflow execution setup failed: {e}")
 
     @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="Requires OpenAI API key")
@@ -152,16 +146,16 @@ class TestWorkflowExecution:
         """Test basic workflow execution."""
         try:
             executor = graphbit.Executor(llm_config)
-            
+
             # Validate workflow first
             executable_workflow.validate()
-            
+
             # Execute the workflow
             result = executor.execute(executable_workflow)
             assert result is not None
             assert isinstance(result, graphbit.WorkflowResult)
-            
-        except Exception as e:
+
+        except (ValueError, RuntimeError) as e:
             pytest.skip(f"Workflow execution test skipped: {e}")
 
 
@@ -171,43 +165,37 @@ class TestWorkflowValidation:
     def test_empty_workflow_validation(self) -> None:
         """Test validation of empty workflows."""
         workflow = graphbit.Workflow("empty_test")
-        
-        try:
+
+        with contextlib.suppress(ValueError, RuntimeError):
             workflow.validate()
-        except Exception:
-            # Empty workflow validation may fail
-            pass
 
     def test_single_node_validation(self) -> None:
         """Test validation of single node workflows."""
         workflow = graphbit.Workflow("single_node_test")
-        
+
         agent_node = graphbit.Node.agent("solo_agent", "Work alone", "agent_001")
         workflow.add_node(agent_node)
-        
-        try:
+
+        with contextlib.suppress(ValueError, RuntimeError):
             workflow.validate()
-        except Exception:
-            # Single node validation may fail depending on requirements
-            pass
 
     def test_connected_nodes_validation(self) -> None:
         """Test validation of connected nodes."""
         workflow = graphbit.Workflow("connected_test")
-        
+
         # Create two nodes
         agent1 = graphbit.Node.agent("agent1", "First step", "agent_001")
         agent2 = graphbit.Node.agent("agent2", "Second step", "agent_002")
-        
+
         # Add nodes to workflow
         workflow.add_node(agent1)
         workflow.add_node(agent2)
-        
+
         # Connect them
         try:
             workflow.connect("agent1", "agent2")
             workflow.validate()
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             pytest.skip(f"Connected nodes validation test skipped: {e}")
 
 
@@ -219,11 +207,11 @@ class TestWorkflowComponents:
         # Basic agent node
         agent1 = graphbit.Node.agent("basic_agent", "Basic prompt", "agent_001")
         assert agent1.name() == "basic_agent"
-        
+
         # Agent with auto-generated ID
         agent2 = graphbit.Node.agent("auto_agent", "Auto ID prompt")
         assert agent2.name() == "auto_agent"
-        
+
         # Complex agent
         agent3 = graphbit.Node.agent("complex_agent", "Complex multi-line prompt\nwith instructions", "complex_001")
         assert agent3.name() == "complex_agent"
@@ -233,7 +221,7 @@ class TestWorkflowComponents:
         # Simple boolean condition
         cond1 = graphbit.Node.condition("simple_check", "score > 0.5")
         assert cond1.name() == "simple_check"
-        
+
         # Complex condition
         cond2 = graphbit.Node.condition("complex_check", "sentiment == 'positive' and confidence > 0.8")
         assert cond2.name() == "complex_check"
@@ -243,7 +231,7 @@ class TestWorkflowComponents:
         # Simple transformation
         trans1 = graphbit.Node.transform("uppercase", "uppercase")
         assert trans1.name() == "uppercase"
-        
+
         # Complex transformation
         trans2 = graphbit.Node.transform("json_parse", "parse_json")
         assert trans2.name() == "json_parse"
@@ -255,14 +243,14 @@ class TestWorkflowMetadata:
     def test_workflow_properties(self) -> None:
         """Test workflow property access."""
         workflow = graphbit.Workflow("metadata_test")
-        
+
         # Just verify workflow creation works
         assert workflow is not None
 
     def test_workflow_node_metadata(self) -> None:
         """Test node metadata access."""
         agent_node = graphbit.Node.agent("meta_agent", "Test metadata", "meta_001")
-        
+
         assert agent_node.name() == "meta_agent"
         assert agent_node.id() is not None
         assert isinstance(agent_node.id(), str)
@@ -270,14 +258,14 @@ class TestWorkflowMetadata:
     def test_workflow_modification(self) -> None:
         """Test workflow modification operations."""
         workflow = graphbit.Workflow("modify_test")
-        
+
         # Add nodes
         node1 = graphbit.Node.agent("node1", "First node", "agent_001")
         node2 = graphbit.Node.agent("node2", "Second node", "agent_002")
-        
+
         id1 = workflow.add_node(node1)
         id2 = workflow.add_node(node2)
-        
+
         assert id1 is not None
         assert id2 is not None
         assert id1 != id2
@@ -285,13 +273,13 @@ class TestWorkflowMetadata:
     def test_workflow_node_retrieval(self) -> None:
         """Test retrieving nodes from workflow."""
         workflow = graphbit.Workflow("retrieval_test")
-        
+
         # Add a node
         agent_node = graphbit.Node.agent("retrievable", "Test retrieval", "retrieve_001")
         node_id = workflow.add_node(agent_node)
-        
+
         assert node_id is not None
-        
+
         # Note: Node retrieval methods would depend on the actual API
         # This test verifies that node addition returns a valid ID
 
