@@ -90,7 +90,7 @@ class TestWorkflowComposition:
         """Test creating connections between nodes."""
         # Instead of using the sample workflow, create our own nodes with known IDs
         workflow = graphbit.Workflow("connection_test")
-        
+
         # Create nodes
         agent1 = graphbit.Node.agent("agent1", "Start processing", "agent_001")
         condition1 = graphbit.Node.condition("condition1", "quality_score > 0.5")

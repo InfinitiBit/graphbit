@@ -162,9 +162,9 @@ class TestEmbeddingUtilities:
             similarity = graphbit.EmbeddingClient.similarity(vec1, vec2)
             # If it doesn't raise an error, verify it's a valid value
             assert isinstance(similarity, float)
-        except Exception:
+        except Exception as e:  # noqa: B110
             # Exception is acceptable for zero vectors
-            pass
+            print(f"Zero vector similarity failed as expected: {e}")
 
 
 @pytest.mark.integration

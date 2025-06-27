@@ -1,5 +1,5 @@
-#!/usr/bin/env python3
 """Integration tests for GraphBit dynamic workflow functionality."""
+
 import contextlib
 import os
 from typing import Any
@@ -16,11 +16,9 @@ class TestDynamicWorkflowCreation:
         """Test creating workflows dynamically at runtime."""
         workflow = graphbit.Workflow("dynamic_test")
 
-        # Add nodes dynamically based on conditions
         base_agent = graphbit.Node.agent("base_processor", "Process input", "agent_001")
         workflow.add_node(base_agent)
 
-        # Add conditional processing
         condition_node = graphbit.Node.condition("quality_check", "quality > 0.7")
         workflow.add_node(condition_node)
 
@@ -96,9 +94,9 @@ class TestDynamicWorkflowExecution:
         try:
             workflow.connect("start", "decision")
             workflow.connect("decision", "end")
-        except Exception:
+        except Exception as e:  # noqa: B110
             # Connection may not be required for basic testing
-            pass
+            print(f"Connection attempt failed (acceptable): {e}")
 
         return workflow
 
