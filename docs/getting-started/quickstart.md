@@ -25,11 +25,17 @@ import os
 graphbit.init()
 
 # Configure LLM (using OpenAI GPT-4)
+# GraphBit supports multiple providers: openai, anthropic, huggingface, ollama
 api_key = os.getenv("OPENAI_API_KEY")
 if not api_key:
     raise ValueError("Please set OPENAI_API_KEY environment variable")
 
 config = graphbit.LlmConfig.openai(api_key, "gpt-4o-mini")
+
+# Alternative configurations:
+# config = graphbit.LlmConfig.anthropic(os.getenv("ANTHROPIC_API_KEY"), "claude-3-5-sonnet-20241022")
+# config = graphbit.LlmConfig.huggingface(os.getenv("HUGGINGFACE_API_KEY"), "microsoft/DialoGPT-medium")
+# config = graphbit.LlmConfig.ollama("llama3.2")  # Local model, no API key needed
 ```
 
 ### Step 2: Create Your First Agent Node

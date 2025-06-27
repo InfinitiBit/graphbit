@@ -134,6 +134,25 @@ config = graphbit.LlmConfig.anthropic("sk-ant-...")  # Uses claude-3-5-sonnet-20
 
 **Returns**: `LlmConfig` instance
 
+##### `LlmConfig.huggingface(api_key, model=None, base_url=None)`
+Create HuggingFace provider configuration.
+
+```python
+config = graphbit.LlmConfig.huggingface("hf_...", "microsoft/DialoGPT-medium")
+# With default model
+config = graphbit.LlmConfig.huggingface("hf_...")  # Uses microsoft/DialoGPT-medium
+# With custom endpoint
+config = graphbit.LlmConfig.huggingface("hf_...", "mistralai/Mistral-7B-Instruct-v0.1", 
+                                        base_url="https://my-endpoint.huggingface.co")
+```
+
+**Parameters**:
+- `api_key` (str): HuggingFace API key
+- `model` (str, optional): Model name. Default: "microsoft/DialoGPT-medium"
+- `base_url` (str, optional): Custom API endpoint. Default: HuggingFace Inference API
+
+**Returns**: `LlmConfig` instance
+
 ##### `LlmConfig.ollama(model=None)`
 Create Ollama provider configuration.
 

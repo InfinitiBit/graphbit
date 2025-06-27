@@ -39,6 +39,24 @@ impl LlmConfig {
     }
 
     #[staticmethod]
+    #[pyo3(signature = (api_key, model=None, base_url=None))]
+    fn huggingface(api_key: String, model: Option<String>, base_url: Option<String>) -> PyResult<Self> {
+        validate_api_key(&api_key, "HuggingFace")?;
+
+        let mut config = CoreLlmConfig::huggingface(
+            api_key,
+            model.unwrap_or_else(|| "microsoft/DialoGPT-medium".to_string()),
+        );
+
+        // Set custom base URL if provided
+        if let CoreLlmConfig::HuggingFace { base_url: ref mut url, .. } = config {
+            *url = base_url;
+        }
+
+        Ok(Self { inner: config })
+    }
+
+    #[staticmethod]
     #[pyo3(signature = (model=None))]
     fn ollama(model: Option<String>) -> Self {
         Self {

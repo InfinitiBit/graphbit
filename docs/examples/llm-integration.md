@@ -5,7 +5,7 @@ This example demonstrates comprehensive LLM integration with GraphBit, showcasin
 ## Overview
 
 We'll explore:
-1. **Multiple LLM Providers**: OpenAI, Anthropic, Ollama
+1. **Multiple LLM Providers**: OpenAI, Anthropic, HuggingFace, Ollama
 2. **Execution Modes**: Sync, async, batch, streaming
 3. **Performance Optimization**: High-throughput, low-latency, memory-optimized
 4. **Error Handling**: Resilience patterns and fallbacks
@@ -51,6 +51,15 @@ class AdvancedLLMSystem:
             )
             self.clients['anthropic'] = graphbit.LlmClient(anthropic_config, debug=True)
             print("Anthropic client initialized")
+        
+        # HuggingFace client
+        if os.getenv("HUGGINGFACE_API_KEY"):
+            huggingface_config = graphbit.LlmConfig.huggingface(
+                api_key=os.getenv("HUGGINGFACE_API_KEY"),
+                model="microsoft/DialoGPT-medium"
+            )
+            self.clients['huggingface'] = graphbit.LlmClient(huggingface_config, debug=True)
+            print("HuggingFace client initialized")
         
         # Ollama client (no API key required)
         try:

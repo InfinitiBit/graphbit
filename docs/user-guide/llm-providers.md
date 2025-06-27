@@ -7,6 +7,7 @@ GraphBit supports multiple Large Language Model providers through a unified clie
 GraphBit supports these LLM providers:
 - **OpenAI** - GPT models including GPT-4o, GPT-4o-mini
 - **Anthropic** - Claude models including Claude-3.5-Sonnet  
+- **HuggingFace** - Access to thousands of models via HuggingFace Inference API
 - **Ollama** - Local model execution with various open-source models
 
 ## Configuration
@@ -98,6 +99,83 @@ fast_config = graphbit.LlmConfig.anthropic(
     model="claude-3-haiku-20240307"  # For speed and efficiency
 )
 ```
+
+### HuggingFace Configuration
+
+Configure HuggingFace provider to access thousands of models via the Inference API:
+
+```python
+# Basic HuggingFace configuration
+config = graphbit.LlmConfig.huggingface(
+    api_key=os.getenv("HUGGINGFACE_API_KEY"),
+    model="microsoft/DialoGPT-medium"  # Optional - defaults to microsoft/DialoGPT-medium
+)
+
+print(f"Provider: {config.provider()}")  # "huggingface"
+print(f"Model: {config.model()}")        # "microsoft/DialoGPT-medium"
+
+# Custom endpoint configuration
+custom_config = graphbit.LlmConfig.huggingface(
+    api_key=os.getenv("HUGGINGFACE_API_KEY"),
+    model="mistralai/Mistral-7B-Instruct-v0.1",
+    base_url="https://my-custom-endpoint.huggingface.co"  # Optional custom endpoint
+)
+```
+
+#### Popular HuggingFace Models
+
+| Model | Best For | Size | Performance |
+|-------|----------|------|-------------|
+| `microsoft/DialoGPT-medium` | Conversational AI, chat | 345M | Fast, good dialogue |
+| `mistralai/Mistral-7B-Instruct-v0.1` | General instruction following | 7B | High quality, versatile |
+| `microsoft/CodeBERT-base` | Code understanding | 125M | Specialized for code |
+| `facebook/blenderbot-400M-distill` | Conversational AI | 400M | Balanced dialogue |
+| `huggingface/CodeBERTa-small-v1` | Code generation | 84M | Fast code tasks |
+| `microsoft/DialoGPT-large` | Advanced dialogue | 762M | Higher quality chat |
+
+```python
+# Model selection for different use cases
+dialogue_config = graphbit.LlmConfig.huggingface(
+    api_key=os.getenv("HUGGINGFACE_API_KEY"),
+    model="microsoft/DialoGPT-large"  # For high-quality dialogue
+)
+
+instruction_config = graphbit.LlmConfig.huggingface(
+    api_key=os.getenv("HUGGINGFACE_API_KEY"),
+    model="mistralai/Mistral-7B-Instruct-v0.1"  # For instruction following
+)
+
+code_config = graphbit.LlmConfig.huggingface(
+    api_key=os.getenv("HUGGINGFACE_API_KEY"),
+    model="microsoft/CodeBERT-base"  # For code-related tasks
+)
+
+# Fast and lightweight option
+lightweight_config = graphbit.LlmConfig.huggingface(
+    api_key=os.getenv("HUGGINGFACE_API_KEY"),
+    model="microsoft/DialoGPT-medium"  # Balanced performance
+)
+```
+
+#### HuggingFace API Key Setup
+
+To use HuggingFace models, you need an API key:
+
+1. Create an account at [HuggingFace](https://huggingface.co/)
+2. Generate an API token in your [settings](https://huggingface.co/settings/tokens)
+3. Set the environment variable:
+
+```bash
+export HUGGINGFACE_API_KEY="your-api-key-here"
+```
+
+#### Model Selection Tips
+
+- **Free Tier**: Most models work with free HuggingFace accounts
+- **Custom Models**: You can use any public model from the HuggingFace Hub
+- **Private Models**: Use your own fine-tuned models with appropriate permissions
+- **Performance**: Larger models (7B+) provide better quality but slower responses
+- **Cost**: HuggingFace Inference API has competitive pricing for hosted inference
 
 ### Ollama Configuration
 
