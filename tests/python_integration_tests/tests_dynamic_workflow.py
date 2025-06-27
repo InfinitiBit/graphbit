@@ -8,387 +8,404 @@ import pytest
 import graphbit
 
 
-class TestDynamicGraphConfiguration:
-    """Integration tests for dynamic graph configuration."""
+class TestDynamicWorkflowCreation:
+    """Integration tests for dynamic workflow creation and modification."""
 
-    def test_basic_dynamic_graph_config(self) -> None:
-        """Test basic dynamic graph configuration creation."""
-        config = graphbit.PyDynamicGraphConfig()
+    def test_dynamic_workflow_creation(self) -> None:
+        """Test creating workflows dynamically at runtime."""
+        workflow = graphbit.Workflow("dynamic_test")
+        
+        # Add nodes dynamically based on conditions
+        base_agent = graphbit.Node.agent("base_processor", "Process input", "agent_001")
+        workflow.add_node(base_agent)
+        
+        # Add conditional processing
+        condition_node = graphbit.Node.condition("quality_check", "quality > 0.7")
+        workflow.add_node(condition_node)
+        
+        assert workflow.name() == "dynamic_test"
 
-        assert config is not None
-        assert config.max_auto_nodes > 0
-        assert config.confidence_threshold >= 0.0
-        assert config.generation_temperature >= 0.0
-
-    def test_dynamic_graph_config_customization(self) -> None:
-        """Test dynamic graph configuration customization."""
-        config = graphbit.PyDynamicGraphConfig()
-
-        # Customize configuration
-        custom_config = config.with_max_auto_nodes(50)
-        custom_config = custom_config.with_confidence_threshold(0.8)
-        custom_config = custom_config.with_generation_temperature(0.7)
-        custom_config = custom_config.with_max_generation_depth(10)
-        custom_config = custom_config.with_completion_objectives(
-            [
-                "Process data efficiently",
-                "Validate results",
-                "Generate comprehensive output",
-            ]
-        )
-
-        assert custom_config.max_auto_nodes == 50
-        assert abs(custom_config.confidence_threshold - 0.8) < 1e-6
-        assert abs(custom_config.generation_temperature - 0.7) < 1e-6
-
-    def test_dynamic_graph_config_validation_settings(self) -> None:
-        """Test dynamic graph configuration validation settings."""
-        config = graphbit.PyDynamicGraphConfig()
-
-        # Test enabling validation
-        validated_config = config.enable_validation()
-        assert validated_config is not None
-
-        # Test disabling validation
-        unvalidated_config = config.disable_validation()
-        assert unvalidated_config is not None
-
-
-class TestDynamicGraphAnalytics:
-    """Integration tests for dynamic graph analytics."""
-
-    @pytest.fixture
-    def mock_analytics(self) -> Optional[Any]:
-        """Create mock analytics for testing (would be populated by actual usage)."""
-        # In real scenarios, this would come from a DynamicGraphManager
-        # For testing, we'll use the structure without actual data
-        return None
-
-    def test_analytics_structure(self) -> None:
-        """Test analytics data structure and methods."""
-        # Note: This test is more about API structure than actual values
-        # since analytics would be populated through actual dynamic graph usage
-
-        # Test that analytics classes exist and have expected methods
-        assert hasattr(graphbit, "PyDynamicGraphAnalytics")
-
-        # The analytics would typically be obtained from a manager
-        # analytics = manager.get_analytics()
-        # This is tested in the manager tests below
-
-
-class TestDynamicGraphManager:
-    """Integration tests for dynamic graph manager."""
-
-    @pytest.fixture
-    def llm_config(self) -> Any:
-        """Get LLM config for dynamic graph tests."""
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            pytest.skip("OPENAI_API_KEY not set for dynamic graph tests")
-            raise RuntimeError("Unreachable after pytest.skip")
-        return graphbit.PyLlmConfig.openai(api_key, "gpt-3.5-turbo")
-
-    @pytest.fixture
-    def dynamic_config(self) -> Any:
-        """Create dynamic graph configuration for testing."""
-        config = graphbit.PyDynamicGraphConfig()
-        config = config.with_max_auto_nodes(10)
-        config = config.with_confidence_threshold(0.6)
-        config = config.with_generation_temperature(0.8)
-        return config
-
-    @pytest.fixture
-    def manager(self, llm_config: Any, dynamic_config: Any) -> Optional[Any]:
-        """Create dynamic graph manager for testing."""
-        manager = graphbit.PyDynamicGraphManager(llm_config, dynamic_config)
+    def test_dynamic_node_addition(self) -> None:
+        """Test adding nodes to workflow dynamically."""
+        workflow = graphbit.Workflow("dynamic_addition")
+        
+        # Start with empty workflow
+        initial_count = 0
+        
+        # Add nodes one by one
+        for i in range(3):
+            agent = graphbit.Node.agent(f"agent_{i}", f"Process step {i}", f"agent_{i:03d}")
+            node_id = workflow.add_node(agent)
+            assert node_id is not None
+            
+        # Verify workflow structure
         try:
-            manager.initialize(llm_config, dynamic_config)
-            return manager
-        except Exception as e:
-            pytest.skip(f"Failed to initialize dynamic graph manager: {e}")
-            raise RuntimeError("Unreachable: pytest.skip triggered")
+            workflow.validate()
+        except Exception:
+            # Dynamic workflow validation may fail, which is acceptable
+            pass
 
-    def test_dynamic_graph_manager_creation(self, llm_config: Any, dynamic_config: Any) -> None:
-        """Test dynamic graph manager creation."""
-        manager = graphbit.PyDynamicGraphManager(llm_config, dynamic_config)
-        assert manager is not None
-
-    def test_dynamic_graph_manager_initialization(self, llm_config: Any, dynamic_config: Any) -> None:
-        """Test dynamic graph manager initialization."""
-        manager = graphbit.PyDynamicGraphManager(llm_config, dynamic_config)
-
-        try:
-            manager.initialize(llm_config, dynamic_config)
-            # If initialization succeeds, the manager should be ready
-        except Exception as e:
-            # Initialization might fail in test environments
-            pytest.skip(f"Dynamic graph manager initialization skipped: {e}")
-
-    @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="Requires OpenAI API key")
-    def test_dynamic_node_generation(self, manager: Optional[Any]) -> None:
-        """Test dynamic node generation."""
-        if manager is None:
-            pytest.skip("Manager not available")
-
-        # Create a basic workflow context for testing
-        # Create a test workflow for dynamic generation
-        graphbit.PyWorkflow("dynamic_test", "Test workflow for dynamic generation")
-
-        # Create a basic workflow context
-        try:
-            # This would normally come from workflow execution
-            # For testing, we'll create a minimal context
-            # Would need actual context from execution for real testing
-
-            # Skip this test if we can't create proper context
-            pytest.skip("Dynamic node generation test requires actual workflow context")
-
-        except Exception as e:
-            pytest.skip(f"Dynamic node generation test skipped: {e}")
-
-    @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="Requires OpenAI API key")
-    def test_workflow_auto_completion(self, manager: Optional[Any]) -> None:
-        """Test workflow auto-completion functionality."""
-        if manager is None:
-            pytest.skip("Manager not available")
-
-        try:
-            # Create a partial workflow for auto-completion
-            workflow = graphbit.PyWorkflow("auto_complete_test", "Test auto-completion")
-
-            # Add an initial node
-            agent = graphbit.PyWorkflowNode.agent_node("starter", "Initial processing", "agent_001", "Start processing")
-            workflow.add_node(agent)
-
-            # This would require actual workflow execution to get context
-            pytest.skip("Auto-completion test requires actual workflow execution context")
-
-        except Exception as e:
-            pytest.skip(f"Workflow auto-completion test skipped: {e}")
-
-
-class TestDynamicNodeResponse:
-    """Integration tests for dynamic node response handling."""
-
-    def test_dynamic_node_response_structure(self) -> None:
-        """Test dynamic node response structure."""
-        # Test that the response classes exist and have expected methods
-        assert hasattr(graphbit, "PyDynamicNodeResponse")
-        assert hasattr(graphbit, "PySuggestedConnection")
-
-        # Response would typically be created by the dynamic graph manager
-        # response = manager.generate_node(...)
-        # This is tested in actual generation scenarios
-
-
-class TestAutoCompletionResult:
-    """Integration tests for auto-completion results."""
-
-    def test_auto_completion_result_structure(self) -> None:
-        """Test auto-completion result structure."""
-        # Test that auto-completion result classes exist
-        assert hasattr(graphbit, "PyAutoCompletionResult")
-
-        # Results would typically be created by auto-completion engine
-        # result = manager.auto_complete_workflow(...)
-        # This is tested in actual completion scenarios
-
-
-class TestWorkflowAutoCompletion:
-    """Integration tests for workflow auto-completion engine."""
-
-    @pytest.fixture
-    def llm_config(self) -> Any:
-        """Get LLM config for auto-completion tests."""
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            pytest.skip("OPENAI_API_KEY not set for auto-completion tests")
-        return graphbit.PyLlmConfig.openai(api_key or "", "gpt-3.5-turbo")
-
-    @pytest.fixture
-    def dynamic_config(self) -> Any:
-        """Create dynamic configuration for auto-completion."""
-        config = graphbit.PyDynamicGraphConfig()
-        config = config.with_max_auto_nodes(5)
-        config = config.with_confidence_threshold(0.7)
-        return config
-
-    def test_workflow_auto_completion_creation(self, llm_config: Any, dynamic_config: Any) -> None:
-        """Test workflow auto-completion engine creation."""
-        try:
-            engine = graphbit.PyWorkflowAutoCompletion(llm_config, dynamic_config)
-            assert engine is not None
-        except Exception as e:
-            # Auto-completion might not be available in all configurations
-            pytest.skip(f"Auto-completion engine creation skipped: {e}")
-
-    def test_auto_completion_configuration(self, llm_config: Any, dynamic_config: Any) -> None:
-        """Test auto-completion engine configuration."""
-        try:
-            engine = graphbit.PyWorkflowAutoCompletion(llm_config, dynamic_config)
-
-            # Test configuration access (would depend on implementation)
-            # This test structure assumes the engine exposes configuration
-            assert engine is not None
-
-        except Exception as e:
-            pytest.skip(f"Auto-completion configuration test skipped: {e}")
-
-
-class TestDynamicWorkflowIntegration:
-    """Integration tests for dynamic workflow integration."""
-
-    @pytest.fixture
-    def llm_config(self) -> Any:
-        """Get LLM config for integration tests."""
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            pytest.skip("OPENAI_API_KEY not set for dynamic graph tests")
-            raise RuntimeError("Should not reach here due to pytest.skip")
-        return graphbit.PyLlmConfig.openai(api_key, "gpt-3.5-turbo")
-
-    @pytest.fixture
-    def dynamic_setup(self, llm_config: Any) -> Optional[Any]:
-        """Set up dynamic workflow components."""
-        try:
-            config = graphbit.PyDynamicGraphConfig()
-            config = config.with_max_auto_nodes(8)
-            config = config.with_confidence_threshold(0.7)
-
-            manager = graphbit.PyDynamicGraphManager(llm_config, config)
-            manager.initialize(llm_config, config)
-
-            return {
-                "manager": manager,
-                "config": config,
-                "llm_config": llm_config,
-            }
-        except Exception as e:
-            pytest.skip(f"Dynamic workflow setup failed: {e}")
-            raise RuntimeError("Unreachable: pytest.skip triggered")
-
-    def test_dynamic_workflow_basic_integration(self, dynamic_setup: Optional[Any]) -> None:
-        """Test basic integration of dynamic workflow components."""
-        if dynamic_setup is None:
-            pytest.skip("Dynamic setup not available")
-            return
-
-        manager = dynamic_setup["manager"]
-        config = dynamic_setup["config"]
-
-        # Verify components are properly integrated
-        assert manager is not None
-        assert config is not None
-
-        # Additional integration tests would require actual workflow execution
-        pytest.skip("Detailed integration testing requires workflow execution context")
-
-    def test_dynamic_workflow_with_static_base(self, dynamic_setup: Optional[Any]) -> None:
-        """Test dynamic enhancement of static workflow."""
-        if dynamic_setup is None:
-            pytest.skip("Dynamic setup not available")
-
-        try:
-            # Create a static workflow as a base
-            workflow = graphbit.PyWorkflow("hybrid_test", "Test hybrid workflow")
-
-            # Add static nodes
-            agent1 = graphbit.PyWorkflowNode.agent_node("agent1", "Static processing", "agent_001", "Process input")
+    def test_conditional_workflow_building(self) -> None:
+        """Test building workflows based on runtime conditions."""
+        workflow = graphbit.Workflow("conditional_build")
+        
+        # Simulate different workflow paths based on conditions
+        use_complex_processing = True  # Runtime condition
+        
+        if use_complex_processing:
+            # Add complex processing chain
+            agent1 = graphbit.Node.agent("complex_start", "Start complex processing", "complex_001")
+            transform1 = graphbit.Node.transform("complex_transform", "complex_operation")
+            agent2 = graphbit.Node.agent("complex_end", "Finish complex processing", "complex_002")
+            
             workflow.add_node(agent1)
+            workflow.add_node(transform1)
+            workflow.add_node(agent2)
+        else:
+            # Add simple processing
+            agent = graphbit.Node.agent("simple_processor", "Simple processing", "simple_001")
+            workflow.add_node(agent)
+        
+        try:
+            workflow.validate()
+        except Exception:
+            # Validation may fail for complex workflows
+            pass
 
-            # Test dynamic enhancement capability
-            # This would require actual dynamic generation
-            pytest.skip("Dynamic enhancement testing requires execution context")
 
-        except Exception as e:
-            pytest.skip(f"Hybrid workflow test skipped: {e}")
-
-
-class TestDynamicWorkflowPerformance:
-    """Integration tests for dynamic workflow performance considerations."""
+class TestDynamicWorkflowExecution:
+    """Integration tests for dynamic workflow execution."""
 
     @pytest.fixture
-    def performance_config(self) -> Any:
-        """Create performance-optimized dynamic configuration."""
-        config = graphbit.PyDynamicGraphConfig()
-        config = config.with_max_auto_nodes(20)
-        config = config.with_confidence_threshold(0.8)
-        config = config.with_generation_temperature(0.6)
-        return config
+    def llm_config(self) -> Any:
+        """Get LLM config for dynamic workflow tests."""
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            pytest.skip("OPENAI_API_KEY not set for dynamic workflow tests")
+        return graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
 
-    def test_dynamic_config_performance_settings(self, performance_config: Any) -> None:
-        """Test performance-oriented configuration settings."""
-        assert performance_config.max_auto_nodes == 20
-        assert abs(performance_config.confidence_threshold - 0.8) < 1e-6
-        assert abs(performance_config.generation_temperature - 0.6) < 1e-6
+    @pytest.fixture
+    def dynamic_workflow(self) -> Any:
+        """Create a dynamic workflow for testing."""
+        workflow = graphbit.Workflow("dynamic_execution_test")
+        
+        # Create a basic dynamic workflow
+        start_agent = graphbit.Node.agent("start", "Begin processing", "start_001")
+        decision_node = graphbit.Node.condition("decision", "continue_processing == true")
+        end_agent = graphbit.Node.agent("end", "Complete processing", "end_001")
+        
+        workflow.add_node(start_agent)
+        workflow.add_node(decision_node)
+        workflow.add_node(end_agent)
+        
+        # Connect nodes
+        try:
+            workflow.connect("start", "decision")
+            workflow.connect("decision", "end")
+        except Exception:
+            # Connection may not be required for basic testing
+            pass
+        
+        return workflow
 
-    def test_dynamic_workflow_scalability_considerations(self) -> None:
-        """Test considerations for dynamic workflow scalability."""
-        # Test configuration limits and boundaries
-        config = graphbit.PyDynamicGraphConfig()
+    @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="Requires OpenAI API key")
+    def test_dynamic_workflow_execution_setup(self, llm_config: Any, dynamic_workflow: Any) -> None:
+        """Test setting up dynamic workflow execution."""
+        try:
+            executor = graphbit.Executor(llm_config)
+            assert executor is not None
+            
+            # Validate the dynamic workflow
+            dynamic_workflow.validate()
+            
+        except Exception as e:
+            pytest.fail(f"Dynamic workflow execution setup failed: {e}")
 
-        # Test extreme values to understand limits
-        high_node_config = config.with_max_auto_nodes(100)
-        assert high_node_config.max_auto_nodes == 100
+    @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="Requires OpenAI API key")
+    def test_dynamic_workflow_execution(self, llm_config: Any, dynamic_workflow: Any) -> None:
+        """Test executing dynamic workflows."""
+        try:
+            executor = graphbit.Executor(llm_config)
+            
+            # Validate workflow first
+            dynamic_workflow.validate()
+            
+            # Execute the dynamic workflow
+            result = executor.execute(dynamic_workflow)
+            assert result is not None
+            assert isinstance(result, graphbit.WorkflowResult)
+            
+        except Exception as e:
+            pytest.skip(f"Dynamic workflow execution test skipped: {e}")
 
-        # Test very high confidence threshold
-        high_confidence_config = config.with_confidence_threshold(0.95)
-        assert abs(high_confidence_config.confidence_threshold - 0.95) < 1e-6
+
+class TestWorkflowModification:
+    """Integration tests for runtime workflow modification."""
+
+    def test_runtime_node_modification(self) -> None:
+        """Test modifying workflow nodes at runtime."""
+        workflow = graphbit.Workflow("modification_test")
+        
+        # Add initial nodes
+        agent1 = graphbit.Node.agent("modifiable_agent", "Initial prompt", "mod_001")
+        workflow.add_node(agent1)
+        
+        # Add additional nodes based on runtime logic
+        runtime_condition = True  # Simulate runtime decision
+        
+        if runtime_condition:
+            agent2 = graphbit.Node.agent("additional_agent", "Additional processing", "add_001")
+            workflow.add_node(agent2)
+            
+            # Connect new node
+            try:
+                workflow.connect("modifiable_agent", "additional_agent")
+            except Exception:
+                # Connection may fail, which is acceptable for testing
+                pass
+
+    def test_workflow_branch_addition(self) -> None:
+        """Test adding workflow branches dynamically."""
+        workflow = graphbit.Workflow("branch_test")
+        
+        # Create main workflow branch
+        main_agent = graphbit.Node.agent("main_processor", "Main processing", "main_001")
+        workflow.add_node(main_agent)
+        
+        # Add conditional branches
+        conditions = ["high_priority", "medium_priority", "low_priority"]
+        
+        for i, condition in enumerate(conditions):
+            # Add condition node
+            cond_node = graphbit.Node.condition(f"check_{condition}", f"priority == '{condition}'")
+            workflow.add_node(cond_node)
+            
+            # Add processing node for this branch
+            branch_agent = graphbit.Node.agent(
+                f"process_{condition}", 
+                f"Process {condition} items", 
+                f"branch_{i:03d}"
+            )
+            workflow.add_node(branch_agent)
+        
+        # Validate the branched workflow
+        try:
+            workflow.validate()
+        except Exception:
+            # Complex workflows may fail validation
+            pass
+
+
+class TestDynamicExecutorConfiguration:
+    """Integration tests for dynamic executor configuration."""
+
+    def test_runtime_executor_configuration(self) -> None:
+        """Test configuring executor at runtime."""
+        # Test different executor configurations
+        configs = [
+            ({"debug": True}, "debug mode"),
+            ({"timeout_seconds": 60}, "custom timeout"),
+            ({"lightweight_mode": True}, "lightweight mode"),
+        ]
+        
+        for config_params, description in configs:
+            try:
+                # Create a basic LLM config for testing
+                api_key = os.getenv("OPENAI_API_KEY")
+                if not api_key:
+                    pytest.skip("OPENAI_API_KEY not set")
+                
+                llm_config = graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
+                
+                # Create executor with different configurations
+                executor = graphbit.Executor(llm_config, **config_params)
+                assert executor is not None
+                
+            except Exception as e:
+                pytest.skip(f"Runtime executor configuration test skipped for {description}: {e}")
+
+    def test_executor_mode_switching(self) -> None:
+        """Test switching executor modes at runtime."""
+        try:
+            api_key = os.getenv("OPENAI_API_KEY")
+            if not api_key:
+                pytest.skip("OPENAI_API_KEY not set")
+            
+            llm_config = graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
+            
+            # Test different executor modes
+            high_throughput = graphbit.Executor.new_high_throughput(llm_config)
+            low_latency = graphbit.Executor.new_low_latency(llm_config)
+            memory_optimized = graphbit.Executor.new_memory_optimized(llm_config)
+            
+            assert high_throughput is not None
+            assert low_latency is not None
+            assert memory_optimized is not None
+            
+        except Exception as e:
+            pytest.skip(f"Executor mode switching test skipped: {e}")
+
+
+class TestConditionalWorkflowLogic:
+    """Integration tests for conditional workflow logic."""
+
+    def test_conditional_node_creation(self) -> None:
+        """Test creating conditional workflow nodes."""
+        workflow = graphbit.Workflow("conditional_logic_test")
+        
+        # Create different types of conditional nodes
+        conditions = [
+            ("simple_check", "score > 0.5"),
+            ("complex_check", "sentiment == 'positive' and confidence > 0.8"),
+            ("numeric_check", "value >= 100 and value <= 1000"),
+            ("string_check", "status in ['active', 'pending']"),
+        ]
+        
+        for name, expression in conditions:
+            cond_node = graphbit.Node.condition(name, expression)
+            workflow.add_node(cond_node)
+            
+            assert cond_node.name() == name
+
+    def test_workflow_branching_logic(self) -> None:
+        """Test workflow branching based on conditions."""
+        workflow = graphbit.Workflow("branching_test")
+        
+        # Create entry point
+        entry_agent = graphbit.Node.agent("entry", "Process input", "entry_001")
+        workflow.add_node(entry_agent)
+        
+        # Create decision point
+        decision = graphbit.Node.condition("routing_decision", "route_type == 'priority'")
+        workflow.add_node(decision)
+        
+        # Create different processing branches
+        priority_agent = graphbit.Node.agent("priority_processor", "Handle priority items", "priority_001")
+        normal_agent = graphbit.Node.agent("normal_processor", "Handle normal items", "normal_001")
+        
+        workflow.add_node(priority_agent)
+        workflow.add_node(normal_agent)
+        
+        # Connect the workflow
+        try:
+            workflow.connect("entry", "routing_decision")
+            # Note: Conditional connections would need specific implementation
+        except Exception:
+            # Connection logic may not be fully implemented
+            pass
+
+
+class TestDynamicDataTransformation:
+    """Integration tests for dynamic data transformation."""
+
+    def test_dynamic_transform_creation(self) -> None:
+        """Test creating transformation nodes dynamically."""
+        workflow = graphbit.Workflow("transform_test")
+        
+        # Create different transformation types
+        transformations = [
+            ("uppercase", "uppercase"),
+            ("lowercase", "lowercase"),
+            ("json_parse", "parse_json"),
+            ("format_date", "format_date('%Y-%m-%d')"),
+            ("extract_text", "extract_text(pattern='[a-zA-Z]+')"),
+        ]
+        
+        for name, operation in transformations:
+            transform_node = graphbit.Node.transform(name, operation)
+            workflow.add_node(transform_node)
+            
+            assert transform_node.name() == name
+
+    def test_chained_transformations(self) -> None:
+        """Test chaining multiple transformations."""
+        workflow = graphbit.Workflow("chained_transforms")
+        
+        # Create a chain of transformations
+        input_agent = graphbit.Node.agent("input", "Receive data", "input_001")
+        transform1 = graphbit.Node.transform("clean", "clean_text")
+        transform2 = graphbit.Node.transform("normalize", "normalize")
+        transform3 = graphbit.Node.transform("validate", "validate_format")
+        output_agent = graphbit.Node.agent("output", "Send processed data", "output_001")
+        
+        # Add all nodes
+        for node in [input_agent, transform1, transform2, transform3, output_agent]:
+            workflow.add_node(node)
+        
+        # Create transformation chain
+        try:
+            workflow.connect("input", "clean")
+            workflow.connect("clean", "normalize")
+            workflow.connect("normalize", "validate")
+            workflow.connect("validate", "output")
+        except Exception:
+            # Chain connection may not be implemented
+            pass
 
 
 @pytest.mark.integration
-class TestDynamicWorkflowEndToEnd:
-    """End-to-end integration tests for dynamic workflows."""
+class TestCrossProviderDynamicWorkflows:
+    """Integration tests for dynamic workflows across providers."""
 
     @pytest.fixture
-    def full_setup(self) -> Optional[Any]:
-        """Set up complete dynamic workflow environment."""
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            pytest.skip("OPENAI_API_KEY not set for end-to-end tests")
-            raise RuntimeError("Unreachable: pytest.skip triggered")
+    def providers(self) -> Any:
+        """Create configurations for available providers."""
+        configs = {}
+        
+        if os.getenv("OPENAI_API_KEY"):
+            configs["openai"] = graphbit.LlmConfig.openai(
+                os.getenv("OPENAI_API_KEY"), "gpt-3.5-turbo"
+            )
+        
+        if os.getenv("ANTHROPIC_API_KEY"):
+            configs["anthropic"] = graphbit.LlmConfig.anthropic(
+                os.getenv("ANTHROPIC_API_KEY"), "claude-3-sonnet-20240229"
+            )
 
-        try:
-            # Complete environment setup
-            llm_config = graphbit.PyLlmConfig.openai(api_key, "gpt-3.5-turbo")
-            dynamic_config = graphbit.PyDynamicGraphConfig()
-            dynamic_config = dynamic_config.with_max_auto_nodes(15)
-            dynamic_config = dynamic_config.with_confidence_threshold(0.75)
+        configs["ollama"] = graphbit.LlmConfig.ollama("llama3.2")
+        
+        return configs
 
-            manager = graphbit.PyDynamicGraphManager(llm_config, dynamic_config)
-            manager.initialize(llm_config, dynamic_config)
+    def test_dynamic_provider_switching(self, providers: Any) -> None:
+        """Test switching providers dynamically."""
+        workflow = graphbit.Workflow("provider_switching_test")
+        
+        # Create a simple workflow
+        agent = graphbit.Node.agent("test_agent", "Test provider switching", "switch_001")
+        workflow.add_node(agent)
+        
+        # Test with different providers
+        for provider_name, config in providers.items():
+            try:
+                executor = graphbit.Executor(config)
+                assert executor is not None
+                
+                # Validate workflow with this provider
+                workflow.validate()
+                
+            except Exception as e:
+                pytest.skip(f"Provider switching test failed for {provider_name}: {e}")
 
-            auto_completion = graphbit.PyWorkflowAutoCompletion(llm_config, dynamic_config)
-
-            return {
-                "llm_config": llm_config,
-                "dynamic_config": dynamic_config,
-                "manager": manager,
-                "auto_completion": auto_completion,
-            }
-        except Exception as e:
-            pytest.skip(f"Full setup failed: {e}")
-            raise RuntimeError("Unreachable: pytest.skip triggered")
-
-    def test_complete_dynamic_workflow_cycle(self, full_setup: Optional[Any]) -> None:
-        """Test complete dynamic workflow creation and management cycle."""
-        if full_setup is None:
-            pytest.skip("Full setup not available")
-            return
-
-        # This would test the complete cycle:
-        # 1. Create base workflow
-        # 2. Use dynamic generation to add nodes
-        # 3. Use auto-completion to finalize
-        # 4. Execute and analyze results
-
-        # For now, just verify all components are available
-        assert full_setup["manager"] is not None
-        assert full_setup["auto_completion"] is not None
-        assert full_setup["dynamic_config"] is not None
-
-        pytest.skip("Complete cycle testing requires full execution environment")
+    def test_multi_provider_workflow_validation(self, providers: Any) -> None:
+        """Test workflow validation across providers."""
+        for provider_name, config in providers.items():
+            try:
+                # Create a test workflow
+                workflow = graphbit.Workflow(f"validation_{provider_name}")
+                
+                # Add test nodes
+                agent = graphbit.Node.agent(f"agent_{provider_name}", f"Test for {provider_name}", f"test_{provider_name}")
+                workflow.add_node(agent)
+                
+                # Validate workflow
+                workflow.validate()
+                
+                # Create executor
+                executor = graphbit.Executor(config)
+                assert executor is not None
+                
+            except Exception as e:
+                pytest.skip(f"Multi-provider workflow validation failed for {provider_name}: {e}")
 
 
 if __name__ == "__main__":

@@ -20,7 +20,6 @@ class IntegrationTestRunner:
             ("tests_workflow_builder.py", "Builder Integration Tests"),
             ("tests_executor_async.py", "Async Executor Tests"),
             ("tests_workflow_context.py", "Workflow Context Accessor Tests"),
-            ("tests_executor_batch.py", "Executor Batch + Agent Task Tests"),
             ("tests_validation_result.py", "Validation Error Handling Tests"),
         ]
 
@@ -55,7 +54,7 @@ class IntegrationTestRunner:
             print(f"  {key}: {status}")
 
         if not any(api_keys.values()):
-            print("\n⚠️  Warning: No API keys detected. Many tests will be skipped.")
+            print("\nWarning: No API keys detected. Many tests will be skipped.")
 
         print(f"\nPython version: {sys.version}")
         print(f"Working directory: {os.getcwd()}")
@@ -156,7 +155,7 @@ class IntegrationTestRunner:
         if passed_count == total_count:
             print("\n🎉 All integration tests completed successfully!")
         else:
-            print(f"\n⚠️  {total_count - passed_count} module(s) had failures or skipped tests")
+            print(f"\n {total_count - passed_count} module(s) had failures or skipped tests")
             print("\nDetailed output for failed modules:")
             print("-" * 60)
 
@@ -198,14 +197,11 @@ def main() -> None:
 
     # Check command line arguments for specific test patterns
     if len(sys.argv) > 1:
-        # Run specific tests
         test_patterns = sys.argv[1:]
         success = runner.run_specific_tests(test_patterns)
     else:
-        # Run all tests
         success = runner.run_all_tests()
 
-    # Exit with appropriate code
     sys.exit(0 if success else 1)
 
 

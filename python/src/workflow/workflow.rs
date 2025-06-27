@@ -46,4 +46,8 @@ impl Workflow {
         self.inner.validate().map_err(to_py_runtime_error)?;
         Ok(())
     }
+
+    fn name(&self) -> String {
+        self.inner.name.clone()
+    }
 }

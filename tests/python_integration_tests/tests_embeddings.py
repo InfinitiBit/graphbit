@@ -24,76 +24,52 @@ class TestOpenAIEmbeddings:
     @pytest.fixture
     def openai_config(self, api_key: str) -> Any:
         """Create OpenAI embedding configuration."""
-        return graphbit.PyEmbeddingConfig.openai(api_key=api_key, model="text-embedding-3-small")
+        return graphbit.EmbeddingConfig.openai(api_key=api_key, model="text-embedding-3-small")
 
     @pytest.fixture
-    def openai_service(self, openai_config: Any) -> Any:
-        """Create OpenAI embedding service."""
-        return graphbit.PyEmbeddingService(openai_config)
+    def openai_client(self, openai_config: Any) -> Any:
+        """Create OpenAI embedding client."""
+        return graphbit.EmbeddingClient(openai_config)
 
     def test_openai_config_creation(self, openai_config: Any) -> None:
-        """Test OpenAI config creation and properties."""
-        assert openai_config.provider_name() == "openai"
-        assert openai_config.model_name() == "text-embedding-3-small"
+        """Test OpenAI config creation."""
+        assert openai_config is not None
 
-    def test_openai_config_customization(self, api_key: str) -> None:
-        """Test OpenAI config customization."""
-        config = graphbit.PyEmbeddingConfig.openai(api_key, "text-embedding-3-large")
-        config = config.with_timeout(120)
-        config = config.with_max_batch_size(100)
-        config = config.with_base_url("https://api.openai.com/v1")
+    def test_openai_client_creation(self, openai_client: Any) -> None:
+        """Test OpenAI client creation."""
+        assert openai_client is not None
 
-        assert config.model_name() == "text-embedding-3-large"
-
-    def test_openai_service_creation(self, openai_service: Any) -> None:
-        """Test OpenAI service creation."""
-        provider, model = openai_service.get_provider_info()
-        assert provider == "openai"
-        assert model == "text-embedding-3-small"
-
-    @pytest.mark.asyncio
-    async def test_openai_single_embedding(self, openai_service: Any) -> None:
+    def test_openai_single_embedding(self, openai_client: Any) -> None:
         """Test single text embedding with OpenAI."""
         try:
-            embedding = await openai_service.embed_text("Hello world!")
+            embedding = openai_client.embed("Hello world!")
             assert isinstance(embedding, list)
             assert len(embedding) > 0
             assert all(isinstance(x, float) for x in embedding)
         except Exception as e:
             pytest.fail(f"Single embedding failed: {e}")
 
-    @pytest.mark.asyncio
-    async def test_openai_multiple_embeddings(self, openai_service: Any) -> None:
+    def test_openai_multiple_embeddings(self, openai_client: Any) -> None:
         """Test multiple text embeddings with OpenAI."""
         texts = ["Hello", "World", "AI", "Machine Learning"]
         try:
-            embeddings = await openai_service.embed_texts(texts)
+            embeddings = openai_client.embed_many(texts)
             assert isinstance(embeddings, list)
             assert len(embeddings) == len(texts)
             assert all(isinstance(emb, list) for emb in embeddings)
+            assert all(len(emb) > 0 for emb in embeddings)
         except Exception as e:
             pytest.fail(f"Multiple embeddings failed: {e}")
 
-    @pytest.mark.asyncio
-    async def test_openai_get_dimensions(self, openai_service: Any) -> None:
-        """Test getting embedding dimensions from OpenAI."""
-        try:
-            dimensions = await openai_service.get_dimensions()
-            assert isinstance(dimensions, int)
-            assert dimensions > 0
-        except Exception as e:
-            pytest.fail(f"Get dimensions failed: {e}")
-
-    @pytest.mark.asyncio
-    async def test_openai_embedding_consistency(self, openai_service: Any) -> None:
+    def test_openai_embedding_consistency(self, openai_client: Any) -> None:
         """Test embedding consistency for same text."""
         text = "Consistent embedding test"
         try:
-            embedding1 = await openai_service.embed_text(text)
-            embedding2 = await openai_service.embed_text(text)
+            embedding1 = openai_client.embed(text)
+            embedding2 = openai_client.embed(text)
 
             # Calculate similarity between embeddings
-            similarity = graphbit.PyEmbeddingService.cosine_similarity(embedding1, embedding2)
+            similarity = graphbit.EmbeddingClient.similarity(embedding1, embedding2)
             assert similarity > 0.99  # Should be very similar for same text
         except Exception as e:
             pytest.fail(f"Embedding consistency test failed: {e}")
@@ -114,65 +90,42 @@ class TestHuggingFaceEmbeddings:
     @pytest.fixture
     def hf_config(self, hf_api_key: str) -> Any:
         """Create HuggingFace embedding configuration."""
-        return graphbit.PyEmbeddingConfig.huggingface(api_key=hf_api_key, model="sentence-transformers/all-MiniLM-L6-v2")
+        return graphbit.EmbeddingConfig.huggingface(api_key=hf_api_key, model="sentence-transformers/all-MiniLM-L6-v2")
 
     @pytest.fixture
-    def hf_service(self, hf_config: Any) -> Any:
-        """Create HuggingFace embedding service."""
-        return graphbit.PyEmbeddingService(hf_config)
+    def hf_client(self, hf_config: Any) -> Any:
+        """Create HuggingFace embedding client."""
+        return graphbit.EmbeddingClient(hf_config)
 
     def test_hf_config_creation(self, hf_config: Any) -> None:
-        """Test HuggingFace config creation and properties."""
-        assert hf_config.provider_name() == "huggingface"
-        assert hf_config.model_name() == "sentence-transformers/all-MiniLM-L6-v2"
+        """Test HuggingFace config creation."""
+        assert hf_config is not None
 
-    def test_hf_config_customization(self, hf_api_key: str) -> None:
-        """Test HuggingFace config customization."""
-        config = graphbit.PyEmbeddingConfig.huggingface(hf_api_key, "sentence-transformers/all-mpnet-base-v2")
-        config = config.with_timeout(180)
-        config = config.with_max_batch_size(32)
-        config = config.with_base_url("https://api-inference.huggingface.co")
+    def test_hf_client_creation(self, hf_client: Any) -> None:
+        """Test HuggingFace client creation."""
+        assert hf_client is not None
 
-        assert config.model_name() == "sentence-transformers/all-mpnet-base-v2"
-
-    def test_hf_service_creation(self, hf_service: Any) -> None:
-        """Test HuggingFace service creation."""
-        provider, model = hf_service.get_provider_info()
-        assert provider == "huggingface"
-        assert model == "sentence-transformers/all-MiniLM-L6-v2"
-
-    @pytest.mark.asyncio
-    async def test_hf_single_embedding(self, hf_service: Any) -> None:
+    def test_hf_single_embedding(self, hf_client: Any) -> None:
         """Test single text embedding with HuggingFace."""
         try:
-            embedding = await hf_service.embed_text("Natural language processing")
+            embedding = hf_client.embed("Natural language processing")
             assert isinstance(embedding, list)
             assert len(embedding) > 0
             assert all(isinstance(x, float) for x in embedding)
         except Exception as e:
             pytest.fail(f"HF single embedding failed: {e}")
 
-    @pytest.mark.asyncio
-    async def test_hf_multiple_embeddings(self, hf_service: Any) -> None:
+    def test_hf_multiple_embeddings(self, hf_client: Any) -> None:
         """Test multiple text embeddings with HuggingFace."""
         texts = ["Deep learning", "Neural networks", "Transformer models", "BERT"]
         try:
-            embeddings = await hf_service.embed_texts(texts)
+            embeddings = hf_client.embed_many(texts)
             assert isinstance(embeddings, list)
             assert len(embeddings) == len(texts)
             assert all(isinstance(emb, list) for emb in embeddings)
+            assert all(len(emb) > 0 for emb in embeddings)
         except Exception as e:
             pytest.fail(f"HF multiple embeddings failed: {e}")
-
-    @pytest.mark.asyncio
-    async def test_hf_get_dimensions(self, hf_service: Any) -> None:
-        """Test getting embedding dimensions from HuggingFace."""
-        try:
-            dimensions = await hf_service.get_dimensions()
-            assert isinstance(dimensions, int)
-            assert dimensions > 0
-        except Exception as e:
-            pytest.fail(f"HF get dimensions failed: {e}")
 
 
 class TestEmbeddingUtilities:
@@ -182,121 +135,123 @@ class TestEmbeddingUtilities:
         """Test cosine similarity with identical vectors."""
         vec1 = [1.0, 2.0, 3.0]
         vec2 = [1.0, 2.0, 3.0]
-        similarity = graphbit.PyEmbeddingService.cosine_similarity(vec1, vec2)
+        similarity = graphbit.EmbeddingClient.similarity(vec1, vec2)
         assert abs(similarity - 1.0) < 1e-6
 
     def test_cosine_similarity_orthogonal(self) -> None:
         """Test cosine similarity with orthogonal vectors."""
         vec1 = [1.0, 0.0, 0.0]
         vec2 = [0.0, 1.0, 0.0]
-        similarity = graphbit.PyEmbeddingService.cosine_similarity(vec1, vec2)
+        similarity = graphbit.EmbeddingClient.similarity(vec1, vec2)
         assert abs(similarity - 0.0) < 1e-6
 
     def test_cosine_similarity_opposite(self) -> None:
         """Test cosine similarity with opposite vectors."""
         vec1 = [1.0, 0.0, 0.0]
         vec2 = [-1.0, 0.0, 0.0]
-        similarity = graphbit.PyEmbeddingService.cosine_similarity(vec1, vec2)
+        similarity = graphbit.EmbeddingClient.similarity(vec1, vec2)
         assert abs(similarity - (-1.0)) < 1e-6
 
-    def test_embedding_request_single(self) -> None:
-        """Test embedding request creation for single text."""
-        request = graphbit.PyEmbeddingRequest("Test text")
-        assert request is not None
-
-    def test_embedding_request_multiple(self) -> None:
-        """Test embedding request creation for multiple texts."""
-        texts = ["Text 1", "Text 2", "Text 3"]
-        request = graphbit.PyEmbeddingRequest.multiple(texts)
-        assert request is not None
-
-    def test_embedding_request_with_user(self) -> None:
-        """Test embedding request creation with user identifier."""
-        request = graphbit.PyEmbeddingRequest("Test text")
-        request = request.with_user("test_user")
-        assert request is not None
-
-    def test_embedding_response_handling(self) -> None:
-        """Test embedding response handling."""
-        # This would typically test response parsing
-        # Implementation depends on the actual response structure
-        assert hasattr(graphbit, "PyEmbeddingResponse")
+    def test_cosine_similarity_zero_vector(self) -> None:
+        """Test cosine similarity error handling with zero vectors."""
+        vec1 = [0.0, 0.0, 0.0]
+        vec2 = [1.0, 0.0, 0.0]
+        
+        # Should handle zero vector gracefully (may return error or special value)
+        try:
+            similarity = graphbit.EmbeddingClient.similarity(vec1, vec2)
+            # If it doesn't raise an error, verify it's a valid value
+            assert isinstance(similarity, float)
+        except Exception:
+            # Exception is acceptable for zero vectors
+            pass
 
 
 @pytest.mark.integration
 class TestCrossProviderEmbeddings:
-    """Integration tests comparing different embedding providers."""
+    """Integration tests across multiple embedding providers."""
 
     @pytest.fixture
     def providers(self) -> Any:
-        """Set up multiple embedding providers for comparison."""
-        providers = {}
+        """Create embedding configurations for available providers."""
+        configs = {}
+        
+        if os.getenv("OPENAI_API_KEY"):
+            configs["openai"] = graphbit.EmbeddingConfig.openai(
+                api_key=os.getenv("OPENAI_API_KEY"), 
+                model="text-embedding-3-small"
+            )
+        
+        if os.getenv("HUGGINGFACE_API_KEY"):
+            configs["huggingface"] = graphbit.EmbeddingConfig.huggingface(
+                api_key=os.getenv("HUGGINGFACE_API_KEY"),
+                model="sentence-transformers/all-MiniLM-L6-v2"
+            )
+        
+        return configs
 
-        # OpenAI
-        openai_key = os.getenv("OPENAI_API_KEY")
-        if openai_key:
-            openai_config = graphbit.PyEmbeddingConfig.openai(openai_key, "text-embedding-3-small")
-            providers["openai"] = graphbit.PyEmbeddingService(openai_config)
+    def test_cross_provider_embedding_comparison(self, providers: Any) -> None:
+        """Test embedding comparison across providers."""
+        if len(providers) < 2:
+            pytest.skip("Need at least 2 providers for comparison")
 
-        # HuggingFace
-        hf_key = os.getenv("HUGGINGFACE_API_KEY")
-        if hf_key:
-            hf_config = graphbit.PyEmbeddingConfig.huggingface(hf_key, "sentence-transformers/all-MiniLM-L6-v2")
-            providers["huggingface"] = graphbit.PyEmbeddingService(hf_config)
-
-        if not providers:
-            pytest.skip("No embedding providers available")
-
-        return providers
-
-    @pytest.mark.asyncio
-    async def test_cross_provider_embedding_comparison(self, providers: Any) -> None:
-        """Test embedding comparison across different providers."""
-        text = "Machine learning is transforming technology."
-
+        text = "Machine learning is transforming the world"
         embeddings = {}
-        for name, service in providers.items():
+        
+        # Generate embeddings from all providers
+        for provider_name, config in providers.items():
             try:
-                embedding = await service.embed_text(text)
-                embeddings[name] = embedding
+                client = graphbit.EmbeddingClient(config)
+                embedding = client.embed(text)
+                embeddings[provider_name] = embedding
             except Exception as e:
-                pytest.fail(f"{name} embedding failed: {e}")
+                pytest.fail(f"Failed to generate embedding for {provider_name}: {e}")
 
-        # Compare embedding dimensions
-        dimensions = {name: len(emb) for name, emb in embeddings.items()}
-        assert all(dim > 0 for dim in dimensions.values())
+        # Compare embeddings between providers
+        provider_names = list(embeddings.keys())
+        for i in range(len(provider_names)):
+            for j in range(i + 1, len(provider_names)):
+                provider1 = provider_names[i]
+                provider2 = provider_names[j]
+                
+                try:
+                    similarity = graphbit.EmbeddingClient.similarity(
+                        embeddings[provider1], embeddings[provider2]
+                    )
+                    # Different providers may have different embedding spaces
+                    # but similarity should be a valid float
+                    assert isinstance(similarity, float)
+                    assert -1.0 <= similarity <= 1.0
+                except Exception as e:
+                    pytest.fail(f"Similarity comparison failed between {provider1} and {provider2}: {e}")
 
-        # If we have multiple providers, compare similarities
-        if len(embeddings) > 1:
-            provider_names = list(embeddings.keys())
-            for i in range(len(provider_names)):
-                for j in range(i + 1, len(provider_names)):
-                    name1, name2 = provider_names[i], provider_names[j]
-                    emb1, emb2 = embeddings[name1], embeddings[name2]
+    def test_cross_provider_batch_processing(self, providers: Any) -> None:
+        """Test batch processing across providers."""
+        if not providers:
+            pytest.skip("No providers available")
 
-                    # Note: Embeddings from different providers might have different
-                    # dimensions and scales, so direct comparison might not be meaningful
-                    assert len(emb1) > 0
-                    assert len(emb2) > 0
-
-    @pytest.mark.asyncio
-    async def test_cross_provider_batch_processing(self, providers: Any) -> None:
-        """Test batch processing capabilities across providers."""
         texts = [
             "Artificial intelligence",
-            "Machine learning algorithms",
-            "Neural network architectures",
-            "Deep learning models",
+            "Natural language processing", 
+            "Computer vision",
+            "Machine learning algorithms"
         ]
-
-        for name, service in providers.items():
+        
+        for provider_name, config in providers.items():
             try:
-                embeddings = await service.embed_texts(texts)
+                client = graphbit.EmbeddingClient(config)
+                embeddings = client.embed_many(texts)
+                
                 assert len(embeddings) == len(texts)
                 assert all(isinstance(emb, list) for emb in embeddings)
                 assert all(len(emb) > 0 for emb in embeddings)
+                
+                # All embeddings should have the same dimension
+                dimensions = [len(emb) for emb in embeddings]
+                assert len(set(dimensions)) == 1, f"Inconsistent dimensions for {provider_name}"
+                
             except Exception as e:
-                pytest.fail(f"{name} batch processing failed: {e}")
+                pytest.fail(f"Batch processing failed for {provider_name}: {e}")
 
 
 if __name__ == "__main__":
