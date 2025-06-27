@@ -6,7 +6,7 @@ This guide will help you install GraphBit on your system and set up your develop
 
 - **Python**: 3.10 or higher (< 3.13)
 - **Operating System**: Linux, macOS, or Windows
-- **Memory**: 4GB RAM minimum, 8GB recommended
+- **Memory**: 4GB RAM minimum, 8GB recommended for high-throughput workloads
 - **Storage**: 1GB free space
 
 ## Installation Methods
@@ -32,8 +32,12 @@ cd graphbit
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 source ~/.cargo/env
 
-# Build and install
-make install
+# Set environment variable for compilation
+unset ARGV0
+
+# Build and install Python bindings
+cd python
+maturin develop
 ```
 
 ## Environment Setup
@@ -86,7 +90,7 @@ curl -fsSL https://ollama.ai/install.sh | sh
 ollama serve
 
 # Pull a model (in another terminal)
-ollama pull llama3.1
+ollama pull llama3.2
 ollama pull phi3
 ```
 
@@ -104,23 +108,43 @@ graphbit.init()
 # Test basic functionality
 print(f"GraphBit version: {graphbit.version()}")
 
+# Get system information
+system_info = graphbit.get_system_info()
+print(f"Python binding version: {system_info['python_binding_version']}")
+print(f"Runtime initialized: {system_info['runtime_initialized']}")
+
+# Perform health check
+health = graphbit.health_check()
+print(f"System healthy: {health['overall_healthy']}")
+
 # Test LLM configuration (requires API key)
 if os.getenv("OPENAI_API_KEY"):
-    config = graphbit.PyLlmConfig.openai(
+    config = graphbit.LlmConfig.openai(
         os.getenv("OPENAI_API_KEY"), 
         "gpt-4o-mini"
     )
-    print(f"LLM Provider: {config.provider_name()}")
-    print(f"Model: {config.model_name()}")
-    print("✅ Installation successful!")
+    print(f"LLM Provider: {config.provider()}")
+    print(f"Model: {config.model()}")
+    print("Installation successful!")
 else:
-    print("⚠️  No OPENAI_API_KEY found - set up API keys to use LLM features")
+    print("No OPENAI_API_KEY found - set up API keys to use LLM features")
 ```
 
 Save this as `test_installation.py` and run:
 
 ```bash
 python test_installation.py
+```
+
+Expected output:
+```
+GraphBit version: [version]
+Python binding version: [version]
+Runtime initialized: True
+System healthy: True
+LLM Provider: openai
+Model: gpt-4o-mini
+Installation successful!
 ```
 
 ## Development Installation
@@ -138,7 +162,12 @@ make dev-setup
 # Install pre-commit hooks
 make pre-commit-install
 
+# Build Python bindings in development mode
+cd python
+maturin develop
+
 # Run tests to verify setup
+cd ..
 make test
 ```
 
@@ -176,6 +205,15 @@ error: Microsoft Visual C++ 14.0 is required (Windows)
 ```
 **Solution**: Install Microsoft C++ Build Tools or Visual Studio with C++ support.
 
+For Linux/macOS compilation issues:
+```bash
+# Ensure ARGV0 is unset for proper compilation
+unset ARGV0
+
+# Make sure Rust is properly installed
+rustc --version
+```
+
 #### 3. API Key Issues
 ```
 Authentication failed
@@ -185,7 +223,19 @@ Authentication failed
 echo $OPENAI_API_KEY
 ```
 
-#### 4. Permission Errors (Linux/macOS)
+#### 4. Runtime Initialization Errors
+```
+Failed to initialize GraphBit runtime
+```
+**Solution**: Check system health and reinitialize:
+```python
+import graphbit
+graphbit.init(debug=True)  # Enable debug logging
+health = graphbit.health_check()
+print(health)
+```
+
+#### 5. Permission Errors (Linux/macOS)
 ```bash
 # If you get permission errors, try:
 pip install --user graphbit
@@ -197,6 +247,40 @@ source graphbit-env/bin/activate  # Linux/macOS
 pip install graphbit
 ```
 
+#### 6. Memory Issues
+If you encounter memory-related errors, use memory-optimized executor:
+```python
+import graphbit
+config = graphbit.LlmConfig.openai(api_key, "gpt-4o-mini")
+executor = graphbit.Executor.new_memory_optimized(config)
+```
+
+### Performance Optimization
+
+For optimal performance:
+
+1. **Choose the right executor**:
+   - `Executor.new_high_throughput()` for batch processing
+   - `Executor.new_low_latency()` for real-time applications
+   - `Executor.new_memory_optimized()` for resource-constrained environments
+
+2. **Monitor system health**:
+   ```python
+   health = graphbit.health_check()
+   if not health['overall_healthy']:
+       print("System issues detected")
+   ```
+
+3. **Configure runtime for your workload**:
+   ```python
+   # Before calling graphbit.init()
+   graphbit.configure_runtime(
+       worker_threads=8,
+       max_blocking_threads=16
+   )
+   graphbit.init()
+   ```
+
 ### Get Help
 
 If you encounter issues:
@@ -207,6 +291,7 @@ If you encounter issues:
    - Your operating system and Python version
    - Complete error message
    - Steps to reproduce
+   - Output of `graphbit.get_system_info()` and `graphbit.health_check()`
 
 ## Next Steps
 
@@ -223,5 +308,6 @@ pip install --upgrade graphbit
 # Update from source
 cd graphbit
 git pull origin main
-make install
+cd python
+maturin develop
 ``` 
