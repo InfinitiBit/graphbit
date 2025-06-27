@@ -408,21 +408,21 @@ class ComprehensiveBenchmarkRunner:
                 framework_names.append(framework_info["name"])
                 colors_list.append(framework_info["color"])
 
-        # 1. Execution Time Comparison (Left side)
+        # 1. CPU Usage Comparison (Left side)
         ax1 = axes[0]
         for i, fw_name in enumerate(framework_names):
-            fw_exec_times = []
+            fw_cpu_usage = []
             for scenario_name in scenario_names:
-                found_time = None
+                found_cpu = None
                 for _framework_type, framework_info in self.frameworks.items():
                     if framework_info["name"] == fw_name and scenario_name in framework_info["results"]:
-                        found_time = framework_info["results"][scenario_name].execution_time_ms
+                        found_cpu = framework_info["results"][scenario_name].cpu_usage_percent
                         break
-                fw_exec_times.append(found_time if found_time is not None else 0)
+                fw_cpu_usage.append(found_cpu if found_cpu is not None else 0)
 
             ax1.bar(
                 x_pos + i * width,
-                fw_exec_times,
+                fw_cpu_usage,
                 width,
                 label=fw_name,
                 color=colors_list[i],
@@ -430,8 +430,8 @@ class ComprehensiveBenchmarkRunner:
             )
 
         ax1.set_xlabel("Benchmark Scenarios", fontsize=12)
-        ax1.set_ylabel("Execution Time (milliseconds)", fontsize=12)
-        ax1.set_title("Execution Time Comparison", fontsize=16, fontweight="bold")
+        ax1.set_ylabel("CPU Usage (%)", fontsize=12)
+        ax1.set_title("CPU Usage Comparison", fontsize=16, fontweight="bold")
         ax1.set_xticks(x_pos + width * (len(framework_names) - 1) / 2)
         ax1.set_xticklabels(scenario_names, rotation=45, ha="right")
         ax1.legend()
@@ -445,8 +445,6 @@ class ComprehensiveBenchmarkRunner:
         table_data = []
         headers = [
             "Framework",
-            "Avg Exec Time (ms)",
-            "Avg Memory (MB)",
             "Avg CPU (%)",
             "Avg Throughput (tasks/s)",
             "Success Rate (%)",
@@ -461,8 +459,6 @@ class ComprehensiveBenchmarkRunner:
 
             if found_framework_info and found_framework_info["results"]:
                 results = found_framework_info["results"]
-                avg_exec = np.mean([m.execution_time_ms for m in results.values()])
-                avg_memory = np.mean([m.memory_usage_mb for m in results.values()])
                 avg_cpu = np.mean([m.cpu_usage_percent for m in results.values()])
                 avg_throughput = np.mean([m.throughput_tasks_per_sec for m in results.values()])
 
@@ -474,8 +470,6 @@ class ComprehensiveBenchmarkRunner:
                 table_data.append(
                     [
                         _fw_name,
-                        f"{avg_exec:.0f}",
-                        f"{avg_memory:.3f}",
                         f"{avg_cpu:.3f}",
                         f"{avg_throughput:.2f}",
                         f"{success_rate:.1f}%",
