@@ -33,7 +33,7 @@ repos:
   rev: 25.1.0
   hooks:
   - id: black
-    language_version: python3.12
+    language_version: python3.11
     args: [--line-length=200]
     files: ^(tests/.*\.py|benchmarks/.*\.py|examples/.*\.py|scripts/.*\.py)$
 
@@ -76,7 +76,7 @@ repos:
   rev: 1.8.5
   hooks:
   - id: bandit
-    args: [-r, '--skip=B101,B110,B601']
+    args: [-r, '--skip=B101,B601']
     files: ^(tests/.*\.py|benchmarks/.*\.py|examples/.*\.py|scripts/.*\.py)$
 
   # Python Dependency Safety Check
