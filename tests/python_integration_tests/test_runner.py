@@ -18,9 +18,17 @@ class IntegrationTestRunner:
             ("tests_static_workflow.py", "Static Workflow Integration Tests"),
             ("tests_dynamic_workflow.py", "Dynamic Workflow Integration Tests"),
             ("tests_workflow_builder.py", "Builder Integration Tests"),
-            ("tests_executor_async.py", "Async Executor Tests"),
+            ("tests_executor.py", "Executor Integration Tests"),
+            ("tests_async_execution.py", "Async Execution Tests"),
             ("tests_workflow_context.py", "Workflow Context Accessor Tests"),
             ("tests_validation_result.py", "Validation Error Handling Tests"),
+            ("tests_system_functions.py", "System Functions Tests"),
+            # New comprehensive test files for improved coverage
+            ("tests_validation_comprehensive.py", "Comprehensive Validation Tests"),
+            ("tests_error_handling_advanced.py", "Advanced Error Handling Tests"),
+            ("tests_performance_monitoring.py", "Performance Monitoring Tests"),
+            ("tests_complex_workflow_patterns.py", "Complex Workflow Pattern Tests"),
+            ("tests_runtime_configuration_advanced.py", "Advanced Runtime Configuration Tests"),
         ]
 
         self.results: Dict[str, Dict[str, Any]] = {}

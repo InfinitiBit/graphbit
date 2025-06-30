@@ -229,8 +229,8 @@ impl LlmClient {
     fn complete_async<'a>(
         &self,
         prompt: String,
-        max_tokens: Option<u32>,
-        temperature: Option<f32>,
+        max_tokens: Option<i64>,
+        temperature: Option<f64>,
         py: Python<'a>,
     ) -> PyResult<Bound<'a, PyAny>> {
         // Validate input
@@ -242,25 +242,40 @@ impl LlmClient {
             ));
         }
 
-        if let Some(tokens) = max_tokens {
-            if tokens == 0 || tokens > 100000 {
+        // Validate max_tokens
+        let validated_max_tokens = if let Some(tokens) = max_tokens {
+            if tokens <= 0 {
                 return Err(validation_error(
                     "max_tokens",
                     Some(&tokens.to_string()),
-                    "Max tokens must be between 1 and 100000",
+                    "max_tokens must be greater than 0",
                 ));
             }
-        }
+            if tokens > u32::MAX as i64 {
+                return Err(validation_error(
+                    "max_tokens",
+                    Some(&tokens.to_string()),
+                    "max_tokens is too large",
+                ));
+            }
+            Some(tokens as u32)
+        } else {
+            None
+        };
 
-        if let Some(temp) = temperature {
+        // Validate temperature
+        let validated_temperature = if let Some(temp) = temperature {
             if temp < 0.0 || temp > 2.0 {
                 return Err(validation_error(
                     "temperature",
                     Some(&temp.to_string()),
-                    "Temperature must be between 0.0 and 2.0",
+                    "temperature must be between 0.0 and 2.0",
                 ));
             }
-        }
+            Some(temp as f32)
+        } else {
+            None
+        };
 
         let provider = Arc::clone(&self.provider);
         let circuit_breaker = Arc::clone(&self.circuit_breaker);
@@ -274,8 +289,8 @@ impl LlmClient {
                 stats,
                 config,
                 prompt,
-                max_tokens,
-                temperature,
+                validated_max_tokens,
+                validated_temperature,
             )
             .await
         })
@@ -287,8 +302,8 @@ impl LlmClient {
     fn complete(
         &self,
         prompt: String,
-        max_tokens: Option<u32>,
-        temperature: Option<f32>,
+        max_tokens: Option<i64>,
+        temperature: Option<f64>,
     ) -> PyResult<String> {
         // Validate input
         if prompt.is_empty() {
@@ -298,6 +313,41 @@ impl LlmClient {
                 "Prompt cannot be empty",
             ));
         }
+
+        // Validate max_tokens
+        let validated_max_tokens = if let Some(tokens) = max_tokens {
+            if tokens <= 0 {
+                return Err(validation_error(
+                    "max_tokens",
+                    Some(&tokens.to_string()),
+                    "max_tokens must be greater than 0",
+                ));
+            }
+            if tokens > u32::MAX as i64 {
+                return Err(validation_error(
+                    "max_tokens",
+                    Some(&tokens.to_string()),
+                    "max_tokens is too large",
+                ));
+            }
+            Some(tokens as u32)
+        } else {
+            None
+        };
+
+        // Validate temperature
+        let validated_temperature = if let Some(temp) = temperature {
+            if temp < 0.0 || temp > 2.0 {
+                return Err(validation_error(
+                    "temperature",
+                    Some(&temp.to_string()),
+                    "temperature must be between 0.0 and 2.0",
+                ));
+            }
+            Some(temp as f32)
+        } else {
+            None
+        };
 
         let provider = Arc::clone(&self.provider);
         let circuit_breaker = Arc::clone(&self.circuit_breaker);
@@ -311,8 +361,8 @@ impl LlmClient {
                 stats,
                 config,
                 prompt,
-                max_tokens,
-                temperature,
+                validated_max_tokens,
+                validated_temperature,
             )
             .await
         })
@@ -324,8 +374,8 @@ impl LlmClient {
     fn complete_batch<'a>(
         &self,
         prompts: Vec<String>,
-        max_tokens: Option<u32>,
-        temperature: Option<f32>,
+        max_tokens: Option<i64>,
+        temperature: Option<f64>,
         max_concurrency: Option<usize>,
         py: Python<'a>,
     ) -> PyResult<Bound<'a, PyAny>> {
@@ -346,6 +396,52 @@ impl LlmClient {
             ));
         }
 
+        // Validate max_tokens
+        let validated_max_tokens = if let Some(tokens) = max_tokens {
+            if tokens <= 0 {
+                return Err(validation_error(
+                    "max_tokens",
+                    Some(&tokens.to_string()),
+                    "max_tokens must be greater than 0",
+                ));
+            }
+            if tokens > u32::MAX as i64 {
+                return Err(validation_error(
+                    "max_tokens",
+                    Some(&tokens.to_string()),
+                    "max_tokens is too large",
+                ));
+            }
+            Some(tokens as u32)
+        } else {
+            None
+        };
+
+        // Validate temperature
+        let validated_temperature = if let Some(temp) = temperature {
+            if temp < 0.0 || temp > 2.0 {
+                return Err(validation_error(
+                    "temperature",
+                    Some(&temp.to_string()),
+                    "temperature must be between 0.0 and 2.0",
+                ));
+            }
+            Some(temp as f32)
+        } else {
+            None
+        };
+
+        // Validate max_concurrency
+        if let Some(concurrency) = max_concurrency {
+            if concurrency == 0 {
+                return Err(validation_error(
+                    "max_concurrency",
+                    Some(&concurrency.to_string()),
+                    "max_concurrency must be greater than 0",
+                ));
+            }
+        }
+
         let provider = Arc::clone(&self.provider);
         let circuit_breaker = Arc::clone(&self.circuit_breaker);
         let stats = Arc::clone(&self.stats);
@@ -360,10 +456,10 @@ impl LlmClient {
                 }
 
                 let mut req = LlmRequest::new(prompt);
-                if let Some(tokens) = max_tokens {
+                if let Some(tokens) = validated_max_tokens {
                     req = req.with_max_tokens(tokens);
                 }
-                if let Some(temp) = temperature {
+                if let Some(temp) = validated_temperature {
                     req = req.with_temperature(temp);
                 }
                 requests.push(req);
@@ -430,8 +526,8 @@ impl LlmClient {
     fn chat_optimized<'a>(
         &self,
         messages: Vec<(String, String)>,
-        max_tokens: Option<u32>,
-        temperature: Option<f32>,
+        max_tokens: Option<i64>,
+        temperature: Option<f64>,
         py: Python<'a>,
     ) -> PyResult<Bound<'a, PyAny>> {
         // Validate messages
@@ -442,6 +538,41 @@ impl LlmClient {
                 "Messages list cannot be empty",
             ));
         }
+
+        // Validate max_tokens
+        let validated_max_tokens = if let Some(tokens) = max_tokens {
+            if tokens <= 0 {
+                return Err(validation_error(
+                    "max_tokens",
+                    Some(&tokens.to_string()),
+                    "max_tokens must be greater than 0",
+                ));
+            }
+            if tokens > u32::MAX as i64 {
+                return Err(validation_error(
+                    "max_tokens",
+                    Some(&tokens.to_string()),
+                    "max_tokens is too large",
+                ));
+            }
+            Some(tokens as u32)
+        } else {
+            None
+        };
+
+        // Validate temperature
+        let validated_temperature = if let Some(temp) = temperature {
+            if temp < 0.0 || temp > 2.0 {
+                return Err(validation_error(
+                    "temperature",
+                    Some(&temp.to_string()),
+                    "temperature must be between 0.0 and 2.0",
+                ));
+            }
+            Some(temp as f32)
+        } else {
+            None
+        };
 
         let provider = Arc::clone(&self.provider);
         let circuit_breaker = Arc::clone(&self.circuit_breaker);
@@ -473,10 +604,10 @@ impl LlmClient {
             }
 
             let mut request = LlmRequest::with_messages(llm_messages);
-            if let Some(tokens) = max_tokens {
+            if let Some(tokens) = validated_max_tokens {
                 request = request.with_max_tokens(tokens);
             }
-            if let Some(temp) = temperature {
+            if let Some(temp) = validated_temperature {
                 request = request.with_temperature(temp);
             }
 
@@ -491,8 +622,8 @@ impl LlmClient {
     fn complete_stream<'a>(
         &self,
         prompt: String,
-        max_tokens: Option<u32>,
-        temperature: Option<f32>,
+        max_tokens: Option<i64>,
+        temperature: Option<f64>,
         py: Python<'a>,
     ) -> PyResult<Bound<'a, PyAny>> {
         self.complete_async(prompt, max_tokens, temperature, py)

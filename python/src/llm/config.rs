@@ -47,10 +47,8 @@ impl LlmConfig {
     ) -> PyResult<Self> {
         validate_api_key(&api_key, "HuggingFace")?;
 
-        let mut config = CoreLlmConfig::huggingface(
-            api_key,
-            model.unwrap_or_else(|| "microsoft/DialoGPT-medium".to_string()),
-        );
+        let mut config =
+            CoreLlmConfig::huggingface(api_key, model.unwrap_or_else(|| "gpt2".to_string()));
 
         // Set custom base URL if provided
         if let CoreLlmConfig::HuggingFace {

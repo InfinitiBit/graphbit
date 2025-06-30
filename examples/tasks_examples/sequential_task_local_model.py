@@ -68,16 +68,12 @@ def run_sequential_pipeline_mistral():
     # Create nodes for each task
     for i, task in enumerate(SEQUENTIAL_TASKS):
         print(f"[DEBUG] Adding node for Task {i+1}: {task}")
-        
+
         # Generate unique agent ID for each step
         agent_id = str(uuid.uuid4())
-        
-        node = graphbit.Node.agent(
-            name=f"Step {i+1}",
-            prompt=task,
-            agent_id=agent_id
-        )
-        
+
+        node = graphbit.Node.agent(name=f"Step {i+1}", prompt=task, agent_id=agent_id)
+
         node_id = workflow.add_node(node)
         node_ids.append(node_id)
 

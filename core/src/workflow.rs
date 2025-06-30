@@ -332,11 +332,19 @@ impl WorkflowExecutor {
                     )
                     .with_id(agent_id.clone());
 
-                    // Try to create agent - if it fails, continue (will use fallback execution)
-                    if let Ok(agent) = crate::agents::Agent::new(default_config).await {
-                        let mut agents_guard = self.agents.write().await;
-                        agents_guard.insert(agent_id.clone(), Arc::new(agent));
-                        tracing::debug!("Auto-registered agent: {}", agent_id);
+                    // Try to create agent - if it fails due to config issues, fail the workflow
+                    match crate::agents::Agent::new(default_config).await {
+                        Ok(agent) => {
+                            let mut agents_guard = self.agents.write().await;
+                            agents_guard.insert(agent_id.clone(), Arc::new(agent));
+                            tracing::debug!("Auto-registered agent: {}", agent_id);
+                        }
+                        Err(e) => {
+                            return Err(GraphBitError::workflow_execution(format!(
+                                "Failed to create agent '{}': {}. This may be due to invalid API key or configuration.",
+                                agent_id_str, e
+                            )));
+                        }
                     }
                 }
 
@@ -433,7 +441,16 @@ impl WorkflowExecutor {
                         }
                     }
                     Ok(Err(e)) => {
-                        if self.fail_fast {
+                        // Check for critical authentication/configuration errors that should always fail the workflow
+                        let error_msg = e.to_string().to_lowercase();
+                        let is_auth_error = error_msg.contains("auth")
+                            || error_msg.contains("key")
+                            || error_msg.contains("invalid")
+                            || error_msg.contains("unauthorized")
+                            || error_msg.contains("permission")
+                            || error_msg.contains("api error");
+
+                        if is_auth_error || self.fail_fast {
                             should_fail_fast = true;
                             failure_message = e.to_string();
                             break;

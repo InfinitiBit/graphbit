@@ -45,6 +45,7 @@
     while_true
 )]
 
+use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use std::sync::Once;
@@ -261,15 +262,54 @@ fn health_check(py: Python<'_>) -> PyResult<Bound<'_, PyDict>> {
 #[pyfunction]
 #[pyo3(signature = (worker_threads=None, max_blocking_threads=None, thread_stack_size_mb=None))]
 fn configure_runtime(
-    worker_threads: Option<usize>,
-    max_blocking_threads: Option<usize>,
-    thread_stack_size_mb: Option<usize>,
+    worker_threads: Option<i32>,
+    max_blocking_threads: Option<i32>,
+    thread_stack_size_mb: Option<i32>,
 ) -> PyResult<()> {
+    // Validate and convert worker_threads
+    let validated_worker_threads = if let Some(threads) = worker_threads {
+        if threads <= 0 {
+            return Err(PyValueError::new_err(format!(
+                "worker_threads must be positive, got: {}",
+                threads
+            )));
+        }
+        Some(threads as usize)
+    } else {
+        None
+    };
+
+    // Validate and convert max_blocking_threads
+    let validated_max_blocking_threads = if let Some(threads) = max_blocking_threads {
+        if threads <= 0 {
+            return Err(PyValueError::new_err(format!(
+                "max_blocking_threads must be positive, got: {}",
+                threads
+            )));
+        }
+        Some(threads as usize)
+    } else {
+        None
+    };
+
+    // Validate and convert thread_stack_size_mb
+    let validated_thread_stack_size = if let Some(mb) = thread_stack_size_mb {
+        if mb <= 0 {
+            return Err(PyValueError::new_err(format!(
+                "thread_stack_size_mb must be positive, got: {}",
+                mb
+            )));
+        }
+        Some((mb as usize) * 1024 * 1024)
+    } else {
+        None
+    };
+
     let config = runtime::RuntimeConfig {
-        worker_threads,
-        thread_stack_size: thread_stack_size_mb.map(|mb| mb * 1024 * 1024),
+        worker_threads: validated_worker_threads,
+        thread_stack_size: validated_thread_stack_size,
         enable_blocking_pool: true,
-        max_blocking_threads,
+        max_blocking_threads: validated_max_blocking_threads,
         thread_keep_alive: Some(std::time::Duration::from_secs(10)),
         thread_name_prefix: "graphbit-py".to_string(),
     };

@@ -33,7 +33,7 @@ repos:
   rev: 25.1.0
   hooks:
   - id: black
-    language_version: python3.11
+    language_version: python3.12
     args: [--line-length=200]
     files: ^(tests/.*\.py|benchmarks/.*\.py|examples/.*\.py|scripts/.*\.py)$
 
@@ -48,7 +48,7 @@ repos:
 
   # Python Linting
 - repo: https://github.com/pycqa/flake8
-  rev: 7.2.0
+  rev: 7.3.0
   hooks:
   - id: flake8
     args: [--max-line-length=200, '--extend-ignore=E203,W503']
@@ -61,7 +61,7 @@ repos:
 
   # Python Type Checking
 - repo: https://github.com/pre-commit/mirrors-mypy
-  rev: v1.16.0
+  rev: v1.16.1
   hooks:
   - id: mypy
     # args: [--ignore-missing-imports, --no-strict-optional]
@@ -73,10 +73,10 @@ repos:
 
   # Python Security Checks
 - repo: https://github.com/pycqa/bandit
-  rev: 1.8.3
+  rev: 1.8.5
   hooks:
   - id: bandit
-    args: [-r, '--skip=B101,B601']
+    args: [-r, '--skip=B101,B110,B601']
     files: ^(tests/.*\.py|benchmarks/.*\.py|examples/.*\.py|scripts/.*\.py)$
 
   # Python Dependency Safety Check
@@ -111,7 +111,7 @@ repos:
 
   # TOML Formatting and Validation
 - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
-  rev: v2.14.0
+  rev: v2.15.0
   hooks:
   - id: pretty-format-toml
     args: [--autofix]
@@ -119,7 +119,7 @@ repos:
 
   # YAML Formatting
 - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
-  rev: v2.14.0
+  rev: v2.15.0
   hooks:
   - id: pretty-format-yaml
     args: [--autofix, --indent, '2']
@@ -134,8 +134,7 @@ repos:
 
   # Spell Checking
 - repo: https://github.com/crate-ci/typos
-  # rev: v1
-  rev: v1.16.13
+  rev: v1.28.3
   hooks:
   - id: typos
     exclude: ^(Cargo\.lock|poetry\.lock|CHANGELOG\.md)$

@@ -64,12 +64,8 @@ def run_simple_task_local():
 
     workflow = graphbit.Workflow("Simple Task Workflow")
 
-    node = graphbit.Node.agent(
-        name="Task Executor", 
-        prompt=SIMPLE_TASK_PROMPT,
-        agent_id=agent_id
-    )
-    
+    node = graphbit.Node.agent(name="Task Executor", prompt=SIMPLE_TASK_PROMPT, agent_id=agent_id)
+
     workflow.add_node(node)
     workflow.validate()
 

@@ -22,6 +22,13 @@ impl EmbeddingClient {
     }
 
     fn embed(&self, text: String) -> PyResult<Vec<f32>> {
+        // Validate input
+        if text.is_empty() {
+            return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                "Text input cannot be empty",
+            ));
+        }
+
         let service = Arc::clone(&self.service);
 
         get_runtime().block_on(async move {
@@ -34,6 +41,13 @@ impl EmbeddingClient {
     }
 
     fn embed_many(&self, texts: Vec<String>) -> PyResult<Vec<Vec<f32>>> {
+        // Validate input
+        if texts.is_empty() {
+            return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                "Text list cannot be empty",
+            ));
+        }
+
         let service = Arc::clone(&self.service);
 
         get_runtime().block_on(async move {

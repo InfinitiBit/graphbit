@@ -73,37 +73,35 @@ def extract_output(result, agent_id: str, fallback_name="Task") -> str:
 
     # Get all variables from the result
     variables = result.variables()
-    
+
     if not variables:
         return f"{fallback_name} completed successfully, but no variables were found."
-    
+
     # Try to find the specific output for this agent
-    for key, value in variables:
+    for _key, value in variables:
         value_str = str(value).strip()
-        
+
         # Skip null/none values
         if value_str.lower() in ["null", "none", '"null"', '"none"', ""]:
             continue
-            
+
         # Try to decode JSON if it's a JSON string
-        try:
+        with contextlib.suppress(json.JSONDecodeError):
             if value_str.startswith('"') and value_str.endswith('"'):
                 decoded = json.loads(value_str)
                 if decoded and str(decoded).strip().lower() not in ["null", "none", ""]:
                     return str(decoded)
-        except json.JSONDecodeError:
-            pass
-        
+
         # If it's not JSON, return the raw value if it's meaningful
         if value_str and len(value_str) > 10:  # Only consider meaningful outputs
             return value_str
-    
+
     # If we couldn't find meaningful output, try to get any non-empty variable
-    for key, value in variables:
+    for _key, value in variables:
         value_str = str(value).strip()
         if value_str and value_str.lower() not in ["null", "none", '"null"', '"none"']:
             return value_str
-    
+
     return f"{fallback_name} completed successfully, but no detailed output was captured."
 
 
@@ -121,18 +119,14 @@ def run_complex_workflow_mistral():
     executor = graphbit.Executor.new_memory_optimized(llm_config, timeout_seconds=300)
 
     agent_id = str(uuid.uuid4())
-    
+
     # Create workflow
     workflow = graphbit.Workflow("Complex Workflow Benchmark")
 
     # Create nodes and track their IDs
     node_ids = {}
     for step in COMPLEX_WORKFLOW_STEPS:
-        node = graphbit.Node.agent(
-            name=step["task"],
-            prompt=step["prompt"],
-            agent_id=agent_id
-        )
+        node = graphbit.Node.agent(name=step["task"], prompt=step["prompt"], agent_id=agent_id)
         node_id = workflow.add_node(node)
         node_ids[step["task"]] = node_id
 
@@ -153,13 +147,13 @@ def run_complex_workflow_mistral():
     total_tokens = 0
 
     print("\n[LOG]  Complex Workflow Output:\n" + "-" * 60)
-    
+
     # Debug: print all variables to understand the structure
     print(f"[DEBUG] Found {len(variables)} variables:")
-    for i, (key, value) in enumerate(variables):
-        print(f"  Variable {i}: key='{key}', value='{str(value)[:100]}...' (length: {len(str(value))})")
-    
-    for i, (key, value) in enumerate(variables):
+    for i, (_key, value) in enumerate(variables):
+        print(f"  Variable {i}: key='{_key}', value='{str(value)[:100]}...' (length: {len(str(value))})")
+
+    for i, (_key, _value) in enumerate(variables):
         if i < len(COMPLEX_WORKFLOW_STEPS):
             prompt = COMPLEX_WORKFLOW_STEPS[i]["prompt"]
             task = COMPLEX_WORKFLOW_STEPS[i]["task"]

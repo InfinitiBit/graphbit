@@ -415,11 +415,11 @@ impl Executor {
 
         // Validate retries
         if let Some(retries) = max_retries {
-            if retries > 10 {
+            if retries == 0 || retries > 10 {
                 return Err(validation_error(
                     "max_retries",
                     Some(&retries.to_string()),
-                    "Maximum retries must be <= 10",
+                    "Maximum retries must be between 1 and 10",
                 ));
             }
             self.config.max_retries = retries;

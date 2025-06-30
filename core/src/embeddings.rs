@@ -373,7 +373,7 @@ impl HuggingFaceEmbeddingProvider {
             .map(|url| url.to_string())
             .unwrap_or_else(|| {
                 format!(
-                    "https://api-inference.huggingface.co/pipeline/feature-extraction/{}",
+                    "https://api-inference.huggingface.co/models/{}",
                     self.config.model
                 )
             })

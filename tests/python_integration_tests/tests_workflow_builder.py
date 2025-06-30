@@ -1,5 +1,5 @@
-#!/usr/bin/env python3
 """Integration tests for GraphBit workflow builder functionality."""
+
 import contextlib
 import os
 from typing import Any
@@ -51,11 +51,9 @@ class TestWorkflowBuilder:
 
         # Connect parallel structure
         with contextlib.suppress(ValueError, RuntimeError):
-            # Connect entry to all parallel agents
             for agent in parallel_agents:
                 workflow.connect(entry.id(), agent.id())
 
-            # Connect all parallel agents to merge
             for agent in parallel_agents:
                 workflow.connect(agent.id(), merge.id())
 
@@ -63,17 +61,14 @@ class TestWorkflowBuilder:
         """Test building conditional workflows."""
         workflow = graphbit.Workflow("conditional_test")
 
-        # Create decision tree structure
         entry = graphbit.Node.agent("entry", "Start processing", "entry_001")
         workflow.add_node(entry)
 
-        # Create condition nodes
         condition1 = graphbit.Node.condition("check_priority", "priority == 'high'")
         condition2 = graphbit.Node.condition("check_type", "type == 'urgent'")
         workflow.add_node(condition1)
         workflow.add_node(condition2)
 
-        # Create processing branches
         high_priority = graphbit.Node.agent("high_priority", "Handle high priority", "high_001")
         urgent_processing = graphbit.Node.agent("urgent", "Handle urgent items", "urgent_001")
         normal_processing = graphbit.Node.agent("normal", "Handle normal items", "normal_001")
@@ -137,12 +132,10 @@ class TestWorkflowExecution:
         """Test executing simple workflows."""
         workflow = graphbit.Workflow("simple_execution")
 
-        # Create simple workflow
         agent = graphbit.Node.agent("processor", "Process the input", "proc_001")
         workflow.add_node(agent)
 
         try:
-            # Validate and execute
             workflow.validate()
 
             executor = graphbit.Executor(llm_config)
@@ -160,11 +153,9 @@ class TestWorkflowComponents:
 
     def test_agent_node_builder(self) -> None:
         """Test building agent nodes with different configurations."""
-        # Basic agent
         agent1 = graphbit.Node.agent("basic", "Basic processing", "basic_001")
         assert agent1.name() == "basic"
 
-        # Agent with auto ID
         agent2 = graphbit.Node.agent("auto", "Auto ID processing")
         assert agent2.name() == "auto"
 

@@ -83,26 +83,17 @@ def run_memory_intensive_llama():
 
     # Create memory-optimized executor with extended timeout for large prompts
     executor = graphbit.Executor.new_memory_optimized(llm_config, timeout_seconds=300)
-    
+
     # Configure additional settings for memory-intensive tasks
-    executor.configure(
-        timeout_seconds=300, 
-        max_retries=3, 
-        enable_metrics=True, 
-        debug=False
-    )
+    executor.configure(timeout_seconds=300, max_retries=3, enable_metrics=True, debug=False)
 
     agent_id = str(uuid.uuid4())
 
     # Create workflow directly
     workflow = graphbit.Workflow("Memory Intensive Workflow")
 
-    node = graphbit.Node.agent(
-        name="Memory Intensive Task",
-        prompt=MEMORY_INTENSIVE_PROMPT,
-        agent_id=agent_id
-    )
-    
+    node = graphbit.Node.agent(name="Memory Intensive Task", prompt=MEMORY_INTENSIVE_PROMPT, agent_id=agent_id)
+
     workflow.add_node(node)
     workflow.validate()
 

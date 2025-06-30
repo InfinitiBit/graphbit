@@ -181,8 +181,6 @@ class CrewAIBenchmark(BaseBenchmark):
         metrics.throughput_tasks_per_sec = calculate_throughput(1, metrics.execution_time_ms / 1000)
         return metrics
 
-
-
     async def run_sequential_pipeline(self) -> BenchmarkMetrics:
         """Run a sequential pipeline benchmark using CrewAI."""
         self.monitor.start_monitoring()
@@ -229,8 +227,6 @@ class CrewAIBenchmark(BaseBenchmark):
         metrics.throughput_tasks_per_sec = calculate_throughput(len(SEQUENTIAL_TASKS), metrics.execution_time_ms / 1000)
         return metrics
 
-
-
     async def run_parallel_pipeline(self) -> BenchmarkMetrics:
         """Run a parallel pipeline benchmark using CrewAI."""
         self.monitor.start_monitoring()
@@ -250,7 +246,7 @@ class CrewAIBenchmark(BaseBenchmark):
             # Create tasks for execution
             agent_keys = ["general", "technical", "creator", "analyst"]
             tasks = [execute_task(task_desc, agent_keys[i % len(agent_keys)]) for i, task_desc in enumerate(PARALLEL_TASKS)]
-            
+
             # Run all tasks in parallel
             results = await asyncio.gather(*tasks)
 
@@ -276,7 +272,6 @@ class CrewAIBenchmark(BaseBenchmark):
         metrics.concurrent_tasks = len(PARALLEL_TASKS)
         metrics.throughput_tasks_per_sec = calculate_throughput(len(PARALLEL_TASKS), metrics.execution_time_ms / 1000)
         return metrics
-
 
     async def run_complex_workflow(self) -> BenchmarkMetrics:
         """Run a complex workflow benchmark using CrewAI with optimized execution."""
@@ -374,7 +369,7 @@ class CrewAIBenchmark(BaseBenchmark):
                 expected_output="Detailed data analysis with insights and recommendations",
             )
             crew = Crew(agents=[self.agents["analyst"]], tasks=[task], verbose=False)
-            
+
             # Run the task asynchronously
             result = await asyncio.get_event_loop().run_in_executor(None, crew.kickoff)
 
@@ -407,13 +402,10 @@ class CrewAIBenchmark(BaseBenchmark):
         metrics.throughput_tasks_per_sec = calculate_throughput(1, metrics.execution_time_ms / 1000)
         return metrics
 
-    async def async_cleanup_resources(self):
+    async def async_cleanup_resources(self) -> None:
         """Asynchronously clean up any additional resources (e.g., files, data)."""
         # Example cleanup: freeing up additional resources, deleting temporary files, etc.
         await asyncio.sleep(1)  # Simulate async cleanup
-
-
-
 
     async def run_concurrent_tasks(self) -> BenchmarkMetrics:
         """Run concurrent tasks benchmark using CrewAI with retry mechanism."""
@@ -444,6 +436,8 @@ class CrewAIBenchmark(BaseBenchmark):
                         else:
                             self.logger.error(f"Error in task '{task_desc}' after {max_retries} attempts: {e}")
                             raise e  # If max retries are reached, raise the error
+
+                raise RuntimeError(f"Unexpected end of retry loop for task: {task_desc}")
 
             # Create tasks for execution
             agent_keys = ["general", "technical", "creator", "analyst"]

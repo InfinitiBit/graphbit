@@ -38,7 +38,14 @@ impl Workflow {
 
         self.inner
             .connect_nodes(from_node_id, to_node_id, WorkflowEdge::data_flow())
-            .map_err(to_py_runtime_error)?;
+            .map_err(|e| {
+                let error_msg = e.to_string();
+                if error_msg.contains("not found") || error_msg.contains("Target node") {
+                    PyErr::new::<pyo3::exceptions::PyValueError, _>(error_msg)
+                } else {
+                    to_py_runtime_error(e)
+                }
+            })?;
         Ok(())
     }
 

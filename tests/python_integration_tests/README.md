@@ -35,6 +35,59 @@ This directory contains comprehensive integration tests for the GraphBit Python 
 - **Integration**: Hybrid static/dynamic workflows
 - **Performance**: Scalability and optimization configurations
 
+### 5. Executor Integration Tests (`tests_executor.py`)
+- **Executor Configuration**: Standard, high-throughput, low-latency, memory-optimized modes
+- **Statistics Tracking**: Execution metrics, performance monitoring, stats reset
+- **Async Operations**: Async workflow execution, concurrent executions
+- **Runtime Configuration**: Thread management, timeout handling, performance tuning
+
+### 6. Async Execution Tests (`tests_async_execution.py`)
+- **Async LLM Operations**: Async completion, batch processing, chat optimization
+- **Async Workflow Execution**: Async executor operations, concurrent workflows
+- **Performance Comparison**: Async vs sync performance characteristics
+- **Error Handling**: Async error propagation and recovery
+
+### 7. System Functions Tests (`tests_system_functions.py`)
+- **System Initialization**: Library initialization, version management, logging configuration
+- **System Information**: Runtime statistics, health monitoring, resource tracking
+- **Runtime Configuration**: Worker threads, memory management, performance tuning
+- **Health Checks**: Component health monitoring, system diagnostics
+
+### 8. Comprehensive Validation Tests (`tests_validation_comprehensive.py`)
+- **API Key Validation**: Comprehensive testing across all providers (OpenAI, Anthropic, HuggingFace)
+- **Workflow Structure Validation**: Circular dependency detection, invalid connections, orphaned nodes
+- **Parameter Validation**: LLM parameters, executor settings, batch operations
+- **Node Validation**: Agent, condition, and transform node parameter validation
+- **Embedding Validation**: Input validation, similarity computation error handling
+- **Cross-Component Validation**: System-wide validation scenarios
+
+### 9. Advanced Error Handling Tests (`tests_error_handling_advanced.py`)
+- **Network Error Handling**: Invalid API keys, connection timeouts, rate limiting
+- **Resource Exhaustion**: Memory pressure, concurrent request limits, large input handling
+- **Workflow Error Recovery**: Execution errors, invalid workflow structures, empty workflows
+- **Async Error Handling**: Async operation error scenarios, error propagation
+- **System Error Recovery**: Runtime errors, configuration errors, graceful degradation
+
+### 10. Performance Monitoring Tests (`tests_performance_monitoring.py`)
+- **Client Statistics**: LLM client performance tracking, response time monitoring
+- **Executor Statistics**: Workflow execution metrics, performance mode comparison
+- **System Performance**: Resource utilization, concurrent operations monitoring
+- **Performance Benchmarking**: Completion vs batch performance, cross-component benchmarks
+
+### 11. Complex Workflow Pattern Tests (`tests_complex_workflow_patterns.py`)
+- **Multi-Branch Workflows**: Parallel processing, conditional branching, nested conditionals
+- **Transformation Chains**: Sequential and parallel data transformations, conditional transforms
+- **Error Handling Patterns**: Try-catch workflows, circuit breaker patterns, retry with backoff
+- **Data Pipeline Patterns**: ETL workflows, stream processing, complex pipeline execution
+- **Workflow Composition**: Nested patterns, hierarchical structures, pattern performance
+
+### 12. Advanced Runtime Configuration Tests (`tests_runtime_configuration_advanced.py`)
+- **Advanced Configuration**: Pre/post-init configuration, multiple configuration attempts
+- **Runtime State Management**: Initialization states, uptime tracking, health monitoring
+- **Concurrent Operations**: Concurrent initialization, configuration, system info access
+- **Resource Management**: Memory configuration, thread pool management, performance under load
+- **Error Recovery**: Configuration error recovery, initialization error handling, graceful degradation
+
 ## Prerequisites
 
 ### Required Dependencies
@@ -79,6 +132,18 @@ python test_runner.py static
 
 # Dynamic workflows only
 python test_runner.py dynamic
+
+# Validation tests only
+python test_runner.py validation
+
+# Performance monitoring only
+python test_runner.py performance
+
+# Error handling tests only
+python test_runner.py error
+
+# Complex workflow patterns only
+python test_runner.py complex
 ```
 
 ### Run Individual Test Files
@@ -94,6 +159,21 @@ pytest tests_static_workflow.py -v
 
 # Dynamic workflow tests
 pytest tests_dynamic_workflow.py -v
+
+# Comprehensive validation tests
+pytest tests_validation_comprehensive.py -v
+
+# Advanced error handling tests
+pytest tests_error_handling_advanced.py -v
+
+# Performance monitoring tests
+pytest tests_performance_monitoring.py -v
+
+# Complex workflow pattern tests
+pytest tests_complex_workflow_patterns.py -v
+
+# Advanced runtime configuration tests
+pytest tests_runtime_configuration_advanced.py -v
 ```
 
 ### Run Specific Test Classes or Methods
