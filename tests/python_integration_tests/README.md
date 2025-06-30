@@ -53,7 +53,7 @@ This directory contains comprehensive integration tests for the GraphBit Python 
 - **Runtime Configuration**: Worker threads, memory management, performance tuning
 - **Health Checks**: Component health monitoring, system diagnostics
 
-### 8. Comprehensive Validation Tests (`tests_validation_comprehensive.py`)
+### 8. Validation Tests (`tests_validation.py`)
 - **API Key Validation**: Comprehensive testing across all providers (OpenAI, Anthropic, HuggingFace)
 - **Workflow Structure Validation**: Circular dependency detection, invalid connections, orphaned nodes
 - **Parameter Validation**: LLM parameters, executor settings, batch operations
@@ -61,7 +61,7 @@ This directory contains comprehensive integration tests for the GraphBit Python 
 - **Embedding Validation**: Input validation, similarity computation error handling
 - **Cross-Component Validation**: System-wide validation scenarios
 
-### 9. Advanced Error Handling Tests (`tests_error_handling_advanced.py`)
+### 9. Error Handling Tests (`tests_error_handling.py`)
 - **Network Error Handling**: Invalid API keys, connection timeouts, rate limiting
 - **Resource Exhaustion**: Memory pressure, concurrent request limits, large input handling
 - **Workflow Error Recovery**: Execution errors, invalid workflow structures, empty workflows
@@ -74,14 +74,14 @@ This directory contains comprehensive integration tests for the GraphBit Python 
 - **System Performance**: Resource utilization, concurrent operations monitoring
 - **Performance Benchmarking**: Completion vs batch performance, cross-component benchmarks
 
-### 11. Complex Workflow Pattern Tests (`tests_complex_workflow_patterns.py`)
+### 11. Complex Workflow Pattern Tests (`tests_complex_workflow.py`)
 - **Multi-Branch Workflows**: Parallel processing, conditional branching, nested conditionals
 - **Transformation Chains**: Sequential and parallel data transformations, conditional transforms
 - **Error Handling Patterns**: Try-catch workflows, circuit breaker patterns, retry with backoff
 - **Data Pipeline Patterns**: ETL workflows, stream processing, complex pipeline execution
 - **Workflow Composition**: Nested patterns, hierarchical structures, pattern performance
 
-### 12. Advanced Runtime Configuration Tests (`tests_runtime_configuration_advanced.py`)
+### 12. Runtime Configuration Tests (`tests_runtime_configuration.py`)
 - **Advanced Configuration**: Pre/post-init configuration, multiple configuration attempts
 - **Runtime State Management**: Initialization states, uptime tracking, health monitoring
 - **Concurrent Operations**: Concurrent initialization, configuration, system info access
@@ -253,7 +253,7 @@ INTEGRATION TEST SUMMARY
 Total: 4/4 modules passed
 Total execution time: 15.74 seconds
 
-🎉 All integration tests completed successfully!
+All integration tests completed successfully!
 ```
 
 ## Troubleshooting
