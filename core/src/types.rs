@@ -835,19 +835,14 @@ impl ConcurrencyConfig {
     /// Create a high-throughput configuration
     pub fn high_throughput() -> Self {
         let mut node_type_limits = HashMap::with_capacity(8);
-        node_type_limits.insert("agent".to_string(), 4);
-        node_type_limits.insert("http_request".to_string(), 8);
-        node_type_limits.insert("transform".to_string(), 16);
-        node_type_limits.insert("condition".to_string(), 32);
-        node_type_limits.insert("delay".to_string(), 1);
-
-        // Increase per-type limits
-        node_type_limits.insert("agent".to_string(), 8);
-        node_type_limits.insert("http_request".to_string(), 16);
-        node_type_limits.insert("transform".to_string(), 32);
+        node_type_limits.insert("agent".to_string(), 50);
+        node_type_limits.insert("http_request".to_string(), 32);
+        node_type_limits.insert("transform".to_string(), 64);
+        node_type_limits.insert("condition".to_string(), 128);
+        node_type_limits.insert("delay".to_string(), 2);
 
         Self {
-            global_max_concurrency: 32,
+            global_max_concurrency: 200,
             node_type_limits,
         }
     }
@@ -855,19 +850,14 @@ impl ConcurrencyConfig {
     /// Create a low-latency configuration
     pub fn low_latency() -> Self {
         let mut node_type_limits = HashMap::with_capacity(8);
-        node_type_limits.insert("agent".to_string(), 4);
+        node_type_limits.insert("agent".to_string(), 10);
         node_type_limits.insert("http_request".to_string(), 8);
-        node_type_limits.insert("transform".to_string(), 16);
-        node_type_limits.insert("condition".to_string(), 32);
+        node_type_limits.insert("transform".to_string(), 12);
+        node_type_limits.insert("condition".to_string(), 16);
         node_type_limits.insert("delay".to_string(), 1);
 
-        // Lower limits but prioritize fast execution
-        node_type_limits.insert("agent".to_string(), 2);
-        node_type_limits.insert("http_request".to_string(), 4);
-        node_type_limits.insert("transform".to_string(), 8);
-
         Self {
-            global_max_concurrency: 8,
+            global_max_concurrency: 24,
             node_type_limits,
         }
     }
@@ -875,19 +865,14 @@ impl ConcurrencyConfig {
     /// Create a memory-optimized configuration
     pub fn memory_optimized() -> Self {
         let mut node_type_limits = HashMap::with_capacity(8);
-        node_type_limits.insert("agent".to_string(), 4);
+        node_type_limits.insert("agent".to_string(), 5);
         node_type_limits.insert("http_request".to_string(), 8);
-        node_type_limits.insert("transform".to_string(), 16);
-        node_type_limits.insert("condition".to_string(), 32);
+        node_type_limits.insert("transform".to_string(), 12);
+        node_type_limits.insert("condition".to_string(), 20);
         node_type_limits.insert("delay".to_string(), 1);
 
-        // Conservative limits to reduce memory pressure
-        node_type_limits.insert("agent".to_string(), 3);
-        node_type_limits.insert("http_request".to_string(), 6);
-        node_type_limits.insert("transform".to_string(), 12);
-
         Self {
-            global_max_concurrency: 12,
+            global_max_concurrency: 32,
             node_type_limits,
         }
     }

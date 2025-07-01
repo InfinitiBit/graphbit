@@ -3,7 +3,7 @@
 use pyo3::prelude::*;
 
 /// Validate API key for different providers
-pub fn validate_api_key(api_key: &str, provider: &str) -> PyResult<()> {
+pub(crate) fn validate_api_key(api_key: &str, provider: &str) -> PyResult<()> {
     if api_key.is_empty() {
         return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
             "{} API key cannot be empty",

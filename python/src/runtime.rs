@@ -10,7 +10,7 @@ use tracing::{error, info, warn};
 
 /// Production-grade runtime configuration
 #[derive(Debug, Clone)]
-pub struct RuntimeConfig {
+pub(crate) struct RuntimeConfig {
     /// Number of worker threads (auto-detected if None)
     pub worker_threads: Option<usize>,
     /// Thread stack size in bytes
@@ -30,7 +30,7 @@ impl Default for RuntimeConfig {
         let cpu_count = num_cpus::get();
         Self {
             // Use 2x CPU cores for optimal performance, but cap at 32
-            worker_threads: Some((cpu_count * 2).min(32).max(4)),
+            worker_threads: Some((cpu_count * 2).clamp(4, 32)),
             // Smaller stack size for memory efficiency
             thread_stack_size: Some(1024 * 1024), // 1MB
             enable_blocking_pool: true,
@@ -43,7 +43,7 @@ impl Default for RuntimeConfig {
 }
 
 /// Runtime wrapper with monitoring and management capabilities
-pub struct GraphBitRuntime {
+pub(crate) struct GraphBitRuntime {
     runtime: Runtime,
     config: RuntimeConfig,
     created_at: std::time::Instant,
@@ -51,7 +51,7 @@ pub struct GraphBitRuntime {
 
 impl GraphBitRuntime {
     /// Create a new runtime with the given configuration
-    pub fn new(config: RuntimeConfig) -> Result<Self, std::io::Error> {
+    pub(crate) fn new(config: RuntimeConfig) -> Result<Self, std::io::Error> {
         info!("Creating GraphBit runtime with config: {:?}", config);
 
         let mut builder = Builder::new_multi_thread();
@@ -101,22 +101,22 @@ impl GraphBitRuntime {
     }
 
     /// Get a reference to the underlying runtime
-    pub fn runtime(&self) -> &Runtime {
+    pub(crate) fn runtime(&self) -> &Runtime {
         &self.runtime
     }
 
     /// Get runtime configuration
-    pub fn config(&self) -> &RuntimeConfig {
+    pub(crate) fn config(&self) -> &RuntimeConfig {
         &self.config
     }
 
     /// Get runtime uptime
-    pub fn uptime(&self) -> Duration {
+    pub(crate) fn uptime(&self) -> Duration {
         self.created_at.elapsed()
     }
 
     /// Get runtime statistics (placeholder for future metrics)
-    pub fn stats(&self) -> RuntimeStats {
+    pub(crate) fn stats(&self) -> RuntimeStats {
         RuntimeStats {
             uptime: self.uptime(),
             worker_threads: self.config.worker_threads.unwrap_or(0),
@@ -127,7 +127,7 @@ impl GraphBitRuntime {
 
 /// Runtime statistics for monitoring
 #[derive(Debug, Clone)]
-pub struct RuntimeStats {
+pub(crate) struct RuntimeStats {
     pub uptime: Duration,
     pub worker_threads: usize,
     pub max_blocking_threads: usize,
@@ -137,7 +137,7 @@ pub struct RuntimeStats {
 static GRAPHBIT_RUNTIME: OnceLock<GraphBitRuntime> = OnceLock::new();
 
 /// Get the optimized runtime instance with proper error handling
-pub fn get_runtime() -> &'static Runtime {
+pub(crate) fn get_runtime() -> &'static Runtime {
     GRAPHBIT_RUNTIME
         .get_or_init(|| {
             let config = RuntimeConfig::default();
@@ -153,7 +153,7 @@ pub fn get_runtime() -> &'static Runtime {
 }
 
 /// Initialize runtime with custom configuration
-pub fn init_runtime_with_config(config: RuntimeConfig) -> Result<(), std::io::Error> {
+pub(crate) fn init_runtime_with_config(config: RuntimeConfig) -> Result<(), std::io::Error> {
     if GRAPHBIT_RUNTIME.get().is_some() {
         warn!("Runtime already initialized, ignoring new configuration");
         return Ok(());
@@ -171,17 +171,17 @@ pub fn init_runtime_with_config(config: RuntimeConfig) -> Result<(), std::io::Er
 }
 
 /// Get runtime statistics for monitoring
-pub fn get_runtime_stats() -> Option<RuntimeStats> {
+pub(crate) fn get_runtime_stats() -> Option<RuntimeStats> {
     GRAPHBIT_RUNTIME.get().map(|runtime| runtime.stats())
 }
 
 /// Check if runtime is initialized
-pub fn is_runtime_initialized() -> bool {
+pub(crate) fn is_runtime_initialized() -> bool {
     GRAPHBIT_RUNTIME.get().is_some()
 }
 
 /// Shutdown runtime gracefully (for testing and cleanup)
-pub fn shutdown_runtime() {
+pub(crate) fn shutdown_runtime() {
     if GRAPHBIT_RUNTIME.get().is_some() {
         info!("Shutting down GraphBit runtime gracefully");
         // Note: In production, runtime shutdown is handled automatically

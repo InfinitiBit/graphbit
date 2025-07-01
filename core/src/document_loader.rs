@@ -345,10 +345,12 @@ impl Default for DocumentLoader {
 
 /// Helper function to determine document type from file extension
 pub fn detect_document_type(file_path: &str) -> Option<String> {
+    let supported_types = DocumentLoader::supported_types();
     Path::new(file_path)
         .extension()
         .and_then(|ext| ext.to_str())
         .map(|ext| ext.to_lowercase())
+        .filter(|ext| supported_types.contains(&ext.as_str()))
 }
 
 /// Utility function to validate document path and type

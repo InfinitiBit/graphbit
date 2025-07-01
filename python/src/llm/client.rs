@@ -24,7 +24,7 @@ use crate::runtime::get_runtime;
 
 /// Client configuration for production environments
 #[derive(Debug, Clone)]
-pub struct ClientConfig {
+pub(crate) struct ClientConfig {
     /// Request timeout in seconds
     pub request_timeout: Duration,
     /// Maximum retries for failed requests
@@ -149,7 +149,7 @@ impl CircuitBreaker {
 
 /// Client statistics for monitoring
 #[derive(Debug, Clone)]
-pub struct ClientStats {
+pub(crate) struct ClientStats {
     pub total_requests: u64,
     pub successful_requests: u64,
     pub failed_requests: u64,
@@ -175,8 +175,10 @@ impl LlmClient {
     #[new]
     #[pyo3(signature = (config, debug=None))]
     fn new(config: LlmConfig, debug: Option<bool>) -> PyResult<Self> {
-        let mut client_config = ClientConfig::default();
-        client_config.debug = debug.unwrap_or(false);
+        let mut client_config = ClientConfig {
+            debug: debug.unwrap_or(false),
+            ..Default::default()
+        };
 
         // Optimize timeout based on provider type
         match &config.inner {
@@ -337,7 +339,7 @@ impl LlmClient {
 
         // Validate temperature
         let validated_temperature = if let Some(temp) = temperature {
-            if temp < 0.0 || temp > 2.0 {
+            if !(0.0..=2.0).contains(&temp) {
                 return Err(validation_error(
                     "temperature",
                     Some(&temp.to_string()),
@@ -419,7 +421,7 @@ impl LlmClient {
 
         // Validate temperature
         let validated_temperature = if let Some(temp) = temperature {
-            if temp < 0.0 || temp > 2.0 {
+            if !(0.0..=2.0).contains(&temp) {
                 return Err(validation_error(
                     "temperature",
                     Some(&temp.to_string()),
@@ -468,7 +470,7 @@ impl LlmClient {
             // Adaptive concurrency based on system capabilities
             let concurrency = max_concurrency.unwrap_or_else(|| {
                 let cpu_count = num_cpus::get();
-                (cpu_count * 2).min(20).max(5) // Between 5 and 20
+                (cpu_count * 2).clamp(5, 20) // Between 5 and 20
             });
 
             if config.debug {
@@ -562,7 +564,7 @@ impl LlmClient {
 
         // Validate temperature
         let validated_temperature = if let Some(temp) = temperature {
-            if temp < 0.0 || temp > 2.0 {
+            if !(0.0..=2.0).contains(&temp) {
                 return Err(validation_error(
                     "temperature",
                     Some(&temp.to_string()),
@@ -590,7 +592,8 @@ impl LlmClient {
                 let message = match role.as_str() {
                     "system" => LlmMessage::system(content),
                     "assistant" => LlmMessage::assistant(content),
-                    "user" | _ => LlmMessage::user(content),
+                    "user" => LlmMessage::user(content),
+                    _ => LlmMessage::user(content),
                 };
                 llm_messages.push(message);
             }

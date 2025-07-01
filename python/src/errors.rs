@@ -9,7 +9,7 @@ use tracing::{error, warn};
 
 /// Enhanced error types for better Python integration
 #[derive(Debug, Clone)]
-pub enum PythonBindingError {
+pub(crate) enum PythonBindingError {
     /// Core library error
     Core(String),
     /// Configuration error with context
@@ -128,7 +128,7 @@ impl fmt::Display for PythonBindingError {
 }
 
 /// Convert GraphBit core errors to Python exceptions with enhanced error mapping
-pub fn to_py_error(error: graphbit_core::errors::GraphBitError) -> PyErr {
+pub(crate) fn to_py_error(error: graphbit_core::errors::GraphBitError) -> PyErr {
     use graphbit_core::errors::GraphBitError;
 
     // Log the error for debugging
@@ -163,7 +163,7 @@ pub fn to_py_error(error: graphbit_core::errors::GraphBitError) -> PyErr {
 }
 
 /// Convert Python binding errors to PyErr with appropriate exception types
-pub fn python_error_to_py_err(error: PythonBindingError) -> PyErr {
+pub(crate) fn python_error_to_py_err(error: PythonBindingError) -> PyErr {
     match &error {
         PythonBindingError::Network { .. } => {
             PyErr::new::<pyo3::exceptions::PyConnectionError, _>(error.to_string())
@@ -191,7 +191,7 @@ pub fn python_error_to_py_err(error: PythonBindingError) -> PyErr {
 }
 
 /// Enhanced utility function to convert any error to PyErr with context
-pub fn to_py_runtime_error<E: std::fmt::Display>(error: E) -> PyErr {
+pub(crate) fn to_py_runtime_error<E: std::fmt::Display>(error: E) -> PyErr {
     let error_msg = error.to_string();
     warn!(
         "Converting runtime error to Python exception: {}",
@@ -215,7 +215,7 @@ pub fn to_py_runtime_error<E: std::fmt::Display>(error: E) -> PyErr {
 }
 
 /// Create configuration error with field context
-pub fn config_error(field: &str, message: &str) -> PyErr {
+pub(crate) fn config_error(field: &str, message: &str) -> PyErr {
     let error = PythonBindingError::Configuration {
         message: message.to_string(),
         field: Some(field.to_string()),
@@ -224,7 +224,7 @@ pub fn config_error(field: &str, message: &str) -> PyErr {
 }
 
 /// Create validation error with field and value context
-pub fn validation_error(field: &str, value: Option<&str>, message: &str) -> PyErr {
+pub(crate) fn validation_error(field: &str, value: Option<&str>, message: &str) -> PyErr {
     let error = PythonBindingError::Validation {
         message: message.to_string(),
         field: field.to_string(),
@@ -234,7 +234,7 @@ pub fn validation_error(field: &str, value: Option<&str>, message: &str) -> PyEr
 }
 
 /// Create timeout error with operation context
-pub fn timeout_error(operation: &str, duration_ms: u64, message: &str) -> PyErr {
+pub(crate) fn timeout_error(operation: &str, duration_ms: u64, message: &str) -> PyErr {
     let error = PythonBindingError::Timeout {
         message: message.to_string(),
         operation: operation.to_string(),

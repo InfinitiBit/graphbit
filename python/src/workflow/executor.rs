@@ -20,7 +20,7 @@ use crate::runtime::get_runtime;
 
 /// Execution mode for different performance characteristics
 #[derive(Debug, Clone, Copy)]
-pub enum ExecutionMode {
+pub(crate) enum ExecutionMode {
     /// High-throughput mode for batch processing
     HighThroughput,
     /// Low-latency mode for real-time applications
@@ -33,7 +33,7 @@ pub enum ExecutionMode {
 
 /// Execution configuration for fine-tuning performance
 #[derive(Debug, Clone)]
-pub struct ExecutionConfig {
+pub(crate) struct ExecutionConfig {
     /// Execution mode
     pub mode: ExecutionMode,
     /// Request timeout in seconds
@@ -63,7 +63,7 @@ impl Default for ExecutionConfig {
 
 /// Execution statistics for monitoring
 #[derive(Debug, Clone)]
-pub struct ExecutionStats {
+pub(crate) struct ExecutionStats {
     pub total_executions: u64,
     pub successful_executions: u64,
     pub failed_executions: u64,
@@ -158,10 +158,12 @@ impl Executor {
         timeout_seconds: Option<u64>,
         debug: Option<bool>,
     ) -> PyResult<Self> {
-        let mut config = ExecutionConfig::default();
-        config.mode = ExecutionMode::HighThroughput;
-        config.max_concurrency = Some(num_cpus::get() * 4); // Higher concurrency
-        config.enable_tracing = debug.unwrap_or(false); // Default to false
+        let mut config = ExecutionConfig {
+            mode: ExecutionMode::HighThroughput,
+            max_concurrency: Some(num_cpus::get() * 4), // Higher concurrency
+            enable_tracing: debug.unwrap_or(false),     // Default to false
+            ..Default::default()
+        };
 
         if let Some(timeout) = timeout_seconds {
             if timeout == 0 || timeout > 3600 {
@@ -189,11 +191,13 @@ impl Executor {
         timeout_seconds: Option<u64>,
         debug: Option<bool>,
     ) -> PyResult<Self> {
-        let mut config = ExecutionConfig::default();
-        config.mode = ExecutionMode::LowLatency;
-        config.timeout = Duration::from_secs(30); // Shorter timeout for low latency
-        config.max_retries = 1; // Fewer retries for faster response
-        config.enable_tracing = debug.unwrap_or(false); // Default to false
+        let mut config = ExecutionConfig {
+            mode: ExecutionMode::LowLatency,
+            timeout: Duration::from_secs(30), // Shorter timeout for low latency
+            max_retries: 1,                   // Fewer retries for faster response
+            enable_tracing: debug.unwrap_or(false), // Default to false
+            ..Default::default()
+        };
 
         if let Some(timeout) = timeout_seconds {
             if timeout == 0 || timeout > 300 {
@@ -221,11 +225,13 @@ impl Executor {
         timeout_seconds: Option<u64>,
         debug: Option<bool>,
     ) -> PyResult<Self> {
-        let mut config = ExecutionConfig::default();
-        config.mode = ExecutionMode::MemoryOptimized;
-        config.max_concurrency = Some(2); // Lower concurrency to save memory
-        config.enable_metrics = false; // Disable metrics to save memory
-        config.enable_tracing = debug.unwrap_or(false); // Default to false
+        let mut config = ExecutionConfig {
+            mode: ExecutionMode::MemoryOptimized,
+            max_concurrency: Some(2), // Lower concurrency to save memory
+            enable_metrics: false,    // Disable metrics to save memory
+            enable_tracing: debug.unwrap_or(false), // Default to false
+            ..Default::default()
+        };
 
         if let Some(timeout) = timeout_seconds {
             if timeout == 0 || timeout > 3600 {

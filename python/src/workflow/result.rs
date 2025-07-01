@@ -39,11 +39,11 @@ impl WorkflowResult {
         self.inner
             .variables
             .iter()
-            .filter_map(|(k, v)| {
+            .map(|(k, v)| {
                 if let Ok(s) = serde_json::to_string(v) {
-                    Some((k.clone(), s.trim_matches('"').to_string()))
+                    (k.clone(), s.trim_matches('"').to_string())
                 } else {
-                    Some((k.clone(), v.to_string()))
+                    (k.clone(), v.to_string())
                 }
             })
             .collect()
