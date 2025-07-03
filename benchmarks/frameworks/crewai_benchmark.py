@@ -245,9 +245,16 @@ class CrewAIBenchmark(BaseBenchmark):
 
             # Create tasks for execution
             agent_keys = ["general", "technical", "creator", "analyst"]
-            tasks = [execute_task(task_desc, agent_keys[i % len(agent_keys)]) for i, task_desc in enumerate(PARALLEL_TASKS)]
+            concurrency: int = int(self.config.get("concurrency", len(PARALLEL_TASKS)))
+            sem = asyncio.Semaphore(concurrency)
 
-            # Run all tasks in parallel
+            async def run_with_sem(task_desc: str, agent_key: str) -> Any:
+                async with sem:
+                    return await execute_task(task_desc, agent_key)
+
+            tasks = [run_with_sem(task_desc, agent_keys[i % len(agent_keys)]) for i, task_desc in enumerate(PARALLEL_TASKS)]
+
+            # Run all tasks with concurrency limit
             results = await asyncio.gather(*tasks)
 
             # Log the output and calculate metrics
@@ -441,9 +448,16 @@ class CrewAIBenchmark(BaseBenchmark):
 
             # Create tasks for execution
             agent_keys = ["general", "technical", "creator", "analyst"]
-            tasks = [execute_concurrent_task(task_desc, agent_keys[i % len(agent_keys)]) for i, task_desc in enumerate(CONCURRENT_TASK_PROMPTS)]
+            concurrency: int = int(self.config.get("concurrency", len(CONCURRENT_TASK_PROMPTS)))
+            sem = asyncio.Semaphore(concurrency)
 
-            # Run all tasks in parallel with retries
+            async def run_with_sem(task_desc: str, agent_key: str) -> Any:
+                async with sem:
+                    return await execute_concurrent_task(task_desc, agent_key)
+
+            tasks = [run_with_sem(task_desc, agent_keys[i % len(agent_keys)]) for i, task_desc in enumerate(CONCURRENT_TASK_PROMPTS)]
+
+            # Run all tasks in parallel with retries and concurrency limit
             results = await asyncio.gather(*tasks)
 
             # Log the output and calculate metrics

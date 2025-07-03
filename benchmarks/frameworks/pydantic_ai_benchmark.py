@@ -195,7 +195,14 @@ class PydanticAIBenchmark(BaseBenchmark):
         self.monitor.start_monitoring()
 
         agent: Agent = self.agents["general"]
-        tasks = [agent.run(task) for task in PARALLEL_TASKS]
+        concurrency: int = int(self.config.get("concurrency", len(PARALLEL_TASKS)))
+        sem = asyncio.Semaphore(concurrency)
+
+        async def run_with_sem(t: str) -> Any:
+            async with sem:
+                return await agent.run(t)
+
+        tasks = [run_with_sem(task) for task in PARALLEL_TASKS]
         results = await asyncio.gather(*tasks)
 
         for i, (_, result) in enumerate(zip(PARALLEL_TASKS, results)):
@@ -274,7 +281,14 @@ class PydanticAIBenchmark(BaseBenchmark):
         self.monitor.start_monitoring()
 
         agent: Agent = self.agents["general"]
-        tasks = [agent.run(prompt) for prompt in CONCURRENT_TASK_PROMPTS]
+        concurrency: int = int(self.config.get("concurrency", len(CONCURRENT_TASK_PROMPTS)))
+        sem = asyncio.Semaphore(concurrency)
+
+        async def run_with_sem(p: str) -> Any:
+            async with sem:
+                return await agent.run(p)
+
+        tasks = [run_with_sem(prompt) for prompt in CONCURRENT_TASK_PROMPTS]
         results = await asyncio.gather(*tasks)
 
         for i, (_, result) in enumerate(zip(CONCURRENT_TASK_PROMPTS, results)):

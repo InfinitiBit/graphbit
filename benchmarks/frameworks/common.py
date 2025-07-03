@@ -2,15 +2,23 @@
 
 import gc
 import logging
+import os
+import sys
 import time
+import os
 import tracemalloc
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-import psutil
+try:
+    import psutil
+except Exception as e:  # pragma: no cover - optional dependency
+    psutil = None
+    print(f"Warning: psutil not available ({e}). Benchmark metrics will be limited.")
 
 # Configure logging
 # Standard LLM Configuration Constants
@@ -135,6 +143,9 @@ class PerformanceMonitor:
 
     def __init__(self) -> None:
         """Initialize the performance monitor."""
+        if psutil is None:
+            raise RuntimeError("psutil is required for performance monitoring")
+
         self.process = psutil.Process()
         self.start_time: float = 0.0
         self.start_memory: float = 0.0
@@ -435,3 +446,97 @@ def get_provider_models(provider: str) -> List[str]:
         return PROVIDER_MODELS.get(provider_enum, [])
     except ValueError:
         return []
+
+
+@lru_cache(maxsize=None)
+def select_least_busy_cores(count: int) -> List[int]:
+    """Return ``count`` least busy CPU cores using a short sampling interval."""
+    if psutil is None:
+        # Fallback: just return the first ``count`` cores
+        return list(range(count))
+
+    usage = psutil.cpu_percent(interval=0.1, percpu=True)
+    indices = sorted(range(len(usage)), key=lambda i: usage[i])
+    return indices[:count]
+
+
+def parse_core_list(spec: Optional[str]) -> Optional[List[int]]:
+    """Parse a core list specification.
+
+    ``spec`` may be ``None``, a comma separated list like ``"0,1"``,
+    or ``"auto:N"`` to automatically select ``N`` least busy cores.
+    """
+    if spec is None:
+        return None
+
+    spec = spec.strip()
+    if not spec:
+        return None
+
+    if spec.startswith("auto:"):
+        try:
+            count = int(spec.split(":", 1)[1])
+        except ValueError as exc:
+            raise ValueError("Invalid core specification") from exc
+        return select_least_busy_cores(count)
+
+    try:
+        return [int(part) for part in spec.split(",") if part.strip()]
+    except ValueError as exc:
+        raise ValueError("Invalid core specification") from exc
+
+
+def set_process_affinity(cores: Optional[List[int]]) -> None:
+    """Apply CPU affinity to the current process if ``cores`` provided."""
+    if cores and psutil is not None:
+        psutil.Process().cpu_affinity(cores)
+
+
+def set_memory_binding(node: Optional[int]) -> None:
+    """Bind process memory allocations to the given NUMA ``node`` if specified."""
+    if node is None:
+        return
+
+    try:
+        import ctypes
+
+        libnuma = ctypes.CDLL("libnuma.so.1")
+        libnuma.numa_available.restype = ctypes.c_int
+        if libnuma.numa_available() < 0:
+            raise RuntimeError("NUMA not available")
+
+        libnuma.numa_allocate_nodemask.restype = ctypes.c_void_p
+        mask = libnuma.numa_allocate_nodemask()
+        libnuma.numa_bitmask_setbit.argtypes = [ctypes.c_void_p, ctypes.c_uint]
+        libnuma.numa_bitmask_setbit(mask, ctypes.c_uint(node))
+        libnuma.numa_set_membind.argtypes = [ctypes.c_void_p]
+        libnuma.numa_set_membind(mask)
+        libnuma.numa_bitmask_free.argtypes = [ctypes.c_void_p]
+        libnuma.numa_bitmask_free(mask)
+    except OSError as e:
+        logging.warning("libnuma not available: %s", e)
+        _reexec_with_numactl(node)
+    except Exception as exc:  # pragma: no cover - optional fallback path
+        logging.warning(
+            "Failed to set memory binding via libnuma: %s. Falling back to numactl.",
+            exc,
+        )
+        _reexec_with_numactl(node)
+
+
+def _reexec_with_numactl(node: int) -> None:
+    """Re-execute the current process under ``numactl`` for memory binding."""
+    if os.environ.get("_NUMACTL_REEXEC") == "1":
+        logging.error("numactl re-exec attempt already made and failed")
+        return
+
+    os.environ["_NUMACTL_REEXEC"] = "1"
+    args = [
+        "numactl",
+        f"--membind={node}",
+        "--localalloc",
+        sys.executable,
+        *sys.argv,
+    ]
+    logging.info("Re-executing under numactl: %s", " ".join(args))
+    os.execvp("numactl", args)

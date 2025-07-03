@@ -187,7 +187,14 @@ class LangChainBenchmark(BaseBenchmark):
 
         try:
             chain = self.chains["simple"]
-            tasks = [chain.ainvoke({"task": task}) for task in PARALLEL_TASKS]
+            concurrency: int = int(self.config.get("concurrency", len(PARALLEL_TASKS)))
+            sem = asyncio.Semaphore(concurrency)
+
+            async def run_with_sem(t: str) -> Any:
+                async with sem:
+                    return await chain.ainvoke({"task": t})
+
+            tasks = [run_with_sem(task) for task in PARALLEL_TASKS]
             results = await asyncio.gather(*tasks)
 
             result_contents = [result.content if hasattr(result, "content") else str(result) for result in results]
@@ -295,7 +302,14 @@ class LangChainBenchmark(BaseBenchmark):
 
         try:
             chain = self.chains["simple"]
-            tasks = [chain.ainvoke({"task": prompt}) for prompt in CONCURRENT_TASK_PROMPTS]
+            concurrency: int = int(self.config.get("concurrency", len(CONCURRENT_TASK_PROMPTS)))
+            sem = asyncio.Semaphore(concurrency)
+
+            async def run_with_sem(p: str) -> Any:
+                async with sem:
+                    return await chain.ainvoke({"task": p})
+
+            tasks = [run_with_sem(prompt) for prompt in CONCURRENT_TASK_PROMPTS]
             results = await asyncio.gather(*tasks)
 
             result_contents = [result.content if hasattr(result, "content") else str(result) for result in results]

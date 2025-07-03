@@ -170,7 +170,14 @@ class LlamaIndexBenchmark(BaseBenchmark):
         if self.llm is None:
             raise ValueError("LLM not initialized")
 
-        tasks = [self.llm.acomplete(task) for task in PARALLEL_TASKS]
+        concurrency: int = int(self.config.get("concurrency", len(PARALLEL_TASKS)))
+        sem = asyncio.Semaphore(concurrency)
+
+        async def run_with_sem(t: str) -> Any:
+            async with sem:
+                return await self.llm.acomplete(t)
+
+        tasks = [run_with_sem(task) for task in PARALLEL_TASKS]
         responses = await asyncio.gather(*tasks)
         results = [str(response) for response in responses]
 
@@ -265,10 +272,17 @@ class LlamaIndexBenchmark(BaseBenchmark):
         if self.llm is None:
             raise ValueError("LLM not initialized")
 
-        llm_tasks = [self.llm.acomplete(f"Task {i+1}: {prompt}") for i, prompt in enumerate(CONCURRENT_TASK_PROMPTS[: len(CONCURRENT_TASK_PROMPTS) // 2])]
+        concurrency: int = int(self.config.get("concurrency", len(CONCURRENT_TASK_PROMPTS)))
+        sem = asyncio.Semaphore(concurrency)
+
+        async def run_with_sem(text: str) -> Any:
+            async with sem:
+                return await self.llm.acomplete(text)
+
+        llm_tasks = [run_with_sem(f"Task {i+1}: {prompt}") for i, prompt in enumerate(CONCURRENT_TASK_PROMPTS[: len(CONCURRENT_TASK_PROMPTS) // 2])]
 
         query_tasks = [
-            self.llm.acomplete(f"Query Task {i+1}: {prompt}")
+            run_with_sem(f"Query Task {i+1}: {prompt}")
             for i, prompt in enumerate(
                 CONCURRENT_TASK_PROMPTS[len(CONCURRENT_TASK_PROMPTS) // 2 :],
                 start=len(CONCURRENT_TASK_PROMPTS) // 2,

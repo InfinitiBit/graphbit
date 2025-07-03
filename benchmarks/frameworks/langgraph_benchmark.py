@@ -496,7 +496,14 @@ class LangGraphBenchmark(BaseBenchmark):
         self.monitor.start_monitoring()
         try:
             graph = self.graphs["simple"]
-            tasks = [graph.ainvoke({"messages": [], "task": prompt, "result": None}) for prompt in CONCURRENT_TASK_PROMPTS]
+            concurrency: int = int(self.config.get("concurrency", len(CONCURRENT_TASK_PROMPTS)))
+            sem = asyncio.Semaphore(concurrency)
+
+            async def run_with_sem(p: str) -> SimpleState:
+                async with sem:
+                    return await graph.ainvoke({"messages": [], "task": p, "result": None})
+
+            tasks = [run_with_sem(prompt) for prompt in CONCURRENT_TASK_PROMPTS]
             results: List[SimpleState] = await asyncio.gather(*tasks)
             total_tokens = sum(count_tokens_estimate(prompt + (res["result"] or "")) for prompt, res in zip(CONCURRENT_TASK_PROMPTS, results))
         except Exception as e:

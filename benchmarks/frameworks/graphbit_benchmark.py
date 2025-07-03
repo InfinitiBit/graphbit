@@ -10,6 +10,8 @@ import os
 import sys
 from typing import Dict
 
+import psutil
+
 try:
     import graphbit
 except ImportError:
@@ -54,6 +56,11 @@ class GraphBitBenchmark(BaseBenchmark):
 
     async def setup(self) -> None:
         """Set up GraphBit with minimal overhead configuration - DIRECT API ONLY."""
+        # Align runtime worker threads with the current CPU affinity so the runtime
+        # uses only the pinned CPU cores
+        affinity = psutil.Process().cpu_affinity()
+        graphbit.configure_runtime(worker_threads=len(affinity))
+
         # Initialize GraphBit core only (skip workflow system)
         # Use debug=False for benchmarks to minimize overhead
         graphbit.init(debug=False)
@@ -192,7 +199,13 @@ class GraphBitBenchmark(BaseBenchmark):
         try:
             max_tokens, temperature = self._get_llm_params()
 
-            results = await self.llm_client.complete_batch(prompts=PARALLEL_TASKS, max_tokens=max_tokens, temperature=temperature, max_concurrency=len(PARALLEL_TASKS))
+            concurrency: int = int(self.config.get("concurrency", len(PARALLEL_TASKS)))
+            results = await self.llm_client.complete_batch(
+                prompts=PARALLEL_TASKS,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                max_concurrency=concurrency,
+            )
 
             total_tokens = 0
             for i, (task, result) in enumerate(zip(PARALLEL_TASKS, results)):
@@ -317,7 +330,13 @@ class GraphBitBenchmark(BaseBenchmark):
 
             # Try to use batch processing first for better performance
             try:
-                results = await self.llm_client.complete_batch(prompts=CONCURRENT_TASK_PROMPTS, max_tokens=max_tokens, temperature=temperature, max_concurrency=20)
+                concurrency: int = int(self.config.get("concurrency", len(CONCURRENT_TASK_PROMPTS)))
+                results = await self.llm_client.complete_batch(
+                    prompts=CONCURRENT_TASK_PROMPTS,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    max_concurrency=concurrency,
+                )
             except Exception as e:
                 self.logger.error(f"Error in concurrent tasks benchmark: {e}")
                 metrics = self.monitor.stop_monitoring()
