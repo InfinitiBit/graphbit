@@ -1,0 +1,23 @@
+# Generated benchmark results
+results/
+logs/
+*.log
+
+# Environment variables with sensitive data
+.env
+
+# Docker volumes and temporary files
+test_output.log
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# System files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/

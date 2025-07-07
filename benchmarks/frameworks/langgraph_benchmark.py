@@ -78,7 +78,6 @@ class LangGraphBenchmark(BaseBenchmark):
                 model=llm_config_obj.model,
                 api_key=SecretStr(api_key),
                 temperature=temperature,
-                max_tokens=max_tokens,
             )
 
         elif llm_config_obj.provider == LLMProvider.ANTHROPIC:

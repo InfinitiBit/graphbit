@@ -20,18 +20,16 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import click
+
 try:
     import matplotlib.pyplot as plt
     import numpy as np
     import seaborn as sns
 except Exception as e:  # pragma: no cover - optional deps
-    plt = None
-    np = None
-    sns = None
-    print(
-        f"Warning: visualization libraries not available ({e}). "
-        "Plots will be disabled."
-    )
+    plt = None  # type: ignore
+    np = None  # type: ignore
+    sns = None  # type: ignore
+    print(f"Warning: visualization libraries not available ({e}). " "Plots will be disabled.")
 
 # API key will be checked later when actually running benchmarks
 
@@ -64,8 +62,8 @@ try:
         create_llm_config_from_args,
         get_provider_models,
         parse_core_list,
-        set_process_affinity,
         set_memory_binding,
+        set_process_affinity,
     )
 except Exception as e:
     print(f"Warning: failed to import core benchmark utilities ({e}).")
@@ -74,7 +72,7 @@ except Exception as e:
 # Framework specific modules are loaded lazily inside ``main`` to allow running
 # ``--help`` even when optional dependencies are missing.
 
-  
+
 class ComprehensiveBenchmarkRunner:
     """Runner for comprehensive framework benchmarks."""
 
@@ -95,6 +93,7 @@ class ComprehensiveBenchmarkRunner:
         from frameworks.langgraph_benchmark import LangGraphBenchmark
         from frameworks.llamaindex_benchmark import LlamaIndexBenchmark
         from frameworks.pydantic_ai_benchmark import PydanticAIBenchmark
+
         self.verbose = verbose
         self.llm_config = llm_config
         self.concurrency = concurrency
@@ -176,7 +175,7 @@ class ComprehensiveBenchmarkRunner:
                 "results": {},
                 "errors": {},
                 "color": "#C73E1D",
-            }
+            },
         }
 
         # Define scenarios to run
@@ -270,6 +269,7 @@ class ComprehensiveBenchmarkRunner:
             if framework_type == FrameworkType.GRAPHBIT:
                 try:
                     import graphbit  # noqa: F401
+
                     self.log_verbose("GraphBit Python bindings are available")
                 except ImportError:
                     self.log("GraphBit Python bindings not found!", "ERROR")
@@ -302,7 +302,9 @@ class ComprehensiveBenchmarkRunner:
         if self.verbose and framework_info["results"]:
             print(f"\n{framework_name} Performance Overview:")
             for scenario_name, metrics in framework_info["results"].items():
-                print(f"  {scenario_name}: {metrics.execution_time_ms:.0f}ms, {metrics.memory_usage_mb:.3f}MB, {metrics.cpu_usage_percent:.3f}% CPU, {metrics.token_count} tokens")
+                if metrics is not None:
+                    print(f"  {scenario_name}: {metrics.execution_time_ms:.0f}ms, {metrics.memory_usage_mb:.3f}MB, {metrics.cpu_usage_percent:.3f}% CPU, {metrics.token_count} tokens")
+
     def generate_comparison_report(self) -> None:
         """Generate a comparison report across all frameworks."""
         self.log("Generating comparison report")
@@ -404,9 +406,7 @@ class ComprehensiveBenchmarkRunner:
 
         self.log("Generating benchmark visualizations")
         self.create_simple_dashboard()
-        self.log(
-            f"Visualization saved to: {Path(str(self.config['results_dir'])).absolute()}"
-        )
+        self.log(f"Visualization saved to: {Path(str(self.config['results_dir'])).absolute()}")
 
     def create_simple_dashboard(self) -> None:
         """Create a simple dashboard with execution time comparison and performance table."""
@@ -552,8 +552,8 @@ class ComprehensiveBenchmarkRunner:
         self.log(f"Benchmark completed in {overall_time:.2f} seconds")
         self.log(f"Results saved to: {Path(str(self.config['log_dir'])).absolute()}")
         self.log(f"Visualizations saved to: {Path(str(self.config['results_dir'])).absolute()}")
-        
-        
+
+
 @click.command()
 @click.option("--provider", type=click.Choice([p.value for p in LLMProvider], case_sensitive=False), default=LLMProvider.OPENAI.value, help="LLM provider to use for benchmarking", show_default=True)
 @click.option("--model", type=str, default=DEFAULT_MODEL, help="Model name to use for benchmarking", show_default=True)
@@ -710,10 +710,9 @@ def main(
         click.echo(f"Benchmark failed: {e}", err=True)
         if verbose:
             import traceback
+
             traceback.print_exc()
 
 
 if __name__ == "__main__":
     main()
-        
-        

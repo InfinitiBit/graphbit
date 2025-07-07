@@ -1,0 +1,30 @@
+services:
+  graphbit-benchmark:
+    build:
+      context: ..
+      dockerfile: benchmarks/Dockerfile
+    container_name: graphbit-benchmark
+    environment:
+    - OPENAI_API_KEY=${OPENAI_API_KEY}
+    - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    - HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY}
+    - PYTHONUNBUFFERED=1
+    - RUST_LOG=info
+    volumes:
+
+    - ./results:/app/benchmarks/results
+    - ./logs:/app/benchmarks/logs
+      # Optional: Mount benchmark source for development
+      # - ./:/app/benchmarks:ro
+    working_dir: /app
+    # Default command - override with docker-compose run
+    command: [run_benchmark.py, --help]
+    # Resource limits (adjust based on your system)
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2.0'
+        reservations:
+          memory: 1G
+          cpus: '0.5'

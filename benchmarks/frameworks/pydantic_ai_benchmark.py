@@ -110,21 +110,21 @@ class PydanticAIBenchmark(BaseBenchmark):
 
         self.agents["simple"] = Agent(
             model=self.model,
-            output_type=SimpleResponse,
+            output_type=str,
             system_prompt="You are a helpful AI assistant. Respond with analysis and insights.",
             model_settings=model_settings,
         )
 
         self.agents["sequential"] = Agent(
             model=self.model,
-            output_type=SequentialResponse,
+            output_type=str,
             system_prompt="You are processing tasks in sequence. Use previous results to inform your response.",
             model_settings=model_settings,
         )
 
         self.agents["complex"] = Agent(
             model=self.model,
-            output_type=ComplexResponse,
+            output_type=str,
             system_prompt="You are part of a complex workflow. Consider dependencies and context.",
             model_settings=model_settings,
         )
@@ -151,10 +151,10 @@ class PydanticAIBenchmark(BaseBenchmark):
         self.log_output(
             scenario_name=BenchmarkScenario.SIMPLE_TASK.value,
             task_name="Simple Task",
-            output=result.output.result,
+            output=str(result.output),
         )
 
-        token_count = count_tokens_estimate(SIMPLE_TASK_PROMPT + result.output.result)
+        token_count = count_tokens_estimate(SIMPLE_TASK_PROMPT + str(result.output))
         metrics = self.monitor.stop_monitoring()
         metrics.token_count = token_count
         metrics.throughput_tasks_per_sec = calculate_throughput(1, metrics.execution_time_ms / 1000)
@@ -175,7 +175,7 @@ class PydanticAIBenchmark(BaseBenchmark):
                 prompt = f"Previous result: {previous_result}\n\nTask {i+1}: {task}"
 
             result = await agent.run(prompt)
-            previous_result = result.output.step_result
+            previous_result = str(result.output)
             # Count tokens based on original task only for fair comparison
             total_tokens += count_tokens_estimate(task + previous_result)
 
@@ -235,16 +235,16 @@ class PydanticAIBenchmark(BaseBenchmark):
             prompt = f"Context from dependencies: {context}\n\n" f"Task: {step['prompt']}\nTask name: {step['task']}"
 
             result = await agent.run(prompt)
-            results[step["task"]] = result.output.result
+            results[step["task"]] = str(result.output)
 
             self.log_output(
                 scenario_name=BenchmarkScenario.COMPLEX_WORKFLOW.value,
                 task_name=step["task"],
-                output=result.output.result,
+                output=str(result.output),
             )
 
             # Count tokens based on original step prompt only for fair comparison
-            total_tokens += count_tokens_estimate(step["prompt"] + result.output.result)
+            total_tokens += count_tokens_estimate(step["prompt"] + str(result.output))
 
         metrics = self.monitor.stop_monitoring()
         metrics.token_count = total_tokens

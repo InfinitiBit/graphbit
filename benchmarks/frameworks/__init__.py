@@ -9,11 +9,8 @@ from .common import BenchmarkMetrics, BenchmarkScenario, FrameworkType
 # options. This keeps ``benchmarks.run_benchmark`` usable even if optional
 # frameworks are not installed.
 
-__getattr__ = None  # placate static analyzers
-
 __all__ = [
     "BenchmarkMetrics",
     "BenchmarkScenario",
     "FrameworkType",
 ]
-
