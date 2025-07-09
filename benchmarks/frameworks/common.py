@@ -5,13 +5,40 @@ import logging
 import os
 import sys
 import time
-import tracemalloc
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
+from threading import Thread
 from typing import Any, Dict, List, Optional, Tuple
+
+
+def get_total_cpu_time(proc: Any) -> Tuple[float, float]:
+    """Sum CPU time (user+system) for process and its children."""
+    total_user = proc.cpu_times().user
+    total_sys = proc.cpu_times().system
+    for child in proc.children(recursive=True):
+        try:
+            ctimes = child.cpu_times()
+            total_user += ctimes.user
+            total_sys += ctimes.system
+        except psutil.NoSuchProcess:
+            pass
+    return total_user, total_sys
+
+
+def sample_total_memory(proc: Any, interval: float, running: List[bool], samples: List[int]) -> None:
+    """Sample total RSS memory for process and its children."""
+    while running[0]:
+        total_rss = proc.memory_info().rss
+        for child in proc.children(recursive=True):
+            try:
+                total_rss += child.memory_info().rss
+            except psutil.NoSuchProcess:
+                pass
+        samples.append(total_rss)
+        time.sleep(interval)
 
 try:
     import psutil
@@ -133,6 +160,13 @@ class BenchmarkMetrics:
     setup_time_ms: float = 0.0
     teardown_time_ms: float = 0.0
 
+    # Detailed CPU and memory stats
+    user_cpu_sec: float = 0.0
+    sys_cpu_sec: float = 0.0
+    avg_memory_mb: float = 0.0
+    peak_memory_mb: float = 0.0
+    mem_delta_mb: float = 0.0
+
     # Additional metadata
     metadata: Dict[str, Any] = field(default_factory=dict)
 
@@ -145,49 +179,67 @@ class PerformanceMonitor:
         if psutil is None:
             raise RuntimeError("psutil is required for performance monitoring")
 
-        self.process = psutil.Process()
+        self.process = psutil.Process(os.getpid())
         self.start_time: float = 0.0
-        self.start_memory: float = 0.0
-        self.start_cpu_times: psutil._common.pcputimes = self.process.cpu_times()
-        self.initial_memory_trace: int = 0
+        self.cpu_user_start: float = 0.0
+        self.cpu_sys_start: float = 0.0
+        self.mem_start: int = 0
+        self.samples: List[int] = []
+        self._running: List[bool] = [False]
+        self._mem_thread: Optional[Thread] = None
 
     def start_monitoring(self) -> None:
         """Start performance monitoring."""
         gc.collect()  # Clean up before starting
-        tracemalloc.start()
-
+        self.cpu_user_start, self.cpu_sys_start = get_total_cpu_time(self.process)
+        self.mem_start = self.process.memory_info().rss + sum(
+            c.memory_info().rss for c in self.process.children(recursive=True) if c.is_running()
+        )
+        self.samples = []
+        self._running[0] = True
+        self._mem_thread = Thread(
+            target=sample_total_memory,
+            args=(self.process, 0.05, self._running, self.samples),
+        )
+        self._mem_thread.start()
         self.start_time = time.perf_counter()
-        self.start_memory = self.process.memory_info().rss / 1024 / 1024  # MB
-        self.start_cpu_times = self.process.cpu_times()
-        self.initial_memory_trace = tracemalloc.get_traced_memory()[0]
 
     def stop_monitoring(self) -> BenchmarkMetrics:
         """Stop monitoring and return collected metrics."""
         end_time = time.perf_counter()
-        end_memory = self.process.memory_info().rss / 1024 / 1024  # MB
-        end_cpu_times = self.process.cpu_times()
+        self._running[0] = False
+        if self._mem_thread is not None:
+            self._mem_thread.join()
 
-        current_memory, peak_memory = tracemalloc.get_traced_memory()
-        tracemalloc.stop()
+        user_cpu_end, sys_cpu_end = get_total_cpu_time(self.process)
+        mem_end = self.process.memory_info().rss + sum(
+            c.memory_info().rss for c in self.process.children(recursive=True) if c.is_running()
+        )
 
-        # Calculate metrics
-        execution_time_ms = (end_time - self.start_time) * 1000
-        memory_usage_mb = end_memory - self.start_memory
+        exec_time_sec = end_time - self.start_time
+        user_cpu = user_cpu_end - self.cpu_user_start
+        sys_cpu = sys_cpu_end - self.cpu_sys_start
+        mem_delta_mb = (mem_end - self.mem_start) / 1024 / 1024
 
-        # Calculate CPU usage (approximate)
-        cpu_time_used = (end_cpu_times.user - self.start_cpu_times.user) + (end_cpu_times.system - self.start_cpu_times.system)
-        wall_time = end_time - self.start_time
-        cpu_usage_percent = (cpu_time_used / wall_time) * 100 if wall_time > 0 else 0
+        if self.samples:
+            avg_mem_mb = sum(self.samples) / len(self.samples) / 1024 / 1024
+            peak_mem_mb = max(self.samples) / 1024 / 1024
+        else:
+            avg_mem_mb = 0.0
+            peak_mem_mb = 0.0
+
+        cpu_usage_percent = ((user_cpu + sys_cpu) / exec_time_sec) * 100 if exec_time_sec > 0 else 0
 
         return BenchmarkMetrics(
-            execution_time_ms=execution_time_ms,
-            memory_usage_mb=memory_usage_mb,
+            execution_time_ms=exec_time_sec * 1000,
+            memory_usage_mb=mem_delta_mb,
             cpu_usage_percent=cpu_usage_percent,
-            latency_ms=execution_time_ms,  # Same as execution time for single tasks
-            metadata={
-                "peak_memory_mb": peak_memory / 1024 / 1024,
-                "memory_delta_mb": (current_memory - self.initial_memory_trace) / 1024 / 1024,
-            },
+            latency_ms=exec_time_sec * 1000,
+            user_cpu_sec=user_cpu,
+            sys_cpu_sec=sys_cpu,
+            avg_memory_mb=avg_mem_mb,
+            peak_memory_mb=peak_mem_mb,
+            mem_delta_mb=mem_delta_mb,
         )
 
 
