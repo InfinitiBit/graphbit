@@ -49,68 +49,61 @@ import os
 
 # Initialize and configure
 graphbit.init()
-config = graphbit.PyLlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4o-mini")
+config = graphbit.LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4o-mini")
 
-# Create executor with reliability features
-executor = graphbit.PyWorkflowExecutor(config) \
-    .with_retry_config(graphbit.PyRetryConfig.default()) \
-    .with_circuit_breaker_config(graphbit.PyCircuitBreakerConfig.default())
+# Create executor
+executor = graphbit.Executor(config)
 
 # Build workflow
-builder = graphbit.PyWorkflowBuilder("Analysis Pipeline")
+workflow = graphbit.Workflow("Analysis Pipeline")
 
-analyzer = graphbit.PyWorkflowNode.agent_node(
+analyzer = graphbit.Node.agent(
     "Data Analyzer", 
-    "Analyzes input data", 
-    "analyzer-001",
     "Analyze the following data: {input}"
 )
 
-processor = graphbit.PyWorkflowNode.agent_node(
+processor = graphbit.Node.agent(
     "Data Processor",
-    "Processes analyzed results",
-    "processor-001", 
     "Process and summarize: {analyzed_data}"
 )
 
 # Connect and execute
-id1 = builder.add_node(analyzer)
-id2 = builder.add_node(processor)
-builder.connect(id1, id2, graphbit.PyWorkflowEdge.data_flow())
+id1 = workflow.add_node(analyzer)
+id2 = workflow.add_node(processor)
+workflow.connect(id1, id2)
 
-workflow = builder.build()
 result = executor.execute(workflow)
-print(f"Completed in {result.execution_time_ms()}ms")
+print(f"Workflow completed: {result.is_successful()}")
 ```
 
-## 🏗️ Architecture
+## Architecture
 
 Three-tier design for reliability and performance:
 - **Python API** - PyO3 bindings with async support
 - **CLI Tool** - Project management and execution
 - **Rust Core** - Workflow engine, agents, and LLM providers
 
-## ⚙️ Configuration
+## Configuration
 
 ```python
 # High-throughput
-executor = graphbit.PyWorkflowExecutor.new_high_throughput(config)
+executor = graphbit.Executor.new_high_throughput(config)
 
-# Low-latency (fail fast)
-executor = graphbit.PyWorkflowExecutor.new_low_latency(config).without_retries()
+# Low-latency
+executor = graphbit.Executor.new_low_latency(config)
 
 # Memory-optimized
-executor = graphbit.PyWorkflowExecutor.new_memory_optimized(config)
+executor = graphbit.Executor.new_memory_optimized(config)
 ```
 
 ## Observability
 
 ```python
 # Monitor execution
-stats = await executor.get_concurrency_stats()
+stats = executor.get_stats()
 result = executor.execute(workflow)
-print(f"Active tasks: {stats.current_active_tasks}")
-print(f"Execution time: {result.execution_time_ms()}ms")
+print(f"Total executions: {stats['total_executions']}")
+print(f"Success rate: {stats['success_rate']:.2%}")
 ```
 
 ## Contributing
