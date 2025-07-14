@@ -62,6 +62,7 @@ ENV/
 env.bak/
 venv.bak/
 .conda/
+venv.chatbot/
 
 # Poetry
 poetry.lock
