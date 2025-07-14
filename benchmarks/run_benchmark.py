@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import click
+
 try:
     import matplotlib.pyplot as plt
     import numpy as np
@@ -28,10 +29,7 @@ except Exception as e:  # pragma: no cover - optional deps
     plt = None
     np = None
     sns = None
-    print(
-        f"Warning: visualization libraries not available ({e}). "
-        "Plots will be disabled."
-    )
+    print(f"Warning: visualization libraries not available ({e}). " "Plots will be disabled.")
 
 # API key will be checked later when actually running benchmarks
 
@@ -64,8 +62,8 @@ try:
         create_llm_config_from_args,
         get_provider_models,
         parse_core_list,
-        set_process_affinity,
         set_memory_binding,
+        set_process_affinity,
     )
 except Exception as e:
     print(f"Warning: failed to import core benchmark utilities ({e}).")
@@ -74,7 +72,7 @@ except Exception as e:
 # Framework specific modules are loaded lazily inside ``main`` to allow running
 # ``--help`` even when optional dependencies are missing.
 
-  
+
 class ComprehensiveBenchmarkRunner:
     """Runner for comprehensive framework benchmarks."""
 
@@ -95,6 +93,7 @@ class ComprehensiveBenchmarkRunner:
         from frameworks.langgraph_benchmark import LangGraphBenchmark
         from frameworks.llamaindex_benchmark import LlamaIndexBenchmark
         from frameworks.pydantic_ai_benchmark import PydanticAIBenchmark
+
         self.verbose = verbose
         self.llm_config = llm_config
         self.concurrency = concurrency
@@ -176,7 +175,7 @@ class ComprehensiveBenchmarkRunner:
                 "results": {},
                 "errors": {},
                 "color": "#C73E1D",
-            }
+            },
         }
 
         # Define scenarios to run
@@ -213,17 +212,18 @@ class ComprehensiveBenchmarkRunner:
         if self.verbose:
             click.echo(f"\n{scenario_name} Results:")
             click.echo(f"  Execution Time: {metrics.execution_time_ms:.2f} ms")
+            click.echo(f"  Latency: {metrics.latency_ms:.2f} ms")
             click.echo(f"  Memory Usage: {metrics.memory_usage_mb:.3f} MB")
             click.echo(f"  Avg Memory: {metrics.avg_memory_mb:.2f} MB")
             click.echo(f"  Peak Memory: {metrics.peak_memory_mb:.2f} MB")
+            click.echo(f"  Memory Δ: {metrics.mem_delta_mb:.3f} MB")
             click.echo(f"  CPU Usage: {metrics.cpu_usage_percent:.3f}%")
             click.echo(f"  User CPU Time: {metrics.user_cpu_sec:.3f} sec")
             click.echo(f"  System CPU Time: {metrics.sys_cpu_sec:.3f} sec")
             click.echo(f"  Token Count: {metrics.token_count}")
             click.echo(f"  Throughput: {metrics.throughput_tasks_per_sec:.2f} tasks/sec")
             click.echo(f"  Error Rate: {metrics.error_rate:.2%}")
-            if metrics.concurrent_tasks > 0:
-                click.echo(f"  Concurrent Tasks: {metrics.concurrent_tasks}")
+            click.echo(f"  Concurrent Tasks: {metrics.concurrent_tasks}")
             click.echo(f"  Setup Time: {metrics.setup_time_ms:.2f} ms")
             click.echo(f"  Teardown Time: {metrics.teardown_time_ms:.2f} ms")
             if metrics.metadata:
@@ -237,7 +237,8 @@ class ComprehensiveBenchmarkRunner:
             self.log(
                 f"{scenario_name}: {metrics.execution_time_ms:.0f}ms, "
                 f"{metrics.memory_usage_mb:.3f}MB (peak {metrics.peak_memory_mb:.2f}MB), "
-                f"{metrics.cpu_usage_percent:.3f}% CPU, {metrics.token_count} tokens"
+                f"{metrics.cpu_usage_percent:.3f}% CPU, {metrics.token_count} tokens, "
+                f"{metrics.throughput_tasks_per_sec:.2f} t/s, err {metrics.error_rate:.1%}"
             )
 
     async def run_framework_scenario(
@@ -278,6 +279,7 @@ class ComprehensiveBenchmarkRunner:
             if framework_type == FrameworkType.GRAPHBIT:
                 try:
                     import graphbit  # noqa: F401
+
                     self.log_verbose("GraphBit Python bindings are available")
                 except ImportError:
                     self.log("GraphBit Python bindings not found!", "ERROR")
@@ -315,6 +317,7 @@ class ComprehensiveBenchmarkRunner:
                     f"{metrics.memory_usage_mb:.3f}MB (peak {metrics.peak_memory_mb:.2f}MB), "
                     f"{metrics.cpu_usage_percent:.3f}% CPU, {metrics.token_count} tokens"
                 )
+
     def generate_comparison_report(self) -> None:
         """Generate a comparison report across all frameworks."""
         self.log("Generating comparison report")
@@ -325,8 +328,12 @@ class ComprehensiveBenchmarkRunner:
 
         if self.verbose:
             print("\nFramework Performance Summary:")
-            print(f"{'Framework':<15} {'Scenarios':<12} {'Avg Time (ms)':<15} {'Avg Memory (MB)':<16} {'Avg CPU (%)':<12} {'Avg Tokens':<12}")
-            print(f"{'-' * 95}")
+            print(
+                f"{'Framework':<15} {'Scenarios':<12} {'Avg Exec Time (ms)':<18} {'Avg Memory (MB)':<16} "
+                f"{'Avg Peak Mem (MB)':<18} {'Avg CPU (%)':<12} {'Avg Latency (ms)':<17} {'Avg Tokens':<12} {'Avg Throughput':<15} {'Err Rate (%)':<13} "
+                f"{'Avg User CPU (s)':<17} {'Avg Sys CPU (s)':<17} {'Avg LLM API Time (s)':<22} {'Avg Total Time (s)':<20}"
+            )
+            print(f"{'-' * 240}")
 
             for _framework_type, framework_info in self.frameworks.items():
                 framework_name = framework_info["name"]
@@ -336,18 +343,39 @@ class ComprehensiveBenchmarkRunner:
                     scenario_count = len(results)
                     avg_time = sum(m.execution_time_ms for m in results.values()) / scenario_count
                     avg_memory = sum(m.avg_memory_mb for m in results.values()) / scenario_count
+                    avg_peak = sum(m.peak_memory_mb for m in results.values()) / scenario_count
                     avg_cpu = sum(m.cpu_usage_percent for m in results.values()) / scenario_count
+                    avg_latency = sum(m.latency_ms for m in results.values()) / scenario_count
                     avg_tokens = sum(m.token_count for m in results.values()) / scenario_count
+                    avg_throughput = sum(m.throughput_tasks_per_sec for m in results.values()) / scenario_count
+                    avg_error = sum(m.error_rate for m in results.values()) / scenario_count * 100
+                    avg_user_cpu = sum(m.user_cpu_sec for m in results.values()) / scenario_count
+                    avg_sys_cpu = sum(m.sys_cpu_sec for m in results.values()) / scenario_count
+                    avg_llm_api_time = sum(getattr(m, "llm_api_time_sec", 0.0) for m in results.values()) / scenario_count
+                    avg_total_time = sum((getattr(m, "execution_time_ms", 0.0) / 1000 + getattr(m, "llm_api_time_sec", 0.0)) for m in results.values()) / scenario_count
 
-                    print(f"{framework_name:<15} {scenario_count:<12} {avg_time:<15.1f} {avg_memory:<16.3f} {avg_cpu:<12.3f} {avg_tokens:<12.0f}")
+                    print(
+                        f"{framework_name:<15} {scenario_count:<12} {avg_time:<18.1f} {avg_memory:<16.3f} "
+                        f"{avg_peak:<18.3f} {avg_cpu:<12.3f} {avg_latency:<17.1f} {avg_tokens:<12.0f} {avg_throughput:<15.2f} {avg_error:<13.2f} "
+                        f"{avg_user_cpu:<17.3f} {avg_sys_cpu:<17.3f} {avg_llm_api_time:<22.3f} {avg_total_time:<20.3f}"
+                    )
                 else:
-                    print(f"{framework_name:<15} {'0':<12} {'N/A':<15} {'N/A':<16} {'N/A':<12} {'N/A':<12}")
+                    print(
+                        f"{framework_name:<15} {'0':<12} {'N/A':<18} {'N/A':<16} {'N/A':<18} {'N/A':<12} {'N/A':<17} "
+                        f"{'N/A':<12} {'N/A':<15} {'N/A':<13} {'N/A':<17} {'N/A':<17} {'N/A':<22} {'N/A':<20}"
+                    )
 
         print("\nDetailed Scenario Comparison:")
         for _scenario, scenario_name in self.scenarios:
             print(f"\n{scenario_name}:")
-            print(f"{'Framework':<15} {'Time (ms)':<12} {'Mem Δ (MB)':<12} {'Peak Mem':<10} {'CPU (%)':<10} {'Tokens':<10} {'Throughput':<12}")
-            print(f"{'-' * 80}")
+            print(
+                f"{'Framework':<15} {'Exec Time (ms)':<16} {'Latency (ms)':<14} {'Mem Δ (MB)':<14} "
+                f"{'Avg Mem (MB)':<14} {'Peak Mem (MB)':<15} {'CPU (%)':<10} {'User CPU (s)':<15} {'Sys CPU (s)':<15} "
+                f"{'LLM API Time (s)':<22} {'Total Time (s)':<20} "
+                f"{'Tokens':<10} {'Throughput':<14} "
+                f"{'Err Rate (%)':<14} {'Conc. Tasks':<15} {'Setup Time (ms)':<16} {'Teardown Time (ms)':<18}"
+            )
+            print(f"{'-' * 270}")
 
             for _framework_type, framework_info in self.frameworks.items():
                 framework_name = framework_info["name"]
@@ -355,15 +383,25 @@ class ComprehensiveBenchmarkRunner:
 
                 if scenario_name in results:
                     metrics = results[scenario_name]
+                    llm_api_time = getattr(metrics, "llm_api_time_sec", 0.0)
+                    total_time = (metrics.execution_time_ms / 1000) + llm_api_time
                     print(
-                        f"{framework_name:<15} {metrics.execution_time_ms:<12.1f} "
-                        f"{metrics.mem_delta_mb:<12.3f} {metrics.peak_memory_mb:<10.2f} "
-                        f"{metrics.cpu_usage_percent:<10.3f} "
-                        f"{metrics.token_count:<10} "
-                        f"{metrics.throughput_tasks_per_sec:<12.2f}"
+                        f"{framework_name:<15} {metrics.execution_time_ms:<16.1f} "
+                        f"{metrics.latency_ms:<14.1f} {metrics.mem_delta_mb:<14.3f} "
+                        f"{metrics.avg_memory_mb:<14.2f} {metrics.peak_memory_mb:<15.2f} {metrics.cpu_usage_percent:<10.3f} "
+                        f"{metrics.user_cpu_sec:<15.3f} {metrics.sys_cpu_sec:<15.3f} "
+                        f"{llm_api_time:<22.3f} {total_time:<20.3f} "
+                        f"{metrics.token_count:<10} {metrics.throughput_tasks_per_sec:<14.2f} "
+                        f"{metrics.error_rate*100:<14.2f} {metrics.concurrent_tasks:<15} {metrics.setup_time_ms:<16.2f} {metrics.teardown_time_ms:<18.2f}"
                     )
                 else:
-                    print(f"{framework_name:<15} {'FAILED':<12} {'FAILED':<13} {'FAILED':<10} {'FAILED':<10} {'FAILED':<12}")
+                    print(
+                        f"{framework_name:<15} {'FAILED':<16} {'FAILED':<14} {'FAILED':<14} "
+                        f"{'FAILED':<14} {'FAILED':<15} {'FAILED':<10} {'FAILED':<15} {'FAILED':<15} "
+                        f"{'FAILED':<22} {'FAILED':<20} "
+                        f"{'FAILED':<10} {'FAILED':<14} "
+                        f"{'FAILED':<14} {'FAILED':<15} {'FAILED':<16} {'FAILED':<18}"
+                    )
 
         has_errors = False
         for _framework_type, framework_info in self.frameworks.items():
@@ -417,9 +455,7 @@ class ComprehensiveBenchmarkRunner:
 
         self.log("Generating benchmark visualizations")
         self.create_simple_dashboard()
-        self.log(
-            f"Visualization saved to: {Path(str(self.config['results_dir'])).absolute()}"
-        )
+        self.log(f"Visualization saved to: {Path(str(self.config['results_dir'])).absolute()}")
 
     def create_simple_dashboard(self) -> None:
         """Create a simple dashboard with execution time comparison and performance table."""
@@ -427,7 +463,7 @@ class ComprehensiveBenchmarkRunner:
             self.log("Visualization libraries missing - skipping dashboard", "WARNING")
             return
 
-        fig, axes = plt.subplots(1, 2, figsize=(20, 8))
+        fig, axes = plt.subplots(1, 3, figsize=(30, 8))
         fig.suptitle("Framework Benchmark Results", fontsize=20, fontweight="bold")
 
         scenario_names = [scenario_name for _, scenario_name in self.scenarios]
@@ -443,15 +479,31 @@ class ComprehensiveBenchmarkRunner:
                 colors_list.append(framework_info["color"])
 
         ax1 = axes[0]
+        metric_cache = {}
         for i, fw_name in enumerate(framework_names):
             fw_cpu_usage = []
+            fw_memory = []
+            fw_throughput = []
             for scenario_name in scenario_names:
                 found_cpu = None
+                found_mem = None
+                found_throughput = None
                 for _framework_type, framework_info in self.frameworks.items():
                     if framework_info["name"] == fw_name and scenario_name in framework_info["results"]:
-                        found_cpu = framework_info["results"][scenario_name].cpu_usage_percent
+                        res = framework_info["results"][scenario_name]
+                        found_cpu = res.cpu_usage_percent
+                        found_mem = res.mem_delta_mb
+                        found_throughput = res.throughput_tasks_per_sec
                         break
                 fw_cpu_usage.append(found_cpu if found_cpu is not None else 0)
+                fw_memory.append(found_mem if found_mem is not None else 0)
+                fw_throughput.append(found_throughput if found_throughput is not None else 0)
+
+            metric_cache[fw_name] = {
+                "cpu": fw_cpu_usage,
+                "mem": fw_memory,
+                "thr": fw_throughput,
+            }
 
             ax1.bar(
                 x_pos + i * width,
@@ -464,20 +516,60 @@ class ComprehensiveBenchmarkRunner:
 
         ax1.set_xlabel("Benchmark Scenarios", fontsize=12)
         ax1.set_ylabel("CPU Usage (%)", fontsize=12)
-        ax1.set_title("CPU Usage Comparison", fontsize=16, fontweight="bold")
+        ax1.set_title("CPU Usage", fontsize=16, fontweight="bold")
         ax1.set_xticks(x_pos + width * (len(framework_names) - 1) / 2)
         ax1.set_xticklabels(scenario_names, rotation=45, ha="right")
         ax1.legend()
         ax1.grid(True, alpha=0.3)
 
-        ax2 = axes[1]
+        ax_mem = axes[1]
+        for i, fw_name in enumerate(framework_names):
+            ax_mem.bar(
+                x_pos + i * width,
+                metric_cache[fw_name]["mem"],
+                width,
+                label=fw_name,
+                color=colors_list[i],
+                alpha=0.8,
+            )
+        ax_mem.set_xlabel("Benchmark Scenarios", fontsize=12)
+        ax_mem.set_ylabel("Memory Δ (MB)", fontsize=12)
+        ax_mem.set_title("Memory Usage", fontsize=16, fontweight="bold")
+        ax_mem.set_xticks(x_pos + width * (len(framework_names) - 1) / 2)
+        ax_mem.set_xticklabels(scenario_names, rotation=45, ha="right")
+        ax_mem.legend()
+        ax_mem.grid(True, alpha=0.3)
+
+        ax_thr = axes[2]
+        for i, fw_name in enumerate(framework_names):
+            ax_thr.bar(
+                x_pos + i * width,
+                metric_cache[fw_name]["thr"],
+                width,
+                label=fw_name,
+                color=colors_list[i],
+                alpha=0.8,
+            )
+        ax_thr.set_xlabel("Benchmark Scenarios", fontsize=12)
+        ax_thr.set_ylabel("Throughput (t/s)", fontsize=12)
+        ax_thr.set_title("Throughput", fontsize=16, fontweight="bold")
+        ax_thr.set_xticks(x_pos + width * (len(framework_names) - 1) / 2)
+        ax_thr.set_xticklabels(scenario_names, rotation=45, ha="right")
+        ax_thr.legend()
+        ax_thr.grid(True, alpha=0.3)
+
+        ax2 = ax_thr.twinx()
         ax2.axis("off")
 
         table_data = []
         headers = [
             "Framework",
             "Avg CPU (%)",
+            "Avg Memory",
+            "Avg Peak",
             "Avg Throughput (tasks/s)",
+            "Avg Tokens",
+            "Error Rate (%)",
             "Success Rate (%)",
         ]
 
@@ -491,7 +583,11 @@ class ComprehensiveBenchmarkRunner:
             if found_framework_info and found_framework_info["results"]:
                 results = found_framework_info["results"]
                 avg_cpu = np.mean([m.cpu_usage_percent for m in results.values()])
+                avg_mem = np.mean([m.avg_memory_mb for m in results.values()])
+                avg_peak = np.mean([m.peak_memory_mb for m in results.values()])
                 avg_throughput = np.mean([m.throughput_tasks_per_sec for m in results.values()])
+                avg_tokens = np.mean([m.token_count for m in results.values()])
+                avg_error = np.mean([m.error_rate for m in results.values()]) * 100
                 total_scenarios = len(found_framework_info["results"])
                 total_errors = len(found_framework_info["errors"])
                 success_rate = (total_scenarios / (total_scenarios + total_errors)) * 100 if total_scenarios + total_errors > 0 else 100
@@ -500,7 +596,11 @@ class ComprehensiveBenchmarkRunner:
                     [
                         _fw_name,
                         f"{avg_cpu:.3f}",
+                        f"{avg_mem:.2f}",
+                        f"{avg_peak:.2f}",
                         f"{avg_throughput:.2f}",
+                        f"{avg_tokens:.1f}",
+                        f"{avg_error:.1f}",
                         f"{success_rate:.1f}%",
                     ]
                 )
@@ -565,8 +665,8 @@ class ComprehensiveBenchmarkRunner:
         self.log(f"Benchmark completed in {overall_time:.2f} seconds")
         self.log(f"Results saved to: {Path(str(self.config['log_dir'])).absolute()}")
         self.log(f"Visualizations saved to: {Path(str(self.config['results_dir'])).absolute()}")
-        
-        
+
+
 @click.command()
 @click.option("--provider", type=click.Choice([p.value for p in LLMProvider], case_sensitive=False), default=LLMProvider.OPENAI.value, help="LLM provider to use for benchmarking", show_default=True)
 @click.option("--model", type=str, default=DEFAULT_MODEL, help="Model name to use for benchmarking", show_default=True)
@@ -723,10 +823,9 @@ def main(
         click.echo(f"Benchmark failed: {e}", err=True)
         if verbose:
             import traceback
+
             traceback.print_exc()
 
 
 if __name__ == "__main__":
     main()
-        
-        

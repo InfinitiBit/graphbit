@@ -142,11 +142,16 @@ class PydanticAIBenchmark(BaseBenchmark):
         self.agents = {}
 
     async def run_simple_task(self) -> BenchmarkMetrics:
-        """Execute a simple single-task benchmark using Pydantic AI."""
+        """Execute a simple single-task benchmark using Pydantic AI, excluding LLM API time."""
+        import time
+
         self.monitor.start_monitoring()
+        llm_api_time = 0.0
 
         agent: Agent = self.agents["simple"]
+        llm_start = time.perf_counter()
         result = await agent.run(SIMPLE_TASK_PROMPT)
+        llm_api_time += time.perf_counter() - llm_start
 
         self.log_output(
             scenario_name=BenchmarkScenario.SIMPLE_TASK.value,
@@ -157,12 +162,17 @@ class PydanticAIBenchmark(BaseBenchmark):
         token_count = count_tokens_estimate(SIMPLE_TASK_PROMPT + str(result.output))
         metrics = self.monitor.stop_monitoring()
         metrics.token_count = token_count
-        metrics.throughput_tasks_per_sec = calculate_throughput(1, metrics.execution_time_ms / 1000)
+        metrics.llm_api_time_sec = llm_api_time
+        metrics.throughput_tasks_per_sec = calculate_throughput(1, (metrics.execution_time_ms / 1000) - llm_api_time)
+        metrics.execution_time_ms = max(0, metrics.execution_time_ms - llm_api_time * 1000)
         return metrics
 
     async def run_sequential_pipeline(self) -> BenchmarkMetrics:
-        """Execute a sequential pipeline benchmark using Pydantic AI."""
+        """Execute a sequential pipeline benchmark using Pydantic AI, excluding LLM API time."""
+        import time
+
         self.monitor.start_monitoring()
+        llm_api_time = 0.0
 
         agent: Agent = self.agents["sequential"]
         previous_result: str = ""
@@ -174,7 +184,9 @@ class PydanticAIBenchmark(BaseBenchmark):
             else:
                 prompt = f"Previous result: {previous_result}\n\nTask {i+1}: {task}"
 
+            llm_start = time.perf_counter()
             result = await agent.run(prompt)
+            llm_api_time += time.perf_counter() - llm_start
             previous_result = str(result.output)
             # Count tokens based on original task only for fair comparison
             total_tokens += count_tokens_estimate(task + previous_result)
@@ -187,20 +199,29 @@ class PydanticAIBenchmark(BaseBenchmark):
 
         metrics = self.monitor.stop_monitoring()
         metrics.token_count = total_tokens
-        metrics.throughput_tasks_per_sec = calculate_throughput(len(SEQUENTIAL_TASKS), metrics.execution_time_ms / 1000)
+        metrics.llm_api_time_sec = llm_api_time
+        metrics.throughput_tasks_per_sec = calculate_throughput(len(SEQUENTIAL_TASKS), (metrics.execution_time_ms / 1000) - llm_api_time)
+        metrics.execution_time_ms = max(0, metrics.execution_time_ms - llm_api_time * 1000)
         return metrics
 
     async def run_parallel_pipeline(self) -> BenchmarkMetrics:
-        """Execute a parallel pipeline benchmark using Pydantic AI."""
+        """Execute a parallel pipeline benchmark using Pydantic AI, excluding LLM API time."""
+        import time
+
         self.monitor.start_monitoring()
+        llm_api_time = 0.0
 
         agent: Agent = self.agents["general"]
         concurrency: int = int(self.config.get("concurrency", len(PARALLEL_TASKS)))
         sem = asyncio.Semaphore(concurrency)
 
         async def run_with_sem(t: str) -> Any:
+            nonlocal llm_api_time
             async with sem:
-                return await agent.run(t)
+                llm_start = time.perf_counter()
+                result = await agent.run(t)
+                llm_api_time += time.perf_counter() - llm_start
+                return result
 
         tasks = [run_with_sem(task) for task in PARALLEL_TASKS]
         results = await asyncio.gather(*tasks)
@@ -216,13 +237,18 @@ class PydanticAIBenchmark(BaseBenchmark):
 
         metrics = self.monitor.stop_monitoring()
         metrics.token_count = total_tokens
+        metrics.llm_api_time_sec = llm_api_time
         metrics.concurrent_tasks = len(PARALLEL_TASKS)
-        metrics.throughput_tasks_per_sec = calculate_throughput(len(PARALLEL_TASKS), metrics.execution_time_ms / 1000)
+        metrics.throughput_tasks_per_sec = calculate_throughput(len(PARALLEL_TASKS), (metrics.execution_time_ms / 1000) - llm_api_time)
+        metrics.execution_time_ms = max(0, metrics.execution_time_ms - llm_api_time * 1000)
         return metrics
 
     async def run_complex_workflow(self) -> BenchmarkMetrics:
-        """Run a complex workflow benchmark using Pydantic AI."""
+        """Run a complex workflow benchmark using Pydantic AI, excluding LLM API time."""
+        import time
+
         self.monitor.start_monitoring()
+        llm_api_time = 0.0
 
         agent: Agent = self.agents["complex"]
         results: Dict[str, str] = {}
@@ -234,7 +260,9 @@ class PydanticAIBenchmark(BaseBenchmark):
 
             prompt = f"Context from dependencies: {context}\n\n" f"Task: {step['prompt']}\nTask name: {step['task']}"
 
+            llm_start = time.perf_counter()
             result = await agent.run(prompt)
+            llm_api_time += time.perf_counter() - llm_start
             results[step["task"]] = str(result.output)
 
             self.log_output(
@@ -248,19 +276,26 @@ class PydanticAIBenchmark(BaseBenchmark):
 
         metrics = self.monitor.stop_monitoring()
         metrics.token_count = total_tokens
-        metrics.throughput_tasks_per_sec = calculate_throughput(len(COMPLEX_WORKFLOW_STEPS), metrics.execution_time_ms / 1000)
+        metrics.llm_api_time_sec = llm_api_time
+        metrics.throughput_tasks_per_sec = calculate_throughput(len(COMPLEX_WORKFLOW_STEPS), (metrics.execution_time_ms / 1000) - llm_api_time)
+        metrics.execution_time_ms = max(0, metrics.execution_time_ms - llm_api_time * 1000)
         return metrics
 
     async def run_memory_intensive(self) -> BenchmarkMetrics:
-        """Run a memory-intensive benchmark using Pydantic AI."""
+        """Run a memory-intensive benchmark using Pydantic AI, excluding LLM API time."""
+        import time
+
         self.monitor.start_monitoring()
+        llm_api_time = 0.0
 
         agent: Agent = self.agents["general"]
 
         # Simulate large memory usage (no real processing)
         large_data: List[str] = ["data" * 1000] * 1000  # ~4MB of string data
 
+        llm_start = time.perf_counter()
         result = await agent.run(MEMORY_INTENSIVE_PROMPT)
+        llm_api_time += time.perf_counter() - llm_start
 
         self.log_output(
             scenario_name=BenchmarkScenario.MEMORY_INTENSIVE.value,
@@ -273,20 +308,29 @@ class PydanticAIBenchmark(BaseBenchmark):
 
         metrics = self.monitor.stop_monitoring()
         metrics.token_count = token_count
-        metrics.throughput_tasks_per_sec = calculate_throughput(1, metrics.execution_time_ms / 1000)
+        metrics.llm_api_time_sec = llm_api_time
+        metrics.throughput_tasks_per_sec = calculate_throughput(1, (metrics.execution_time_ms / 1000) - llm_api_time)
+        metrics.execution_time_ms = max(0, metrics.execution_time_ms - llm_api_time * 1000)
         return metrics
 
     async def run_concurrent_tasks(self) -> BenchmarkMetrics:
-        """Run concurrent tasks benchmark using Pydantic AI."""
+        """Run concurrent tasks benchmark using Pydantic AI, excluding LLM API time."""
+        import time
+
         self.monitor.start_monitoring()
 
         agent: Agent = self.agents["general"]
         concurrency: int = int(self.config.get("concurrency", len(CONCURRENT_TASK_PROMPTS)))
         sem = asyncio.Semaphore(concurrency)
+        llm_api_time = 0.0
 
         async def run_with_sem(p: str) -> Any:
+            nonlocal llm_api_time
             async with sem:
-                return await agent.run(p)
+                llm_start = time.perf_counter()
+                result = await agent.run(p)
+                llm_api_time += time.perf_counter() - llm_start
+                return result
 
         tasks = [run_with_sem(prompt) for prompt in CONCURRENT_TASK_PROMPTS]
         results = await asyncio.gather(*tasks)
@@ -302,6 +346,8 @@ class PydanticAIBenchmark(BaseBenchmark):
 
         metrics = self.monitor.stop_monitoring()
         metrics.token_count = total_tokens
+        metrics.llm_api_time_sec = llm_api_time
         metrics.concurrent_tasks = len(CONCURRENT_TASK_PROMPTS)
-        metrics.throughput_tasks_per_sec = calculate_throughput(len(CONCURRENT_TASK_PROMPTS), metrics.execution_time_ms / 1000)
+        metrics.throughput_tasks_per_sec = calculate_throughput(len(CONCURRENT_TASK_PROMPTS), (metrics.execution_time_ms / 1000) - llm_api_time)
+        metrics.execution_time_ms = max(0, metrics.execution_time_ms - llm_api_time * 1000)
         return metrics

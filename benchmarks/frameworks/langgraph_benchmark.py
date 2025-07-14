@@ -378,12 +378,17 @@ class LangGraphBenchmark(BaseBenchmark):
         self.graphs = {}
 
     async def run_simple_task(self) -> BenchmarkMetrics:
-        """Run the simple task benchmark."""
+        """Run the simple task benchmark, excluding LLM API time."""
+        import time
+
         self.monitor.start_monitoring()
+        llm_api_time = 0.0
         try:
             graph = self.graphs["simple"]
             initial_state: SimpleState = {"messages": [], "task": SIMPLE_TASK_PROMPT, "result": None}
+            llm_start = time.perf_counter()
             result: SimpleState = await graph.ainvoke(initial_state)
+            llm_api_time += time.perf_counter() - llm_start
             token_count = count_tokens_estimate(SIMPLE_TASK_PROMPT + (result["result"] or ""))
         except Exception as e:
             self.logger.error(f"Error in simple task benchmark: {e}")
@@ -393,12 +398,17 @@ class LangGraphBenchmark(BaseBenchmark):
             return metrics
         metrics = self.monitor.stop_monitoring()
         metrics.token_count = token_count
-        metrics.throughput_tasks_per_sec = calculate_throughput(1, metrics.execution_time_ms / 1000)
+        metrics.llm_api_time_sec = llm_api_time
+        metrics.throughput_tasks_per_sec = calculate_throughput(1, (metrics.execution_time_ms / 1000) - llm_api_time)
+        metrics.execution_time_ms = max(0, metrics.execution_time_ms - llm_api_time * 1000)
         return metrics
 
     async def run_sequential_pipeline(self) -> BenchmarkMetrics:
-        """Run the sequential pipeline benchmark."""
+        """Run the sequential pipeline benchmark, excluding LLM API time."""
+        import time
+
         self.monitor.start_monitoring()
+        llm_api_time = 0.0
         try:
             graph = self.graphs["sequential"]
             step_data = {f"step_{i}": task for i, task in enumerate(SEQUENTIAL_TASKS)}
@@ -408,7 +418,9 @@ class LangGraphBenchmark(BaseBenchmark):
                 "context": "",
                 "step_data": step_data,
             }
+            llm_start = time.perf_counter()
             result: WorkflowState = await graph.ainvoke(state)
+            llm_api_time += time.perf_counter() - llm_start
             total_tokens = sum(count_tokens_estimate(task + result["results"].get(f"step_{i}", "")) for i, task in enumerate(SEQUENTIAL_TASKS))
         except Exception as e:
             self.logger.error(f"Error in sequential pipeline benchmark: {e}")
@@ -418,12 +430,17 @@ class LangGraphBenchmark(BaseBenchmark):
             return metrics
         metrics = self.monitor.stop_monitoring()
         metrics.token_count = total_tokens
-        metrics.throughput_tasks_per_sec = calculate_throughput(len(SEQUENTIAL_TASKS), metrics.execution_time_ms / 1000)
+        metrics.llm_api_time_sec = llm_api_time
+        metrics.throughput_tasks_per_sec = calculate_throughput(len(SEQUENTIAL_TASKS), (metrics.execution_time_ms / 1000) - llm_api_time)
+        metrics.execution_time_ms = max(0, metrics.execution_time_ms - llm_api_time * 1000)
         return metrics
 
     async def run_parallel_pipeline(self) -> BenchmarkMetrics:
-        """Run the parallel pipeline benchmark."""
+        """Run the parallel pipeline benchmark, excluding LLM API time."""
+        import time
+
         self.monitor.start_monitoring()
+        llm_api_time = 0.0
         try:
             graph = self.graphs["parallel"]
             state: WorkflowState = {
@@ -432,7 +449,9 @@ class LangGraphBenchmark(BaseBenchmark):
                 "context": "",
                 "step_data": {},
             }
+            llm_start = time.perf_counter()
             result: WorkflowState = await graph.ainvoke(state)
+            llm_api_time += time.perf_counter() - llm_start
             total_tokens = sum(count_tokens_estimate(task + result["results"].get(f"task_{i}", "")) for i, task in enumerate(PARALLEL_TASKS))
         except Exception as e:
             self.logger.error(f"Error in parallel pipeline benchmark: {e}")
@@ -442,13 +461,18 @@ class LangGraphBenchmark(BaseBenchmark):
             return metrics
         metrics = self.monitor.stop_monitoring()
         metrics.token_count = total_tokens
+        metrics.llm_api_time_sec = llm_api_time
         metrics.concurrent_tasks = len(PARALLEL_TASKS)
-        metrics.throughput_tasks_per_sec = calculate_throughput(len(PARALLEL_TASKS), metrics.execution_time_ms / 1000)
+        metrics.throughput_tasks_per_sec = calculate_throughput(len(PARALLEL_TASKS), (metrics.execution_time_ms / 1000) - llm_api_time)
+        metrics.execution_time_ms = max(0, metrics.execution_time_ms - llm_api_time * 1000)
         return metrics
 
     async def run_complex_workflow(self) -> BenchmarkMetrics:
-        """Run the complex workflow benchmark."""
+        """Run the complex workflow benchmark, excluding LLM API time."""
+        import time
+
         self.monitor.start_monitoring()
+        llm_api_time = 0.0
         try:
             graph = self.graphs["complex"]
             state: WorkflowState = {
@@ -457,7 +481,9 @@ class LangGraphBenchmark(BaseBenchmark):
                 "context": "",
                 "step_data": {},
             }
+            llm_start = time.perf_counter()
             result: WorkflowState = await graph.ainvoke(state)
+            llm_api_time += time.perf_counter() - llm_start
             total_tokens = sum(count_tokens_estimate(step["prompt"] + result["results"].get(step["task"], "")) for step in COMPLEX_WORKFLOW_STEPS)
         except Exception as e:
             self.logger.error(f"Error in complex workflow benchmark: {e}")
@@ -467,17 +493,24 @@ class LangGraphBenchmark(BaseBenchmark):
             return metrics
         metrics = self.monitor.stop_monitoring()
         metrics.token_count = total_tokens
-        metrics.throughput_tasks_per_sec = calculate_throughput(len(COMPLEX_WORKFLOW_STEPS), metrics.execution_time_ms / 1000)
+        metrics.llm_api_time_sec = llm_api_time
+        metrics.throughput_tasks_per_sec = calculate_throughput(len(COMPLEX_WORKFLOW_STEPS), (metrics.execution_time_ms / 1000) - llm_api_time)
+        metrics.execution_time_ms = max(0, metrics.execution_time_ms - llm_api_time * 1000)
         return metrics
 
     async def run_memory_intensive(self) -> BenchmarkMetrics:
-        """Run the memory-intensive benchmark."""
+        """Run the memory-intensive benchmark, excluding LLM API time."""
+        import time
+
         self.monitor.start_monitoring()
+        llm_api_time = 0.0
         try:
             graph = self.graphs["simple"]
             _ = ["data" * 1000] * 1000
             state: SimpleState = {"messages": [], "task": MEMORY_INTENSIVE_PROMPT, "result": None}
+            llm_start = time.perf_counter()
             result: SimpleState = await graph.ainvoke(state)
+            llm_api_time += time.perf_counter() - llm_start
             token_count = count_tokens_estimate(MEMORY_INTENSIVE_PROMPT + (result["result"] or ""))
         except Exception as e:
             self.logger.error(f"Error in memory intensive benchmark: {e}")
@@ -487,20 +520,29 @@ class LangGraphBenchmark(BaseBenchmark):
             return metrics
         metrics = self.monitor.stop_monitoring()
         metrics.token_count = token_count
-        metrics.throughput_tasks_per_sec = calculate_throughput(1, metrics.execution_time_ms / 1000)
+        metrics.llm_api_time_sec = llm_api_time
+        metrics.throughput_tasks_per_sec = calculate_throughput(1, (metrics.execution_time_ms / 1000) - llm_api_time)
+        metrics.execution_time_ms = max(0, metrics.execution_time_ms - llm_api_time * 1000)
         return metrics
 
     async def run_concurrent_tasks(self) -> BenchmarkMetrics:
-        """Run the concurrent tasks benchmark."""
+        """Run the concurrent tasks benchmark, excluding LLM API time."""
+        import time
+
         self.monitor.start_monitoring()
+        llm_api_time = 0.0
         try:
             graph = self.graphs["simple"]
             concurrency: int = int(self.config.get("concurrency", len(CONCURRENT_TASK_PROMPTS)))
             sem = asyncio.Semaphore(concurrency)
 
             async def run_with_sem(p: str) -> SimpleState:
+                nonlocal llm_api_time
                 async with sem:
-                    return await graph.ainvoke({"messages": [], "task": p, "result": None})
+                    llm_start = time.perf_counter()
+                    result = await graph.ainvoke({"messages": [], "task": p, "result": None})
+                    llm_api_time += time.perf_counter() - llm_start
+                    return result
 
             tasks = [run_with_sem(prompt) for prompt in CONCURRENT_TASK_PROMPTS]
             results: List[SimpleState] = await asyncio.gather(*tasks)
@@ -514,6 +556,8 @@ class LangGraphBenchmark(BaseBenchmark):
             return metrics
         metrics = self.monitor.stop_monitoring()
         metrics.token_count = total_tokens
+        metrics.llm_api_time_sec = llm_api_time
         metrics.concurrent_tasks = len(CONCURRENT_TASK_PROMPTS)
-        metrics.throughput_tasks_per_sec = calculate_throughput(len(CONCURRENT_TASK_PROMPTS), metrics.execution_time_ms / 1000)
+        metrics.throughput_tasks_per_sec = calculate_throughput(len(CONCURRENT_TASK_PROMPTS), (metrics.execution_time_ms / 1000) - llm_api_time)
+        metrics.execution_time_ms = max(0, metrics.execution_time_ms - llm_api_time * 1000)
         return metrics

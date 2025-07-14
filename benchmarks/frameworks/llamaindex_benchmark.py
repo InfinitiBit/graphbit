@@ -112,12 +112,17 @@ class LlamaIndexBenchmark(BaseBenchmark):
         self.chat_engine = None
 
     async def run_simple_task(self) -> BenchmarkMetrics:
-        """Run a simple single-task benchmark using LlamaIndex."""
+        """Run a simple single-task benchmark using LlamaIndex, excluding LLM API time."""
+        import time
+
         self.monitor.start_monitoring()
+        llm_api_time = 0.0
 
         if self.llm is None:
             raise ValueError("LLM not initialized")
+        llm_start = time.perf_counter()
         response = await self.llm.acomplete(SIMPLE_TASK_PROMPT)
+        llm_api_time += time.perf_counter() - llm_start
         result = str(response)
 
         self.log_output(
@@ -130,12 +135,17 @@ class LlamaIndexBenchmark(BaseBenchmark):
 
         metrics = self.monitor.stop_monitoring()
         metrics.token_count = token_count
-        metrics.throughput_tasks_per_sec = calculate_throughput(1, metrics.execution_time_ms / 1000)
+        metrics.llm_api_time_sec = llm_api_time
+        metrics.throughput_tasks_per_sec = calculate_throughput(1, (metrics.execution_time_ms / 1000) - llm_api_time)
+        metrics.execution_time_ms = max(0, metrics.execution_time_ms - llm_api_time * 1000)
         return metrics
 
     async def run_sequential_pipeline(self) -> BenchmarkMetrics:
-        """Run a sequential pipeline benchmark using LlamaIndex."""
+        """Run a sequential pipeline benchmark using LlamaIndex, excluding LLM API time."""
+        import time
+
         self.monitor.start_monitoring()
+        llm_api_time = 0.0
 
         if self.llm is None:
             raise ValueError("LLM not initialized")
@@ -145,8 +155,9 @@ class LlamaIndexBenchmark(BaseBenchmark):
 
         for i, task in enumerate(SEQUENTIAL_TASKS):
             prompt = task if i == 0 else f"Previous result: {previous_result}\n\nNew task: {task}"
-
+            llm_start = time.perf_counter()
             response = await self.llm.acomplete(prompt)
+            llm_api_time += time.perf_counter() - llm_start
             result = str(response)
             previous_result = result
             total_tokens += count_tokens_estimate(prompt + result)
@@ -159,12 +170,17 @@ class LlamaIndexBenchmark(BaseBenchmark):
 
         metrics = self.monitor.stop_monitoring()
         metrics.token_count = total_tokens
-        metrics.throughput_tasks_per_sec = calculate_throughput(len(SEQUENTIAL_TASKS), metrics.execution_time_ms / 1000)
+        metrics.llm_api_time_sec = llm_api_time
+        metrics.throughput_tasks_per_sec = calculate_throughput(len(SEQUENTIAL_TASKS), (metrics.execution_time_ms / 1000) - llm_api_time)
+        metrics.execution_time_ms = max(0, metrics.execution_time_ms - llm_api_time * 1000)
         return metrics
 
     async def run_parallel_pipeline(self) -> BenchmarkMetrics:
-        """Run a parallel pipeline benchmark using LlamaIndex."""
+        """Run a parallel pipeline benchmark using LlamaIndex, excluding LLM API time."""
+        import time
+
         self.monitor.start_monitoring()
+        llm_api_time = 0.0
 
         if self.llm is None:
             raise ValueError("LLM not initialized")
@@ -174,8 +190,12 @@ class LlamaIndexBenchmark(BaseBenchmark):
         sem = asyncio.Semaphore(concurrency)
 
         async def run_with_sem(t: str) -> Any:
+            nonlocal llm_api_time
             async with sem:
-                return await llm.acomplete(t)
+                llm_start = time.perf_counter()
+                result = await llm.acomplete(t)
+                llm_api_time += time.perf_counter() - llm_start
+                return result
 
         tasks = [run_with_sem(task) for task in PARALLEL_TASKS]
         responses = await asyncio.gather(*tasks)
@@ -192,13 +212,18 @@ class LlamaIndexBenchmark(BaseBenchmark):
 
         metrics = self.monitor.stop_monitoring()
         metrics.token_count = total_tokens
+        metrics.llm_api_time_sec = llm_api_time
         metrics.concurrent_tasks = len(PARALLEL_TASKS)
-        metrics.throughput_tasks_per_sec = calculate_throughput(len(PARALLEL_TASKS), metrics.execution_time_ms / 1000)
+        metrics.throughput_tasks_per_sec = calculate_throughput(len(PARALLEL_TASKS), (metrics.execution_time_ms / 1000) - llm_api_time)
+        metrics.execution_time_ms = max(0, metrics.execution_time_ms - llm_api_time * 1000)
         return metrics
 
     async def run_complex_workflow(self) -> BenchmarkMetrics:
-        """Run a complex workflow benchmark using LlamaIndex query engine."""
+        """Run a complex workflow benchmark using LlamaIndex query engine, excluding LLM API time."""
+        import time
+
         self.monitor.start_monitoring()
+        llm_api_time = 0.0
 
         if self.query_engine is None or self.llm is None:
             raise ValueError("Query engine or LLM not initialized")
@@ -207,7 +232,9 @@ class LlamaIndexBenchmark(BaseBenchmark):
         results: List[str] = []
 
         for i, step in enumerate(COMPLEX_WORKFLOW_STEPS):
+            llm_start = time.perf_counter()
             response = self.query_engine.query(step["prompt"])
+            llm_api_time += time.perf_counter() - llm_start
             result = str(response)
             results.append(result)
             total_tokens += count_tokens_estimate(step["prompt"] + result)
@@ -220,7 +247,9 @@ class LlamaIndexBenchmark(BaseBenchmark):
 
         synthesis_prompt = "Synthesize the following results into a comprehensive conclusion:\n\n" + "\n\n".join([f"Step {i+1}: {result}" for i, result in enumerate(results)])
 
+        llm_start = time.perf_counter()
         final_response = await self.llm.acomplete(synthesis_prompt)
+        llm_api_time += time.perf_counter() - llm_start
         final_result = str(final_response)
         total_tokens += count_tokens_estimate(synthesis_prompt + final_result)
 
@@ -232,12 +261,17 @@ class LlamaIndexBenchmark(BaseBenchmark):
 
         metrics = self.monitor.stop_monitoring()
         metrics.token_count = total_tokens
-        metrics.throughput_tasks_per_sec = calculate_throughput(len(COMPLEX_WORKFLOW_STEPS) + 1, metrics.execution_time_ms / 1000)
+        metrics.llm_api_time_sec = llm_api_time
+        metrics.throughput_tasks_per_sec = calculate_throughput(len(COMPLEX_WORKFLOW_STEPS) + 1, (metrics.execution_time_ms / 1000) - llm_api_time)
+        metrics.execution_time_ms = max(0, metrics.execution_time_ms - llm_api_time * 1000)
         return metrics
 
     async def run_memory_intensive(self) -> BenchmarkMetrics:
-        """Run a memory-intensive benchmark using LlamaIndex."""
+        """Run a memory-intensive benchmark using LlamaIndex, excluding LLM API time."""
+        import time
+
         self.monitor.start_monitoring()
+        llm_api_time = 0.0
 
         if self.llm is None:
             raise ValueError("LLM not initialized")
@@ -249,7 +283,9 @@ class LlamaIndexBenchmark(BaseBenchmark):
         VectorStoreIndex.from_documents(large_documents)
 
         # Use the LLM directly with the full MEMORY_INTENSIVE_PROMPT for consistent token counting
+        llm_start = time.perf_counter()
         response = await self.llm.acomplete(MEMORY_INTENSIVE_PROMPT)
+        llm_api_time += time.perf_counter() - llm_start
         result = str(response)
 
         self.log_output(
@@ -262,11 +298,15 @@ class LlamaIndexBenchmark(BaseBenchmark):
 
         metrics = self.monitor.stop_monitoring()
         metrics.token_count = token_count
-        metrics.throughput_tasks_per_sec = calculate_throughput(1, metrics.execution_time_ms / 1000)
+        metrics.llm_api_time_sec = llm_api_time
+        metrics.throughput_tasks_per_sec = calculate_throughput(1, (metrics.execution_time_ms / 1000) - llm_api_time)
+        metrics.execution_time_ms = max(0, metrics.execution_time_ms - llm_api_time * 1000)
         return metrics
 
     async def run_concurrent_tasks(self) -> BenchmarkMetrics:
-        """Run concurrent tasks benchmark using LlamaIndex."""
+        """Run concurrent tasks benchmark using LlamaIndex, excluding LLM API time."""
+        import time
+
         self.monitor.start_monitoring()
 
         if self.llm is None:
@@ -275,10 +315,15 @@ class LlamaIndexBenchmark(BaseBenchmark):
         llm = self.llm  # Capture for closure
         concurrency: int = int(self.config.get("concurrency", len(CONCURRENT_TASK_PROMPTS)))
         sem = asyncio.Semaphore(concurrency)
+        llm_api_time = 0.0
 
         async def run_with_sem(text: str) -> Any:
+            nonlocal llm_api_time
             async with sem:
-                return await llm.acomplete(text)
+                llm_start = time.perf_counter()
+                result = await llm.acomplete(text)
+                llm_api_time += time.perf_counter() - llm_start
+                return result
 
         llm_tasks = [run_with_sem(f"Task {i+1}: {prompt}") for i, prompt in enumerate(CONCURRENT_TASK_PROMPTS[: len(CONCURRENT_TASK_PROMPTS) // 2])]
 
@@ -305,6 +350,8 @@ class LlamaIndexBenchmark(BaseBenchmark):
 
         metrics = self.monitor.stop_monitoring()
         metrics.token_count = total_tokens
+        metrics.llm_api_time_sec = llm_api_time
         metrics.concurrent_tasks = len(CONCURRENT_TASK_PROMPTS)
-        metrics.throughput_tasks_per_sec = calculate_throughput(len(CONCURRENT_TASK_PROMPTS), metrics.execution_time_ms / 1000)
+        metrics.throughput_tasks_per_sec = calculate_throughput(len(CONCURRENT_TASK_PROMPTS), (metrics.execution_time_ms / 1000) - llm_api_time)
+        metrics.execution_time_ms = max(0, metrics.execution_time_ms - llm_api_time * 1000)
         return metrics

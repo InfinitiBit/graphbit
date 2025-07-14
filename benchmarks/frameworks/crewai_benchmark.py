@@ -132,12 +132,13 @@ class CrewAIBenchmark(BaseBenchmark):
         self.crews.clear()
 
     async def run_simple_task(self) -> BenchmarkMetrics:
-        """Run a simple task benchmark using CrewAI with retry mechanism."""
+        """Run a simple task benchmark using CrewAI with retry mechanism, excluding LLM API time."""
+        import time
+
         self.monitor.start_monitoring()
-
-        max_retries = 3  # Max retries for each task
-        retry_delay = 2  # Delay between retries in seconds
-
+        max_retries = 3
+        retry_delay = 2
+        llm_api_time = 0.0
         try:
             task = Task(
                 description=SIMPLE_TASK_PROMPT,
@@ -145,94 +146,89 @@ class CrewAIBenchmark(BaseBenchmark):
                 expected_output="A comprehensive analysis and summary",
             )
             crew = Crew(agents=[self.agents["general"]], tasks=[task], verbose=False)
-
-            # Retry mechanism
             for attempt in range(max_retries):
                 try:
+                    llm_start = time.perf_counter()
                     result = await asyncio.get_event_loop().run_in_executor(None, crew.kickoff)
-                    break  # If the task succeeds, exit the retry loop
+                    llm_api_time += time.perf_counter() - llm_start
+                    break
                 except Exception as e:
-                    if attempt < max_retries - 1:  # Retry if we haven't reached the max attempts
+                    if attempt < max_retries - 1:
                         self.logger.error(f"Error in simple task on attempt {attempt + 1}: {e}. Retrying...")
-                        await asyncio.sleep(retry_delay)  # Retry delay
+                        await asyncio.sleep(retry_delay)
                     else:
                         self.logger.error(f"Error in simple task after {max_retries} attempts: {e}")
-                        raise e  # If max retries are reached, raise the error
-
-            # Log the output
+                        raise e
             self.log_output(
                 scenario_name=BenchmarkScenario.SIMPLE_TASK.value,
                 task_name="Simple Task",
                 output=str(result),
             )
-
-            # Estimate tokens based on task and result
             token_count = count_tokens_estimate(SIMPLE_TASK_PROMPT + str(result))
-
         except Exception as e:
             self.logger.error(f"Error in simple task benchmark: {e}")
             metrics = self.monitor.stop_monitoring()
             metrics.error_rate = 1.0
             metrics.token_count = 0
             return metrics
-
         metrics = self.monitor.stop_monitoring()
         metrics.token_count = token_count
-        metrics.throughput_tasks_per_sec = calculate_throughput(1, metrics.execution_time_ms / 1000)
+        metrics.llm_api_time_sec = llm_api_time
+        metrics.throughput_tasks_per_sec = calculate_throughput(1, (metrics.execution_time_ms / 1000) - llm_api_time)
+        metrics.execution_time_ms = max(0, metrics.execution_time_ms - llm_api_time * 1000)
         return metrics
 
     async def run_sequential_pipeline(self) -> BenchmarkMetrics:
-        """Run a sequential pipeline benchmark using CrewAI."""
-        self.monitor.start_monitoring()
+        """Run a sequential pipeline benchmark using CrewAI, excluding LLM API time."""
+        import time
 
+        self.monitor.start_monitoring()
+        llm_api_time = 0.0
         try:
             total_tokens = 0
             results: List[str] = []
-
             for i, task_desc in enumerate(SEQUENTIAL_TASKS):
                 agent = self.agents["creator"] if "product" in task_desc or "marketing" in task_desc else self.agents["analyst"]
-
-                # For fair token comparison, use original task description
-                # but still pass context for functional accuracy
                 context = f"Previous results: {' | '.join(results)}\n\n" if results else ""
                 full_prompt = f"{context}Task {i+1}: {task_desc}"
-
                 task = Task(
                     description=full_prompt,
                     agent=agent,
                     expected_output="Detailed response addressing the task requirements",
                 )
                 crew = Crew(agents=[agent], tasks=[task], verbose=False)
+                llm_start = time.perf_counter()
                 result = await asyncio.get_event_loop().run_in_executor(None, crew.kickoff)
+                llm_api_time += time.perf_counter() - llm_start
                 result_str = str(result)
                 results.append(result_str)
-
                 self.log_output(
                     scenario_name=BenchmarkScenario.SEQUENTIAL_PIPELINE.value,
                     task_name=f"Task {i+1}",
                     output=result_str,
                 )
-                # Count tokens based on original task prompt only for fair comparison
                 total_tokens += count_tokens_estimate(task_desc + result_str)
-
         except Exception as e:
             self.logger.error(f"Error in sequential pipeline benchmark: {e}")
             metrics = self.monitor.stop_monitoring()
             metrics.error_rate = 1.0
             metrics.token_count = 0
             return metrics
-
         metrics = self.monitor.stop_monitoring()
         metrics.token_count = total_tokens
-        metrics.throughput_tasks_per_sec = calculate_throughput(len(SEQUENTIAL_TASKS), metrics.execution_time_ms / 1000)
+        metrics.llm_api_time_sec = llm_api_time
+        metrics.throughput_tasks_per_sec = calculate_throughput(len(SEQUENTIAL_TASKS), (metrics.execution_time_ms / 1000) - llm_api_time)
+        metrics.execution_time_ms = max(0, metrics.execution_time_ms - llm_api_time * 1000)
         return metrics
 
     async def run_parallel_pipeline(self) -> BenchmarkMetrics:
-        """Run a parallel pipeline benchmark using CrewAI."""
-        self.monitor.start_monitoring()
+        """Run a parallel pipeline benchmark using CrewAI, excluding LLM API time."""
+        import time
 
+        self.monitor.start_monitoring()
+        llm_api_time = 0.0
         try:
-            # Optimize task execution using asyncio.gather to run tasks concurrently
+
             async def execute_task(task_desc: str, agent_key: str) -> str:
                 agent = self.agents[agent_key]
                 task = Task(
@@ -241,9 +237,12 @@ class CrewAIBenchmark(BaseBenchmark):
                     expected_output="Clear and concise response",
                 )
                 crew = Crew(agents=[agent], tasks=[task], verbose=False)
-                return await asyncio.get_event_loop().run_in_executor(None, crew.kickoff)
+                llm_start = time.perf_counter()
+                result = await asyncio.get_event_loop().run_in_executor(None, crew.kickoff)
+                nonlocal llm_api_time
+                llm_api_time += time.perf_counter() - llm_start
+                return result
 
-            # Create tasks for execution
             agent_keys = ["general", "technical", "creator", "analyst"]
             concurrency: int = int(self.config.get("concurrency", len(PARALLEL_TASKS)))
             sem = asyncio.Semaphore(concurrency)
@@ -253,47 +252,42 @@ class CrewAIBenchmark(BaseBenchmark):
                     return await execute_task(task_desc, agent_key)
 
             tasks = [run_with_sem(task_desc, agent_keys[i % len(agent_keys)]) for i, task_desc in enumerate(PARALLEL_TASKS)]
-
-            # Run all tasks with concurrency limit
             results = await asyncio.gather(*tasks)
-
-            # Log the output and calculate metrics
             for i, (_task_desc, result) in enumerate(zip(PARALLEL_TASKS, results)):
                 self.log_output(
                     scenario_name=BenchmarkScenario.PARALLEL_PIPELINE.value,
                     task_name=f"Parallel Task {i+1}",
                     output=str(result),
                 )
-
             total_tokens = sum(count_tokens_estimate(task_desc + str(result)) for task_desc, result in zip(PARALLEL_TASKS, results))
-
         except Exception as e:
             self.logger.error(f"Error in parallel pipeline benchmark: {e}")
             metrics = self.monitor.stop_monitoring()
             metrics.error_rate = 1.0
             metrics.token_count = 0
             return metrics
-
         metrics = self.monitor.stop_monitoring()
         metrics.token_count = total_tokens
+        metrics.llm_api_time_sec = llm_api_time
         metrics.concurrent_tasks = len(PARALLEL_TASKS)
-        metrics.throughput_tasks_per_sec = calculate_throughput(len(PARALLEL_TASKS), metrics.execution_time_ms / 1000)
+        metrics.throughput_tasks_per_sec = calculate_throughput(len(PARALLEL_TASKS), (metrics.execution_time_ms / 1000) - llm_api_time)
+        metrics.execution_time_ms = max(0, metrics.execution_time_ms - llm_api_time * 1000)
         return metrics
 
     async def run_complex_workflow(self) -> BenchmarkMetrics:
-        """Run a complex workflow benchmark using CrewAI with optimized execution."""
-        self.monitor.start_monitoring()
+        """Run a complex workflow benchmark using CrewAI with optimized execution, excluding LLM API time."""
+        import time
 
+        self.monitor.start_monitoring()
+        llm_api_time = 0.0
         try:
             results: Dict[str, str] = {}
             total_tokens = 0
 
-            # Identify independent steps and run them concurrently
             async def execute_step(step: Dict[str, Any]) -> str:
                 context_parts = [f"{dep}: {results[dep]}" for dep in step["depends_on"] if dep in results]
                 context = " | ".join(context_parts) if context_parts else "None"
                 full_prompt = f"Context: {context}\n\nTask: {step['prompt']}"
-
                 agent_key = "analyst" if "analysis" in step["task"] else "technical"
                 task = Task(
                     description=full_prompt,
@@ -301,112 +295,89 @@ class CrewAIBenchmark(BaseBenchmark):
                     expected_output="Comprehensive analysis and recommendations",
                 )
                 crew = Crew(agents=[self.agents[agent_key]], tasks=[task], verbose=False)
-
-                # Execute task and ensure proper result handling
+                llm_start = time.perf_counter()
                 result = await asyncio.get_event_loop().run_in_executor(None, crew.kickoff)
-
-                # Log the type of result to understand its structure
-                # self.logger.info(f"Task result type: {type(result)}")
-
-                # If result is a custom object (e.g., CrewOutput), handle it
+                nonlocal llm_api_time
+                llm_api_time += time.perf_counter() - llm_start
                 if isinstance(result, str):
                     return result
                 else:
-                    # Attempt to convert the result to string or access specific properties
                     try:
-                        result_str = str(result)  # Attempt to convert to string
+                        result_str = str(result)
                         return result_str
                     except Exception as e:
-                        # Handle the case where result cannot be directly converted to string
                         self.logger.error(f"Failed to convert result to string: {e}")
                         raise e
 
-            # Identify dependent and independent steps
             steps_to_execute = []
             for step in COMPLEX_WORKFLOW_STEPS:
-                # If the step has no dependencies or all dependencies are already in results, we can run it in parallel
                 if not step["depends_on"] or all(dep in results for dep in step["depends_on"]):
                     steps_to_execute.append(execute_step(step))
                 else:
-                    # For steps that are dependent, execute sequentially
                     result = await execute_step(step)
                     results[step["task"]] = result
                     total_tokens += count_tokens_estimate(step["prompt"] + result)
-
-            # Execute all steps concurrently when dependencies are satisfied
             step_results = await asyncio.gather(*steps_to_execute)
-
-            # Add results to the workflow
             for i, result in enumerate(step_results):
                 step = COMPLEX_WORKFLOW_STEPS[i]
                 results[step["task"]] = result
                 total_tokens += count_tokens_estimate(step["prompt"] + result)
-
-            # Log the output and calculate metrics
             for task_name, result in results.items():
                 self.log_output(
                     scenario_name=BenchmarkScenario.COMPLEX_WORKFLOW.value,
                     task_name=task_name,
-                    output=str(result),  # Ensure the result is a string before logging
+                    output=str(result),
                 )
-
         except Exception as e:
             self.logger.error(f"Error in complex workflow benchmark: {e}")
             metrics = self.monitor.stop_monitoring()
             metrics.error_rate = 1.0
             metrics.token_count = 0
             return metrics
-
         metrics = self.monitor.stop_monitoring()
         metrics.token_count = total_tokens
-        metrics.throughput_tasks_per_sec = calculate_throughput(len(COMPLEX_WORKFLOW_STEPS), metrics.execution_time_ms / 1000)
+        metrics.llm_api_time_sec = llm_api_time
+        metrics.throughput_tasks_per_sec = calculate_throughput(len(COMPLEX_WORKFLOW_STEPS), (metrics.execution_time_ms / 1000) - llm_api_time)
+        metrics.execution_time_ms = max(0, metrics.execution_time_ms - llm_api_time * 1000)
         return metrics
 
     async def run_memory_intensive(self) -> BenchmarkMetrics:
-        """Run a memory-intensive benchmark with optimized cleanup."""
+        """Run a memory-intensive benchmark with optimized cleanup, excluding LLM API time."""
+        import time
+
         self.monitor.start_monitoring()
-
+        llm_api_time = 0.0
         try:
-            # Simulate memory-intensive task
             large_data = ["data" * 1000] * 1000  # ~4MB of string data
-
             task = Task(
                 description=MEMORY_INTENSIVE_PROMPT,
                 agent=self.agents["analyst"],
                 expected_output="Detailed data analysis with insights and recommendations",
             )
             crew = Crew(agents=[self.agents["analyst"]], tasks=[task], verbose=False)
-
-            # Run the task asynchronously
+            llm_start = time.perf_counter()
             result = await asyncio.get_event_loop().run_in_executor(None, crew.kickoff)
-
-            # Efficient cleanup: delete large data as soon as it's no longer needed
+            llm_api_time += time.perf_counter() - llm_start
             del large_data
-            await asyncio.sleep(0)  # Yield control to allow cleanup to happen
-
-            # Log the output
+            await asyncio.sleep(0)
             self.log_output(
                 scenario_name=BenchmarkScenario.MEMORY_INTENSIVE.value,
                 task_name="Memory Intensive",
                 output=str(result),
             )
-
-            # Estimate tokens
             token_count = count_tokens_estimate(MEMORY_INTENSIVE_PROMPT + str(result))
-
-            # Cleanup resources asynchronously to reduce memory consumption
             await self.async_cleanup_resources()
-
         except Exception as e:
             self.logger.error(f"Error in memory-intensive benchmark: {e}")
             metrics = self.monitor.stop_monitoring()
             metrics.error_rate = 1.0
             metrics.token_count = 0
             return metrics
-
         metrics = self.monitor.stop_monitoring()
         metrics.token_count = token_count
-        metrics.throughput_tasks_per_sec = calculate_throughput(1, metrics.execution_time_ms / 1000)
+        metrics.llm_api_time_sec = llm_api_time
+        metrics.throughput_tasks_per_sec = calculate_throughput(1, (metrics.execution_time_ms / 1000) - llm_api_time)
+        metrics.execution_time_ms = max(0, metrics.execution_time_ms - llm_api_time * 1000)
         return metrics
 
     async def async_cleanup_resources(self) -> None:
@@ -415,11 +386,14 @@ class CrewAIBenchmark(BaseBenchmark):
         await asyncio.sleep(1)  # Simulate async cleanup
 
     async def run_concurrent_tasks(self) -> BenchmarkMetrics:
-        """Run concurrent tasks benchmark using CrewAI with retry mechanism."""
+        """Run concurrent tasks benchmark using CrewAI with retry mechanism, excluding LLM API time."""
+        import time
+
         self.monitor.start_monitoring()
 
         max_retries = 3  # Max retries for each task
         retry_delay = 2  # Delay between retries in seconds
+        llm_api_time = 0.0
 
         try:
             # Optimize task execution using asyncio.gather to run tasks concurrently
@@ -435,7 +409,11 @@ class CrewAIBenchmark(BaseBenchmark):
                 # Retry mechanism
                 for attempt in range(max_retries):
                     try:
-                        return await asyncio.get_event_loop().run_in_executor(None, crew.kickoff)
+                        llm_start = time.perf_counter()
+                        result = await asyncio.get_event_loop().run_in_executor(None, crew.kickoff)
+                        nonlocal llm_api_time
+                        llm_api_time += time.perf_counter() - llm_start
+                        return result
                     except Exception as e:
                         if attempt < max_retries - 1:  # Retry if we haven't reached the max attempts
                             self.logger.error(f"Error in task '{task_desc}' on attempt {attempt + 1}: {e}. Retrying...")
@@ -479,6 +457,8 @@ class CrewAIBenchmark(BaseBenchmark):
 
         metrics = self.monitor.stop_monitoring()
         metrics.token_count = total_tokens
+        metrics.llm_api_time_sec = llm_api_time
         metrics.concurrent_tasks = len(CONCURRENT_TASK_PROMPTS)
-        metrics.throughput_tasks_per_sec = calculate_throughput(len(CONCURRENT_TASK_PROMPTS), metrics.execution_time_ms / 1000)
+        metrics.throughput_tasks_per_sec = calculate_throughput(len(CONCURRENT_TASK_PROMPTS), (metrics.execution_time_ms / 1000) - llm_api_time)
+        metrics.execution_time_ms = max(0, metrics.execution_time_ms - llm_api_time * 1000)
         return metrics

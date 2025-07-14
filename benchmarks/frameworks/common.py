@@ -6,7 +6,7 @@ import os
 import sys
 import time
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
@@ -39,6 +39,7 @@ def sample_total_memory(proc: Any, interval: float, running: List[bool], samples
                 pass
         samples.append(total_rss)
         time.sleep(interval)
+
 
 try:
     import psutil
@@ -160,6 +161,9 @@ class BenchmarkMetrics:
     setup_time_ms: float = 0.0
     teardown_time_ms: float = 0.0
 
+    # LLM API time (seconds)
+    llm_api_time_sec: float = 0.0
+
     # Detailed CPU and memory stats
     user_cpu_sec: float = 0.0
     sys_cpu_sec: float = 0.0
@@ -169,6 +173,10 @@ class BenchmarkMetrics:
 
     # Additional metadata
     metadata: Dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Return metrics as a serializable dictionary."""
+        return asdict(self)
 
 
 class PerformanceMonitor:
@@ -192,9 +200,7 @@ class PerformanceMonitor:
         """Start performance monitoring."""
         gc.collect()  # Clean up before starting
         self.cpu_user_start, self.cpu_sys_start = get_total_cpu_time(self.process)
-        self.mem_start = self.process.memory_info().rss + sum(
-            c.memory_info().rss for c in self.process.children(recursive=True) if c.is_running()
-        )
+        self.mem_start = self.process.memory_info().rss + sum(c.memory_info().rss for c in self.process.children(recursive=True) if c.is_running())
         self.samples = []
         self._running[0] = True
         self._mem_thread = Thread(
@@ -212,9 +218,7 @@ class PerformanceMonitor:
             self._mem_thread.join()
 
         user_cpu_end, sys_cpu_end = get_total_cpu_time(self.process)
-        mem_end = self.process.memory_info().rss + sum(
-            c.memory_info().rss for c in self.process.children(recursive=True) if c.is_running()
-        )
+        mem_end = self.process.memory_info().rss + sum(c.memory_info().rss for c in self.process.children(recursive=True) if c.is_running())
 
         exec_time_sec = end_time - self.start_time
         user_cpu = user_cpu_end - self.cpu_user_start
@@ -232,7 +236,7 @@ class PerformanceMonitor:
 
         return BenchmarkMetrics(
             execution_time_ms=exec_time_sec * 1000,
-            memory_usage_mb=mem_delta_mb,
+            memory_usage_mb=avg_mem_mb,
             cpu_usage_percent=cpu_usage_percent,
             latency_ms=exec_time_sec * 1000,
             user_cpu_sec=user_cpu,
