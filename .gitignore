@@ -62,7 +62,10 @@ ENV/
 env.bak/
 venv.bak/
 .conda/
-venv.chatbot/
+
+# vectorDB
+*.sqlite3
+vector_index*
 
 # Poetry
 poetry.lock

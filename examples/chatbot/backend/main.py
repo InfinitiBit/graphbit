@@ -17,15 +17,15 @@ def root():
 def create_index():
     """Endpoint to trigger the creation of the vector store index."""
     try:
-        chatbot.create_index()
+        chatbot._create_index()
         return {"message": "Vector store index created successfully."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/chat/")
-def chat(req: ChatRequest):
+async def chat(req: ChatRequest):
     try:
-        response = chatbot.chat(req.session_id, req.message)
+        response = await chatbot.chat(req.session_id, req.message)
         return {"response": response}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
