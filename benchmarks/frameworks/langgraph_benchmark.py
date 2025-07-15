@@ -44,9 +44,9 @@ class WorkflowState(TypedDict):
 class LangGraphBenchmark(BaseBenchmark):
     """LangGraph framework benchmark implementation."""
 
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: Dict[str, Any], num_runs: int = None):
         """Initialize LangGraph benchmark with configuration."""
-        super().__init__(config)
+        super().__init__(config, num_runs=num_runs)
         self.llm: Optional[Any] = None
         self.graphs: Dict[str, Any] = {}
 

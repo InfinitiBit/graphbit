@@ -26,9 +26,9 @@ from .common import (
 class LangChainBenchmark(BaseBenchmark):
     """LangChain framework benchmark implementation."""
 
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: Dict[str, Any], num_runs: int = None):
         """Initialize LangChain benchmark with configuration."""
-        super().__init__(config)
+        super().__init__(config, num_runs=num_runs)
         self.llm: Optional[Any] = None
         self.chains: Dict[str, PromptTemplate | Any] = {}
 

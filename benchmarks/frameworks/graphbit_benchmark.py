@@ -39,9 +39,9 @@ from .common import (
 class GraphBitBenchmark(BaseBenchmark):
     """Ultra-high-performance GraphBit benchmark using direct API calls."""
 
-    def __init__(self, config: Dict):
+    def __init__(self, config: Dict, num_runs: int = None):
         """Initialize GraphBit benchmark with configuration."""
-        super().__init__(config)
+        super().__init__(config, num_runs=num_runs)
         self.llm_config = None
         self.llm_client = None
 

@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 
+
 """
 Comprehensive Framework Benchmark Runner.
 
-This script runs benchmarks for GraphBit, LangChain, and PydanticAI frameworks,
+This script runs benchmarks for GraphBit, LangChain, LangGraph, CrewAI, LlamaIndex, and PydanticAI frameworks,
 measuring execution speed, CPU usage, memory usage, and throughput.
 Each framework's LLM outputs are logged to individual .log files.
+
+New: You can set the number of runs for each scenario using --num-runs. The final results will be averaged and shown in logs and plots.
 """
 
 import asyncio
@@ -46,6 +49,9 @@ def _default_concurrency() -> int:
         return os.cpu_count() or 4
 
 
+
+# Central global variable for number of runs
+NUM_RUNS = 2
 DEFAULT_CONCURRENCY = _default_concurrency()
 
 try:
@@ -82,6 +88,7 @@ class ComprehensiveBenchmarkRunner:
         verbose: bool = False,
         concurrency: int = DEFAULT_CONCURRENCY,
         cpu_cores: Optional[List[int]] = None,
+        num_runs: Optional[int] = None,
     ):
         """Initialize the benchmark runner with configuration."""
         # Import framework implementations lazily to avoid ImportErrors when
@@ -98,6 +105,7 @@ class ComprehensiveBenchmarkRunner:
         self.llm_config = llm_config
         self.concurrency = concurrency
         self.cpu_cores = cpu_cores
+        self.num_runs = num_runs if num_runs is not None else NUM_RUNS
 
         # Get appropriate API key based on provider
         api_key = llm_config.api_key
@@ -136,42 +144,42 @@ class ComprehensiveBenchmarkRunner:
         self.frameworks: Dict[FrameworkType, Dict[str, Any]] = {
             FrameworkType.GRAPHBIT: {
                 "name": "GraphBit",
-                "benchmark": GraphBitBenchmark(self.config),
+                "benchmark": GraphBitBenchmark(self.config, num_runs=self.num_runs),
                 "results": {},
                 "errors": {},
                 "color": "#2E86AB",
             },
             FrameworkType.LANGCHAIN: {
                 "name": "LangChain",
-                "benchmark": LangChainBenchmark(self.config),
+                "benchmark": LangChainBenchmark(self.config, num_runs=self.num_runs),
                 "results": {},
                 "errors": {},
                 "color": "#A23B72",
             },
             FrameworkType.LANGGRAPH: {
                 "name": "LangGraph",
-                "benchmark": LangGraphBenchmark(self.config),
+                "benchmark": LangGraphBenchmark(self.config, num_runs=self.num_runs),
                 "results": {},
                 "errors": {},
                 "color": "#062505",
             },
             FrameworkType.CREWAI: {
                 "name": "CrewAI",
-                "benchmark": CrewAIBenchmark(self.config),
+                "benchmark": CrewAIBenchmark(self.config, num_runs=self.num_runs),
                 "results": {},
                 "errors": {},
                 "color": "#592E83",
             },
             FrameworkType.PYDANTIC_AI: {
                 "name": "PydanticAI",
-                "benchmark": PydanticAIBenchmark(self.config),
+                "benchmark": PydanticAIBenchmark(self.config, num_runs=self.num_runs),
                 "results": {},
                 "errors": {},
                 "color": "#F18F01",
             },
             FrameworkType.LLAMAINDEX: {
                 "name": "LlamaIndex",
-                "benchmark": LlamaIndexBenchmark(self.config),
+                "benchmark": LlamaIndexBenchmark(self.config, num_runs=self.num_runs),
                 "results": {},
                 "errors": {},
                 "color": "#C73E1D",
@@ -189,9 +197,10 @@ class ComprehensiveBenchmarkRunner:
         ]
 
     def log(self, message: str, level: str = "INFO") -> None:
-        """Log message with timestamp."""
+        """Log message with timestamp, including number of runs if averaging."""
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        click.echo(f"[{timestamp}] {level}: {message}")
+        prefix = f"[Averaged over {self.num_runs} runs] " if self.num_runs > 1 else ""
+        click.echo(f"[{timestamp}] {level}: {prefix}{message}")
 
     def log_verbose(self, message: str) -> None:
         """Log verbose message only if verbose mode is enabled."""
@@ -208,9 +217,10 @@ class ComprehensiveBenchmarkRunner:
             self.log(f"Starting {framework_name} benchmark")
 
     def print_scenario_metrics(self, scenario_name: str, metrics: BenchmarkMetrics) -> None:
-        """Print benchmark metrics in a formatted way."""
+        """Print benchmark metrics in a formatted way, mentioning averaging if num_runs > 1."""
+        avg_note = f" (averaged over {self.num_runs} runs)" if self.num_runs > 1 else ""
         if self.verbose:
-            click.echo(f"\n{scenario_name} Results:")
+            click.echo(f"\n{scenario_name} Results{avg_note}:")
             click.echo(f"  Execution Time: {metrics.execution_time_ms:.2f} ms")
             click.echo(f"  Memory Usage: {metrics.memory_usage_mb:.3f} MB")
             click.echo(f"  CPU Usage: {metrics.cpu_usage_percent:.3f}%")
@@ -229,7 +239,7 @@ class ComprehensiveBenchmarkRunner:
                     else:
                         click.echo(f"    {key}: {value}")
         else:
-            self.log(f"{scenario_name}: {metrics.execution_time_ms:.0f}ms, {metrics.memory_usage_mb:.3f}MB, {metrics.cpu_usage_percent:.3f}% CPU, {metrics.token_count} tokens")
+            self.log(f"{scenario_name}{avg_note}: {metrics.execution_time_ms:.0f}ms, {metrics.memory_usage_mb:.3f}MB, {metrics.cpu_usage_percent:.3f}% CPU, {metrics.token_count} tokens")
 
     async def run_framework_scenario(
         self,
@@ -237,25 +247,54 @@ class ComprehensiveBenchmarkRunner:
         scenario: BenchmarkScenario,
         scenario_name: str,
     ) -> Tuple[Optional[BenchmarkMetrics], Optional[Exception]]:
-        """Run a specific benchmark scenario for a framework."""
+        """Run a specific benchmark scenario for a framework, repeated num_runs times and averaged."""
         framework_info = self.frameworks[framework_type]
         framework_name: str = framework_info["name"]
         benchmark: BaseBenchmark = framework_info["benchmark"]
 
-        try:
-            if self.cpu_cores:
-                self.log_verbose(f"Setting CPU affinity to: {', '.join(str(c) for c in self.cpu_cores)}")
-            set_process_affinity(self.cpu_cores)
-            self.log_verbose(f"Running {framework_name} - {scenario_name}")
-            # Pass concurrency if needed by your benchmark's run_scenario
-            metrics = await benchmark.run_scenario(scenario)
-            self.print_scenario_metrics(scenario_name, metrics)
-            return metrics, None
-        except Exception as e:
-            self.log(f"{framework_name} - {scenario_name} failed: {e}", "ERROR")
-            if self.verbose:
-                print(f"   Error details: {str(e)}")
-            return None, e
+        all_metrics = []
+        last_exception = None
+        for run_idx in range(self.num_runs):
+            try:
+                if self.cpu_cores:
+                    self.log_verbose(f"Setting CPU affinity to: {', '.join(str(c) for c in self.cpu_cores)}")
+                set_process_affinity(self.cpu_cores)
+                self.log_verbose(f"Running {framework_name} - {scenario_name} (run {run_idx+1}/{self.num_runs})")
+                metrics = await benchmark.run_scenario(scenario)
+                all_metrics.append(metrics)
+            except Exception as e:
+                self.log(f"{framework_name} - {scenario_name} failed on run {run_idx+1}: {e}", "ERROR")
+                last_exception = e
+        if all_metrics:
+            # Average all numeric fields in BenchmarkMetrics
+            avg_metrics = self._average_metrics(all_metrics)
+            self.print_scenario_metrics(scenario_name, avg_metrics)
+            return avg_metrics, None
+        else:
+            if last_exception is not None:
+                if self.verbose:
+                    print(f"   Error details: {str(last_exception)}")
+                return None, last_exception
+            return None, Exception("No successful runs")
+
+    def _average_metrics(self, metrics_list: list) -> BenchmarkMetrics:
+        # Average all numeric fields in BenchmarkMetrics
+        if not metrics_list:
+            return BenchmarkMetrics()
+        n = len(metrics_list)
+        # Use the first as a template
+        base = metrics_list[0]
+        avg = BenchmarkMetrics()
+        for field in base.__dataclass_fields__:
+            value = getattr(base, field)
+            if isinstance(value, (int, float)):
+                setattr(avg, field, sum(getattr(m, field, 0) for m in metrics_list) / n)
+            elif isinstance(value, dict):
+                # For metadata, just take the first (or could merge)
+                setattr(avg, field, value)
+            else:
+                setattr(avg, field, value)
+        return avg
 
     async def run_framework_benchmarks(self, framework_type: FrameworkType) -> None:
         """Run all benchmarks for a specific framework."""
@@ -389,6 +428,9 @@ class ComprehensiveBenchmarkRunner:
             "model": self.config["model"],
             "total_scenarios": len(self.scenarios),
             "frameworks_tested": len(self.frameworks),
+            "num_runs": self.num_runs,
+            "averaged": self.num_runs > 1,
+            "note": f"All metrics are averaged over {self.num_runs} runs per scenario" if self.num_runs > 1 else "Single run per scenario",
         }
 
         try:
@@ -415,7 +457,8 @@ class ComprehensiveBenchmarkRunner:
             return
 
         fig, axes = plt.subplots(1, 2, figsize=(20, 8))
-        fig.suptitle("Framework Benchmark Results", fontsize=20, fontweight="bold")
+        avg_note = f" (Averaged over {self.num_runs} runs)" if self.num_runs > 1 else ""
+        fig.suptitle(f"Framework Benchmark Results{avg_note}", fontsize=20, fontweight="bold")
 
         scenario_names = [scenario_name for _, scenario_name in self.scenarios]
         x_pos = np.arange(len(scenario_names))
@@ -552,6 +595,11 @@ class ComprehensiveBenchmarkRunner:
         self.log(f"Benchmark completed in {overall_time:.2f} seconds")
         self.log(f"Results saved to: {Path(str(self.config['log_dir'])).absolute()}")
         self.log(f"Visualizations saved to: {Path(str(self.config['results_dir'])).absolute()}")
+        if self.num_runs > 1:
+            click.echo(click.style(
+                f"\nNOTE: All reported metrics are averaged over {self.num_runs} runs per scenario.\n",
+                fg="yellow", bold=True
+            ))
 
 
 @click.command()
@@ -566,6 +614,7 @@ class ComprehensiveBenchmarkRunner:
 @click.option("--membind", type=int, help="Bind memory allocations to the specified NUMA node")
 @click.option("--frameworks", type=str, help="Comma-separated list of frameworks to test (e.g., 'graphbit,langchain')")
 @click.option("--scenarios", type=str, help="Comma-separated list of scenarios to run (e.g., 'simple_task,parallel_pipeline')")
+@click.option("--num-runs", type=int, default=NUM_RUNS, show_default=True, help="Number of times to repeat each scenario (results are averaged)")
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose output")
 @click.option("--list-models", is_flag=True, help="List available models for the selected provider and exit")
 def main(
@@ -581,6 +630,7 @@ def main(
     frameworks: Optional[str],
     scenarios: Optional[str],
     verbose: bool,
+    num_runs: int,
     list_models: bool,
 ) -> None:
     """Run comprehensive benchmarks for AI frameworks.
@@ -690,6 +740,7 @@ def main(
             verbose=verbose,
             concurrency=concurrency,
             cpu_cores=selected_cores,
+            num_runs=num_runs,
         )
 
         if selected_frameworks:

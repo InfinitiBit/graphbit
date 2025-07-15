@@ -26,9 +26,9 @@ from .common import (
 class CrewAIBenchmark(BaseBenchmark):
     """CrewAI framework benchmark implementation."""
 
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: Dict[str, Any], num_runs: int = None):
         """Initialize CrewAI benchmark with configuration."""
-        super().__init__(config)
+        super().__init__(config, num_runs=num_runs)
         self.llm: Optional[LLM] = None
         self.agents: Dict[str, Agent] = {}
         self.crews: Dict[str, Crew] = {}
