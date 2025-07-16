@@ -1,6 +1,8 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 from .chatbot_manager import ChatbotManager
+
+import json
 
 app = FastAPI()
 chatbot = ChatbotManager()
@@ -31,3 +33,44 @@ async def chat(req: ChatRequest):
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+
+
+@app.websocket("/ws/chat/")
+
+async def websocket_chat(websocket: WebSocket):
+
+    await websocket.accept()
+    try:
+        while True:
+
+            data = await websocket.receive_text()
+            message_data = json.loads(data)
+
+            message = message_data.get("message")
+            session_id = message_data.get("session_id")
+
+            if not message or not session_id:
+                await websocket.send_text(json.dumps({
+                    "error": "Missing message or session_id"
+                }))
+                continue
+
+            response = await chatbot.chat(session_id, message)
+
+            await websocket.send_text(json.dumps({
+                "response": response,
+                "session_id": session_id
+            }))
+
+    except WebSocketDisconnect:
+        print("Client disconnected")
+    except json.JSONDecodeError:
+        await websocket.send_text(json.dumps({
+            "error": "Invalid JSON format"
+        }))
+
+    except Exception as e:
+        await websocket.send_text(json.dumps({
+            "error": str(e)
+        }))
