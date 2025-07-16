@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from chatbot_manager import ChatbotManager
+from .chatbot_manager import ChatbotManager
 
 app = FastAPI()
 chatbot = ChatbotManager()

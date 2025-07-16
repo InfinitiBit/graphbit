@@ -19,7 +19,7 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-VECTOR_DB_TEXT_FILE = "data/vectordb.txt"
+VECTOR_DB_TEXT_FILE = "backend/data/vectordb.txt"
 VECTOR_DB_INDEX_NAME = "vector_index_chatbot"
 CHUNK_SIZE = 1000
 OVERLAP_SIZE = 100
