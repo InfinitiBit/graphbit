@@ -28,9 +28,9 @@ from .common import (
 class LlamaIndexBenchmark(BaseBenchmark):
     """LlamaIndex framework benchmark implementation."""
 
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: Dict[str, Any], num_runs: int = None):
         """Initialize LlamaIndex benchmark with configuration."""
-        super().__init__(config)
+        super().__init__(config, num_runs=num_runs)
         self.llm: Optional[Any] = None
         self.index: Optional[VectorStoreIndex] = None
         self.query_engine: Optional[Any] = None
