@@ -1,0 +1,172 @@
+[config]
+# Tarpaulin Configuration for GraphBit
+# Documentation: https://github.com/xd009642/tarpaulin
+
+# Coverage engine to use
+engine = "Llvm"
+
+# Output directory for coverage reports
+out = ["Html", "Json", "Lcov", "Xml"]
+output-dir = "target/coverage"
+
+# Exclude files and directories from coverage
+exclude = [
+    # Test files
+    "tests/*",
+    "*/tests/*",
+    # Example files
+    "examples/*",
+    "*/examples/*",
+    # Benchmark files
+    "benchmarks/*",
+    "*/benchmarks/*",
+    # Generated files
+    "target/*",
+    "*/target/*",
+    # Python bindings (covered separately)
+    "python/*",
+    # Documentation
+    "docs/*",
+    # Configuration files
+    "*.toml",
+    "*.yaml",
+    "*.yml",
+    "*.json",
+    "Makefile",
+    "*.sh",
+    "*.md",
+]
+
+# Exclude specific lines from coverage
+exclude-lines = [
+    # Debug/unreachable code
+    "unreachable!",
+    "unimplemented!",
+    "todo!",
+    "panic!",
+    # Test-only code
+    "#\\[cfg\\(test\\)\\]",
+    "mod tests",
+    "fn test_",
+    "async fn test_",
+    # Derive macros
+    "#\\[derive\\(",
+    # Skip certain patterns
+    "skip_on_error",
+    "TRACE",
+    "DEBUG",
+]
+
+# Include all workspace members
+workspace = true
+
+# Run tests with all features
+all-features = true
+
+# Timeout for tests in seconds
+timeout = "300s"
+
+# Number of parallel jobs
+jobs = 4
+
+# Fail if coverage is below threshold (can be overridden)
+# fail-under = 80
+
+# Line coverage threshold
+line-coverage = true
+
+# Branch coverage threshold
+branch-coverage = true
+
+# Generate coverage for doctests
+doc-tests = true
+
+# Forward arguments to cargo test
+forward-signals = true
+
+# Verbose output
+verbose = true
+
+# Run ignored tests
+run-ignored = false
+
+# Include test results in coverage
+include-tests = false
+
+# Release mode for better performance
+release = true
+
+# Count hits for coverage calculation
+count = true
+
+# Follow symbolic links
+follow-links = true
+
+# Exclude specific functions from coverage
+exclude-functions = [
+    "main",
+    "test_*",
+    "bench_*",
+    "*::fmt",
+    "*::new",
+    "*::default",
+    "*::drop",
+    "*::clone",
+    "*::debug",
+    "*::display",
+]
+
+# Profile-specific configurations
+[profile.dev]
+# Settings for development builds
+debug = true
+opt-level = 0
+
+[profile.test]
+# Settings for test builds
+debug = true
+opt-level = 1
+
+[profile.release]
+# Settings for release builds (used for coverage)
+debug = true
+opt-level = 2
+lto = false
+codegen-units = 1
+
+# Environment variables for coverage runs
+[env]
+RUST_BACKTRACE = "1"
+RUST_LOG = "warn"
+
+# Additional cargo features to enable during coverage
+[features]
+default = []
+coverage = ["python"]
+
+# Custom report generation
+[report]
+# HTML report settings
+html = true
+html-dir = "target/coverage/html"
+
+# JSON report settings
+json = true
+json-file = "target/coverage/coverage.json"
+
+# LCOV report settings
+lcov = true
+lcov-file = "target/coverage/lcov.info"
+
+# XML report settings
+xml = true
+xml-file = "target/coverage/coverage.xml"
+
+# Coverage thresholds
+[thresholds]
+# Line coverage threshold
+line = 80.0
+# Branch coverage threshold
+branch = 70.0
+# Function coverage threshold
+function = 85.0 
