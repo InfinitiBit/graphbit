@@ -51,7 +51,7 @@ class ComplexResponse(BaseModel):
 class PydanticAIBenchmark(BaseBenchmark):
     """Pydantic AI framework benchmark implementation."""
 
-    def __init__(self, config: Dict[str, Any], num_runs: int = None):
+    def __init__(self, config: Dict[str, Any], num_runs: Optional[int] = None):
         """Initialize PydanticAI benchmark with configuration."""
         super().__init__(config, num_runs=num_runs)
         self.model: Optional[Any] = None

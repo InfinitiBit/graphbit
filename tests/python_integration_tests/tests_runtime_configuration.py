@@ -360,7 +360,7 @@ class TestRuntimeResourceManagement:
                     result = client.complete(f"Quick test {i}", max_tokens=5)
                     assert isinstance(result, str)
                 except Exception:
-                    pass  # Some operations may fail, which is acceptable for load testing
+                    pass  # nosec B110: acceptable in test context
 
             end_time = time.time()
 
@@ -465,7 +465,7 @@ class TestRuntimeIntegrationScenarios:
                 result = llm_client.complete("Test", max_tokens=5)
                 assert isinstance(result, str)
             except Exception:
-                pass  # Network errors are acceptable
+                pass  # nosec B110: acceptable in test context
 
             # Create simple workflow for executor
             workflow = graphbit.Workflow("integration_test")
@@ -477,7 +477,7 @@ class TestRuntimeIntegrationScenarios:
                 result = executor.execute(workflow)
                 assert isinstance(result, graphbit.WorkflowResult)
             except Exception:
-                pass  # Execution errors are acceptable for integration test
+                pass  # nosec B110: acceptable in test context
 
             # Verify runtime health with multiple components
             health = graphbit.health_check()

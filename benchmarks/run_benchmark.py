@@ -24,6 +24,16 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import click
 
+if sys.platform == "win32":
+
+    def sched_getaffinity(pid):
+        """Fallback for Windows to get CPU affinity."""
+        return set(range(os.cpu_count() or 4))  # 👈 fallback handled here
+
+else:
+    from os import sched_getaffinity
+
+
 try:
     import matplotlib.pyplot as plt
     import numpy as np
@@ -42,12 +52,7 @@ sys.path.insert(0, str(benchmarks_path))
 
 
 def _default_concurrency() -> int:
-    """Determine default concurrency based on available CPU cores."""
-    try:
-        return len(os.sched_getaffinity(0))
-    except AttributeError:
-        return os.cpu_count() or 4
-
+    return len(sched_getaffinity(0))
 
 
 # Central global variable for number of runs
@@ -596,10 +601,7 @@ class ComprehensiveBenchmarkRunner:
         self.log(f"Results saved to: {Path(str(self.config['log_dir'])).absolute()}")
         self.log(f"Visualizations saved to: {Path(str(self.config['results_dir'])).absolute()}")
         if self.num_runs > 1:
-            click.echo(click.style(
-                f"\nNOTE: All reported metrics are averaged over {self.num_runs} runs per scenario.\n",
-                fg="yellow", bold=True
-            ))
+            click.echo(click.style(f"\nNOTE: All reported metrics are averaged over {self.num_runs} runs per scenario.\n", fg="yellow", bold=True))
 
 
 @click.command()

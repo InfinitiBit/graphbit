@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Comprehensive test runner for GraphBit Python integration tests."""
 import os
-import subprocess
+import subprocess  # nosec
 import sys
 import time
 from typing import Any, Dict, List, Tuple
@@ -80,7 +80,7 @@ class IntegrationTestRunner:
 
         try:
             # Run pytest on the specific module
-            result = subprocess.run(
+            result = subprocess.run(  # nosec
                 [
                     sys.executable,
                     "-m",
@@ -192,7 +192,8 @@ class IntegrationTestRunner:
             cmd.append(module_name)
 
         try:
-            result = subprocess.run(cmd, cwd=os.path.dirname(os.path.abspath(__file__)), check=False)
+            result = subprocess.run(cmd, cwd=os.path.dirname(os.path.abspath(__file__)), check=False)  # nosec B603: safe internal usage
+
             return result.returncode == 0
         except Exception as e:
             print(f"Failed to run specific tests: {e}")
