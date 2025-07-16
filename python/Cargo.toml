@@ -30,6 +30,7 @@ crate-type = ["cdylib"]
 authors = ["GraphBit Team"]
 description = "Production-grade Python bindings for GraphBit agentic workflow automation"
 edition = "2021"
+license = "MIT OR Apache-2.0"
 name = "graphbit"
 publish = false
 repository = "https://github.com/InfinitiBit/graphbit"

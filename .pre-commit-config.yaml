@@ -192,12 +192,15 @@ repos:
     pass_filenames: false
 
       # Dependency vulnerability check
+      # Cross-platform compatible
   - id: cargo-deny
     name: Cargo deny check
-    entry: bash -c 'if command -v cargo-deny &> /dev/null; then cargo deny check; else echo "cargo-deny not installed, skipping"; fi'
+    entry: cargo deny check
     language: system
-    files: ^(Cargo\.toml|Cargo\.lock|.*/Cargo\.toml)$
     pass_filenames: false
+    require_serial: true
+
+
 
 
 

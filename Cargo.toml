@@ -17,6 +17,7 @@ default = []
 authors = ["GraphBit Team"]
 description = "GraphBit agentic workflow automation framework (library)"
 edition = "2021"
+license = "MIT OR Apache-2.0"
 name = "graphbit"
 publish = false
 repository = "https://github.com/InfinitiBit/graphbit"

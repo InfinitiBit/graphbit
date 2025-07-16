@@ -30,6 +30,7 @@ python = ["pyo3"]
 authors = ["GraphBit Team"]
 description = "Core engine for GraphBit agentic workflow automation"
 edition = "2021"
+license = "MIT OR Apache-2.0"
 name = "graphbit-core"
 repository = "https://github.com/InfinitiBit/graphbit"
 version = "0.1.0"

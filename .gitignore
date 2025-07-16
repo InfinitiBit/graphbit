@@ -142,6 +142,7 @@ docs/build/
 */docs/build/
 .readthedocs.yml
 doc/
+*.txt
 
 # Test artifacts
 .nyc_output/
