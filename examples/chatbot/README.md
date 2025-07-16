@@ -41,4 +41,3 @@ poetry run streamlit run frontend/chatbot.py
 - Frontend UI: http://localhost:8501
 
 The chatbot will automatically initialize the vector database on first use.
-

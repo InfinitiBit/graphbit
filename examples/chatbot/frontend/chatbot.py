@@ -1,20 +1,26 @@
+"""
+Streamlit frontend application for GraphBit chatbot.
+
+This module provides a web-based chat interface using Streamlit,
+with WebSocket connectivity to the FastAPI backend for real-time
+conversation capabilities.
+"""
+
+import json
+import time
+import uuid
+
+import requests
 import streamlit as st
 import websocket
-import requests
-import json
-import uuid
-import time
 
-if 'indexed' not in st.session_state:
+if "indexed" not in st.session_state:
     st.session_state.indexed = False
 if not st.session_state.indexed:
     try:
-        with st.spinner('Setting up the knowledge base... Please wait.'):
-            response = requests.post(
-                "http://localhost:8000/index/",
-                timeout=30
-            )
-        
+        with st.spinner("Setting up the knowledge base... Please wait."):
+            response = requests.post("http://localhost:8000/index/", timeout=30)
+
         if response.ok:
             st.session_state.indexed = True
             message = response.json().get("message", "Indexing complete!")
@@ -31,12 +37,19 @@ if not st.session_state.indexed:
         st.stop()
 
 # Initialize WebSocket connection
-if 'ws_client' not in st.session_state:
+if "ws_client" not in st.session_state:
     st.session_state.ws_client = None
-if 'ws_connected' not in st.session_state:
+if "ws_connected" not in st.session_state:
     st.session_state.ws_connected = False
 
+
 def connect_websocket():
+    """
+    Establish a WebSocket connection to the backend server.
+
+    Returns:
+        bool: True if connection successful, False otherwise.
+    """
     try:
         ws = websocket.WebSocket()
         ws.connect("ws://localhost:8000/ws/chat/")
@@ -47,15 +60,23 @@ def connect_websocket():
         st.error(f"Failed to connect: {e}")
         return False
 
+
 def send_websocket_message(message, session_id):
+    """
+    Send a message to the backend via WebSocket and receive response.
+
+    Args:
+        message (str): The user's message to send.
+        session_id (str): Unique session identifier for the conversation.
+
+    Returns:
+        str: The chatbot's response or error message.
+    """
     if not st.session_state.ws_connected:
         return "Not connected to server"
-    
+
     try:
-        data = {
-            "message": message,
-            "session_id": session_id
-        }
+        data = {"message": message, "session_id": session_id}
         st.session_state.ws_client.send(json.dumps(data))
         response = st.session_state.ws_client.recv()
         response_data = json.loads(response)
@@ -63,9 +84,10 @@ def send_websocket_message(message, session_id):
     except Exception as e:
         return f"Error: {e}"
 
+
 # Initialize connection
 if not st.session_state.ws_connected:
-    with st.spinner('Connecting to server...'):
+    with st.spinner("Connecting to server..."):
         if not connect_websocket():
             st.stop()
 
@@ -94,10 +116,10 @@ if prompt := st.chat_input("Type your message here..."):
         st.markdown(prompt)
     st.session_state.messages.append({"role": "user", "content": prompt})
 
-    with st.spinner('Getting response...'):
+    with st.spinner("Getting response..."):
         response = send_websocket_message(prompt, st.session_state.session_id)
 
     with st.chat_message("assistant", avatar=role_avatar["assistant"]):
         st.markdown(response)
-    
+
     st.session_state.messages.append({"role": "assistant", "content": response})

@@ -49,7 +49,6 @@ def _default_concurrency() -> int:
         return os.cpu_count() or 4
 
 
-
 # Central global variable for number of runs
 NUM_RUNS = 10
 DEFAULT_CONCURRENCY = _default_concurrency()
@@ -596,10 +595,7 @@ class ComprehensiveBenchmarkRunner:
         self.log(f"Results saved to: {Path(str(self.config['log_dir'])).absolute()}")
         self.log(f"Visualizations saved to: {Path(str(self.config['results_dir'])).absolute()}")
         if self.num_runs > 1:
-            click.echo(click.style(
-                f"\nNOTE: All reported metrics are averaged over {self.num_runs} runs per scenario.\n",
-                fg="yellow", bold=True
-            ))
+            click.echo(click.style(f"\nNOTE: All reported metrics are averaged over {self.num_runs} runs per scenario.\n", fg="yellow", bold=True))
 
 
 @click.command()
