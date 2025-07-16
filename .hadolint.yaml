@@ -1,6 +1,6 @@
 ignored:
-  - DL3008  # Pin versions in apt get install (not critical for dev environments)
-  - DL3013  # Pin versions in pip (not critical for dev environments)
-  - DL3015  # Avoid additional packages by specifying --no-install-recommends
-  - DL3059  # Multiple consecutive RUN instructions
-  - SC2016  # Expressions don't expand in single quotes (this is intentional) 
+- DL3008    # Pin versions in apt get install (not critical for dev environments)
+- DL3013    # Pin versions in pip (not critical for dev environments)
+- DL3015    # Avoid additional packages by specifying --no-install-recommends
+- DL3059    # Multiple consecutive RUN instructions
+- SC2016    # Expressions don't expand in single quotes (this is intentional)

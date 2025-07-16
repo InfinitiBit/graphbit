@@ -76,4 +76,3 @@ This framework utilizes the following code quality tools:
 - typos: Spell checking
 - hadolint: Dockerfile linting
 - shellcheck: Shell script linting 
-

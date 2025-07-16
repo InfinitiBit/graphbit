@@ -5,14 +5,14 @@ services:
       dockerfile: benchmarks/Dockerfile
     container_name: graphbit-benchmark
     environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY}
-      - PYTHONUNBUFFERED=1
-      - RUST_LOG=info
+    - OPENAI_API_KEY=${OPENAI_API_KEY}
+    - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    - HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY}
+    - PYTHONUNBUFFERED=1
+    - RUST_LOG=info
     volumes:
-      - /home/ubuntu/logs:/app/logs
-      - /home/ubuntu/results:/app/results
+    - /home/ubuntu/logs:/app/logs
+    - /home/ubuntu/results:/app/results
       # Optional: Mount source code read-only
       # - ./:/app/benchmarks:ro
     working_dir: /app
@@ -25,4 +25,3 @@ services:
         reservations:
           memory: 1G
           cpus: '0.5'
- 
