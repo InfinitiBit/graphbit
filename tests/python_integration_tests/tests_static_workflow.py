@@ -320,7 +320,7 @@ class TestWorkflowMetadata:
             workflow.connect(type_check.id(), fast_track.id())
             workflow.connect(priority_check.id(), standard_process.id())
         except Exception:
-            pass  # Complex connections may fail in validation
+            pass  # nosec B110: acceptable in test context
 
         # Test validation
         with contextlib.suppress(Exception):
@@ -350,7 +350,7 @@ class TestWorkflowMetadata:
             workflow.connect(validate_data.id(), enrich.id())
             workflow.connect(enrich.id(), output_node.id())
         except Exception:
-            pass
+            pass  # nosec B110: acceptable in test context
 
         with contextlib.suppress(Exception):
             workflow.validate()
@@ -383,7 +383,7 @@ class TestWorkflowErrorHandling:
 
         except Exception:
             # Connection creation might fail, which is also acceptable
-            pass
+            pass  # nosec B110: acceptable in test context
 
     def test_invalid_connection_attempts(self) -> None:
         """Test handling of invalid connection attempts."""
@@ -435,7 +435,7 @@ class TestWorkflowContextManagement:
                 variables = result.variables()
                 assert isinstance(variables, dict)
             except Exception:
-                pass  # Variables method may not be fully implemented
+                pass  # nosec B110: acceptable in test context
 
             # Validate result state
             state = result.state()
@@ -506,7 +506,7 @@ class TestWorkflowNodeManipulation:
             workflow.connect(agent_id, condition_id)
             workflow.connect(condition_id, transform_id)
         except Exception:
-            pass  # Connections may have restrictions
+            pass  # nosec B110: acceptable in test context
 
         with contextlib.suppress(Exception):
             workflow.validate()

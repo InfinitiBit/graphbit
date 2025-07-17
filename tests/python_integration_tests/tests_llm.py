@@ -574,7 +574,7 @@ class TestLLMErrorHandling:
                 assert isinstance(response, str)
             except Exception:
                 # If it fails, that's also expected
-                pass
+                pass  # nosec B110: acceptable in test context
 
             # Test with invalid temperature - some providers may clamp this
             try:
@@ -583,7 +583,7 @@ class TestLLMErrorHandling:
                 assert isinstance(response, str)
             except Exception:
                 # If it fails, that's also expected
-                pass
+                pass  # nosec B110: acceptable in test context
 
         except Exception as e:
             pytest.fail(f"Parameter validation test failed: {e}")

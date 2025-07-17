@@ -192,7 +192,7 @@ class TestRuntimeConfiguration:
                 graphbit.configure_runtime(worker_threads=1000)
                 graphbit.configure_runtime(max_blocking_threads=10000)
             except Exception:
-                pass  # May be limited by system resources
+                pass  # nosec B110: acceptable in test context
 
         except Exception as e:
             pytest.fail(f"Runtime configuration validation test failed: {e}")

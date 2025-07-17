@@ -24,6 +24,16 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import click
 
+if sys.platform == "win32":
+
+    def sched_getaffinity(pid):
+        """Fallback for Windows to get CPU affinity."""
+        return set(range(os.cpu_count() or 4))  # 👈 fallback handled here
+
+else:
+    from os import sched_getaffinity
+
+
 try:
     import matplotlib.pyplot as plt
     import numpy as np
@@ -42,12 +52,7 @@ sys.path.insert(0, str(benchmarks_path))
 
 
 def _default_concurrency() -> int:
-    """Determine default concurrency based on available CPU cores."""
-    try:
-        return len(os.sched_getaffinity(0))
-    except AttributeError:
-        return os.cpu_count() or 4
-
+    return len(sched_getaffinity(0))
 
 # Central global variable for number of runs
 NUM_RUNS = 10

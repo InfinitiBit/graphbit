@@ -28,7 +28,7 @@ from .common import (
 class LlamaIndexBenchmark(BaseBenchmark):
     """LlamaIndex framework benchmark implementation."""
 
-    def __init__(self, config: Dict[str, Any], num_runs: int = None):
+    def __init__(self, config: Dict[str, Any], num_runs: Optional[int] = None):
         """Initialize LlamaIndex benchmark with configuration."""
         super().__init__(config, num_runs=num_runs)
         self.llm: Optional[Any] = None

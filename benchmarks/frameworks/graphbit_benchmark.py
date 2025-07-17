@@ -8,7 +8,7 @@ OPTIMIZED VERSION: Uses direct LLM client calls instead of workflow overhead for
 import contextlib
 import os
 import sys
-from typing import Dict
+from typing import Dict, Optional
 
 import psutil
 
@@ -39,7 +39,7 @@ from .common import (
 class GraphBitBenchmark(BaseBenchmark):
     """Ultra-high-performance GraphBit benchmark using direct API calls."""
 
-    def __init__(self, config: Dict, num_runs: int = None):
+    def __init__(self, config: Dict, num_runs: Optional[int] = None):
         """Initialize GraphBit benchmark with configuration."""
         super().__init__(config, num_runs=num_runs)
         self.llm_config = None
