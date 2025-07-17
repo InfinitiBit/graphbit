@@ -90,9 +90,9 @@ async def websocket_chat(websocket: WebSocket):
                 await websocket.send_text(json.dumps({"error": "Missing message or session_id"}))
                 continue
 
-            response = await chatbot.chat(session_id, message)
+            await chatbot.chat(websocket, session_id, message)
 
-            await websocket.send_text(json.dumps({"response": response, "session_id": session_id}))
+            await websocket.send_text(json.dumps({"response": "", "session_id": session_id, "type": "end"}))
 
     except WebSocketDisconnect:
         print("Client disconnected")

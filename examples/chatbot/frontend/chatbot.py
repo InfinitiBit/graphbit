@@ -14,6 +14,19 @@ import requests
 import streamlit as st
 import websocket
 
+BACKEND_CHAT_URL = "ws://localhost:8000/ws/chat/"
+
+role_avatar = {
+    "assistant": "🦖",
+    "user": "🧑‍💻",
+}
+
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+# --- Streamlit UI ---
+st.title("GraphBit Chatbot")
+
 if "indexed" not in st.session_state:
     st.session_state.indexed = False
 if not st.session_state.indexed:
@@ -36,6 +49,14 @@ if not st.session_state.indexed:
         st.info("Please make sure the backend server is running.")
         st.stop()
 
+
+with st.chat_message("assistant", avatar=role_avatar["assistant"]):
+    st.write("Hello, I am your AI assistant. How can I help you today?")
+
+for message in st.session_state.messages:
+    with st.chat_message(message["role"], avatar=role_avatar.get(message["role"], "🧑")):
+        st.markdown(message["content"])
+
 # Initialize WebSocket connection
 if "ws_client" not in st.session_state:
     st.session_state.ws_client = None
@@ -44,82 +65,88 @@ if "ws_connected" not in st.session_state:
 
 
 def connect_websocket():
-    """
-    Establish a WebSocket connection to the backend server.
-
-    Returns:
-        bool: True if connection successful, False otherwise.
-    """
+    """Establishes a WebSocket connection."""
     try:
-        ws = websocket.WebSocket()
-        ws.connect("ws://localhost:8000/ws/chat/")
-        st.session_state.ws_client = ws
+        ws = websocket.create_connection(BACKEND_CHAT_URL)
+        st.session_state.ws = ws
         st.session_state.ws_connected = True
-        return True
-    except Exception as e:
-        st.error(f"Failed to connect: {e}")
-        return False
+        return ws
+    except websocket.WebSocketException as e:
+        st.error(f"Failed to connect to WebSocket: {e}")
+        st.session_state.ws_connected = False
+        st.session_state.ws = None
+        return None
 
 
-def send_websocket_message(message, session_id):
-    """
-    Send a message to the backend via WebSocket and receive response.
-
-    Args:
-        message (str): The user's message to send.
-        session_id (str): Unique session identifier for the conversation.
-
-    Returns:
-        str: The chatbot's response or error message.
-    """
-    if not st.session_state.ws_connected:
-        return "Not connected to server"
-
-    try:
-        data = {"message": message, "session_id": session_id}
-        st.session_state.ws_client.send(json.dumps(data))
-        response = st.session_state.ws_client.recv()
-        response_data = json.loads(response)
-        return response_data.get("response", "No response")
-    except Exception as e:
-        return f"Error: {e}"
+def disconnect_websocket():
+    """Closes the WebSocket connection."""
+    if "ws" in st.session_state and st.session_state.ws:
+        try:
+            st.session_state.ws.close()
+        except Exception as e:
+            # Log or handle potential errors on close if necessary
+            print(f"Error closing websocket: {e}")
+        del st.session_state.ws
 
 
-# Initialize connection
-if not st.session_state.ws_connected:
-    with st.spinner("Connecting to server..."):
-        if not connect_websocket():
-            st.stop()
+def send_websocket_message(message):
+    """Connects, sends a message, yields responses, and disconnects."""
+    ws = connect_websocket()
+    if ws:
+        try:
+            ws.send(json.dumps({"message": message, "session_id": str(uuid.uuid4())}))
+            while True:
+                try:
+                    response = ws.recv()
+                    yield response
+                except websocket.WebSocketConnectionClosedException:
+                    break
+        finally:
+            disconnect_websocket()
 
-st.title("GraphBit Chatbot")
 
-if "session_id" not in st.session_state:
-    st.session_state.session_id = str(uuid.uuid4())
-
-role_avatar = {
-    "assistant": "🦖",
-    "user": "🧑‍💻",
-}
-
-with st.chat_message("assistant", avatar=role_avatar["assistant"]):
-    st.write("Hello, I am your AI assistant. How can I help you today?")
-
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
-for message in st.session_state.messages:
-    with st.chat_message(message["role"], avatar=role_avatar.get(message["role"], "🧑")):
-        st.markdown(message["content"])
-
-if prompt := st.chat_input("Type your message here..."):
-    with st.chat_message("user", avatar=role_avatar["user"]):
-        st.markdown(prompt)
+# Accept user input
+if prompt := st.chat_input("What is up?"):
     st.session_state.messages.append({"role": "user", "content": prompt})
+    st.chat_message("user", avatar=role_avatar.get("user", "🧑")).markdown(prompt)
 
-    with st.spinner("Getting response..."):
-        response = send_websocket_message(prompt, st.session_state.session_id)
+    full_response = ""
 
     with st.chat_message("assistant", avatar=role_avatar["assistant"]):
-        st.markdown(response)
+        message_placeholder = st.empty()
 
-    st.session_state.messages.append({"role": "assistant", "content": response})
+        # Enter spinner manually so we can exit it early
+        spinner = st.spinner("Thinking...")
+        spinner_cm = spinner.__enter__()  # manually enter
+        spinner_closed = False  # track spinner state
+
+        try:
+            for response in send_websocket_message(prompt):
+                try:
+                    data = json.loads(response)
+
+                    if data.get("type") == "chunk":
+                        if not spinner_closed:
+                            spinner.__exit__(None, None, None)
+                            spinner_closed = True
+
+                        full_response += data.get("response", "")
+                        message_placeholder.markdown(full_response + "▌")
+
+                    elif data.get("type") == "end":
+                        break
+
+                except json.JSONDecodeError:
+                    if not spinner_closed:
+                        spinner.__exit__(None, None, None)
+                        spinner_closed = True
+                    full_response += response
+                    message_placeholder.markdown(full_response + "▌")
+
+        finally:
+            if not spinner_closed:
+                spinner.__exit__(None, None, None)
+            message_placeholder.markdown(full_response)
+            st.session_state.generating = False
+
+    st.session_state.messages.append({"role": "assistant", "content": full_response})

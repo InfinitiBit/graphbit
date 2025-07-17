@@ -6,6 +6,7 @@ workflow system, with vector database integration for context retrieval and
 memory storage capabilities.
 """
 
+import json
 import logging
 import os
 from dataclasses import dataclass
@@ -15,6 +16,7 @@ from typing import Any, Dict, List, Optional
 from chromadb import Client
 from chromadb.config import Settings
 from dotenv import load_dotenv
+from fastapi import WebSocket
 
 import graphbit
 
@@ -68,7 +70,8 @@ class ChatbotManager:
         self.index_name: str = index_name
 
         # Configure LLM
-        self.llm_config = graphbit.LlmConfig.openai(model="gpt-4o-mini", api_key=os.getenv("OPENAI_API_KEY"))
+        self.llm_config = graphbit.LlmConfig.openai(model="gpt-3.5-turbo", api_key=os.getenv("OPENAI_API_KEY"))
+        self.llm_client = graphbit.LlmClient(self.llm_config)
         self.executor = graphbit.Executor(self.llm_config)
 
         # Configure embeddings
@@ -320,7 +323,44 @@ Create a concise summary for future retrieval:""",
             logging.error(error_msg)
             return {"agent_id": agent_id, "agent_name": agent_config.name, "output": None, "success": False, "error": error_msg}
 
-    async def chat(self, session_id: str, query: str) -> str:
+    def format_prompt(self, context: Optional[str] = "", chat_history: Optional[str] = "", query: Optional[str] = "") -> str:
+        """
+        Format the prompt for a specific agent using its configuration.
+
+        Args:
+            agent_id (str): ID of the agent whose prompt is to be formatted.
+            **kwargs: Additional keyword arguments to fill in the prompt template.
+
+        Returns:
+            str: Formatted prompt string.
+        """
+
+        prompt = f"""You are a helpful and friendly AI assistant.
+
+Document Context:
+{context}
+
+Recent Chat History:
+{chat_history}
+
+Current Question: {query}
+
+Provide a helpful and engaging response:"""
+        return prompt
+
+    async def chat_stream(self, prompt: str):
+        response = await self.llm_client.complete_stream(prompt, max_tokens=200)
+        for chunk in response:
+            yield chunk
+
+    async def full_chat_stream(self, websocket: WebSocket, session_id: str, prompt: str):
+        response = ""
+        async for token in self.chat_stream(prompt):
+            response += token
+            await websocket.send_text(json.dumps({"response": token, "session_id": session_id, "type": "chunk"}))
+        return response
+
+    async def chat(self, websocket: WebSocket, session_id: str, query: str) -> str:
         """
         Process a chat message and generate a response.
 
@@ -343,6 +383,10 @@ Create a concise summary for future retrieval:""",
             # Retrieve Context
             retrieved_docs = self._retrieve_context(query)
             context_result = self.execute_agent("context_retriever", {"query": query, "retrieved_docs": retrieved_docs})
+            prompt = self.format_prompt(context=retrieved_docs, query=query)
+            stream_response = await self.full_chat_stream(websocket, session_id, prompt)
+            await websocket.send_text(json.dumps({"response": "", "session_id": session_id, "type": "end"}))
+            print(stream_response)
 
             if not context_result["success"]:
                 return "Sorry, I encountered an error retrieving context."
