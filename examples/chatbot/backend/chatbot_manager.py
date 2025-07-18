@@ -43,7 +43,7 @@ class LLMManager:
     for generating responses, embeddings, and streaming chat completions.
     """
 
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: Optional[str] = OPENAI_API_KEY):
         """
         Initialize the LLMManager with the OpenAI API key.
 
