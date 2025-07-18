@@ -18,9 +18,8 @@ poetry install
 
 ### 3. Configuration
 
-Create `.env` file:
 ```bash
-export OPENAI_API_KEY="your_openai_api_key_here"
+OPENAI_API_KEY="your_openai_api_key_here"
 ```
 
 ### 4. Run the Application
