@@ -1,5 +1,6 @@
 """
 Chatbot Manager module for GraphBit-based conversational AI.
+
 This module provides a comprehensive chatbot implementation using GraphBit's
 workflow system, with vector database integration for context retrieval and
 memory storage capabilities.
@@ -13,15 +14,12 @@ from dotenv import load_dotenv
 
 import graphbit
 
+from .const import ConfigConstants
+
 load_dotenv()
 
 os.makedirs("logs", exist_ok=True)
 logging.basicConfig(filename="logs/chatbot.log", filemode="a", format="%(asctime)s - %(levelname)s - %(message)s", level=logging.INFO)
-
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-OPENAI_LLM_MODEL = "gpt-3.5-turbo"
-OPENAI_EMBEDDING_MODEL = "text-embedding-3-small"
-MAX_TOKENS = 200
 
 
 class LLMManager:
@@ -32,7 +30,7 @@ class LLMManager:
     for generating responses, embeddings, and streaming chat completions.
     """
 
-    def __init__(self, api_key: Optional[str] = OPENAI_API_KEY):
+    def __init__(self, api_key: Optional[str] = ConfigConstants.OPENAI_API_KEY):
         """
         Initialize the LLMManager with the OpenAI API key.
 
@@ -43,16 +41,14 @@ class LLMManager:
 
         # Ensure OpenAI API key is present
         if not api_key:
-            api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
             raise ValueError("OPENAI_API_KEY environment variable is not set. Please set it in your environment.")
 
         # Configure LLM
-        self.llm_config = graphbit.LlmConfig.openai(model=OPENAI_LLM_MODEL, api_key=api_key)
+        self.llm_config = graphbit.LlmConfig.openai(model=ConfigConstants.OPENAI_LLM_MODEL, api_key=api_key)
         self.llm_client = graphbit.LlmClient(self.llm_config)
 
         # Configure embeddings
-        self.embedding_config = graphbit.EmbeddingConfig.openai(model=OPENAI_EMBEDDING_MODEL, api_key=api_key)
+        self.embedding_config = graphbit.EmbeddingConfig.openai(model=ConfigConstants.OPENAI_EMBEDDING_MODEL, api_key=api_key)
         self.embedding_client = graphbit.EmbeddingClient(self.embedding_config)
 
     def embed(self, text: str) -> List[float]:
@@ -76,7 +72,6 @@ class LLMManager:
         Yields:
             str: Individual response tokens from the streaming completion.
         """
-        response = await self.llm_client.complete_stream(prompt, max_tokens=MAX_TOKENS)
+        response = await self.llm_client.complete_stream(prompt, max_tokens=ConfigConstants.MAX_TOKENS)
         for chunk in response:
             yield chunk
-

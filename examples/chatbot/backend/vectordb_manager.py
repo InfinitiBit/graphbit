@@ -14,6 +14,7 @@ from chromadb import Client
 from chromadb.config import Settings
 from dotenv import load_dotenv
 
+from .const import ConfigConstants
 from .llm_manager import LLMManager
 
 load_dotenv()
@@ -21,13 +22,6 @@ load_dotenv()
 os.makedirs("logs", exist_ok=True)
 logging.basicConfig(filename="logs/chatbot.log", filemode="a", format="%(asctime)s - %(levelname)s - %(message)s", level=logging.INFO)
 
-VECTOR_DB_TEXT_FILE = "backend/data/vectordb.txt"
-VECTOR_DB_INDEX_NAME = "vector_index_chatbot"
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-CHUNK_SIZE = 1000
-OVERLAP_SIZE = 100
-RETRIEVE_CONTEXT_N_RESULTS = 5
-COLLECTION_NAME = "chatbot_memory"
 
 class VectorDBManager:
     """
@@ -37,7 +31,7 @@ class VectorDBManager:
     indexing, similarity search, and conversation history storage for the chatbot.
     """
 
-    def __init__(self, index_name: str = VECTOR_DB_INDEX_NAME, llm_manager: Optional[LLMManager] = None):
+    def __init__(self, index_name: str = ConfigConstants.VECTOR_DB_INDEX_NAME, llm_manager: Optional[LLMManager] = None):
         """
         Initialize the VectorDBManager with the specified index name and LLM manager.
 
@@ -47,7 +41,7 @@ class VectorDBManager:
                                                         generating embeddings.
         """
         if llm_manager is None:
-            llm_manager = LLMManager(os.getenv("OPENAI_API_KEY"))
+            llm_manager = LLMManager(ConfigConstants.OPENAI_API_KEY)
         self.llm_manager = llm_manager
 
         # Initialize ChromaDB
@@ -67,11 +61,11 @@ class VectorDBManager:
         try:
             self.chroma_client = Client(Settings(persist_directory=self.index_name, is_persistent=True))
             if self.chroma_client is not None:
-                if COLLECTION_NAME in [c.name for c in self.chroma_client.list_collections()]:
-                    self.collection = self.chroma_client.get_collection(name=COLLECTION_NAME)
+                if ConfigConstants.COLLECTION_NAME in [c.name for c in self.chroma_client.list_collections()]:
+                    self.collection = self.chroma_client.get_collection(name=ConfigConstants.COLLECTION_NAME)
                     logging.info("Loaded existing ChromaDB collection")
                 else:
-                    self.collection = self.chroma_client.create_collection(name=COLLECTION_NAME)
+                    self.collection = self.chroma_client.create_collection(name=ConfigConstants.COLLECTION_NAME)
                     logging.info("Created new ChromaDB collection")
 
         except Exception as e:
@@ -79,7 +73,7 @@ class VectorDBManager:
             self.chroma_client = None
             self.collection = None
 
-    def _create_index(self, file_path: str = VECTOR_DB_TEXT_FILE) -> None:
+    def _create_index(self, file_path: str = ConfigConstants.VECTOR_DB_TEXT_FILE) -> None:
         """
         Create vector index from a text file by chunking and embedding the content.
 
@@ -92,7 +86,7 @@ class VectorDBManager:
         try:
             content = self.get_or_create_initial_file(file_path)
 
-            chunks = self._split_text(content, chunk_size=CHUNK_SIZE, overlap=OVERLAP_SIZE)
+            chunks = self._split_text(content, chunk_size=ConfigConstants.CHUNK_SIZE, overlap=ConfigConstants.OVERLAP_SIZE)
 
             if self.collection and chunks:
                 embeddings = self.llm_manager.embed_many(chunks)
@@ -109,7 +103,7 @@ class VectorDBManager:
             logging.error(f"Error creating vector index: {str(e)}")
             raise
 
-    def get_or_create_initial_file(self, file_path: str = VECTOR_DB_TEXT_FILE) -> str:
+    def get_or_create_initial_file(self, file_path: str = ConfigConstants.VECTOR_DB_TEXT_FILE) -> str:
         """Ensure the initial knowledge file exists and return its content."""
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
         if not os.path.exists(file_path):
@@ -121,7 +115,7 @@ class VectorDBManager:
             content = f.read()
         return content
 
-    def _split_text(self, text: str, chunk_size: int = CHUNK_SIZE, overlap: int = OVERLAP_SIZE) -> List[str]:
+    def _split_text(self, text: str, chunk_size: int = ConfigConstants.CHUNK_SIZE, overlap: int = ConfigConstants.OVERLAP_SIZE) -> List[str]:
         """
         Split text into overlapping chunks for vector indexing.
 
@@ -168,7 +162,7 @@ class VectorDBManager:
                 logging.warning("Vector store not initialized, skipping save")
                 return
 
-            with open(VECTOR_DB_TEXT_FILE, "a", encoding="utf-8") as f:
+            with open(ConfigConstants.VECTOR_DB_TEXT_FILE, "a", encoding="utf-8") as f:
                 f.write(f"\n{doc_content}\n")
 
             session_id = metadata.get("session_id", "default")
@@ -202,7 +196,7 @@ class VectorDBManager:
 
             query_embedding = self.llm_manager.embed(query)
 
-            results = self.collection.query(query_embeddings=[query_embedding], n_results=RETRIEVE_CONTEXT_N_RESULTS)
+            results = self.collection.query(query_embeddings=[query_embedding], n_results=ConfigConstants.RETRIEVE_CONTEXT_N_RESULTS)
 
             if "documents" in results and results["documents"]:
                 context_docs = [doc for docs in results["documents"] for doc in docs]
@@ -216,4 +210,3 @@ class VectorDBManager:
         except Exception as e:
             logging.error(f"Error retrieving context: {str(e)}")
             return f"Error retrieving context: {str(e)}"
-

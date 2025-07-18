@@ -14,6 +14,7 @@ from typing import Any, Dict, List, Optional
 from dotenv import load_dotenv
 from fastapi import WebSocket
 
+from .const import ConfigConstants
 from .llm_manager import LLMManager
 from .vectordb_manager import VectorDBManager
 
@@ -21,10 +22,6 @@ load_dotenv()
 
 os.makedirs("logs", exist_ok=True)
 logging.basicConfig(filename="logs/chatbot.log", filemode="a", format="%(asctime)s - %(levelname)s - %(message)s", level=logging.INFO)
-
-VECTOR_DB_TEXT_FILE = "backend/data/vectordb.txt"
-VECTOR_DB_INDEX_NAME = "vector_index_chatbot"
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 
 
 class ChatbotManager:
@@ -36,7 +33,7 @@ class ChatbotManager:
     and conversation memory storage using GraphBit's workflow system.
     """
 
-    def __init__(self, index_name: str = VECTOR_DB_INDEX_NAME):
+    def __init__(self, index_name: str = ConfigConstants.VECTOR_DB_INDEX_NAME):
         """
         Initialize the ChatbotManager with necessary configurations.
 
@@ -46,7 +43,7 @@ class ChatbotManager:
         self.index_name: str = index_name
 
         # Ensure OpenAI API key is present
-        openai_api_key = os.getenv("OPENAI_API_KEY")
+        openai_api_key = ConfigConstants.OPENAI_API_KEY
         if not openai_api_key:
             raise ValueError("OPENAI_API_KEY environment variable is not set. Please set it in your environment.")
 
@@ -58,7 +55,7 @@ class ChatbotManager:
         # Session storage for message history
         self.sessions: Dict[str, List[Any]] = {}
 
-    def _create_index(self, file_path: str = VECTOR_DB_TEXT_FILE) -> None:
+    def _create_index(self, file_path: str = ConfigConstants.VECTOR_DB_TEXT_FILE) -> None:
         """Create vector index from a text file."""
         self.vector_db_manager._create_index(file_path)
 
