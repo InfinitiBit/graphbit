@@ -9,8 +9,6 @@ memory storage capabilities.
 import json
 import logging
 import os
-from dataclasses import dataclass
-from enum import Enum
 from typing import Any, Dict, List, Optional
 
 from chromadb import Client
@@ -31,31 +29,12 @@ CHUNK_SIZE = 1000
 OVERLAP_SIZE = 100
 
 
-class AgentType(Enum):
-    """Enumeration of available agent types in the chatbot system."""
-
-    CONTEXT_RETRIEVER = "context_retriever"
-    RESPONSE_GENERATOR = "response_generator"
-    MEMORY_STORAGE = "memory_storage"
-
-
-@dataclass
-class AgentConfig:
-    """Configuration class for chatbot agents."""
-
-    name: str
-    agent_type: AgentType
-    prompt_template: str
-    agent_id: str
-    description: str = ""
-
-
 class ChatbotManager:
     """
-    Main chatbot manager class that orchestrates conversation handling.
+    ChatbotManager orchestrates conversation handling for the chatbot.
 
-    This class manages the entire chatbot workflow including context retrieval,
-    response generation, and memory storage using GraphBit's agent system.
+    This class manages context retrieval, response generation, and memory storage
+    using GraphBit's workflow system and a vector database for persistent memory.
     """
 
     def __init__(self, index_name: str = VECTOR_DB_INDEX_NAME):
@@ -69,13 +48,17 @@ class ChatbotManager:
 
         self.index_name: str = index_name
 
+        # Ensure OpenAI API key is present
+        openai_api_key = os.getenv("OPENAI_API_KEY")
+        if not openai_api_key:
+            raise ValueError("OPENAI_API_KEY environment variable is not set. Please set it in your environment.")
+
         # Configure LLM
-        self.llm_config = graphbit.LlmConfig.openai(model="gpt-3.5-turbo", api_key=os.getenv("OPENAI_API_KEY"))
+        self.llm_config = graphbit.LlmConfig.openai(model="gpt-3.5-turbo", api_key=openai_api_key)
         self.llm_client = graphbit.LlmClient(self.llm_config)
-        self.executor = graphbit.Executor(self.llm_config)
 
         # Configure embeddings
-        self.embedding_config = graphbit.EmbeddingConfig.openai(model="text-embedding-3-small", api_key=os.getenv("OPENAI_API_KEY"))
+        self.embedding_config = graphbit.EmbeddingConfig.openai(model="text-embedding-3-small", api_key=openai_api_key)
         self.embedding_client = graphbit.EmbeddingClient(self.embedding_config)
 
         # Initialize ChromaDB
@@ -85,10 +68,6 @@ class ChatbotManager:
 
         # Session storage for message history
         self.sessions: Dict[str, List[Any]] = {}
-
-        self.agents: Dict[str, AgentConfig] = {}
-        self.agent_outputs: Dict[str, Any] = {}
-        self._setup_agents()
 
     def _init_vectorstore(self) -> None:
         try:
@@ -180,15 +159,14 @@ class ChatbotManager:
             logging.error(f"Error retrieving context: {str(e)}")
             return f"Error retrieving context: {str(e)}"
 
-    def _save_to_vectordb(self, query: str, session_id: str, vector_db_data: Dict[str, Any]) -> None:
+    def _save_to_vectordb(self, query: str, session_id: str, response: str) -> None:
         try:
             if not self.collection:
                 logging.warning("Vector store not initialized, skipping save")
                 return
 
-            # Processed summary from memory storage agent
-            if vector_db_data.get("success") and vector_db_data.get("output"):
-                doc_content = vector_db_data["output"]
+            if response:
+                doc_content = f"Question: {query}\nAnswer: {response}"
             else:
                 doc_content = f"Question: {query}\nAnswer: No processed summary available"
 
@@ -200,9 +178,7 @@ class ChatbotManager:
                 f.write(f"\n{doc_content}\n")
 
             # Add to vector store
-            self.collection.add(
-                documents=[doc_content], embeddings=[doc_embedding], ids=[doc_id], metadatas=[{"session_id": session_id, "type": "processed_summary", "source": "memory_storage_agent"}]
-            )
+            self.collection.add(documents=[doc_content], embeddings=[doc_embedding], ids=[doc_id], metadatas=[{"session_id": session_id, "type": "qa_pair", "source": "chatbot_response"}])
 
             logging.info(f"Saved conversation to vector DB for session {session_id}")
 
@@ -228,113 +204,18 @@ class ChatbotManager:
                     return value_str
         return f"{fallback_name} completed successfully, but no detailed output was captured."
 
-    def _setup_agents(self) -> None:
-
-        # Context Retriever Agent
-        context_config = AgentConfig(
-            name="Context Retriever",
-            agent_type=AgentType.CONTEXT_RETRIEVER,
-            agent_id="context_retriever",
-            prompt_template="""Based on the user query: {query}
-
-Retrieve and summarize the most relevant context from the knowledge base.
-If no relevant context is found, respond with 'No relevant context found'.
-
-Context from database: {retrieved_docs}
-
-Provide a concise summary of relevant information:""",
-            description="Retrieves and summarizes relevant context",
-        )
-
-        # Response Generator Agent
-        response_config = AgentConfig(
-            name="Response Generator",
-            agent_type=AgentType.RESPONSE_GENERATOR,
-            agent_id="response_generator",
-            prompt_template="""You are a helpful and friendly AI assistant.
-
-Document Context:
-{context}
-
-Recent Chat History:
-{chat_history}
-
-Current Question: {query}
-
-Provide a helpful and engaging response:""",
-            description="Generates helpful responses",
-        )
-
-        # Memory Storage Agent
-        memory_config = AgentConfig(
-            name="Memory Storage",
-            agent_type=AgentType.MEMORY_STORAGE,
-            agent_id="memory_storage",
-            prompt_template="""Process this conversation exchange for storage:
-
-User Query: {query}
-Assistant Response: {response}
-
-Create a concise summary for future retrieval:""",
-            description="Processes conversation for storage",
-        )
-
-        self.agents["context_retriever"] = context_config
-        self.agents["response_generator"] = response_config
-        self.agents["memory_storage"] = memory_config
-
-    def execute_agent(self, agent_id: str, input_data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Execute a specific agent with provided input data.
-
-        Args:
-            agent_id (str): ID of the agent to execute.
-            input_data (Dict[str, Any]): Input data for the agent.
-
-        Returns:
-            Dict[str, Any]: Execution result containing output and status.
-        """
-        if agent_id not in self.agents:
-            raise ValueError(f"Agent '{agent_id}' not found")
-
-        agent_config = self.agents[agent_id]
-        logging.info(f"Executing agent: {agent_config.name}")
-
-        try:
-            formatted_prompt = agent_config.prompt_template.format(**input_data)
-
-            workflow_name = agent_config.name
-            workflow = graphbit.Workflow(workflow_name)
-
-            agent_node = graphbit.Node.agent(name=agent_config.name, prompt=formatted_prompt, agent_id=agent_config.agent_id)
-
-            workflow.add_node(agent_node)
-            workflow.validate()
-
-            result_context = self.executor.execute(workflow)
-            output = self.extract_output(result_context, fallback_name=agent_config.name)
-
-            self.agent_outputs[agent_id] = output
-
-            return {"agent_id": agent_id, "agent_name": agent_config.name, "output": output, "success": True}
-
-        except Exception as e:
-            error_msg = f"Failed to execute agent {agent_config.name}: {str(e)}"
-            logging.error(error_msg)
-            return {"agent_id": agent_id, "agent_name": agent_config.name, "output": None, "success": False, "error": error_msg}
-
     def format_prompt(self, context: Optional[str] = "", chat_history: Optional[str] = "", query: Optional[str] = "") -> str:
         """
-        Format the prompt for a specific agent using its configuration.
+        Format the prompt for the AI assistant, including context, chat history, and the current question.
 
         Args:
-            agent_id (str): ID of the agent whose prompt is to be formatted.
-            **kwargs: Additional keyword arguments to fill in the prompt template.
+            context (str, optional): Retrieved document context relevant to the query.
+            chat_history (str, optional): Recent conversation history.
+            query (str, optional): The user's current question.
 
         Returns:
             str: Formatted prompt string.
         """
-
         prompt = f"""You are a helpful and friendly AI assistant.
 
 Document Context:
@@ -349,11 +230,34 @@ Provide a helpful and engaging response:"""
         return prompt
 
     async def chat_stream(self, prompt: str):
+        """
+        Stream chat response tokens from the LLM client.
+
+        This method provides a streaming interface for chat completions, yielding
+        response tokens as they are generated by the language model.
+
+        Args:
+            prompt (str): The input prompt to send to the language model.
+
+        Yields:
+            str: Individual response tokens from the streaming completion.
+        """
         response = await self.llm_client.complete_stream(prompt, max_tokens=200)
         for chunk in response:
             yield chunk
 
     async def full_chat_stream(self, websocket: WebSocket, session_id: str, prompt: str):
+        """
+        Streams chat response tokens to the client via WebSocket.
+
+        Args:
+            websocket (WebSocket): The WebSocket connection to send data through.
+            session_id (str): The identifier for the chat session.
+            prompt (str): The input prompt for the chat model.
+
+        Returns:
+            str: The full accumulated response from the chat stream.
+        """
         response = ""
         async for token in self.chat_stream(prompt):
             response += token
@@ -378,47 +282,23 @@ Provide a helpful and engaging response:"""
             user_message = {"role": "user", "content": query}
             self.sessions[session_id].append(user_message)
 
-            self.clear_agent_outputs()
-
             # Retrieve Context
             retrieved_docs = self._retrieve_context(query)
-            context_result = self.execute_agent("context_retriever", {"query": query, "retrieved_docs": retrieved_docs})
+
+            # Get AI response
             prompt = self.format_prompt(context=retrieved_docs, query=query)
             stream_response = await self.full_chat_stream(websocket, session_id, prompt)
             await websocket.send_text(json.dumps({"response": "", "session_id": session_id, "type": "end"}))
-            print(stream_response)
-
-            if not context_result["success"]:
-                return "Sorry, I encountered an error retrieving context."
-
-            context_summary = context_result["output"]
-
-            # Generate Response
-            chat_history = "\n".join([f"{msg['role'].title()}: {msg['content']}" for msg in self.sessions[session_id]])
-
-            response_result = self.execute_agent("response_generator", {"query": query, "context": context_summary, "chat_history": chat_history})
-
-            if not response_result["success"]:
-                return "Sorry, I encountered an error generating a response."
-
-            response = response_result["output"]
-
-            # Store in Vector DB
-            vector_db_data = self.execute_agent("memory_storage", {"query": query, "response": response})
 
             # Add AI response to session
-            ai_message = {"role": "assistant", "content": response}
+            ai_message = {"role": "assistant", "content": stream_response}
             self.sessions[session_id].append(ai_message)
 
             # Save to vector database
-            self._save_to_vectordb(query, session_id, vector_db_data)
+            self._save_to_vectordb(query, session_id, stream_response)
 
-            return response
+            return stream_response
 
         except Exception as e:
             logging.error(f"Error in chat: {str(e)}")
             return f"Sorry, I encountered an error: {str(e)}"
-
-    def clear_agent_outputs(self) -> None:
-        """Clear all stored agent outputs to prepare for new execution."""
-        self.agent_outputs.clear()

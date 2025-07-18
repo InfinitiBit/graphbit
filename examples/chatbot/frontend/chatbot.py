@@ -65,7 +65,7 @@ if "ws_connected" not in st.session_state:
 
 
 def connect_websocket():
-    """Establishes a WebSocket connection."""
+    """Establish a WebSocket connection."""
     try:
         ws = websocket.create_connection(BACKEND_CHAT_URL)
         st.session_state.ws = ws
@@ -79,7 +79,7 @@ def connect_websocket():
 
 
 def disconnect_websocket():
-    """Closes the WebSocket connection."""
+    """Close the WebSocket connection."""
     if "ws" in st.session_state and st.session_state.ws:
         try:
             st.session_state.ws.close()
@@ -90,7 +90,7 @@ def disconnect_websocket():
 
 
 def send_websocket_message(message):
-    """Connects, sends a message, yields responses, and disconnects."""
+    """Connect, send a message, yield responses, and disconnect."""
     ws = connect_websocket()
     if ws:
         try:
