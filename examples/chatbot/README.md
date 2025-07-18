@@ -18,7 +18,6 @@ poetry install
 
 ### 3. Configuration
 
-Create `.env` file:
 ```bash
 export OPENAI_API_KEY="api_key"
 ```
