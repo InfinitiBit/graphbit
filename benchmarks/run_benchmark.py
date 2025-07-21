@@ -24,11 +24,11 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import click
 
-if sys.platform == "win32":
+if sys.platform == "win32" or sys.platform == "darwin":
 
-    def sched_getaffinity(pid):
-        """Fallback for Windows to get CPU affinity."""
-        return set(range(os.cpu_count() or 4))  # 👈 fallback handled here
+    def sched_getaffinity(pid=0):
+        """Fallback for macOS and Windows to get CPU affinity."""
+        return set(range(os.cpu_count() or 4))  # safe fallback
 
 else:
     from os import sched_getaffinity
@@ -53,6 +53,7 @@ sys.path.insert(0, str(benchmarks_path))
 
 def _default_concurrency() -> int:
     return len(sched_getaffinity(0))
+
 
 # Central global variable for number of runs
 NUM_RUNS = 10
