@@ -1,5 +1,5 @@
 # Google Search API Integration with Graphbit
-**[Connector Guideline]**
+
 
 ## Overview
 
@@ -172,30 +172,6 @@ if result.is_success():
 else:
     print("Workflow failed:", result.state())
 ```
-
----
-
-## Best Practices
-
-- **Do not hardcode API keys**; use a `.env` file and `python-dotenv` to manage credentials securely.
-- **Handle API errors** gracefully and log details for debugging.
-- **Sanitize and limit the amount of text** passed to the LLM to avoid prompt length issues. Use the `max_snippets` parameter to control the number of results.
-- **Check the output variable name** (e.g., `"node_result_1"`) as it may differ if you have multiple nodes.
-
----
-
-## Use Cases
-
-- **Automated research agents**: Retrieve and summarize the latest web information.
-- **Content enrichment**: Feed real-time data into LLMs for up-to-date answers.
-- **Data pipelines**: Integrate web search as a preprocessing step in larger workflows.
-
----
-
-## References
-
-- [Google Custom Search API Documentation](https://developers.google.com/custom-search/v1/overview)
-- [Graphbit Documentation](../README.md)
 
 ---
 
