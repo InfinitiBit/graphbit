@@ -80,10 +80,13 @@ repos:
     files: ^(tests/.*\.py|benchmarks/.*\.py|examples/.*\.py|scripts/.*\.py)$
 
   # Python Dependency Safety Check
-- repo: https://github.com/Lucas-C/pre-commit-hooks-safety
-  rev: v1.4.2
+- repo: local
   hooks:
-  - id: python-safety-dependencies-check
+  - id: safety-check
+    name: Safety dependency check
+    entry: poetry run safety check
+    language: system
+    pass_filenames: false
     files: ^(pyproject\.toml|poetry\.lock)$
 
   # Rust Formatting
