@@ -394,7 +394,7 @@ class TestExecutorIntegration:
                 workflow.connect(condition.id(), agent2.id())
                 workflow.connect(agent2.id(), transform.id())
             except Exception:
-                pass  # Connection errors are acceptable
+                pass  # nosec B110: acceptable in test context
 
             workflow.validate()
 
@@ -431,7 +431,7 @@ class TestExecutorIntegration:
 
             except Exception:
                 # Execution failure is acceptable for invalid workflows
-                pass
+                pass  # nosec B110: acceptable in test context
 
             # Test executor stats after error
             stats = executor.get_stats()

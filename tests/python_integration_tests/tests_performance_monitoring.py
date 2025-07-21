@@ -242,7 +242,7 @@ class TestExecutorStatistics:
             simple_workflow.validate()
             executor.execute(simple_workflow)
         except Exception:
-            pass  # Stats should still be generated even if execution fails
+            pass  # nosec B110: acceptable in test context
 
         # Get stats before reset
         stats_before = executor.get_stats()

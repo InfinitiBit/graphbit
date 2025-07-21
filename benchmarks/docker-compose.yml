@@ -11,15 +11,12 @@ services:
     - PYTHONUNBUFFERED=1
     - RUST_LOG=info
     volumes:
-
-    - ./results:/app/benchmarks/results
-    - ./logs:/app/benchmarks/logs
-      # Optional: Mount benchmark source for development
+    - /home/ubuntu/logs:/app/logs
+    - /home/ubuntu/results:/app/results
+      # Optional: Mount source code read-only
       # - ./:/app/benchmarks:ro
     working_dir: /app
-    # Default command - override with docker-compose run
     command: [run_benchmark.py, --help]
-    # Resource limits (adjust based on your system)
     deploy:
       resources:
         limits:

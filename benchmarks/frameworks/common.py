@@ -3,6 +3,7 @@
 import gc
 import logging
 import os
+import shutil
 import sys
 import time
 import tracemalloc
@@ -63,7 +64,7 @@ PROVIDER_MODELS = {
 class BenchmarkLogger:
     """Utility class for logging benchmark LLM outputs to files."""
 
-    def __init__(self, framework_name: str, log_dir: str = "logs"):
+    def __init__(self, framework_name: str, log_dir: str = "logs", num_runs: Optional[int] = None):
         """Initialize the benchmark logger with framework name and log directory."""
         self.framework_name = framework_name
         self.log_dir = Path(log_dir)
@@ -75,7 +76,7 @@ class BenchmarkLogger:
         self.logger.setLevel(logging.INFO)
 
         # Create file handler
-        file_handler = logging.FileHandler(self.log_file)
+        file_handler = logging.FileHandler(self.log_file, mode="w")
         file_handler.setLevel(logging.INFO)
 
         # Create formatter
@@ -84,6 +85,13 @@ class BenchmarkLogger:
 
         # Add handler to logger
         self.logger.addHandler(file_handler)
+
+        # Write header if averaging is used
+        if num_runs is not None and num_runs > 1:
+            with open(self.log_file, "r+") as f:
+                content = f.read()
+                f.seek(0, 0)
+                f.write(f"# Results in this file are averaged over {num_runs} runs per scenario\n" + content)
 
     def log_llm_output(self, scenario_name: str, task_name: str, llm_output: str) -> None:
         """Log LLM output to the framework-specific log file."""
@@ -148,7 +156,7 @@ class PerformanceMonitor:
         self.process = psutil.Process()
         self.start_time: float = 0.0
         self.start_memory: float = 0.0
-        self.start_cpu_times: psutil._common.pcputimes = self.process.cpu_times()
+        self.start_cpu_times = self.process.cpu_times()  # type: ignore
         self.initial_memory_trace: int = 0
 
     def start_monitoring(self) -> None:
@@ -194,7 +202,7 @@ class PerformanceMonitor:
 class BaseBenchmark(ABC):
     """Base class for framework-specific benchmarks."""
 
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: Dict[str, Any], num_runs: Optional[int] = None):
         """Initialize the benchmark with configuration."""
         self.config = config
         self.api_key = config.get("api_key")
@@ -204,7 +212,7 @@ class BaseBenchmark(ABC):
         # Initialize logger
         framework_name = self.__class__.__name__.replace("Benchmark", "")
         log_dir = config.get("log_dir", "logs")
-        self.logger = BenchmarkLogger(framework_name, log_dir)
+        self.logger = BenchmarkLogger(framework_name, log_dir, num_runs=num_runs if num_runs is not None else 10)
 
     def log_output(self, scenario_name: str, task_name: str, output: str) -> None:
         """Log LLM output to framework-specific log file."""
@@ -529,13 +537,18 @@ def _reexec_with_numactl(node: int) -> None:
         logging.error("numactl re-exec attempt already made and failed")
         return
 
+    numactl_path = shutil.which("numactl")
+    if not numactl_path:
+        logging.error("numactl not found in PATH; skipping re-execution.")
+        return
+
     os.environ["_NUMACTL_REEXEC"] = "1"
     args = [
-        "numactl",
+        numactl_path,
         f"--membind={node}",
         "--localalloc",
         sys.executable,
         *sys.argv,
     ]
     logging.info("Re-executing under numactl: %s", " ".join(args))
-    os.execvp("numactl", args)
+    os.execvp(numactl_path, args)  # nosec B606: os.execvp used for controlled re-exec under numactl, safe in this context

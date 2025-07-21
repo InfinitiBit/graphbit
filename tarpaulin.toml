@@ -1,0 +1,145 @@
+[config]
+# Run tests with all features
+all-features = true
+# Branch coverage threshold
+branch-coverage = true
+# Count hits for coverage calculation
+count = true
+# Generate coverage for doctests
+doc-tests = true
+# Coverage engine to use
+engine = "Llvm"
+# Exclude files and directories from coverage
+exclude = [
+  # Test files
+  "tests/*",
+  "*/tests/*",
+  # Example files
+  "examples/*",
+  "*/examples/*",
+  # Benchmark files
+  "benchmarks/*",
+  "*/benchmarks/*",
+  # Generated files
+  "target/*",
+  "*/target/*",
+  # Python bindings (covered separately)
+  "python/*",
+  # Documentation
+  "docs/*",
+  # Configuration files
+  "*.toml",
+  "*.yaml",
+  "*.yml",
+  "*.json",
+  "Makefile",
+  "*.sh",
+  "*.md"
+]
+# Exclude specific functions from coverage
+exclude-functions = [
+  "main",
+  "test_*",
+  "bench_*",
+  "*::fmt",
+  "*::new",
+  "*::default",
+  "*::drop",
+  "*::clone",
+  "*::debug",
+  "*::display"
+]
+# Exclude specific lines from coverage
+exclude-lines = [
+  # Debug/unreachable code
+  "unreachable!",
+  "unimplemented!",
+  "todo!",
+  "panic!",
+  # Test-only code
+  "#\\[cfg\\(test\\)\\]",
+  "mod tests",
+  "fn test_",
+  "async fn test_",
+  # Derive macros
+  "#\\[derive\\(",
+  # Skip certain patterns
+  "skip_on_error",
+  "TRACE",
+  "DEBUG"
+]
+# Follow symbolic links
+follow-links = true
+# Forward arguments to cargo test
+forward-signals = true
+# Include test results in coverage
+include-tests = false
+# Number of parallel jobs
+jobs = 4
+# Line coverage threshold
+line-coverage = true
+# Output directory for coverage reports
+out = ["Html", "Json", "Lcov", "Xml"]
+output-dir = "target/coverage"
+# Release mode for better performance
+release = true
+# Run ignored tests
+run-ignored = false
+# Timeout for tests in seconds
+timeout = "300s"
+# Verbose output
+verbose = true
+# Include all workspace members
+workspace = true
+
+# Environment variables for coverage runs
+[env]
+RUST_BACKTRACE = "1"
+RUST_LOG = "warn"
+
+# Additional cargo features to enable during coverage
+[features]
+coverage = ["python"]
+default = []
+
+# Profile-specific configurations
+[profile.dev]
+# Settings for development builds
+debug = true
+opt-level = 0
+
+[profile.release]
+codegen-units = 1
+# Settings for release builds (used for coverage)
+debug = true
+lto = false
+opt-level = 2
+
+[profile.test]
+# Settings for test builds
+debug = true
+opt-level = 1
+
+# Custom report generation
+[report]
+# HTML report settings
+html = true
+html-dir = "target/coverage/html"
+# JSON report settings
+json = true
+json-file = "target/coverage/coverage.json"
+# LCOV report settings
+lcov = true
+lcov-file = "target/coverage/lcov.info"
+# XML report settings
+xml = true
+xml-file = "target/coverage/coverage.xml"
+
+# Coverage thresholds
+[thresholds]
+# Branch coverage threshold
+branch = 70.0
+# Function coverage threshold
+function = 85.0
+# Line coverage threshold
+line = 80.0

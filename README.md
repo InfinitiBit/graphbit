@@ -4,6 +4,7 @@
 
 [![Build Status](https://img.shields.io/github/actions/workflow/status/InfinitiBit/graphbit/python-integration-tests.yml?branch=main)](https://github.com/InfinitiBit/graphbit/actions/workflows/python-integration-tests.yml)
 [![Test Coverage](https://img.shields.io/codecov/c/github/InfinitiBit/graphbit)](https://codecov.io/gh/InfinitiBit/graphbit)
+[![Rust Coverage](https://img.shields.io/badge/Rust%20Coverage-47.25%25-yellow)](https://github.com/InfinitiBit/graphbit)
 [![PyPI](https://img.shields.io/pypi/v/graphbit)](https://pypi.org/project/graphbit/)
 [![Rust Version](https://img.shields.io/badge/rust-1.70+-blue.svg)](https://www.rust-lang.org)
 [![Python Version](https://img.shields.io/pypi/pyversions/graphbit)](https://pypi.org/project/graphbit/)

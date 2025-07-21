@@ -63,6 +63,10 @@ env.bak/
 venv.bak/
 .conda/
 
+# vectorDB
+*.sqlite3
+vector_index*
+
 # Poetry
 poetry.lock
 
