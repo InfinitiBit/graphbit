@@ -4,11 +4,13 @@ Configuration constants for the GraphBit chatbot backend.
 This module contains all the configuration constants used throughout the chatbot
 application, including file paths, model settings, and API configurations.
 """
+
 import os
 
 
 class ConfigConstants:
     """Centralized configuration constants for the chatbot backend."""
+
     VECTOR_DB_TEXT_FILE = "backend/data/vectordb.txt"
     VECTOR_DB_INDEX_NAME = "vector_index_chatbot"
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")

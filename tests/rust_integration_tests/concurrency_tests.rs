@@ -529,8 +529,7 @@ async fn test_stress_concurrent_operations() {
     );
 
     println!(
-        "Stress test completed: {}/{} tasks successful in {:?}",
-        successful_tasks, num_tasks, duration
+        "Stress test completed: {successful_tasks}/{num_tasks} tasks successful in {duration:?}"
     );
 }
 
@@ -569,9 +568,7 @@ async fn test_memory_usage_tracking() {
     for (node_type, permits) in available_permits {
         assert!(
             permits <= 20,
-            "Memory optimized permits for {} should be <= 20, got {}",
-            node_type,
-            permits
+            "Memory optimized permits for {node_type} should be <= 20, got {permits}"
         );
     }
 }
@@ -644,8 +641,7 @@ async fn test_concurrent_permit_contention() {
     );
 
     println!(
-        "Contention test: {}/{} successful, {} with wait time, total duration: {:?}",
-        successful_tasks, num_contenders, tasks_with_wait, total_duration
+        "Contention test: {successful_tasks}/{num_contenders} successful, {tasks_with_wait} with wait time, total duration: {total_duration:?}"
     );
 }
 
@@ -748,7 +744,7 @@ async fn test_workflow_executor_concurrent_execution() {
         Box::pin(async move {
             // Simulate async work
             tokio::time::sleep(Duration::from_millis(100)).await;
-            Ok(format!("Processed {}", task))
+            Ok(format!("Processed {task}"))
         }) as futures::future::BoxFuture<'static, Result<String, errors::GraphBitError>>
     };
 
@@ -808,7 +804,7 @@ async fn test_deadlock_prevention() {
                 }
                 Ok(Err(_)) => false,
                 Err(_) => {
-                    println!("Task {} timed out - potential deadlock detected", i);
+                    println!("Task {i} timed out - potential deadlock detected");
                     false
                 }
             }
@@ -842,8 +838,7 @@ async fn test_deadlock_prevention() {
     // Should complete within reasonable time (no deadlock)
     assert!(
         total_duration < overall_timeout,
-        "Should not deadlock - completed in {:?}",
-        total_duration
+        "Should not deadlock - completed in {total_duration:?}"
     );
     assert!(
         completed_tasks > 0,
@@ -851,7 +846,6 @@ async fn test_deadlock_prevention() {
     );
 
     println!(
-        "Deadlock prevention test: {}/{} tasks completed in {:?}",
-        completed_tasks, num_tasks, total_duration
+        "Deadlock prevention test: {completed_tasks}/{num_tasks} tasks completed in {total_duration:?}"
     );
 }

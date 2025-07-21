@@ -612,12 +612,12 @@ async fn test_real_llm_workflow_execution() {
                     assert!(context.state.is_terminal());
                 }
                 Err(e) => {
-                    println!("Real LLM workflow failed (may be expected): {:?}", e);
+                    println!("Real LLM workflow failed (may be expected): {e:?}");
                 }
             }
         }
         Err(e) => {
-            println!("Failed to create real LLM agent (may be expected): {:?}", e);
+            println!("Failed to create real LLM agent (may be expected): {e:?}");
         }
     }
 }
@@ -757,7 +757,7 @@ async fn test_workflow_error_propagation() {
     // Should handle gracefully (may succeed or fail depending on implementation)
     match result {
         Ok(_) => println!("Workflow execution succeeded despite invalid agent reference"),
-        Err(e) => println!("Workflow execution failed as expected: {:?}", e),
+        Err(e) => println!("Workflow execution failed as expected: {e:?}"),
     }
 }
 
@@ -784,16 +784,16 @@ async fn test_multi_provider_workflow_execution() {
     }
 
     println!(
-        "Testing workflow with {} provider(s): {:?}",
-        available_providers.len(),
-        available_providers
+        "Testing workflow with {len} provider(s): {providers:?}",
+        len = available_providers.len(),
+        providers = available_providers
             .iter()
             .map(|(name, _)| name)
             .collect::<Vec<_>>()
     );
 
     for (provider_name, model) in available_providers {
-        println!("🧪 Testing workflow with {}", provider_name);
+        println!("🧪 Testing workflow with {provider_name}");
 
         let llm_config = match provider_name {
             "OpenAI" => LlmConfig::openai(std::env::var("OPENAI_API_KEY").unwrap(), model),
@@ -803,8 +803,8 @@ async fn test_multi_provider_workflow_execution() {
         };
 
         let agent_config = AgentConfig::new(
-            format!("{} Test Agent", provider_name),
-            format!("Agent using {}", provider_name),
+            format!("{provider_name} Test Agent"),
+            format!("Agent using {provider_name}"),
             llm_config,
         )
         .with_system_prompt(
@@ -819,15 +819,15 @@ async fn test_multi_provider_workflow_execution() {
             executor.register_agent(Arc::new(agent)).await;
 
             let agent_node = WorkflowNode::new(
-                format!("{} Node", provider_name),
-                format!("Node using {}", provider_name),
+                format!("{provider_name} Node"),
+                format!("Node using {provider_name}"),
                 NodeType::Agent {
                     agent_id: agent_config.id.clone(),
                     prompt_template: "Say hello: {{input}}".to_string(),
                 },
             );
 
-            let (builder, _node_id) = WorkflowBuilder::new(format!("{} Workflow", provider_name))
+            let (builder, _node_id) = WorkflowBuilder::new(format!("{provider_name} Workflow"))
                 .add_node(agent_node)
                 .expect("Failed to add node");
 
@@ -836,18 +836,17 @@ async fn test_multi_provider_workflow_execution() {
             let result = executor.execute(workflow).await;
             match result {
                 Ok(context) => {
-                    println!("{} workflow executed successfully", provider_name);
+                    println!("{provider_name} workflow executed successfully");
                     assert!(context.state.is_terminal());
                 }
                 Err(e) => {
-                    println!("{} workflow failed: {:?}", provider_name, e);
+                    println!("{provider_name} workflow failed: {e:?}");
                 }
             }
         } else {
             println!(
-                "Failed to create {} agent: {:?}",
-                provider_name,
-                agent_result.err()
+                "Failed to create {provider_name} agent: {err:?}",
+                err = agent_result.err()
             );
         }
     }
@@ -976,13 +975,14 @@ async fn test_comprehensive_real_api_workflow() {
             // Check execution stats
             if let Some(stats) = context.get_stats() {
                 println!(
-                    "Workflow stats: {} nodes executed, {} successful",
-                    stats.total_nodes, stats.successful_nodes
+                    "Workflow stats: {total_nodes} nodes executed, {successful_nodes} successful",
+                    total_nodes = stats.total_nodes,
+                    successful_nodes = stats.successful_nodes
                 );
             }
         }
         Err(e) => {
-            println!("Comprehensive real API workflow failed: {:?}", e);
+            println!("Comprehensive real API workflow failed: {e:?}");
             // Don't panic here as this might fail due to various API-related issues
         }
     }
@@ -1020,6 +1020,6 @@ async fn test_workflow_timeout_handling() {
     // Result might be error or success depending on implementation
     match result {
         Ok(_) => println!("Workflow completed despite timeout"),
-        Err(e) => println!("Workflow timed out as expected: {:?}", e),
+        Err(e) => println!("Workflow timed out as expected: {e:?}"),
     }
 }

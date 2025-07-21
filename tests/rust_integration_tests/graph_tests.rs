@@ -212,11 +212,11 @@ async fn test_large_graph() {
     let mut node_ids = Vec::new();
     for i in 0..100 {
         let node = WorkflowNode::new(
-            format!("Node {}", i),
-            format!("Node {} description", i),
+            format!("Node {i}"),
+            format!("Node {i} description"),
             NodeType::Agent {
                 agent_id: AgentId::new(),
-                prompt_template: format!("Prompt {}", i),
+                prompt_template: format!("Prompt {i}"),
             },
         );
 

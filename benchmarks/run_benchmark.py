@@ -54,6 +54,7 @@ sys.path.insert(0, str(benchmarks_path))
 def _default_concurrency() -> int:
     return len(sched_getaffinity(0))
 
+
 # Central global variable for number of runs
 NUM_RUNS = 10
 DEFAULT_CONCURRENCY = _default_concurrency()
