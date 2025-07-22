@@ -31,8 +31,8 @@ pub use errors::{GraphBitError, GraphBitResult};
 pub use graph::{NodeType, WorkflowEdge, WorkflowGraph, WorkflowNode};
 pub use llm::{LlmConfig, LlmProvider, LlmResponse};
 pub use text_splitter::{
-    CharacterSplitter, RecursiveSplitter, SentenceSplitter, TextChunk, TextSplitterConfig,
-    TextSplitterFactory, TextSplitterTrait, TokenSplitter, SplitterStrategy,
+    CharacterSplitter, RecursiveSplitter, SentenceSplitter, SplitterStrategy, TextChunk,
+    TextSplitterConfig, TextSplitterFactory, TextSplitterTrait, TokenSplitter,
 };
 pub use types::{
     AgentCapability, AgentId, AgentMessage, MessageContent, NodeExecutionResult, NodeId,
