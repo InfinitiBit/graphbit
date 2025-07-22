@@ -1,3 +1,8 @@
+"""Integration tasks for Pinecone vector database.
+
+This module contains example tasks demonstrating how to use Pinecone within the project.
+"""
+
 import os
 import time
 import uuid
