@@ -98,7 +98,7 @@ pub fn get_test_model() -> String {
 #[allow(dead_code)]
 pub fn skip_test_if(condition: bool, reason: &str) {
     if condition {
-        println!("Skipping test - {}", reason);
+        println!("Skipping test - {reason}");
         panic!("TEST_SKIP");
     }
 }

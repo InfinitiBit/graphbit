@@ -194,11 +194,8 @@ async fn test_large_file_handling() {
     let mut large_data = std::collections::HashMap::with_capacity(1000); // Pre-allocate for large data
     for i in 0..1000 {
         large_data.insert(
-            format!("key_{}", i),
-            format!(
-                "This is value number {} with some additional text to make it larger",
-                i
-            ),
+            format!("key_{i}"),
+            format!("This is value number {i} with some additional text to make it larger"),
         );
     }
 

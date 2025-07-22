@@ -10,8 +10,6 @@ import os
 import sys
 from typing import Dict, Optional
 
-import psutil
-
 try:
     import graphbit
 except ImportError:
@@ -32,6 +30,7 @@ from .common import (
     LLMProvider,
     calculate_throughput,
     count_tokens_estimate,
+    get_cpu_affinity_or_count_fallback,
     get_standard_llm_config,
 )
 
@@ -58,8 +57,7 @@ class GraphBitBenchmark(BaseBenchmark):
         """Set up GraphBit with minimal overhead configuration - DIRECT API ONLY."""
         # Align runtime worker threads with the current CPU affinity so the runtime
         # uses only the pinned CPU cores
-        affinity = psutil.Process().cpu_affinity()
-        graphbit.configure_runtime(worker_threads=len(affinity))
+        graphbit.configure_runtime(worker_threads=get_cpu_affinity_or_count_fallback())
 
         # Initialize GraphBit core only (skip workflow system)
         # Use debug=False for benchmarks to minimize overhead

@@ -3,6 +3,7 @@
 import gc
 import logging
 import os
+import platform
 import shutil
 import sys
 import time
@@ -497,6 +498,16 @@ def set_process_affinity(cores: Optional[List[int]]) -> None:
     """Apply CPU affinity to the current process if ``cores`` provided."""
     if cores and psutil is not None:
         psutil.Process().cpu_affinity(cores)
+
+
+def get_cpu_affinity_or_count_fallback() -> int:
+    """Get the number of CPU cores available or the current CPU affinity."""
+    if platform.system() in ("Linux", "Windows"):
+        try:
+            return len(psutil.Process().cpu_affinity())
+        except Exception:
+            return os.cpu_count() or 4
+    return os.cpu_count() or 4
 
 
 def set_memory_binding(node: Optional[int]) -> None:

@@ -359,9 +359,8 @@ async fn test_agent_id_naming_convention() {
     ];
 
     for invalid_id in invalid_ids {
-        let result =
-            validator.validate_against_rule(&format!("\"{}\"", invalid_id), &agent_id_rule);
-        assert!(!result.is_valid, "ID '{}' should be invalid", invalid_id);
+        let result = validator.validate_against_rule(&format!("\"{invalid_id}\""), &agent_id_rule);
+        assert!(!result.is_valid, "ID '{invalid_id}' should be invalid");
     }
 }
 

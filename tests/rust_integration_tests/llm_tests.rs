@@ -317,10 +317,13 @@ async fn test_openai_real_api_call() {
             assert!(!response.content.is_empty());
             assert_eq!(response.model, "gpt-3.5-turbo");
             assert!(response.usage.total_tokens > 0);
-            println!("OpenAI real API call successful: {}", response.content);
+            println!(
+                "OpenAI real API call successful: {content}",
+                content = response.content
+            );
         }
         Err(e) => {
-            println!("OpenAI API call failed: {:?}", e);
+            println!("OpenAI API call failed: {e:?}");
             panic!("OpenAI API call should succeed with valid credentials");
         }
     }
@@ -350,10 +353,13 @@ async fn test_anthropic_real_api_call() {
             assert!(!response.content.is_empty());
             assert_eq!(response.model, "claude-3-haiku-20240307");
             assert!(response.usage.total_tokens > 0);
-            println!("Anthropic real API call successful: {}", response.content);
+            println!(
+                "Anthropic real API call successful: {content}",
+                content = response.content
+            );
         }
         Err(e) => {
-            println!("Anthropic API call failed: {:?}", e);
+            println!("Anthropic API call failed: {e:?}");
             panic!("Anthropic API call should succeed with valid credentials");
         }
     }
@@ -382,15 +388,15 @@ async fn test_huggingface_real_api_call() {
         Ok(response) => {
             assert!(!response.content.is_empty());
             assert_eq!(response.model, "microsoft/DialoGPT-medium");
-            println!("HuggingFace real API call successful: {}", response.content);
+            println!(
+                "HuggingFace real API call successful: {content}",
+                content = response.content
+            );
         }
         Err(e) => {
-            println!("HuggingFace API call failed: {:?}", e);
+            println!("HuggingFace API call failed: {e:?}");
             // Note: HuggingFace API might be less reliable, so we don't fail the test
-            println!(
-                "HuggingFace API call failed (this might be expected): {:?}",
-                e
-            );
+            println!("HuggingFace API call failed (this might be expected): {e:?}");
         }
     }
 }
@@ -416,12 +422,16 @@ async fn test_ollama_local_api_call() {
     match result {
         Ok(response) => {
             assert!(!response.content.is_empty());
-            println!("Ollama local API call successful: {}", response.content);
+            println!(
+                "Ollama local API call successful: {content}",
+                content = response.content
+            );
         }
         Err(e) => {
-            println!("Ollama test failed: {:?}", e);
+            // Only print the error, do not reference response.content in the error case.
+            println!("Ollama test failed: {e:?}");
             // Ollama might not have the model available, so we log but don't fail
-            println!("Ollama test failed (model might not be available): {:?}", e);
+            println!("Ollama test failed (model might not be available): {e:?}");
         }
     }
 }
@@ -468,14 +478,17 @@ async fn test_openai_real_api_with_tools() {
 
             // Check if tool calls were made
             if response.has_tool_calls() {
-                println!("Tool calls were made: {:?}", response.tool_calls);
+                println!(
+                    "Tool calls were made: {tool_calls:?}",
+                    tool_calls = response.tool_calls
+                );
                 assert!(!response.tool_calls.is_empty());
             } else {
-                println!("Response without tool calls: {}", response.content);
+                println!("Tool calls were made: {:?}", response.content);
             }
         }
         Err(e) => {
-            println!("OpenAI API call with tools failed: {:?}", e);
+            println!("OpenAI API call with tools failed: {e:?}");
             // Tool responses can have parsing issues with null values - this is known
             if e.to_string().contains("null, expected a string") {
                 println!("Known issue with OpenAI tool response parsing - null value in response");
@@ -539,15 +552,15 @@ async fn test_multiple_provider_comparison() {
 
     println!("🔍 Provider comparison results:");
     for (provider_name, response) in &successful_providers {
-        println!("  {} -> {}", provider_name, response);
+        println!("  {provider_name} -> {response}");
     }
 
     if successful_providers.is_empty() {
         println!("No providers available for comparison test");
     } else {
         println!(
-            "Successfully tested {} provider(s)",
-            successful_providers.len()
+            "Successfully tested {count} provider(s)",
+            count = successful_providers.len()
         );
     }
 

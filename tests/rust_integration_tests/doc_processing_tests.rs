@@ -413,11 +413,9 @@ async fn test_concurrent_document_loading() {
 
     // Create multiple test files
     for i in 0..num_files {
-        let file_path = temp_dir.path().join(format!("test_{}.txt", i));
-        let content = format!(
-            "This is test document number {}.\nWith some additional content for testing.",
-            i
-        );
+        let file_path = temp_dir.path().join(format!("test_{i}.txt"));
+        let content =
+            format!("This is test document number {i}.\nWith some additional content for testing.");
         fs::write(&file_path, content).expect("Failed to write test file");
         file_paths.push(file_path);
     }
@@ -449,15 +447,11 @@ async fn test_concurrent_document_loading() {
     // Verify all documents loaded successfully
     assert_eq!(results.len(), num_files);
     for (index, result) in results {
-        assert!(
-            result.is_ok(),
-            "Document {} should load successfully",
-            index
-        );
+        assert!(result.is_ok(), "Document {index} should load successfully");
         let document = result.unwrap();
         assert!(document
             .content
-            .contains(&format!("test document number {}", index)));
+            .contains(&format!("test document number {index}")));
         assert_eq!(document.document_type, "txt");
     }
 
@@ -466,10 +460,7 @@ async fn test_concurrent_document_loading() {
         duration.as_millis() < 1000,
         "Concurrent loading should be fast"
     );
-    println!(
-        "Loaded {} documents concurrently in {:?}",
-        num_files, duration
-    );
+    println!("Loaded {num_files} documents concurrently in {duration:?}");
 }
 
 #[tokio::test]
@@ -603,10 +594,7 @@ async fn test_pdf_document_processing() {
             println!("PDF processing succeeded: {}", document.content);
         }
         Err(e) => {
-            println!(
-                "PDF processing failed as expected (not yet implemented): {:?}",
-                e
-            );
+            println!("PDF processing failed as expected (not yet implemented): {e:?}");
             assert!(
                 e.to_string()
                     .contains("PDF processing not yet fully implemented")
@@ -639,10 +627,7 @@ async fn test_docx_document_processing() {
             println!("DOCX processing succeeded: {}", document.content);
         }
         Err(e) => {
-            println!(
-                "DOCX processing failed as expected (not yet implemented): {:?}",
-                e
-            );
+            println!("DOCX processing failed as expected (not yet implemented): {e:?}");
             assert!(
                 e.to_string()
                     .contains("DOCX processing not yet fully implemented")
@@ -825,7 +810,7 @@ async fn test_document_loader_performance() {
     let mut file_paths = Vec::new();
 
     for (i, size) in sizes.iter().enumerate() {
-        let file_path = temp_dir.path().join(format!("perf_test_{}.txt", i));
+        let file_path = temp_dir.path().join(format!("perf_test_{i}.txt"));
         let content = "A".repeat(*size);
         fs::write(&file_path, content).expect("Failed to write performance test file");
         file_paths.push((file_path, *size));
@@ -873,8 +858,8 @@ async fn test_document_loader_memory_efficiency() {
     let mut file_paths = Vec::new();
 
     for i in 0..num_files {
-        let file_path = temp_dir.path().join(format!("memory_test_{}.txt", i));
-        let content = format!("Content for file {} ", i).repeat(file_size / 20);
+        let file_path = temp_dir.path().join(format!("memory_test_{i}.txt"));
+        let content = format!("Content for file {i} ").repeat(file_size / 20);
         fs::write(&file_path, content).expect("Failed to write memory test file");
         file_paths.push(file_path);
     }
@@ -887,18 +872,16 @@ async fn test_document_loader_memory_efficiency() {
         let result = loader
             .load_document(file_path.to_str().unwrap(), "txt")
             .await;
-        assert!(result.is_ok(), "File {} should load successfully", i);
+        assert!(result.is_ok(), "File {i} should load successfully");
 
         let document = result.unwrap();
-        assert!(document
-            .content
-            .contains(&format!("Content for file {}", i)));
+        assert!(document.content.contains(&format!("Content for file {i}")));
 
         // Document should be dropped here, freeing memory
     }
 
     let duration = start_time.elapsed();
-    println!("Loaded {} files sequentially in {:?}", num_files, duration);
+    println!("Loaded {num_files} files sequentially in {duration:?}");
 
     // Should complete within reasonable time
     assert!(duration.as_secs() < 5, "Should complete within 5 seconds");

@@ -205,7 +205,7 @@ async fn test_embedding_service_text_processing() {
             );
         }
         Err(e) => {
-            println!("Embedding failed as expected (no real API): {:?}", e);
+            println!("Embedding failed as expected (no real API): {e:?}");
             // This is expected in test environment without real API keys
         }
     }
@@ -252,7 +252,7 @@ async fn test_openai_real_embeddings() {
             );
         }
         Err(e) => {
-            println!("OpenAI embeddings failed: {:?}", e);
+            println!("OpenAI embeddings failed: {e:?}");
             panic!("OpenAI embeddings should succeed with valid credentials");
         }
     }
@@ -298,7 +298,7 @@ async fn test_openai_real_batch_embeddings() {
             );
 
             for (i, embedding) in embeddings.iter().enumerate() {
-                assert!(!embedding.is_empty(), "Embedding {} should not be empty", i);
+                assert!(!embedding.is_empty(), "Embedding {i} should not be empty");
                 assert_eq!(
                     embedding.len(),
                     1536,
@@ -322,11 +322,11 @@ async fn test_openai_real_batch_embeddings() {
             );
 
             println!("   OpenAI real batch embeddings successful");
-            println!("   Similarity between text 0 and 1: {:.3}", similarity_01);
-            println!("   Similarity between text 0 and 2: {:.3}", similarity_02);
+            println!("   Similarity between text 0 and 1: {similarity_01:.3}");
+            println!("   Similarity between text 0 and 2: {similarity_02:.3}");
         }
         Err(e) => {
-            println!("  OpenAI batch embeddings failed: {:?}", e);
+            println!("  OpenAI batch embeddings failed: {e:?}");
             panic!("OpenAI batch embeddings should succeed with valid credentials");
         }
     }
@@ -374,12 +374,9 @@ async fn test_huggingface_real_embeddings() {
             );
         }
         Err(e) => {
-            println!(" HuggingFace embeddings failed: {:?}", e);
+            println!(" HuggingFace embeddings failed: {e:?}");
             // HuggingFace API can be unreliable, so we log but don't fail the test
-            println!(
-                "HuggingFace embeddings failed (this might be expected): {:?}",
-                e
-            );
+            println!("HuggingFace embeddings failed (this might be expected): {e:?}");
         }
     }
 }
@@ -419,7 +416,7 @@ async fn test_semantic_search_with_real_embeddings() {
     // Generate embeddings for all documents
     let doc_embeddings = service.embed_texts(&documents).await;
     if let Err(e) = doc_embeddings {
-        println!(" Failed to generate document embeddings: {:?}", e);
+        println!(" Failed to generate document embeddings: {e:?}");
         return;
     }
     let doc_embeddings = doc_embeddings.unwrap();
@@ -434,10 +431,7 @@ async fn test_semantic_search_with_real_embeddings() {
     for (query, expected_matches) in queries {
         let query_embedding = service.embed_text(query).await;
         if let Err(e) = query_embedding {
-            println!(
-                " Failed to generate query embedding for '{}': {:?}",
-                query, e
-            );
+            println!(" Failed to generate query embedding for '{query}': {e:?}");
             continue;
         }
         let query_embedding = query_embedding.unwrap();
@@ -456,7 +450,7 @@ async fn test_semantic_search_with_real_embeddings() {
         // Sort by similarity (highest first)
         similarities.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
 
-        println!(" Query: '{}'", query);
+        println!(" Query: '{query}'");
         for (i, (doc_idx, similarity)) in similarities.iter().enumerate() {
             let doc_text = &documents[*doc_idx];
             let preview = if doc_text.len() > 60 {
@@ -474,12 +468,9 @@ async fn test_semantic_search_with_real_embeddings() {
             .any(|&expected| top_2_docs.contains(&expected));
 
         if has_expected_match {
-            println!(" Semantic search found relevant documents for '{}'", query);
+            println!(" Semantic search found relevant documents for '{query}'");
         } else {
-            println!(
-                "  Semantic search results for '{}' might not be as expected",
-                query
-            );
+            println!("  Semantic search results for '{query}' might not be as expected");
         }
     }
 }
@@ -531,7 +522,7 @@ async fn test_embedding_provider_comparison() {
 
     println!("🔍 Embedding provider comparison:");
     for (provider_name, dimensions) in &successful_providers {
-        println!("  {} -> {} dimensions", provider_name, dimensions);
+        println!("  {provider_name} -> {dimensions} dimensions");
     }
 
     if successful_providers.is_empty() {
