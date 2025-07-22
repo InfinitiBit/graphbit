@@ -1,19 +1,16 @@
+[build-system]
+build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core>=1.0.0"]
+
 [tool.poetry]
-name = "graphbit-llm-browser-agent"
-version = "0.1.0"
-description = "LLM-driven browser automation agent using Graphbit (PyO3 bindings), OpenAI GPT, and Playwright"
 authors = ["Your Name <your.email@example.com>"]
-readme = "README.md"
+description = "LLM-driven browser automation agent using Graphbit (PyO3 bindings), OpenAI GPT, and Playwright"
+name = "graphbit-llm-browser-agent"
 packages = [{include = "*"}]
-# adjust as needed for your project structure
+readme = "README.md"
+version = "0.1.0"
 
 [tool.poetry.dependencies]
-python = "^3.8"
 openai = "^1.0.0"
 playwright = "^1.41.0"
-# If you have a built wheel for graphbit, add it like this:
-# graphbit = { path = "./dist/graphbit-0.1.0-cp310-cp310-macosx_10_7_x86_64.whl" }
-
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+python = "^3.8"
