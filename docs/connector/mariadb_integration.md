@@ -72,7 +72,7 @@ embedding_client = graphbit.EmbeddingClient(
 
 texts = [
     "GraphBit is a framework for LLM workflows and agent orchestration.",
-    "Qdrant is an open-source vector database for similarity search.",
+    "MariaDB supports native vector search for efficient AI similarity queries.",
     "OpenAI offers tools for LLMs and embeddings."
 ]
 embeds = embedding_client.embed_many(texts)
