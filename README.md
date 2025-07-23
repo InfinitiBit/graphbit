@@ -2,10 +2,23 @@
 
 # GraphBit - High Performance Agentic Framework
 
+
+<!-- Added placeholders for links, fill it up when the corresponding links are available. -->
+<p align="center">
+    <a href="https://graphbit-docs.vercel.app/">Website</a> |
+    <a href=" ">Blog</a> |
+    <a href="https://graphbit-docs.vercel.app/docs">Docs</a> 
+    <br /><br />
+</p>
+
+
+
 [![Build Status](https://img.shields.io/github/actions/workflow/status/InfinitiBit/graphbit/python-integration-tests.yml?branch=main)](https://github.com/InfinitiBit/graphbit/actions/workflows/python-integration-tests.yml)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/InfinitiBit/graphbit/blob/main/CONTRIBUTING.md)
 [![Test Coverage](https://img.shields.io/codecov/c/github/InfinitiBit/graphbit)](https://codecov.io/gh/InfinitiBit/graphbit)
 [![Rust Coverage](https://img.shields.io/badge/Rust%20Coverage-47.25%25-yellow)](https://github.com/InfinitiBit/graphbit)
 [![PyPI](https://img.shields.io/pypi/v/graphbit)](https://pypi.org/project/graphbit/)
+[![Downloads](https://img.shields.io/pypi/dm/graphbit)](https://pypi.org/project/graphbit/)
 [![Rust Version](https://img.shields.io/badge/rust-1.70+-blue.svg)](https://www.rust-lang.org)
 [![Python Version](https://img.shields.io/pypi/pyversions/graphbit)](https://pypi.org/project/graphbit/)
 
@@ -84,19 +97,6 @@ Three-tier design for reliability and performance:
 - **CLI Tool** - Project management and execution
 - **Rust Core** - Workflow engine, agents, and LLM providers
 
-## Configuration
-
-```python
-# High-throughput
-executor = graphbit.Executor.new_high_throughput(config)
-
-# Low-latency
-executor = graphbit.Executor.new_low_latency(config)
-
-# Memory-optimized
-executor = graphbit.Executor.new_memory_optimized(config)
-```
-
 ## Observability
 
 ```python
@@ -107,6 +107,21 @@ print(f"Total executions: {stats['total_executions']}")
 print(f"Success rate: {stats['success_rate']:.2%}")
 ```
 
-## Contributing
+## Contributing to GraphBit
 
-See the [Contributing](CONTRIBUTING.md) file for development setup and guidelines.
+We welcome contributions. To get started, please see the [Contributing](CONTRIBUTING.md) file for development setup and guidelines.
+
+
+GraphBit is built by a wonderful community of researchers and engineers.
+
+<!-- Remove the following comment and add the code once the repository is public to make the contributors automated. -->
+<!-- <a href="https://github.com/InfinitiBit/graphbit/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=InfinitiBit/graphbit&columns=10" />
+</a> -->
+
+
+<!-- Since repo is currently private, using manual way to view the current contributors. Remove the following section once the repo is public. -->
+<img src="https://github.com/yeahia-sarker.png" width="40" style="border-radius: 50%" alt="yeahia-sarker" />
+<img src="https://github.com/jj-devhub.png" width="40" style="border-radius: 50%" alt="jj-devhub" />
+<img src="https://github.com/JunaidHossain04.png" width="40" style="border-radius: 50%" alt="JunaidHossain04" />
+<img src="https://github.com/tanimahossain-infiniti.png" width="40" style="border-radius: 50%" alt="tanimahossain-infiniti" />
