@@ -1,6 +1,6 @@
 # Embeddings
 
-GraphBit provides vector embedding capabilities for semantic search, similarity analysis, and other AI-powered text operations. This guide covers configuration, usage, and best practices for working with embeddings.
+GraphBit provides vector embedding capabilities for semantic search, similarity analysis, and other AI-powered text operations. This guide covers configuration and usage for working with embeddings.
 
 ## Overview
 
@@ -9,19 +9,6 @@ GraphBit's embedding system supports:
 - **Unified Interface** - Consistent API across all providers
 - **Batch Processing** - Efficient processing of multiple texts
 - **Similarity Calculations** - Built-in cosine similarity functions
-- **Production Ready** - Robust error handling and performance optimization
-
-## Supported Providers
-
-### OpenAI Embeddings
-- **text-embedding-3-small** - Fast, cost-effective embeddings
-- **text-embedding-3-large** - Higher quality, more expensive
-- **text-embedding-ada-002** - Legacy model, still supported
-
-### HuggingFace Embeddings
-- **sentence-transformers/all-MiniLM-L6-v2** - Fast, good quality
-- **sentence-transformers/all-mpnet-base-v2** - High quality
-- **sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2** - Multilingual
 
 ## Configuration
 
@@ -46,7 +33,7 @@ print(f"Provider: OpenAI")
 print(f"Model: {embedding_config.model}")
 ```
 
-#### OpenAI Model Comparison
+#### Supported OpenAI Models with Comparison
 
 | Model | Dimensions | Performance | Cost | Best For |
 |-------|------------|-------------|------|----------|
@@ -54,23 +41,6 @@ print(f"Model: {embedding_config.model}")
 | `text-embedding-3-large` | 3072 | Slower | High | High accuracy requirements |
 | `text-embedding-ada-002` | 1536 | Medium | Medium | Legacy applications |
 
-```python
-# Model selection examples
-fast_config = graphbit.EmbeddingConfig.openai(
-    api_key=os.getenv("OPENAI_API_KEY"),
-    model="text-embedding-3-small"  # Fast and economical
-)
-
-quality_config = graphbit.EmbeddingConfig.openai(
-    api_key=os.getenv("OPENAI_API_KEY"),
-    model="text-embedding-3-large"  # High quality
-)
-
-legacy_config = graphbit.EmbeddingConfig.openai(
-    api_key=os.getenv("OPENAI_API_KEY"),
-    model="text-embedding-ada-002"  # Legacy compatibility
-)
-```
 
 ### HuggingFace Configuration
 
@@ -87,27 +57,14 @@ print(f"Provider: HuggingFace")
 print(f"Model: {embedding_config.model}")
 ```
 
-#### HuggingFace Model Options
+#### Supported HuggingFace Models with Comparison
 
-```python
-# Fast, lightweight model
-fast_hf_config = graphbit.EmbeddingConfig.huggingface(
-    api_key=os.getenv("HUGGINGFACE_API_KEY"),
-    model="sentence-transformers/all-MiniLM-L6-v2"
-)
+| Model                                         | Dimensions | Performance | Multilingual | Best For                        |
+|-----------------------------------------------|------------|-------------|--------------|---------------------------------|
+| `sentence-transformers/all-MiniLM-L6-v2`      | 384        | Fast        | No           | General purpose, low latency    |
+| `sentence-transformers/all-mpnet-base-v2`     | 768        | High        | No           | High accuracy, English texts    |
+| `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` | 384        | Medium      | Yes         | Multilingual, cross-lingual     |
 
-# High quality model
-quality_hf_config = graphbit.EmbeddingConfig.huggingface(
-    api_key=os.getenv("HUGGINGFACE_API_KEY"),
-    model="sentence-transformers/all-mpnet-base-v2"
-)
-
-# Multilingual model
-multilingual_config = graphbit.EmbeddingConfig.huggingface(
-    api_key=os.getenv("HUGGINGFACE_API_KEY"),
-    model="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-)
-```
 
 ## Basic Usage
 
@@ -164,20 +121,14 @@ Calculate similarity between vectors:
 # Generate embeddings for comparison
 text1 = "Artificial intelligence and machine learning"
 text2 = "AI and ML technologies"
-text3 = "Weather forecast for tomorrow"
 
 vector1 = embedding_client.embed(text1)
 vector2 = embedding_client.embed(text2)
-vector3 = embedding_client.embed(text3)
 
 # Calculate similarities
 similarity_1_2 = graphbit.EmbeddingClient.similarity(vector1, vector2)
-similarity_1_3 = graphbit.EmbeddingClient.similarity(vector1, vector3)
-similarity_2_3 = graphbit.EmbeddingClient.similarity(vector2, vector3)
 
 print(f"Similarity between text1 and text2: {similarity_1_2:.3f}")
-print(f"Similarity between text1 and text3: {similarity_1_3:.3f}")
-print(f"Similarity between text2 and text3: {similarity_2_3:.3f}")
 ```
 
 ### Finding Most Similar Texts
@@ -544,238 +495,6 @@ vector1 = cached_client.embed("This text will be cached")
 vector2 = cached_client.embed("This text will be cached")
 
 print(f"Vectors are identical: {vector1 == vector2}")
-```
-
-## Error Handling
-
-### Robust Embedding Operations
-
-Handle errors gracefully:
-
-```python
-def robust_embedding_operation(texts, embedding_client, max_retries=3):
-    """Perform embedding operation with error handling"""
-    for attempt in range(max_retries):
-        try:
-            if isinstance(texts, str):
-                return embedding_client.embed(texts)
-            else:
-                return embedding_client.embed_many(texts)
-                
-        except Exception as e:
-            print(f"Attempt {attempt + 1} failed: {e}")
-            
-            if attempt == max_retries - 1:
-                print("All attempts failed")
-                raise
-            
-            # Wait before retry
-            import time
-            time.sleep(2 ** attempt)  # Exponential backoff
-
-# Usage
-try:
-    vectors = robust_embedding_operation(
-        ["Text 1", "Text 2", "Text 3"], 
-        embedding_client
-    )
-    print(f"Successfully generated {len(vectors)} embeddings")
-except Exception as e:
-    print(f"Failed to generate embeddings: {e}")
-```
-
-## Best Practices
-
-### 1. Provider Selection
-
-Choose the right provider and model:
-
-```python
-def get_embedding_config(use_case, budget="medium"):
-    """Select optimal embedding configuration"""
-    
-    if use_case == "high_volume" and budget == "low":
-        return graphbit.EmbeddingConfig.openai(
-            api_key=os.getenv("OPENAI_API_KEY"),
-            model="text-embedding-3-small"
-        )
-    elif use_case == "high_accuracy" and budget == "high":
-        return graphbit.EmbeddingConfig.openai(
-            api_key=os.getenv("OPENAI_API_KEY"),
-            model="text-embedding-3-large"
-        )
-    elif use_case == "research" or budget == "free":
-        return graphbit.EmbeddingConfig.huggingface(
-            api_key=os.getenv("HUGGINGFACE_API_KEY"),
-            model="sentence-transformers/all-MiniLM-L6-v2"
-        )
-    else:
-        return graphbit.EmbeddingConfig.openai(
-            api_key=os.getenv("OPENAI_API_KEY"),
-            model="text-embedding-3-small"
-        )
-```
-
-### 2. Text Preprocessing
-
-Preprocess texts for better embeddings:
-
-```python
-import re
-
-def preprocess_text(text):
-    """Preprocess text for better embeddings"""
-    # Remove extra whitespace
-    text = re.sub(r'\s+', ' ', text)
-    
-    # Remove special characters but keep punctuation
-    text = re.sub(r'[^\w\s.,!?-]', '', text)
-    
-    # Trim
-    text = text.strip()
-    
-    return text
-
-def preprocess_texts(texts):
-    """Preprocess multiple texts"""
-    return [preprocess_text(text) for text in texts]
-
-# Usage
-raw_texts = [
-    "  This is   a messy    text!!!  ",
-    "Another text with@#$%weird characters",
-    "\n\tTabbed and newlined text\n"
-]
-
-clean_texts = preprocess_texts(raw_texts)
-vectors = embedding_client.embed_many(clean_texts)
-```
-
-### 3. Similarity Thresholds
-
-Use appropriate similarity thresholds:
-
-```python
-def interpret_similarity(similarity):
-    """Interpret similarity scores"""
-    if similarity >= 0.9:
-        return "Very High"
-    elif similarity >= 0.7:
-        return "High"  
-    elif similarity >= 0.5:
-        return "Medium"
-    elif similarity >= 0.3:
-        return "Low"
-    else:
-        return "Very Low"
-
-# Usage
-similarity_score = 0.75
-interpretation = interpret_similarity(similarity_score)
-print(f"Similarity: {similarity_score:.3f} ({interpretation})")
-```
-
-### 4. Memory Management
-
-Manage memory for large embedding operations:
-
-```python
-def memory_efficient_processing(texts, embedding_client, batch_size=50):
-    """Process embeddings in memory-efficient batches"""
-    results = []
-    
-    for i in range(0, len(texts), batch_size):
-        batch = texts[i:i + batch_size]
-        batch_vectors = embedding_client.embed_many(batch)
-        
-        # Process results immediately rather than storing all
-        for text, vector in zip(batch, batch_vectors):
-            # Do something with each embedding
-            result = process_single_embedding(text, vector)
-            results.append(result)
-        
-        # Clear batch vectors from memory
-        del batch_vectors
-    
-    return results
-
-def process_single_embedding(text, vector):
-    """Process individual embedding"""
-    return {
-        "text": text[:100] + "..." if len(text) > 100 else text,
-        "dimension": len(vector),
-        "magnitude": sum(x*x for x in vector) ** 0.5
-    }
-```
-
-## Integration with Workflows
-
-### Embedding-Powered Workflows
-
-Use embeddings in GraphBit workflows:
-
-```python
-def create_embedding_workflow():
-    """Create workflow that uses embeddings for content analysis"""
-    graphbit.init()
-    
-    # Configure LLM for analysis
-    llm_config = graphbit.LlmConfig.openai(
-        api_key=os.getenv("OPENAI_API_KEY"),
-        model="gpt-4o-mini"
-    )
-    
-    # Create workflow
-    workflow = graphbit.Workflow("Embedding-Powered Analysis")
-    
-    # Similarity analyzer node
-    analyzer = graphbit.Node.agent(
-        name="Similarity Analyzer",
-        prompt="""
-        Based on the similarity analysis:
-        - Similar documents found: {similar_docs}
-        - Similarity scores: {similarity_scores}
-        
-        Provide insights about the content relationships and patterns.
-        """,
-        agent_id="similarity_analyzer"
-    )
-    
-    workflow.add_node(analyzer)
-    workflow.validate()
-    
-    # Create executor
-    executor = graphbit.Executor(llm_config, timeout_seconds=60)
-    
-    return workflow, executor
-
-# Combine with embedding analysis
-def analyze_with_embeddings_and_llm(query_text, document_collection):
-    """Combine embeddings and LLM for comprehensive analysis"""
-    
-    # Find similar documents using embeddings
-    query_vector = embedding_client.embed(query_text)
-    doc_vectors = embedding_client.embed_many(document_collection)
-    
-    similarities = []
-    for i, doc_vector in enumerate(doc_vectors):
-        similarity = graphbit.EmbeddingClient.similarity(query_vector, doc_vector)
-        similarities.append((document_collection[i], similarity))
-    
-    # Get top similar documents
-    similarities.sort(key=lambda x: x[1], reverse=True)
-    top_docs = similarities[:3]
-    
-    # Use LLM for deeper analysis
-    workflow, executor = create_embedding_workflow()
-    
-    # Execute workflow with embedding results
-    result = executor.execute(workflow)
-    
-    return {
-        "similar_documents": top_docs,
-        "llm_analysis": result.output() if result.is_completed() else "Analysis failed"
-    }
 ```
 
 ## What's Next
