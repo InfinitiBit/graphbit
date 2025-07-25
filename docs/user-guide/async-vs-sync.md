@@ -35,8 +35,6 @@ GraphBit's Python bindings provide both synchronous (blocking) and asynchronous 
 | [`complete_batch`](llm-providers.md#batch-processing)   | Async        |
 | [`warmup`](llm-providers.md#client-warmup)   | Async        |
 
-> **Note:** Async methods return a Python awaitable (coroutine). Use `await` in an async context or `asyncio.run()` in scripts.
-
 ### Embedding Client 
 
 | Function      | Type |
@@ -44,8 +42,6 @@ GraphBit's Python bindings provide both synchronous (blocking) and asynchronous 
 | [`embed`](../api-reference/configuration.md#embeddings-client)              | Sync         |
 | [`embed_many`](../api-reference/configuration.md#embeddings-client)              | Sync         |
 | [`similarity`](../api-reference/configuration.md#embeddings-client)              | Sync         |
-
-> **Note:** EmbeddingClient currently only exposes sync methods, but internally uses async Rust code.
 
 ### Workflow 
 
@@ -131,6 +127,6 @@ asyncio.run(main())
 ```
 ---
 
-This documentation demonstrates all the sync and async functions supported by GraphBit’s Python API, enabling you to select the best approach for your use case, whether you need straightforward synchronous calls or high-performance asynchronous workflows.
+This documentation demonstrates sync and async functions supported by GraphBit’s Python API, enabling you to select the best approach for your use case, whether you need straightforward synchronous calls or high-performance asynchronous workflows.
 
 ---
