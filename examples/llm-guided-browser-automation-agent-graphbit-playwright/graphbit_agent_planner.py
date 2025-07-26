@@ -10,7 +10,7 @@ from collections import Counter
 import openai
 from playwright.sync_api import sync_playwright
 
-import graphbit
+from graphbit import Node, Workflow
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("GraphbitAgent")
@@ -192,9 +192,8 @@ def get_plan_from_graphbit(prompt: str, url: str) -> tuple[list, list]:
         """
     )
 
-    graphbit.init()
-    workflow = graphbit.Workflow("llm-plan")
-    node = graphbit.Node.agent("Planner", planner_prompt)
+    workflow = Workflow("llm-plan")
+    node = Node.agent("Planner", planner_prompt)
     workflow.add_node(node)
 
     logger.info("Calling GPT-4 with planner prompt.")
