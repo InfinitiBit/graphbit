@@ -1,9 +1,12 @@
+"""Plan execution module for browser automation using Playwright."""
+
 from playwright.sync_api import sync_playwright
 
 
 def run_browser_plan(plan: list, selectors=None) -> dict:
     """
-    Executes the action plan (list of steps) in Playwright.
+    Execute the action plan (list of steps) in Playwright.
+
     If selectors are provided (from initial scan), each selector is validated.
     On error, logs the problem and saves a screenshot for debugging.
     Returns a dictionary of extracted results (by key or step).
@@ -59,14 +62,28 @@ def run_browser_plan(plan: list, selectors=None) -> dict:
                         page.wait_for_selector(sel, timeout=60000)
                     elif action == "click":
                         page.click(sel)
+                    # elif action == "extract_text":
+                    #     locator = page.locator(sel)
+                    #     if locator.count() == 0:
+                    #         print(f"[plan_executor] Step {idx}: Selector '{sel}' not found for extraction.")
+                    #         continue
+                    #     text = locator.inner_text()
+                    #     key = step.get("key") or step.get("extract_to") or step.get("extract") or step.get("output") or f"step_{idx}"
+                    #     result[key] = text
                     elif action == "extract_text":
                         locator = page.locator(sel)
-                        if locator.count() == 0:
+                        count = locator.count()
+                        if count == 0:
                             print(f"[plan_executor] Step {idx}: Selector '{sel}' not found for extraction.")
                             continue
-                        text = locator.inner_text()
                         key = step.get("key") or step.get("extract_to") or step.get("extract") or step.get("output") or f"step_{idx}"
-                        result[key] = text
+                        if count == 1:
+                            result[key] = locator.inner_text()
+                        else:
+                            # Multiple matches → return all texts as list
+                            result[key] = locator.all_inner_texts()
+                            print(f"[plan_executor] Step {idx}: Multiple matches ({count}) → returning all texts.")
+
             except Exception as e:
                 page.screenshot(path=f"error_{action}_step{idx}.png")
                 print(f"[plan_executor] Error at '{action}' (step {idx}) with {step}: {e}")

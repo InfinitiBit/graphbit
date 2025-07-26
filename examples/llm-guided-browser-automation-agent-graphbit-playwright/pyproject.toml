@@ -3,7 +3,7 @@ build-backend = "poetry.core.masonry.api"
 requires = ["poetry-core>=1.0.0"]
 
 [tool.poetry]
-authors = ["Your Name <your.email@example.com>"]
+authors = ["GraphBit"]
 description = "LLM-driven browser automation agent using Graphbit (PyO3 bindings), OpenAI GPT, and Playwright"
 name = "graphbit-llm-browser-agent"
 packages = [{include = "*"}]

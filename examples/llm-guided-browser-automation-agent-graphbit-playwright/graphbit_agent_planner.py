@@ -1,5 +1,6 @@
-"""graphbit_agent_planner.py"""
+"""graphbit_agent_planner."""
 
+import contextlib
 import json
 import logging
 import os
@@ -8,7 +9,6 @@ from collections import Counter
 
 import openai
 from playwright.sync_api import sync_playwright
-from typer import prompt
 
 import graphbit
 
@@ -16,49 +16,48 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("GraphbitAgent")
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# --- Hybrid Selector Filter Settings ---
-UTILITY_CLASSES = set(
-    [
-        "container",
-        "row",
-        "col",
-        "col-lg-6",
-        "text-center",
-        "align-center",
-        "d-flex",
-        "justify-content",
-        "align-items",
-        "p-0",
-        "m-0",
-        "clearfix",
-        "flex",
-        "flex-row",
-        "flex-col",
-        "flex-center",
-        "main",
-        "header",
-        "footer",
-    ]
-)
-CONTENT_TAGS = set(["h1", "h2", "h3", "h4", "h5", "h6", "p", "span", "div", "a", "button", "input", "li", "ul", "ol"])
-IMPORTANT_KEYWORDS = ["headline", "main", "lead", "price", "title", "hero", "news", "top", "feature", "breaking"]
+""" Hybrid Selector Filter Settings """
+UTILITY_CLASSES = {
+    "container",
+    "row",
+    "col",
+    "col-lg-6",
+    "text-center",
+    "align-center",
+    "d-flex",
+    "justify-content",
+    "align-items",
+    "p-0",
+    "m-0",
+    "clearfix",
+    "flex",
+    "flex-row",
+    "flex-col",
+    "flex-center",
+    "main",
+    "header",
+    "footer",
+}
+
+CONTENT_TAGS = {"h1", "h2", "h3", "h4", "h5", "h6", "p", "span", "div", "a", "button", "input", "li", "ul", "ol"}
+IMPORTANT_KEYWORDS = {"headline", "main", "lead", "price", "title", "hero", "news", "top", "feature", "breaking"}
 
 
 def is_heading(tag):
-    """Checks if the tag is a heading (h1-h6)."""
+    """Check if the tag is a heading (h1-h6)."""
     import re
 
     return re.match(r"h[1-6]$", tag)
 
 
 def is_important_string(s):
-    """Checks if the string contains any important keywords."""
+    """Check if the string contains any important keywords."""
     s = (s or "").lower()
     return any(key in s for key in IMPORTANT_KEYWORDS)
 
 
 def get_selectors_for_url_hybrid(url, max_elements=100):
-    """Extracts selectors from a webpage using Playwright with hybrid filtering."""
+    """Extract selectors from a webpage using Playwright with hybrid filtering."""
     selectors = []
     seen = set()
     with sync_playwright() as p:
@@ -91,25 +90,22 @@ def get_selectors_for_url_hybrid(url, max_elements=100):
                 if class_attr and any(c in UTILITY_CLASSES for c in class_attr.split()):
                     continue
                 important = False
-                if is_heading(tag):
-                    important = True
-                elif is_important_string(class_attr) or is_important_string(id_attr):
-                    important = True
-                elif tag in CONTENT_TAGS and txt and len(txt) > 20:
-                    important = True
+                important = is_heading(tag) or is_important_string(class_attr) or is_important_string(id_attr) or (tag in CONTENT_TAGS and txt and len(txt) > 20)
+
                 if not important:
                     continue
                 selectors.append({"id": id_attr if id_attr else None, "class": class_attr if class_attr else None, "tag": tag, "text": txt[:60]})
                 if len(selectors) >= max_elements:
                     break
-            except Exception:
+            except Exception as e:
+                logger.warning(f"Exception processing element: {e}")
                 continue
         browser.close()
     return selectors
 
 
 def build_llm_prompt_advanced(user_goal, url, selectors, max_total=30, max_per_type=10):
-    """Builds a detailed prompt for the LLM planner with selector summaries."""
+    """Build a detailed prompt for the LLM planner with selector summaries."""
     id_counter = Counter(s["id"] for s in selectors if s.get("id"))
     class_counter = Counter()
     for s in selectors:
@@ -162,40 +158,46 @@ def build_llm_prompt_advanced(user_goal, url, selectors, max_total=30, max_per_t
 
 
 def extract_first_json_array(text):
-    """
-    Extracts the first valid JSON array or object from text, even if surrounded by markdown/code fences or extra text.
-    """
+    """Extract the first valid JSON array or object from text, even if surrounded by markdown/code fences or extra text."""
     # Try to extract using regex for array first
     match = re.search(r"(\[.*?\])", text, re.DOTALL)
     if match:
-        try:
+        with contextlib.suppress(Exception):
             return json.loads(match.group(1))
-        except Exception:
-            pass
     # Try to extract using regex for object if array failed
     match = re.search(r"(\{.*\})", text, re.DOTALL)
     if match:
-        try:
+        with contextlib.suppress(Exception):
             return json.loads(match.group(1))
-        except Exception:
-            pass
     # Fallback: Try raw (may raise error)
     return json.loads(text)
 
 
-def get_plan_from_graphbit(prompt: str, url: str) -> (list, list):
-    """Generates a plan using Graphbit and LLM based on the provided prompt and URL."""
+def get_plan_from_graphbit(prompt: str, url: str) -> tuple[list, list]:
+    """Generate plan using Graphbit and LLM based on the provided prompt and URL."""
     logger.info(f"Gathering selectors for {url} ...")
     selectors = get_selectors_for_url_hybrid(url)
     if not selectors:
         logger.warning("No selectors found; page may not have loaded.")
-    planner_prompt = build_llm_prompt_advanced(prompt, url, selectors)
+    # planner_prompt = build_llm_prompt_advanced(prompt, url, selectors)
+    planner_prompt = (
+        build_llm_prompt_advanced(prompt, url, selectors)
+        + """
+
+        INSTRUCTIONS FOR SELECTOR CHOICE:
+        - Prefer unique CSS selectors, IDs or classes (avoid generic tags like just 'p' or 'div').
+        - If extracting text from a specific section (like featured article), target the specific container or heading nearby.
+        - If multiple elements match, pick the one closest to the described content.
+        - Always output valid JSON steps only.
+        """
+    )
+
     graphbit.init()
     workflow = graphbit.Workflow("llm-plan")
     node = graphbit.Node.agent("Planner", planner_prompt)
     workflow.add_node(node)
 
-    logger.info(f"Calling GPT-4 with planner prompt.")
+    logger.info("Calling GPT-4 with planner prompt.")
     response = openai.chat.completions.create(
         model="gpt-4",
         messages=[
