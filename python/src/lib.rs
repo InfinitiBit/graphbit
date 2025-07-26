@@ -56,12 +56,17 @@ mod embeddings;
 mod errors;
 mod llm;
 mod runtime;
+mod text_splitter;
 mod validation;
 mod workflow;
 
 // Re-export all public types and functions
 pub use embeddings::{EmbeddingClient, EmbeddingConfig};
 pub use llm::{LlmClient, LlmConfig};
+pub use text_splitter::{
+    CharacterSplitter, RecursiveSplitter, SentenceSplitter, TextChunk, TextSplitterConfig,
+    TokenSplitter,
+};
 pub use workflow::{Executor, Node, Workflow, WorkflowResult};
 
 /// Global initialization flag to ensure init is called only once
@@ -358,6 +363,15 @@ fn graphbit(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // Embedding classes
     m.add_class::<EmbeddingConfig>()?;
     m.add_class::<EmbeddingClient>()?;
+
+    // Text splitter classes
+    m.add_class::<TextSplitterConfig>()?;
+    m.add_class::<TextChunk>()?;
+    m.add_class::<CharacterSplitter>()?;
+    m.add_class::<TokenSplitter>()?;
+    m.add_class::<SentenceSplitter>()?;
+    m.add_class::<RecursiveSplitter>()?;
+    m.add_class::<text_splitter::splitter::TextSplitter>()?;
 
     // Module metadata
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;

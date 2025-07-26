@@ -13,6 +13,7 @@ Welcome to the comprehensive documentation for **GraphBit** - a high-performance
 - [Core Concepts](user-guide/concepts.md) - Understand workflows, agents, and nodes
 - [Workflow Builder](user-guide/workflow-builder.md) - Creating and connecting workflow nodes
 - [Agent Configuration](user-guide/agents.md) - Setting up AI agents with different capabilities
+- [Text Splitters](user-guide/text-splitters.md) - Processing large documents with various splitting strategies
 - [LLM Providers](user-guide/llm-providers.md) - Working with OpenAI, Anthropic, Ollama, and more
 - [Dynamic Graph Generation](user-guide/dynamics-graph.md) - Auto-generating workflow structures
 - [Data Validation](user-guide/validation.md) - Input validation and data quality checks
