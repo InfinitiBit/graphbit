@@ -21,6 +21,11 @@ pub enum LlmConfig {
         model: String,
         base_url: Option<String>,
     },
+    DeepSeek {
+        api_key: String,
+        model: String,
+        base_url: Option<String>,
+    },
     HuggingFace {
         api_key: String,
         model: String,
@@ -50,6 +55,15 @@ impl LlmConfig {
     /// Create Anthropic configuration
     pub fn anthropic(api_key: impl Into<String>, model: impl Into<String>) -> Self {
         Self::Anthropic {
+            api_key: api_key.into(),
+            model: model.into(),
+            base_url: None,
+        }
+    }
+
+    /// Create DeepSeek configuration
+    pub fn deepseek(api_key: impl Into<String>, model: impl Into<String>) -> Self {
+        Self::DeepSeek {
             api_key: api_key.into(),
             model: model.into(),
             base_url: None,
@@ -86,6 +100,7 @@ impl LlmConfig {
         match self {
             LlmConfig::OpenAI { .. } => "openai",
             LlmConfig::Anthropic { .. } => "anthropic",
+            LlmConfig::DeepSeek { .. } => "deepseek",
             LlmConfig::HuggingFace { .. } => "huggingface",
             LlmConfig::Ollama { .. } => "ollama",
             LlmConfig::Custom { provider_type, .. } => provider_type,
@@ -97,6 +112,7 @@ impl LlmConfig {
         match self {
             LlmConfig::OpenAI { model, .. } => model,
             LlmConfig::Anthropic { model, .. } => model,
+            LlmConfig::DeepSeek { model, .. } => model,
             LlmConfig::HuggingFace { model, .. } => model,
             LlmConfig::Ollama { model, .. } => model,
             LlmConfig::Custom { config, .. } => config

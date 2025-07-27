@@ -4,6 +4,7 @@
 //! LLM providers while maintaining strong type safety and validation.
 
 pub mod anthropic;
+pub mod deepseek;
 pub mod huggingface;
 pub mod ollama;
 pub mod openai;
@@ -228,6 +229,20 @@ impl LlmProviderFactory {
             }
             LlmConfig::Anthropic { api_key, model, .. } => {
                 Ok(Box::new(anthropic::AnthropicProvider::new(api_key, model)?))
+            }
+            LlmConfig::DeepSeek {
+                api_key,
+                model,
+                base_url,
+                ..
+            } => {
+                if let Some(base_url) = base_url {
+                    Ok(Box::new(deepseek::DeepSeekProvider::with_base_url(
+                        api_key, model, base_url,
+                    )?))
+                } else {
+                    Ok(Box::new(deepseek::DeepSeekProvider::new(api_key, model)?))
+                }
             }
             LlmConfig::HuggingFace {
                 api_key,

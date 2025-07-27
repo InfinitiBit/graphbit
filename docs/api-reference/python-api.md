@@ -134,6 +134,26 @@ config = graphbit.LlmConfig.anthropic("sk-ant-...")  # Uses claude-3-5-sonnet-20
 
 **Returns**: `LlmConfig` instance
 
+##### `LlmConfig.deepseek(api_key, model=None)`
+Create DeepSeek provider configuration.
+
+```python
+config = graphbit.LlmConfig.deepseek("your-deepseek-api-key", "deepseek-chat")
+# With default model
+config = graphbit.LlmConfig.deepseek("your-deepseek-api-key")  # Uses deepseek-chat
+```
+
+**Parameters**:
+- `api_key` (str): DeepSeek API key
+- `model` (str, optional): Model name. Default: "deepseek-chat"
+
+**Available Models**:
+- `deepseek-chat`: General conversation and instruction following
+- `deepseek-coder`: Specialized for code generation and programming tasks
+- `deepseek-reasoner`: Advanced reasoning and mathematical problem solving
+
+**Returns**: `LlmConfig` instance
+
 ##### `LlmConfig.huggingface(api_key, model=None, base_url=None)`
 Create HuggingFace provider configuration.
 

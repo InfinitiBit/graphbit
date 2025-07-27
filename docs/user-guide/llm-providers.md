@@ -7,6 +7,7 @@ GraphBit supports multiple Large Language Model providers through a unified clie
 GraphBit supports these LLM providers:
 - **OpenAI** - GPT models including GPT-4o, GPT-4o-mini
 - **Anthropic** - Claude models including Claude-3.5-Sonnet  
+- **DeepSeek** - High-performance models including DeepSeek-Chat, DeepSeek-Coder, and DeepSeek-Reasoner
 - **HuggingFace** - Access to thousands of models via HuggingFace Inference API
 - **Ollama** - Local model execution with various open-source models
 
@@ -98,6 +99,67 @@ fast_config = graphbit.LlmConfig.anthropic(
     api_key=os.getenv("ANTHROPIC_API_KEY"),
     model="claude-3-haiku-20240307"  # For speed and efficiency
 )
+```
+
+### DeepSeek Configuration
+
+Configure DeepSeek provider for high-performance, cost-effective AI models:
+
+```python
+# Basic DeepSeek configuration
+config = graphbit.LlmConfig.deepseek(
+    api_key=os.getenv("DEEPSEEK_API_KEY"),
+    model="deepseek-chat"  # Optional - defaults to deepseek-chat
+)
+
+print(f"Provider: {config.provider()}")  # "deepseek"
+print(f"Model: {config.model()}")        # "deepseek-chat"
+```
+
+#### Available DeepSeek Models
+
+| Model | Best For | Context Length | Performance | Cost |
+|-------|----------|----------------|-------------|------|
+| `deepseek-chat` | General conversation, instruction following | 128K | High quality, fast | $0.14/$0.28 per 1M tokens |
+| `deepseek-coder` | Code generation, programming tasks | 128K | Specialized for code | $0.14/$0.28 per 1M tokens |
+| `deepseek-reasoner` | Complex reasoning, mathematics | 128K | Advanced reasoning | $0.55/$2.19 per 1M tokens |
+
+#### Key Features
+
+- **Cost-Effective**: Among the most competitive pricing in the market
+- **Function Calling**: Full support for tool/function calling
+- **Large Context**: 128K token context window for all models
+- **OpenAI Compatible**: Uses OpenAI-compatible API format
+- **High Performance**: Optimized for speed and quality
+
+```python
+# Model selection for different use cases
+general_config = graphbit.LlmConfig.deepseek(
+    api_key=os.getenv("DEEPSEEK_API_KEY"),
+    model="deepseek-chat"  # For general tasks and conversation
+)
+
+coding_config = graphbit.LlmConfig.deepseek(
+    api_key=os.getenv("DEEPSEEK_API_KEY"),
+    model="deepseek-coder"  # For code generation and programming
+)
+
+reasoning_config = graphbit.LlmConfig.deepseek(
+    api_key=os.getenv("DEEPSEEK_API_KEY"),
+    model="deepseek-reasoner"  # For complex reasoning tasks
+)
+```
+
+#### DeepSeek API Key Setup
+
+To use DeepSeek models, you need an API key:
+
+1. Create an account at [DeepSeek](https://platform.deepseek.com/)
+2. Generate an API key in your dashboard
+3. Set the environment variable:
+
+```bash
+export DEEPSEEK_API_KEY="your-api-key-here"
 ```
 
 ### HuggingFace Configuration
@@ -433,6 +495,82 @@ def create_anthropic_workflow():
 workflow, executor = create_anthropic_workflow()
 ```
 
+### DeepSeek Workflow Example
+
+```python
+def create_deepseek_workflow():
+    """Create workflow using DeepSeek models"""
+    graphbit.init()
+    
+    # Configure DeepSeek
+    config = graphbit.LlmConfig.deepseek(
+        api_key=os.getenv("DEEPSEEK_API_KEY"),
+        model="deepseek-chat"
+    )
+    
+    # Create workflow
+    workflow = graphbit.Workflow("DeepSeek Analysis Pipeline")
+    
+    # Create analyzer optimized for DeepSeek's capabilities
+    analyzer = graphbit.Node.agent(
+        name="DeepSeek Content Analyzer",
+        prompt="""
+        Analyze the following content efficiently and accurately:
+        - Main topics and themes
+        - Key insights and takeaways
+        - Actionable recommendations
+        - Potential concerns or limitations
+        
+        Content: {input}
+        
+        Provide a clear, structured analysis.
+        """,
+        agent_id="deepseek_analyzer"
+    )
+    
+    workflow.add_node(analyzer)
+    workflow.validate()
+    
+    # Create executor optimized for DeepSeek's fast inference
+    executor = graphbit.Executor(config, timeout_seconds=90)
+    return workflow, executor
+
+# Usage for different DeepSeek models
+def create_deepseek_coding_workflow():
+    """Create workflow for code analysis using DeepSeek Coder"""
+    graphbit.init()
+    
+    config = graphbit.LlmConfig.deepseek(
+        api_key=os.getenv("DEEPSEEK_API_KEY"),
+        model="deepseek-coder"
+    )
+    
+    workflow = graphbit.Workflow("DeepSeek Code Analysis")
+    
+    code_analyzer = graphbit.Node.agent(
+        name="DeepSeek Code Reviewer",
+        prompt="""
+        Review this code for:
+        - Code quality and best practices
+        - Potential bugs or issues
+        - Performance improvements
+        - Security considerations
+        
+        Code: {input}
+        """,
+        agent_id="deepseek_code_analyzer"
+    )
+    
+    workflow.add_node(code_analyzer)
+    workflow.validate()
+    
+    executor = graphbit.Executor(config, timeout_seconds=90)
+    return workflow, executor
+
+# Usage
+workflow, executor = create_deepseek_workflow()
+```
+
 ### Ollama Workflow Example
 
 ```python
@@ -477,13 +615,18 @@ openai_executor = graphbit.Executor(
     timeout_seconds=60
 )
 
-# Anthropic - may need more time
+
 anthropic_executor = graphbit.Executor(
     anthropic_config, 
     timeout_seconds=120
 )
 
-# Ollama - local processing may be slower
+deepseek_executor = graphbit.Executor(
+    deepseek_config, 
+    timeout_seconds=90
+)
+
+
 ollama_executor = graphbit.Executor(
     ollama_config, 
     timeout_seconds=180
@@ -579,6 +722,21 @@ def get_optimal_config(use_case):
             api_key=os.getenv("ANTHROPIC_API_KEY"),
             model="claude-3-5-sonnet-20241022"
         )
+    elif use_case == "cost_effective":
+        return graphbit.LlmConfig.deepseek(
+            api_key=os.getenv("DEEPSEEK_API_KEY"),
+            model="deepseek-chat"
+        )
+    elif use_case == "coding":
+        return graphbit.LlmConfig.deepseek(
+            api_key=os.getenv("DEEPSEEK_API_KEY"),
+            model="deepseek-coder"
+        )
+    elif use_case == "reasoning":
+        return graphbit.LlmConfig.deepseek(
+            api_key=os.getenv("DEEPSEEK_API_KEY"),
+            model="deepseek-reasoner"
+        )
     elif use_case == "local":
         return graphbit.LlmConfig.ollama(model="llama3.2")
     else:
@@ -600,7 +758,8 @@ def get_api_key(provider):
     """Securely retrieve API keys"""
     key_mapping = {
         "openai": "OPENAI_API_KEY",
-        "anthropic": "ANTHROPIC_API_KEY"
+        "anthropic": "ANTHROPIC_API_KEY",
+        "deepseek": "DEEPSEEK_API_KEY"
     }
     
     env_var = key_mapping.get(provider)
@@ -644,6 +803,11 @@ class LLMManager:
             elif provider == "anthropic":
                 config = graphbit.LlmConfig.anthropic(
                     api_key=get_api_key("anthropic"),
+                    model=model
+                )
+            elif provider == "deepseek":
+                config = graphbit.LlmConfig.deepseek(
+                    api_key=get_api_key("deepseek"),
                     model=model
                 )
             elif provider == "ollama":

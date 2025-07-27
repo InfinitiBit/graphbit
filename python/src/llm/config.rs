@@ -39,6 +39,19 @@ impl LlmConfig {
     }
 
     #[staticmethod]
+    #[pyo3(signature = (api_key, model=None))]
+    fn deepseek(api_key: String, model: Option<String>) -> PyResult<Self> {
+        validate_api_key(&api_key, "DeepSeek")?;
+
+        Ok(Self {
+            inner: CoreLlmConfig::deepseek(
+                api_key,
+                model.unwrap_or_else(|| "deepseek-chat".to_string()),
+            ),
+        })
+    }
+
+    #[staticmethod]
     #[pyo3(signature = (api_key, model=None, base_url=None))]
     fn huggingface(
         api_key: String,
