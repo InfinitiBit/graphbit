@@ -8,6 +8,7 @@ pub mod deepseek;
 pub mod huggingface;
 pub mod ollama;
 pub mod openai;
+pub mod perplexity;
 pub mod providers;
 pub mod response;
 
@@ -269,6 +270,22 @@ impl LlmProviderFactory {
                     )?))
                 } else {
                     Ok(Box::new(ollama::OllamaProvider::new(model)?))
+                }
+            }
+            LlmConfig::Perplexity {
+                api_key,
+                model,
+                base_url,
+                ..
+            } => {
+                if let Some(base_url) = base_url {
+                    Ok(Box::new(perplexity::PerplexityProvider::with_base_url(
+                        api_key, model, base_url,
+                    )?))
+                } else {
+                    Ok(Box::new(perplexity::PerplexityProvider::new(
+                        api_key, model,
+                    )?))
                 }
             }
             LlmConfig::Custom { provider_type, .. } => Err(GraphBitError::config(format!(

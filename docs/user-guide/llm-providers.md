@@ -6,6 +6,9 @@ GraphBit supports multiple Large Language Model providers through a unified clie
 
 GraphBit supports these LLM providers:
 - **OpenAI** - GPT models including GPT-4o, GPT-4o-mini
+- **Anthropic** - Claude models including Claude-3.5-Sonnet
+- **Perplexity** - Real-time search-enabled models including Sonar models
+=======
 - **Anthropic** - Claude models including Claude-3.5-Sonnet  
 - **DeepSeek** - High-performance models including DeepSeek-Chat, DeepSeek-Coder, and DeepSeek-Reasoner
 - **HuggingFace** - Access to thousands of models via HuggingFace Inference API
@@ -101,6 +104,55 @@ fast_config = graphbit.LlmConfig.anthropic(
 )
 ```
 
+### Perplexity Configuration
+
+Configure Perplexity provider to access real-time search-enabled models:
+
+```python
+# Basic Perplexity configuration
+config = graphbit.LlmConfig.perplexity(
+    api_key=os.getenv("PERPLEXITY_API_KEY"),
+    model="sonar"  # Optional - defaults to sonar
+)
+
+print(f"Provider: {config.provider()}")  # "perplexity"
+print(f"Model: {config.model()}")        # "sonar"
+```
+
+#### Available Perplexity Models
+
+| Model | Best For | Context Length | Special Features |
+|-------|----------|----------------|------------------|
+| `sonar` | General purpose with search | 8K | Real-time web search, citations |
+| `sonar-reasoning` | Complex reasoning with search | 8K | Multi-step reasoning, web research |
+| `sonar-deep-research` | Comprehensive research | 32K | Exhaustive research, detailed analysis |
+| `pplx-7b-online` | Fast online inference | 4K | Quick responses with web data |
+| `pplx-70b-online` | High-quality online inference | 4K | Better quality with web data |
+| `pplx-7b-chat` | General chat without search | 8K | Standard chat functionality |
+| `pplx-70b-chat` | High-quality chat | 8K | Better chat quality |
+
+```python
+# Model selection for different use cases
+research_config = graphbit.LlmConfig.perplexity(
+    api_key=os.getenv("PERPLEXITY_API_KEY"),
+    model="sonar-deep-research"  # For comprehensive research
+)
+
+reasoning_config = graphbit.LlmConfig.perplexity(
+    api_key=os.getenv("PERPLEXITY_API_KEY"),
+    model="sonar-reasoning"  # For complex problem solving
+)
+
+fast_search_config = graphbit.LlmConfig.perplexity(
+    api_key=os.getenv("PERPLEXITY_API_KEY"),
+    model="pplx-7b-online"  # For fast web-enabled responses
+)
+
+chat_config = graphbit.LlmConfig.perplexity(
+    api_key=os.getenv("PERPLEXITY_API_KEY"),
+    model="pplx-70b-chat"  # For high-quality chat without search
+)
+=======
 ### DeepSeek Configuration
 
 Configure DeepSeek provider for high-performance, cost-effective AI models:

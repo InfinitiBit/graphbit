@@ -35,6 +35,11 @@ pub enum LlmConfig {
         model: String,
         base_url: Option<String>,
     },
+    Perplexity {
+        api_key: String,
+        model: String,
+        base_url: Option<String>,
+    },
     Custom {
         provider_type: String,
         config: HashMap<String, serde_json::Value>,
@@ -79,6 +84,15 @@ impl LlmConfig {
         }
     }
 
+    /// Create Perplexity configuration
+    pub fn perplexity(api_key: impl Into<String>, model: impl Into<String>) -> Self {
+        Self::Perplexity {
+            api_key: api_key.into(),
+            model: model.into(),
+            base_url: None,
+        }
+    }
+
     /// Create Ollama configuration
     pub fn ollama(model: impl Into<String>) -> Self {
         Self::Ollama {
@@ -103,6 +117,7 @@ impl LlmConfig {
             LlmConfig::DeepSeek { .. } => "deepseek",
             LlmConfig::HuggingFace { .. } => "huggingface",
             LlmConfig::Ollama { .. } => "ollama",
+            LlmConfig::Perplexity { .. } => "perplexity",
             LlmConfig::Custom { provider_type, .. } => provider_type,
         }
     }
@@ -115,6 +130,7 @@ impl LlmConfig {
             LlmConfig::DeepSeek { model, .. } => model,
             LlmConfig::HuggingFace { model, .. } => model,
             LlmConfig::Ollama { model, .. } => model,
+            LlmConfig::Perplexity { model, .. } => model,
             LlmConfig::Custom { config, .. } => config
                 .get("model")
                 .and_then(|v| v.as_str())
