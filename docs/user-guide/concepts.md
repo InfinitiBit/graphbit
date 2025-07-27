@@ -70,6 +70,12 @@ anthropic_config = graphbit.LlmConfig.anthropic(
     model="claude-3-5-sonnet-20241022"  # Optional, defaults to claude-3-5-sonnet
 )
 
+# DeepSeek
+deepseek_config = graphbit.LlmConfig.deepseek(
+    api_key="your-deepseek-key",
+    model="deepseek-chat"  # Optional, defaults to deepseek-chat
+)
+
 # Ollama (local models)
 ollama_config = graphbit.LlmConfig.ollama(
     model="llama3.2"  # Optional, defaults to llama3.2
