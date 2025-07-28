@@ -20,12 +20,10 @@ This guide explains how to use Graphbit to generate embeddings and perform simil
 Set up Graphbit:
 
 ```python
-import graphbit
+from graphbit import EmbeddingConfig, EmbeddingClient
 
-graphbit.init()
-
-embedding_client = graphbit.EmbeddingClient(
-    graphbit.EmbeddingConfig.openai(
+embedding_client = EmbeddingClient(
+    EmbeddingConfig.openai(
         model="text-embedding-3-small",
         api_key="openai_api_key",
     )
@@ -95,11 +93,10 @@ scores, indices = index.search(query_embedding, k=3)
 ```python
 import faiss
 import numpy as np
-import graphbit
+from graphbit import EmbeddingConfig, EmbeddingClient
 
-graphbit.init()
-embedding_client = graphbit.EmbeddingClient(
-    graphbit.EmbeddingConfig.openai(
+mbedding_client = EmbeddingClient(
+    EmbeddingConfig.openai(
         model="text-embedding-3-small",
         api_key="openai_api_key",
     )
