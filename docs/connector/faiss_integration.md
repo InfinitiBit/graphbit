@@ -95,7 +95,7 @@ import faiss
 import numpy as np
 from graphbit import EmbeddingConfig, EmbeddingClient
 
-mbedding_client = EmbeddingClient(
+embedding_client = EmbeddingClient(
     EmbeddingConfig.openai(
         model="text-embedding-3-small",
         api_key="openai_api_key",
