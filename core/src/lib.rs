@@ -16,6 +16,7 @@ pub mod embeddings;
 pub mod errors;
 pub mod graph;
 pub mod llm;
+pub mod text_splitter;
 pub mod types;
 pub mod validation;
 pub mod workflow;
@@ -29,6 +30,10 @@ pub use embeddings::{
 pub use errors::{GraphBitError, GraphBitResult};
 pub use graph::{NodeType, WorkflowEdge, WorkflowGraph, WorkflowNode};
 pub use llm::{LlmConfig, LlmProvider, LlmResponse};
+pub use text_splitter::{
+    CharacterSplitter, RecursiveSplitter, SentenceSplitter, SplitterStrategy, TextChunk,
+    TextSplitterConfig, TextSplitterFactory, TextSplitterTrait, TokenSplitter,
+};
 pub use types::{
     AgentCapability, AgentId, AgentMessage, MessageContent, NodeExecutionResult, NodeId,
     WorkflowContext, WorkflowExecutionStats, WorkflowId, WorkflowState,

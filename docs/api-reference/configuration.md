@@ -68,6 +68,35 @@ config = graphbit.LlmConfig.anthropic(
 config = graphbit.LlmConfig.anthropic("your-anthropic-key")
 ```
 
+### Perplexity Configuration
+
+```python
+# Basic Perplexity configuration
+config = graphbit.LlmConfig.perplexity(
+    api_key="your-perplexity-key",
+    model="sonar"             # Optional, defaults to sonar
+)
+
+# With default model
+config = graphbit.LlmConfig.perplexity("your-perplexity-key")
+=======
+### DeepSeek Configuration
+
+```python
+# Basic DeepSeek configuration
+config = graphbit.LlmConfig.deepseek(
+    api_key="your-deepseek-key",
+    model="deepseek-chat"        # Optional, defaults to deepseek-chat
+)
+
+# With default model
+config = graphbit.LlmConfig.deepseek("your-deepseek-key")
+
+# Different models for specific use cases
+coding_config = graphbit.LlmConfig.deepseek("your-deepseek-key", "deepseek-coder")
+reasoning_config = graphbit.LlmConfig.deepseek("your-deepseek-key", "deepseek-reasoner")
+```
+
 ### Ollama Configuration
 
 ```python
@@ -84,7 +113,9 @@ config = graphbit.LlmConfig.ollama()
 
 ```python
 # Access configuration properties
-provider = config.provider()  # "openai", "anthropic", "ollama"
+provider = config.provider()  # "openai", "anthropic", "perplexity", "ollama"
+=======
+provider = config.provider()  # "openai", "anthropic", "deepseek", "ollama"
 model = config.model()        # Model name
 ```
 

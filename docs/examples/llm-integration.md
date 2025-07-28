@@ -52,6 +52,15 @@ class AdvancedLLMSystem:
             self.clients['anthropic'] = graphbit.LlmClient(anthropic_config, debug=True)
             print("Anthropic client initialized")
         
+        # DeepSeek client
+        if os.getenv("DEEPSEEK_API_KEY"):
+            deepseek_config = graphbit.LlmConfig.deepseek(
+                api_key=os.getenv("DEEPSEEK_API_KEY"),
+                model="deepseek-chat"
+            )
+            self.clients['deepseek'] = graphbit.LlmClient(deepseek_config, debug=True)
+            print("DeepSeek client initialized")
+        
         # HuggingFace client
         if os.getenv("HUGGINGFACE_API_KEY"):
             huggingface_config = graphbit.LlmConfig.huggingface(
