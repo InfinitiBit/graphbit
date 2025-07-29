@@ -70,12 +70,8 @@ Set up Graphbit and initialize the embedding client:
 from graphbit import EmbeddingClient, EmbeddingConfig
 
 # Initialize embedding client
-embedding_client = EmbeddingClient(
-    EmbeddingConfig.openai(
-        model="text-embedding-3-small",
-        api_key=os.getenv("OPENAI_API_KEY", "")
-    )
-)
+embedding_config = EmbeddingConfig.openai(model="text-embedding-3-small", api_key="OPENAI_API_KEY")
+embedding_client = EmbeddingClient(embedding_config)
 ```
 
 ---
@@ -164,13 +160,8 @@ if vectordb_client is None:
     )
 
 # Step 3: Initialize Graphbit and embedding client
-
-embedding_client = EmbeddingClient(
-    EmbeddingConfig.openai(
-        model="text-embedding-3-small",
-        api_key=os.getenv("OPENAI_API_KEY", "")
-    )
-)
+embedding_config = EmbeddingConfig.openai(model="text-embedding-3-small", api_key="OPENAI_API_KEY")
+embedding_client = EmbeddingClient(embedding_config)
 
 # Step 4: Generate embeddings
 texts = [

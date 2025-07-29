@@ -10,6 +10,8 @@ from graphbit import EmbeddingClient, EmbeddingConfig
 
 weaviate_url = os.environ["WEAVIATE_URL"]
 weaviate_api_key = os.environ["WEAVIATE_API_KEY"]
+openai_api_key = os.environ["OPENAI_API_KEY"]
+collection_name = "Graphbit_VectorDB_3"
 
 vectordb_config = connect_to_weaviate_cloud(
     cluster_url=weaviate_url,
@@ -18,10 +20,10 @@ vectordb_config = connect_to_weaviate_cloud(
 
 print(vectordb_config.is_ready())
 
-vectordb_client = vectordb_config.collections.get("Graphbit_VectorDB")
+vectordb_client = vectordb_config.collections.get(collection_name)
 if vectordb_client is None:
     vectordb_client = vectordb_config.collections.create(
-        name="Graphbit_VectorDB",
+        name=collection_name,
         vector_config={
             "vectorizer": "none",
             "vectorIndexConfig": {
@@ -30,7 +32,8 @@ if vectordb_client is None:
         },
     )
 
-embedding_client = EmbeddingClient(EmbeddingConfig.openai(model="text-embedding-3-small", api_key=os.getenv("OPENAI_API_KEY", "")))
+embedding_config = EmbeddingConfig.openai(model="text-embedding-3-small", api_key=openai_api_key)
+embedding_client = EmbeddingClient(embedding_config)
 
 texts = ["GraphBit is a framework for LLM workflows and agent orchestration.", "Weaviate is a vector database for AI applications.", "OpenAI provides APIs for embeddings and LLMs."]
 
@@ -53,6 +56,5 @@ for obj in results.objects:
     print("Distance:", obj.metadata.distance)
     print("Score:", 1 - obj.metadata.distance)
 
-vectordb_config.collections.delete("Graphbit_VectorDB")
 
 vectordb_config.close()
