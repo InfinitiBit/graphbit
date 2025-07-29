@@ -21,14 +21,17 @@ This guide explains how to connect Weaviate, a vector database for AI applicatio
 Set up the connection to your Weaviate instance:
 
 ```python
+import os
 from weaviate.classes.init import Auth
 from weaviate import connect_to_weaviate_cloud
 
+weaviate_url = os.environ["WEAVIATE_URL"]
+weaviate_api_key = os.environ["WEAVIATE_API_KEY"]
 
 # Connect to Weaviate Cloud Service
 vectordb_config = connect_to_weaviate_cloud(
-    cluster_url="WEAVIATE_URL",
-    auth_credentials=Auth.api_key("WEAVIATE_API_KEY"),
+    cluster_url=weaviate_url,
+    auth_credentials=Auth.api_key(weaviate_api_key),
 )
 
 # Check if Weaviate is ready
@@ -70,7 +73,9 @@ Set up Graphbit and initialize the embedding client:
 from graphbit import EmbeddingClient, EmbeddingConfig
 
 # Initialize embedding client
-embedding_config = EmbeddingConfig.openai(model="text-embedding-3-small", api_key="OPENAI_API_KEY")
+openai_api_key = os.getenv("OPENAI_API_KEY", "")
+
+embedding_config = EmbeddingConfig.openai(model="text-embedding-3-small", api_key=openai_api_key)
 embedding_client = EmbeddingClient(embedding_config)
 ```
 
@@ -139,9 +144,12 @@ from graphbit import EmbeddingConfig, EmbeddingClient
 COLLECTION_NAME = "Graphbit_VectorDB"
 
 # Step 1: Connect to Weaviate Cloud Service
+weaviate_url = os.environ["WEAVIATE_URL"]
+weaviate_api_key = os.environ["WEAVIATE_API_KEY"]
+
 vectordb_config = connect_to_weaviate_cloud(
-    cluster_url="WEAVIATE_URL",
-    auth_credentials=Auth.api_key("WEAVIATE_API_KEY"),
+    cluster_url=weaviate_url,
+    auth_credentials=Auth.api_key(weaviate_api_key),
 )
 
 print("Weaviate ready:", vectordb_config.is_ready())
@@ -160,7 +168,7 @@ if vectordb_client is None:
     )
 
 # Step 3: Initialize Graphbit and embedding client
-embedding_config = EmbeddingConfig.openai(model="text-embedding-3-small", api_key="OPENAI_API_KEY")
+embedding_config = EmbeddingConfig.openai(model="text-embedding-3-small", api_key=os.getenv("OPENAI_API_KEY", ""))
 embedding_client = EmbeddingClient(embedding_config)
 
 # Step 4: Generate embeddings
