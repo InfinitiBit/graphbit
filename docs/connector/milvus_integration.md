@@ -19,12 +19,14 @@ This guide demonstrates how to connect Milvus, an open-source vector database, w
 Configure Graphbit Embedding:
 
 ```python
+import os
 from graphbit import EmbeddingConfig, EmbeddingClient
 
+openai_api_key = os.getenv("OPENAI_API_KEY", "")
 embedding_client = EmbeddingClient(
     EmbeddingConfig.openai(
         model="text-embedding-3-small",
-        api_key="openai_api_key",
+        api_key=openai_api_key,
     )
 )
 ```
@@ -107,13 +109,16 @@ for idx, result in enumerate(search_results):
 ## Full Example
 
 ```python
+import os
 from pymilvus import MilvusClient
 from graphbit import EmbeddingConfig, EmbeddingClient
+
+openai_api_key = os.getenv("OPENAI_API_KEY", "")
 
 embedding_client = EmbeddingClient(
     EmbeddingConfig.openai(
         model="text-embedding-3-small",
-        api_key="open_api_key",
+        api_key=openai_api_key,
     )
 )
 
