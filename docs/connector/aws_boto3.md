@@ -101,14 +101,14 @@ You can use Graphbit to generate vector embeddings and store them in DynamoDB. I
 
 import os
 from decimal import Decimal
-from graphbit import EmbeddingConfig as gb_ecg, EmbeddingClient as gb_ect
+from graphbit import EmbeddingConfig as gb_ecg, EmbeddingClient as gb_etc
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
     raise ValueError("Please set the OPENAI_API_KEY environment variable.")
 
 embedding_config = gb_ecg.openai(OPENAI_API_KEY, "text-embedding-3-small")
-embedding_client = gb_ect(embedding_config)
+embedding_client = gb_etc(embedding_config)
 
 def float_list_to_decimal(lst):
     return [Decimal(str(x)) for x in lst]
@@ -173,7 +173,7 @@ best_score = -1
 best_item = None
 for item in items:
     if 'embedding' in item:
-        score = gb_ect.similarity(query_embedding, item['embedding'])
+        score = gb_etc.similarity(query_embedding, item['embedding'])
         if score > best_score:
             best_score = score
             best_item = item
