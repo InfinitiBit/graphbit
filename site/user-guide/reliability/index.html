@@ -1,0 +1,2669 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../performance/">
+      
+      
+        <link rel="next" href="../text-splitters/">
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.16">
+    
+    
+      
+        <title>Reliability - GraphBits AI</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.7e37652d.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#reliability-and-fault-tolerance" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="GraphBits AI" class="md-header__button md-logo" aria-label="GraphBits AI" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            GraphBits AI
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Reliability
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="GraphBits AI" class="md-nav__button md-logo" aria-label="GraphBits AI" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    GraphBits AI
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../index.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Home
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Getting Started
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Getting Started
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Quickstart
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Installation
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Examples
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    User Guide
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            User Guide
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Concepts
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Agents
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../async-vs-sync/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Async vs Sync
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dynamics-graph/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Dynamics Graph
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../embeddings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Embeddings
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../llm-providers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    LLM Providers
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitoring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Monitoring
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../performance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Performance
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Reliability
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    Reliability
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Overview
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#error-handling-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      Error Handling Patterns
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Error Handling Patterns">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-error-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      Basic Error Handling
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#circuit-breaker-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      Circuit Breaker Pattern
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Circuit Breaker Pattern">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#implementing-circuit-breakers" class="md-nav__link">
+    <span class="md-ellipsis">
+      Implementing Circuit Breakers
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#retry-strategies" class="md-nav__link">
+    <span class="md-ellipsis">
+      Retry Strategies
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Retry Strategies">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#advanced-retry-logic" class="md-nav__link">
+    <span class="md-ellipsis">
+      Advanced Retry Logic
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#health-monitoring-and-recovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      Health Monitoring and Recovery
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Health Monitoring and Recovery">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#health-check-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      Health Check System
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fallback-and-degradation-strategies" class="md-nav__link">
+    <span class="md-ellipsis">
+      Fallback and Degradation Strategies
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Fallback and Degradation Strategies">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#graceful-degradation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Graceful Degradation
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#production-reliability-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      Production Reliability Patterns
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Production Reliability Patterns">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#complete-reliability-stack" class="md-nav__link">
+    <span class="md-ellipsis">
+      Complete Reliability Stack
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#best-practices" class="md-nav__link">
+    <span class="md-ellipsis">
+      Best Practices
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Best Practices">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-reliability-design-principles" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Reliability Design Principles
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-error-classification" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Error Classification
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage Examples
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Usage Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#production-reliability-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      Production Reliability Example
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#whats-next" class="md-nav__link">
+    <span class="md-ellipsis">
+      What's Next
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../text-splitters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Text Splitters
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../validation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Validation
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../workflow-builder/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Workflow Builder
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    API Reference
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            API Reference
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api-reference/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Configuration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api-reference/node-types/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Node Types
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api-reference/python-api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Python API
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Connector Integrations
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            Connector Integrations
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../connector/aws_boto3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    AWS Boto3
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../connector/chromadb_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    ChromaDB Integration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../connector/faiss_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    FAISS Integration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../connector/google_search_api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Google Search API
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../connector/mariadb_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    MariaDB Integration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../connector/milvus_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Milvus Integration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../connector/mongodb/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    MongoDB
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../connector/pgvector/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    PGVector
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../connector/pinecone_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Pinecone Integration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../connector/qdrant_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Qdrant Integration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../connector/weaviate_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Weaviate Integration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Development
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            Development
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Architecture
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Contributing
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/debugging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Debugging
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/python-bindings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Python Bindings
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Examples
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            Examples
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/comprehensive-pipeline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Comprehensive Pipeline
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/content-generation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Content Generation
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/data-processing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Data Processing
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/llm-integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    LLM Integration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/semantic-search/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Semantic Search
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Overview
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#error-handling-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      Error Handling Patterns
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Error Handling Patterns">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-error-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      Basic Error Handling
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#circuit-breaker-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      Circuit Breaker Pattern
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Circuit Breaker Pattern">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#implementing-circuit-breakers" class="md-nav__link">
+    <span class="md-ellipsis">
+      Implementing Circuit Breakers
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#retry-strategies" class="md-nav__link">
+    <span class="md-ellipsis">
+      Retry Strategies
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Retry Strategies">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#advanced-retry-logic" class="md-nav__link">
+    <span class="md-ellipsis">
+      Advanced Retry Logic
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#health-monitoring-and-recovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      Health Monitoring and Recovery
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Health Monitoring and Recovery">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#health-check-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      Health Check System
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fallback-and-degradation-strategies" class="md-nav__link">
+    <span class="md-ellipsis">
+      Fallback and Degradation Strategies
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Fallback and Degradation Strategies">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#graceful-degradation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Graceful Degradation
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#production-reliability-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      Production Reliability Patterns
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Production Reliability Patterns">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#complete-reliability-stack" class="md-nav__link">
+    <span class="md-ellipsis">
+      Complete Reliability Stack
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#best-practices" class="md-nav__link">
+    <span class="md-ellipsis">
+      Best Practices
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Best Practices">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-reliability-design-principles" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Reliability Design Principles
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-error-classification" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Error Classification
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage Examples
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Usage Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#production-reliability-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      Production Reliability Example
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#whats-next" class="md-nav__link">
+    <span class="md-ellipsis">
+      What's Next
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="reliability-and-fault-tolerance">Reliability and Fault Tolerance</h1>
+<p>GraphBit provides comprehensive reliability features to ensure robust production workflows. This guide covers error handling, fault tolerance, recovery strategies, and building resilient workflow systems.</p>
+<h2 id="overview">Overview</h2>
+<p>Reliability in GraphBit encompasses:
+- <strong>Error Handling</strong>: Graceful handling of failures and exceptions
+- <strong>Fault Tolerance</strong>: Continuing operation despite component failures
+- <strong>Recovery Strategies</strong>: Automatic and manual recovery mechanisms
+- <strong>Circuit Breakers</strong>: Preventing cascading failures
+- <strong>Retry Logic</strong>: Intelligent retry patterns for transient failures
+- <strong>Health Monitoring</strong>: Continuous system health assessment</p>
+<h2 id="error-handling-patterns">Error Handling Patterns</h2>
+<h3 id="basic-error-handling">Basic Error Handling</h3>
+<pre><code class="language-python">import graphbit
+import time
+import os
+
+# Initialize GraphBit
+graphbit.init()
+
+def safe_workflow_execution(workflow, executor, max_retries=3):
+    &quot;&quot;&quot;Execute workflow with comprehensive error handling.&quot;&quot;&quot;
+
+    for attempt in range(max_retries + 1):
+        try:
+            print(f&quot;Execution attempt {attempt + 1}/{max_retries + 1}&quot;)
+
+            result = executor.execute(workflow)
+
+            if result.is_completed():
+                print(&quot;✅ Workflow executed successfully&quot;)
+                return result
+            else:
+                error_msg = result.error()
+                print(f&quot;❌ Workflow failed: {error_msg}&quot;)
+
+                if attempt &lt; max_retries:
+                    wait_time = 2 ** attempt  # Exponential backoff
+                    print(f&quot;⏳ Retrying in {wait_time} seconds...&quot;)
+                    time.sleep(wait_time)
+                else:
+                    print(&quot;❌ Max retries exceeded&quot;)
+                    return result
+
+        except Exception as e:
+            print(f&quot;❌ Execution exception: {e}&quot;)
+
+            if attempt &lt; max_retries:
+                wait_time = 2 ** attempt
+                print(f&quot;⏳ Retrying in {wait_time} seconds...&quot;)
+                time.sleep(wait_time)
+            else:
+                print(&quot;❌ Max retries exceeded&quot;)
+                raise e
+
+    return None
+
+def create_fault_tolerant_workflow():
+    &quot;&quot;&quot;Create workflow with built-in fault tolerance.&quot;&quot;&quot;
+
+    workflow = graphbit.Workflow(&quot;Fault Tolerant Workflow&quot;)
+
+    # Input validator with error handling
+    validator = graphbit.Node.agent(
+        name=&quot;Input Validator&quot;,
+        prompt=&quot;&quot;&quot;
+        Validate this input and handle any issues gracefully:
+
+        Input: {input}
+
+        If the input is invalid:
+        1. Identify the specific issues
+        2. Suggest corrections if possible
+        3. Return a status indicating validation result
+
+        If valid, return the input with validation confirmation.
+        &quot;&quot;&quot;,
+        agent_id=&quot;validator&quot;
+    )
+
+    # Robust processor with fallback logic
+    processor = graphbit.Node.agent(
+        name=&quot;Robust Processor&quot;,
+        prompt=&quot;&quot;&quot;
+        Process this validated input with error resilience:
+
+        Input: {validated_input}
+
+        If processing encounters issues:
+        1. Try alternative processing methods
+        2. Provide partial results if possible
+        3. Report any limitations or warnings
+
+        Always return some form of useful output.
+        &quot;&quot;&quot;,
+        agent_id=&quot;processor&quot;
+    )
+
+    # Error recovery node
+    recovery_handler = graphbit.Node.agent(
+        name=&quot;Recovery Handler&quot;,
+        prompt=&quot;&quot;&quot;
+        Handle any errors or partial results:
+
+        Results: {processed_results}
+
+        If there are errors or incomplete results:
+        1. Attempt data recovery
+        2. Fill in missing information where possible
+        3. Flag areas that need manual review
+        &quot;&quot;&quot;,
+        agent_id=&quot;recovery_handler&quot;
+    )
+
+    # Build fault-tolerant chain
+    validator_id = workflow.add_node(validator)
+    processor_id = workflow.add_node(processor)
+    recovery_id = workflow.add_node(recovery_handler)
+
+    workflow.connect(validator_id, processor_id)
+    workflow.connect(processor_id, recovery_id)
+
+    return workflow
+</code></pre>
+<h2 id="circuit-breaker-pattern">Circuit Breaker Pattern</h2>
+<h3 id="implementing-circuit-breakers">Implementing Circuit Breakers</h3>
+<pre><code class="language-python">from enum import Enum
+from datetime import datetime, timedelta
+
+class CircuitState(Enum):
+    CLOSED = &quot;closed&quot;
+    OPEN = &quot;open&quot;
+    HALF_OPEN = &quot;half_open&quot;
+
+class CircuitBreaker:
+    &quot;&quot;&quot;Circuit breaker for preventing cascading failures.&quot;&quot;&quot;
+
+    def __init__(self, failure_threshold=5, recovery_timeout=60, timeout_seconds=30):
+        self.failure_threshold = failure_threshold
+        self.recovery_timeout = recovery_timeout  # seconds
+        self.timeout_seconds = timeout_seconds
+
+        self.failure_count = 0
+        self.last_failure_time = None
+        self.state = CircuitState.CLOSED
+
+    def can_execute(self):
+        &quot;&quot;&quot;Check if execution is allowed.&quot;&quot;&quot;
+
+        if self.state == CircuitState.CLOSED:
+            return True
+        elif self.state == CircuitState.OPEN:
+            if self.last_failure_time and \
+               (datetime.now() - self.last_failure_time).seconds &gt;= self.recovery_timeout:
+                self.state = CircuitState.HALF_OPEN
+                return True
+            return False
+        elif self.state == CircuitState.HALF_OPEN:
+            return True
+
+        return False
+
+    def record_success(self):
+        &quot;&quot;&quot;Record successful execution.&quot;&quot;&quot;
+        self.failure_count = 0
+        self.state = CircuitState.CLOSED
+
+    def record_failure(self):
+        &quot;&quot;&quot;Record failed execution.&quot;&quot;&quot;
+        self.failure_count += 1
+        self.last_failure_time = datetime.now()
+
+        if self.failure_count &gt;= self.failure_threshold:
+            self.state = CircuitState.OPEN
+
+    def get_state(self):
+        &quot;&quot;&quot;Get current circuit breaker state.&quot;&quot;&quot;
+        return self.state
+
+class ReliableExecutor:
+    &quot;&quot;&quot;Executor with circuit breaker protection.&quot;&quot;&quot;
+
+    def __init__(self, base_executor, circuit_breaker=None):
+        self.base_executor = base_executor
+        self.circuit_breaker = circuit_breaker or CircuitBreaker()
+
+    def execute(self, workflow):
+        &quot;&quot;&quot;Execute workflow with circuit breaker protection.&quot;&quot;&quot;
+
+        if not self.circuit_breaker.can_execute():
+            raise Exception(f&quot;Circuit breaker is {self.circuit_breaker.get_state().value}&quot;)
+
+        try:
+            start_time = time.time()
+            result = self.base_executor.execute(workflow)
+            duration = time.time() - start_time
+
+            if result.is_completed():
+                self.circuit_breaker.record_success()
+                return result
+            else:
+                self.circuit_breaker.record_failure()
+                return result
+
+        except Exception as e:
+            self.circuit_breaker.record_failure()
+            raise e
+
+def create_circuit_breaker_executor():
+    &quot;&quot;&quot;Create executor with circuit breaker protection.&quot;&quot;&quot;
+
+    # Base executor
+    llm_config = graphbit.LlmConfig.openai(
+        api_key=os.getenv(&quot;OPENAI_API_KEY&quot;),
+        model=&quot;gpt-4o-mini&quot;
+    )
+
+    base_executor = graphbit.Executor(llm_config)
+
+    # Circuit breaker configuration
+    circuit_breaker = CircuitBreaker(
+        failure_threshold=3,  # Open after 3 failures
+        recovery_timeout=30,  # Try again after 30 seconds
+        timeout_seconds=60    # Individual execution timeout
+    )
+
+    reliable_executor = ReliableExecutor(base_executor, circuit_breaker)
+
+    return reliable_executor
+</code></pre>
+<h2 id="retry-strategies">Retry Strategies</h2>
+<h3 id="advanced-retry-logic">Advanced Retry Logic</h3>
+<pre><code class="language-python">import random
+from typing import Callable, Optional
+
+class RetryStrategy:
+    &quot;&quot;&quot;Base class for retry strategies.&quot;&quot;&quot;
+
+    def get_wait_time(self, attempt: int) -&gt; float:
+        &quot;&quot;&quot;Get wait time for given attempt number.&quot;&quot;&quot;
+        raise NotImplementedError
+
+class ExponentialBackoff(RetryStrategy):
+    &quot;&quot;&quot;Exponential backoff retry strategy.&quot;&quot;&quot;
+
+    def __init__(self, base_delay=1.0, max_delay=60.0, multiplier=2.0):
+        self.base_delay = base_delay
+        self.max_delay = max_delay
+        self.multiplier = multiplier
+
+    def get_wait_time(self, attempt: int) -&gt; float:
+        delay = self.base_delay * (self.multiplier ** attempt)
+        return min(delay, self.max_delay)
+
+class JitteredBackoff(RetryStrategy):
+    &quot;&quot;&quot;Exponential backoff with jitter to avoid thundering herd.&quot;&quot;&quot;
+
+    def __init__(self, base_delay=1.0, max_delay=60.0, multiplier=2.0, jitter_ratio=0.1):
+        self.base_delay = base_delay
+        self.max_delay = max_delay
+        self.multiplier = multiplier
+        self.jitter_ratio = jitter_ratio
+
+    def get_wait_time(self, attempt: int) -&gt; float:
+        delay = self.base_delay * (self.multiplier ** attempt)
+
+        # Add jitter
+        jitter = delay * self.jitter_ratio * random.random()
+        delay += jitter
+
+        return min(delay, self.max_delay)
+
+class RetryableExecutor:
+    &quot;&quot;&quot;Executor with configurable retry strategies.&quot;&quot;&quot;
+
+    def __init__(self, base_executor, retry_strategy=None, max_retries=3):
+        self.base_executor = base_executor
+        self.retry_strategy = retry_strategy or ExponentialBackoff()
+        self.max_retries = max_retries
+
+    def execute(self, workflow, retry_condition: Optional[Callable] = None):
+        &quot;&quot;&quot;Execute workflow with retry logic.&quot;&quot;&quot;
+
+        last_exception = None
+
+        for attempt in range(self.max_retries + 1):
+            try:
+                result = self.base_executor.execute(workflow)
+
+                if result.is_completed():
+                    if attempt &gt; 0:
+                        print(f&quot;✅ Workflow succeeded on attempt {attempt + 1}&quot;)
+                    return result
+                else:
+                    # Check if this failure should trigger a retry
+                    if retry_condition and not retry_condition(result):
+                        print(f&quot;❌ Non-retryable failure: {result.error()}&quot;)
+                        return result
+
+                    if attempt &lt; self.max_retries:
+                        wait_time = self.retry_strategy.get_wait_time(attempt)
+                        print(f&quot;⏳ Workflow failed, retrying in {wait_time:.1f}s (attempt {attempt + 1})&quot;)
+                        time.sleep(wait_time)
+                    else:
+                        print(f&quot;❌ Workflow failed after {self.max_retries + 1} attempts&quot;)
+                        return result
+
+            except Exception as e:
+                last_exception = e
+
+                if attempt &lt; self.max_retries:
+                    wait_time = self.retry_strategy.get_wait_time(attempt)
+                    print(f&quot;⏳ Exception occurred, retrying in {wait_time:.1f}s: {e}&quot;)
+                    time.sleep(wait_time)
+                else:
+                    print(f&quot;❌ Exception after {self.max_retries + 1} attempts: {e}&quot;)
+                    raise e
+
+        if last_exception:
+            raise last_exception
+</code></pre>
+<h2 id="health-monitoring-and-recovery">Health Monitoring and Recovery</h2>
+<h3 id="health-check-system">Health Check System</h3>
+<pre><code class="language-python">class HealthChecker:
+    &quot;&quot;&quot;Comprehensive health monitoring system.&quot;&quot;&quot;
+
+    def __init__(self):
+        self.health_checks = {}
+        self.health_history = []
+
+    def register_health_check(self, name: str, check_func: Callable, critical: bool = True):
+        &quot;&quot;&quot;Register a health check function.&quot;&quot;&quot;
+        self.health_checks[name] = {
+            &quot;func&quot;: check_func,
+            &quot;critical&quot;: critical,
+            &quot;last_result&quot;: None,
+            &quot;last_check&quot;: None
+        }
+
+    def run_health_checks(self):
+        &quot;&quot;&quot;Run all registered health checks.&quot;&quot;&quot;
+
+        results = {}
+        overall_healthy = True
+
+        for name, check_config in self.health_checks.items():
+            try:
+                start_time = time.time()
+                result = check_config[&quot;func&quot;]()
+                duration = (time.time() - start_time) * 1000
+
+                check_result = {
+                    &quot;healthy&quot;: bool(result),
+                    &quot;duration_ms&quot;: duration,
+                    &quot;timestamp&quot;: datetime.now(),
+                    &quot;details&quot;: result if isinstance(result, dict) else {}
+                }
+
+                results[name] = check_result
+                check_config[&quot;last_result&quot;] = check_result
+                check_config[&quot;last_check&quot;] = datetime.now()
+
+                # Update overall health
+                if check_config[&quot;critical&quot;] and not check_result[&quot;healthy&quot;]:
+                    overall_healthy = False
+
+            except Exception as e:
+                check_result = {
+                    &quot;healthy&quot;: False,
+                    &quot;error&quot;: str(e),
+                    &quot;timestamp&quot;: datetime.now()
+                }
+
+                results[name] = check_result
+                check_config[&quot;last_result&quot;] = check_result
+                check_config[&quot;last_check&quot;] = datetime.now()
+
+                if check_config[&quot;critical&quot;]:
+                    overall_healthy = False
+
+        health_report = {
+            &quot;overall_healthy&quot;: overall_healthy,
+            &quot;timestamp&quot;: datetime.now(),
+            &quot;checks&quot;: results
+        }
+
+        self.health_history.append(health_report)
+
+        # Keep only last 100 health checks
+        if len(self.health_history) &gt; 100:
+            self.health_history = self.health_history[-100:]
+
+        return health_report
+
+def create_health_checks():
+    &quot;&quot;&quot;Create standard health checks for GraphBit.&quot;&quot;&quot;
+
+    def check_graphbit_system():
+        &quot;&quot;&quot;Check GraphBit system health.&quot;&quot;&quot;
+        try:
+            system_info = graphbit.get_system_info()
+            health_check = graphbit.health_check()
+
+            return {
+                &quot;system_available&quot;: True,
+                &quot;runtime_initialized&quot;: system_info.get(&quot;runtime_initialized&quot;, False),
+                &quot;health_check&quot;: health_check
+            }
+        except Exception as e:
+            return False
+
+    def check_llm_connectivity():
+        &quot;&quot;&quot;Check LLM provider connectivity.&quot;&quot;&quot;
+        try:
+            config = graphbit.LlmConfig.openai(
+                api_key=os.getenv(&quot;OPENAI_API_KEY&quot;),
+                model=&quot;gpt-4o-mini&quot;
+            )
+
+            client = graphbit.LlmClient(config)
+
+            # Simple test completion
+            response = client.complete(&quot;Test connectivity: {input}&quot;, {&quot;input&quot;: &quot;test&quot;})
+
+            return {
+                &quot;provider_accessible&quot;: True,
+                &quot;response_received&quot;: len(response) &gt; 0
+            }
+        except Exception as e:
+            return False
+
+    # Create health checker and register checks
+    health_checker = HealthChecker()
+
+    health_checker.register_health_check(&quot;graphbit_system&quot;, check_graphbit_system, critical=True)
+    health_checker.register_health_check(&quot;llm_connectivity&quot;, check_llm_connectivity, critical=True)
+
+    return health_checker
+</code></pre>
+<h2 id="fallback-and-degradation-strategies">Fallback and Degradation Strategies</h2>
+<h3 id="graceful-degradation">Graceful Degradation</h3>
+<pre><code class="language-python">class FallbackWorkflow:
+    &quot;&quot;&quot;Workflow with multiple fallback levels.&quot;&quot;&quot;
+
+    def __init__(self, name):
+        self.name = name
+        self.primary_workflow = None
+        self.fallback_workflows = []
+
+    def set_primary_workflow(self, workflow):
+        &quot;&quot;&quot;Set the primary workflow.&quot;&quot;&quot;
+        self.primary_workflow = workflow
+
+    def add_fallback_workflow(self, workflow, priority=1):
+        &quot;&quot;&quot;Add a fallback workflow with priority.&quot;&quot;&quot;
+        self.fallback_workflows.append({
+            &quot;workflow&quot;: workflow,
+            &quot;priority&quot;: priority
+        })
+
+        # Sort by priority (lower numbers = higher priority)
+        self.fallback_workflows.sort(key=lambda x: x[&quot;priority&quot;])
+
+    def execute(self, executor):
+        &quot;&quot;&quot;Execute workflow with fallback chain.&quot;&quot;&quot;
+
+        # Try primary workflow first
+        if self.primary_workflow:
+            try:
+                print(&quot;🚀 Attempting primary workflow...&quot;)
+                result = executor.execute(self.primary_workflow)
+
+                if result.is_completed():
+                    print(&quot;✅ Primary workflow succeeded&quot;)
+                    return result
+                else:
+                    print(f&quot;❌ Primary workflow failed: {result.error()}&quot;)
+
+            except Exception as e:
+                print(f&quot;❌ Primary workflow exception: {e}&quot;)
+
+        # Try fallback workflows in priority order
+        for i, fallback in enumerate(self.fallback_workflows):
+            try:
+                print(f&quot;🔄 Attempting fallback {i+1}...&quot;)
+                result = executor.execute(fallback[&quot;workflow&quot;])
+
+                if result.is_completed():
+                    print(f&quot;✅ Fallback {i+1} succeeded&quot;)
+                    return result
+                else:
+                    print(f&quot;❌ Fallback {i+1} failed: {result.error()}&quot;)
+
+            except Exception as e:
+                print(f&quot;❌ Fallback {i+1} exception: {e}&quot;)
+
+        print(&quot;❌ All workflows failed&quot;)
+        return None
+
+def create_degraded_processing_workflows():
+    &quot;&quot;&quot;Create workflows with different levels of processing.&quot;&quot;&quot;
+
+    # High-quality processing (primary)
+    primary_workflow = graphbit.Workflow(&quot;High Quality Processing&quot;)
+
+    primary_processor = graphbit.Node.agent(
+        name=&quot;Advanced Processor&quot;,
+        prompt=&quot;&quot;&quot;
+        Perform comprehensive analysis of this input:
+
+        Input: {input}
+
+        Provide:
+        1. Detailed analysis
+        2. Multiple perspectives
+        3. Confidence scores
+        4. Recommendations
+        5. Risk assessment
+        &quot;&quot;&quot;,
+        agent_id=&quot;advanced_processor&quot;
+    )
+
+    primary_workflow.add_node(primary_processor)
+
+    # Basic processing (fallback)
+    fallback_workflow = graphbit.Workflow(&quot;Basic Processing&quot;)
+
+    basic_processor = graphbit.Node.agent(
+        name=&quot;Basic Processor&quot;,
+        prompt=&quot;Provide a simple summary of: {input}&quot;,
+        agent_id=&quot;basic_processor&quot;
+    )
+
+    fallback_workflow.add_node(basic_processor)
+
+    # Emergency processing (last resort)
+    emergency_workflow = graphbit.Workflow(&quot;Emergency Processing&quot;)
+
+    emergency_processor = graphbit.Node.transform(
+        name=&quot;Emergency Processor&quot;,
+        transformation=&quot;uppercase&quot;  # Simple transformation as last resort
+    )
+
+    emergency_workflow.add_node(emergency_processor)
+
+    # Create fallback workflow
+    fallback_system = FallbackWorkflow(&quot;Degraded Processing System&quot;)
+    fallback_system.set_primary_workflow(primary_workflow)
+    fallback_system.add_fallback_workflow(fallback_workflow, priority=1)
+    fallback_system.add_fallback_workflow(emergency_workflow, priority=2)
+
+    return fallback_system
+</code></pre>
+<h2 id="production-reliability-patterns">Production Reliability Patterns</h2>
+<h3 id="complete-reliability-stack">Complete Reliability Stack</h3>
+<pre><code class="language-python">class ProductionExecutor:
+    &quot;&quot;&quot;Production-ready executor with full reliability stack.&quot;&quot;&quot;
+
+    def __init__(self, llm_config):
+        # Base executor
+        self.base_executor = graphbit.Executor(llm_config)
+
+        # Reliability components
+        self.circuit_breaker = CircuitBreaker(failure_threshold=3, recovery_timeout=30)
+        self.retry_strategy = JitteredBackoff(base_delay=1.0, max_delay=30.0)
+        self.health_checker = create_health_checks()
+
+        # Metrics
+        self.execution_count = 0
+        self.success_count = 0
+        self.failure_count = 0
+
+    def execute(self, workflow, execution_id=None):
+        &quot;&quot;&quot;Execute workflow with full reliability features.&quot;&quot;&quot;
+
+        self.execution_count += 1
+
+        # Generate execution ID if not provided
+        if execution_id is None:
+            execution_id = f&quot;prod_exec_{int(time.time())}_{self.execution_count}&quot;
+
+        # Health check before execution
+        health_report = self.health_checker.run_health_checks()
+        if not health_report[&quot;overall_healthy&quot;]:
+            self.failure_count += 1
+            raise Exception(&quot;System health check failed&quot;)
+
+        # Circuit breaker check
+        if not self.circuit_breaker.can_execute():
+            self.failure_count += 1
+            raise Exception(f&quot;Circuit breaker is {self.circuit_breaker.get_state().value}&quot;)
+
+        # Retry loop
+        max_retries = 3
+        for attempt in range(max_retries + 1):
+            try:
+                # Execute workflow
+                result = self.base_executor.execute(workflow)
+
+                if result.is_completed():
+                    self.success_count += 1
+                    self.circuit_breaker.record_success()
+                    return result
+                else:
+                    self.failure_count += 1
+                    self.circuit_breaker.record_failure()
+
+                    if attempt &lt; max_retries:
+                        wait_time = self.retry_strategy.get_wait_time(attempt)
+                        print(f&quot;⏳ Retrying in {wait_time:.1f}s (attempt {attempt + 1})&quot;)
+                        time.sleep(wait_time)
+                    else:
+                        return result
+
+            except Exception as e:
+                self.failure_count += 1
+                self.circuit_breaker.record_failure()
+
+                if attempt &lt; max_retries:
+                    wait_time = self.retry_strategy.get_wait_time(attempt)
+                    print(f&quot;⏳ Retrying after exception in {wait_time:.1f}s: {e}&quot;)
+                    time.sleep(wait_time)
+                else:
+                    raise e
+
+    def get_reliability_metrics(self):
+        &quot;&quot;&quot;Get reliability metrics.&quot;&quot;&quot;
+
+        success_rate = (self.success_count / self.execution_count) * 100 if self.execution_count &gt; 0 else 0
+
+        return {
+            &quot;total_executions&quot;: self.execution_count,
+            &quot;successful_executions&quot;: self.success_count,
+            &quot;failed_executions&quot;: self.failure_count,
+            &quot;success_rate_percent&quot;: success_rate,
+            &quot;circuit_breaker_state&quot;: self.circuit_breaker.get_state().value
+        }
+
+def create_production_executor():
+    &quot;&quot;&quot;Create production-ready executor.&quot;&quot;&quot;
+
+    llm_config = graphbit.LlmConfig.openai(
+        api_key=os.getenv(&quot;OPENAI_API_KEY&quot;),
+        model=&quot;gpt-4o-mini&quot;
+    )
+
+    return ProductionExecutor(llm_config)
+</code></pre>
+<h2 id="best-practices">Best Practices</h2>
+<h3 id="1-reliability-design-principles">1. Reliability Design Principles</h3>
+<pre><code class="language-python">def get_reliability_best_practices():
+    &quot;&quot;&quot;Get best practices for building reliable workflows.&quot;&quot;&quot;
+
+    best_practices = {
+        &quot;fail_fast&quot;: &quot;Detect and report failures quickly&quot;,
+        &quot;graceful_degradation&quot;: &quot;Provide reduced functionality when components fail&quot;,
+        &quot;idempotency&quot;: &quot;Ensure operations can be safely repeated&quot;,
+        &quot;timeout_management&quot;: &quot;Set appropriate timeouts for all operations&quot;,
+        &quot;resource_cleanup&quot;: &quot;Always clean up resources, even on failure&quot;,
+        &quot;monitoring&quot;: &quot;Continuously monitor system health and performance&quot;,
+        &quot;testing&quot;: &quot;Test failure scenarios regularly&quot;
+    }
+
+    for practice, description in best_practices.items():
+        print(f&quot;✅ {practice.replace('_', ' ').title()}: {description}&quot;)
+
+    return best_practices
+</code></pre>
+<h3 id="2-error-classification">2. Error Classification</h3>
+<pre><code class="language-python">def classify_error_type(error):
+    &quot;&quot;&quot;Classify errors for appropriate handling.&quot;&quot;&quot;
+
+    error_message = str(error).lower()
+
+    # Transient errors - should retry
+    if any(keyword in error_message for keyword in [
+        &quot;timeout&quot;, &quot;network&quot;, &quot;connection&quot;, &quot;temporary&quot;, &quot;rate limit&quot;
+    ]):
+        return &quot;transient&quot;
+
+    # Permanent errors - should not retry
+    if any(keyword in error_message for keyword in [
+        &quot;authentication&quot;, &quot;permission&quot;, &quot;not found&quot;, &quot;invalid&quot;
+    ]):
+        return &quot;permanent&quot;
+
+    # System errors - may need recovery
+    if any(keyword in error_message for keyword in [
+        &quot;memory&quot;, &quot;disk&quot;, &quot;resource&quot;, &quot;capacity&quot;
+    ]):
+        return &quot;system&quot;
+
+    # Unknown errors - handle conservatively
+    return &quot;unknown&quot;
+</code></pre>
+<h2 id="usage-examples">Usage Examples</h2>
+<h3 id="production-reliability-example">Production Reliability Example</h3>
+<pre><code class="language-python">def example_production_usage():
+    &quot;&quot;&quot;Example of production reliability patterns.&quot;&quot;&quot;
+
+    # Initialize GraphBit
+    graphbit.init()
+
+    # Create production executor
+    prod_executor = create_production_executor()
+
+    # Create reliable workflow
+    workflow = create_fault_tolerant_workflow()
+
+    try:
+        # Execute with full reliability features
+        result = prod_executor.execute(workflow, execution_id=&quot;example_prod_run&quot;)
+
+        if result.is_completed():
+            print(f&quot;✅ Production execution successful: {result.output()}&quot;)
+        else:
+            print(f&quot;❌ Production execution failed: {result.error()}&quot;)
+
+        # Print reliability metrics
+        metrics = prod_executor.get_reliability_metrics()
+        print(f&quot;📊 Reliability Metrics: {metrics}&quot;)
+
+    except Exception as e:
+        print(f&quot;❌ Production execution exception: {e}&quot;)
+
+if __name__ == &quot;__main__&quot;:
+    example_production_usage()
+</code></pre>
+<h2 id="whats-next">What's Next</h2>
+<ul>
+<li>Learn about <a href="../monitoring/">Monitoring</a> for tracking reliability metrics</li>
+<li>Explore <a href="../performance/">Performance</a> optimization for reliable systems  </li>
+<li>Check <a href="../validation/">Validation</a> for ensuring system correctness</li>
+<li>See <a href="../llm-providers/">LLM Providers</a> for provider-specific reliability features </li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.50899def.min.js"></script>
+      
+    
+  </body>
+</html>

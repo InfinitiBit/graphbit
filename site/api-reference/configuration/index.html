@@ -1,0 +1,3196 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../../user-guide/workflow-builder/">
+      
+      
+        <link rel="next" href="../node-types/">
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.16">
+    
+    
+      
+        <title>Configuration - GraphBits AI</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.7e37652d.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#configuration-options" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="GraphBits AI" class="md-header__button md-logo" aria-label="GraphBits AI" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            GraphBits AI
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Configuration
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="GraphBits AI" class="md-nav__button md-logo" aria-label="GraphBits AI" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    GraphBits AI
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../index.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Home
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Getting Started
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Getting Started
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Quickstart
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Installation
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Examples
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    User Guide
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            User Guide
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Concepts
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Agents
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/async-vs-sync/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Async vs Sync
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/dynamics-graph/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Dynamics Graph
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/embeddings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Embeddings
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/llm-providers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    LLM Providers
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/monitoring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Monitoring
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/performance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Performance
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/reliability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Reliability
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/text-splitters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Text Splitters
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/validation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Validation
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/workflow-builder/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Workflow Builder
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    API Reference
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            API Reference
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Configuration
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    Configuration
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#library-initialization" class="md-nav__link">
+    <span class="md-ellipsis">
+      Library Initialization
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Library Initialization">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-initialization" class="md-nav__link">
+    <span class="md-ellipsis">
+      Basic Initialization
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#advanced-initialization" class="md-nav__link">
+    <span class="md-ellipsis">
+      Advanced Initialization
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#runtime-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Runtime Configuration
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#llm-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      LLM Configuration
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="LLM Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#openai-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      OpenAI Configuration
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#anthropic-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Anthropic Configuration
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#perplexity-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Perplexity Configuration
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ollama-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Ollama Configuration
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configuration-properties" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration Properties
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#llm-client-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      LLM Client Configuration
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="LLM Client Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-client" class="md-nav__link">
+    <span class="md-ellipsis">
+      Basic Client
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#client-with-debug-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      Client with Debug Mode
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#client-statistics-and-monitoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      Client Statistics and Monitoring
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#executor-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Executor Configuration
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Executor Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-executor" class="md-nav__link">
+    <span class="md-ellipsis">
+      Basic Executor
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#executor-with-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      Executor with Options
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#specialized-executors" class="md-nav__link">
+    <span class="md-ellipsis">
+      Specialized Executors
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Specialized Executors">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#high-throughput-executor" class="md-nav__link">
+    <span class="md-ellipsis">
+      High Throughput Executor
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#low-latency-executor" class="md-nav__link">
+    <span class="md-ellipsis">
+      Low Latency Executor
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#memory-optimized-executor" class="md-nav__link">
+    <span class="md-ellipsis">
+      Memory Optimized Executor
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#runtime-configuration_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Runtime Configuration
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#executor-statistics" class="md-nav__link">
+    <span class="md-ellipsis">
+      Executor Statistics
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#embeddings-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Embeddings Configuration
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Embeddings Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#openai-embeddings" class="md-nav__link">
+    <span class="md-ellipsis">
+      OpenAI Embeddings
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#huggingface-embeddings" class="md-nav__link">
+    <span class="md-ellipsis">
+      HuggingFace Embeddings
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#embeddings-client" class="md-nav__link">
+    <span class="md-ellipsis">
+      Embeddings Client
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#environment-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      Environment Variables
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Environment Variables">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#required-environment-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      Required Environment Variables
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphbit-specific-environment-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      GraphBit-Specific Environment Variables
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#system-information-and-health" class="md-nav__link">
+    <span class="md-ellipsis">
+      System Information and Health
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="System Information and Health">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#system-information" class="md-nav__link">
+    <span class="md-ellipsis">
+      System Information
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#health-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      Health Checks
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#version-information" class="md-nav__link">
+    <span class="md-ellipsis">
+      Version Information
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration Examples
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#development-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Development Configuration
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#production-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Production Configuration
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#high-volume-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      High-Volume Configuration
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#local-development-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Local Development Configuration
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration Validation
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration Validation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#environment-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Environment Validation
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configuration-testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration Testing
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#health-check-function" class="md-nav__link">
+    <span class="md-ellipsis">
+      Health Check Function
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#best-practices" class="md-nav__link">
+    <span class="md-ellipsis">
+      Best Practices
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Best Practices">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-environment-based-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Environment-Based Configuration
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-secure-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Secure Configuration
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-performance-monitoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. Performance Monitoring
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-graceful-error-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      4. Graceful Error Handling
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-resource-cleanup" class="md-nav__link">
+    <span class="md-ellipsis">
+      5. Resource Cleanup
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration Troubleshooting
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#common-issues-and-solutions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Common Issues and Solutions
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Common Issues and Solutions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-api-key-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. API Key Issues
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-runtime-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Runtime Issues
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-memory-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. Memory Issues
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../node-types/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Node Types
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../python-api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Python API
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Connector Integrations
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            Connector Integrations
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../connector/aws_boto3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    AWS Boto3
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../connector/chromadb_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    ChromaDB Integration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../connector/faiss_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    FAISS Integration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../connector/google_search_api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Google Search API
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../connector/mariadb_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    MariaDB Integration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../connector/milvus_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Milvus Integration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../connector/mongodb/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    MongoDB
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../connector/pgvector/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    PGVector
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../connector/pinecone_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Pinecone Integration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../connector/qdrant_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Qdrant Integration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../connector/weaviate_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Weaviate Integration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Development
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            Development
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Architecture
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Contributing
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/debugging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Debugging
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/python-bindings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Python Bindings
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Examples
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            Examples
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/comprehensive-pipeline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Comprehensive Pipeline
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/content-generation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Content Generation
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/data-processing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Data Processing
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/llm-integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    LLM Integration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/semantic-search/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Semantic Search
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#library-initialization" class="md-nav__link">
+    <span class="md-ellipsis">
+      Library Initialization
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Library Initialization">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-initialization" class="md-nav__link">
+    <span class="md-ellipsis">
+      Basic Initialization
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#advanced-initialization" class="md-nav__link">
+    <span class="md-ellipsis">
+      Advanced Initialization
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#runtime-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Runtime Configuration
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#llm-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      LLM Configuration
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="LLM Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#openai-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      OpenAI Configuration
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#anthropic-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Anthropic Configuration
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#perplexity-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Perplexity Configuration
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ollama-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Ollama Configuration
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configuration-properties" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration Properties
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#llm-client-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      LLM Client Configuration
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="LLM Client Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-client" class="md-nav__link">
+    <span class="md-ellipsis">
+      Basic Client
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#client-with-debug-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      Client with Debug Mode
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#client-statistics-and-monitoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      Client Statistics and Monitoring
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#executor-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Executor Configuration
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Executor Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-executor" class="md-nav__link">
+    <span class="md-ellipsis">
+      Basic Executor
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#executor-with-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      Executor with Options
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#specialized-executors" class="md-nav__link">
+    <span class="md-ellipsis">
+      Specialized Executors
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Specialized Executors">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#high-throughput-executor" class="md-nav__link">
+    <span class="md-ellipsis">
+      High Throughput Executor
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#low-latency-executor" class="md-nav__link">
+    <span class="md-ellipsis">
+      Low Latency Executor
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#memory-optimized-executor" class="md-nav__link">
+    <span class="md-ellipsis">
+      Memory Optimized Executor
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#runtime-configuration_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Runtime Configuration
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#executor-statistics" class="md-nav__link">
+    <span class="md-ellipsis">
+      Executor Statistics
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#embeddings-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Embeddings Configuration
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Embeddings Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#openai-embeddings" class="md-nav__link">
+    <span class="md-ellipsis">
+      OpenAI Embeddings
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#huggingface-embeddings" class="md-nav__link">
+    <span class="md-ellipsis">
+      HuggingFace Embeddings
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#embeddings-client" class="md-nav__link">
+    <span class="md-ellipsis">
+      Embeddings Client
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#environment-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      Environment Variables
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Environment Variables">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#required-environment-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      Required Environment Variables
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphbit-specific-environment-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      GraphBit-Specific Environment Variables
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#system-information-and-health" class="md-nav__link">
+    <span class="md-ellipsis">
+      System Information and Health
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="System Information and Health">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#system-information" class="md-nav__link">
+    <span class="md-ellipsis">
+      System Information
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#health-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      Health Checks
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#version-information" class="md-nav__link">
+    <span class="md-ellipsis">
+      Version Information
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration Examples
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#development-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Development Configuration
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#production-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Production Configuration
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#high-volume-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      High-Volume Configuration
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#local-development-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Local Development Configuration
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration Validation
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration Validation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#environment-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Environment Validation
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configuration-testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration Testing
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#health-check-function" class="md-nav__link">
+    <span class="md-ellipsis">
+      Health Check Function
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#best-practices" class="md-nav__link">
+    <span class="md-ellipsis">
+      Best Practices
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Best Practices">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-environment-based-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Environment-Based Configuration
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-secure-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Secure Configuration
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-performance-monitoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. Performance Monitoring
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-graceful-error-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      4. Graceful Error Handling
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-resource-cleanup" class="md-nav__link">
+    <span class="md-ellipsis">
+      5. Resource Cleanup
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration Troubleshooting
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#common-issues-and-solutions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Common Issues and Solutions
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Common Issues and Solutions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-api-key-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. API Key Issues
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-runtime-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Runtime Issues
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-memory-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. Memory Issues
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="configuration-options">Configuration Options</h1>
+<p>GraphBit provides extensive configuration options to customize workflow execution, LLM providers, reliability features, and performance settings.</p>
+<h2 id="library-initialization">Library Initialization</h2>
+<h3 id="basic-initialization">Basic Initialization</h3>
+<pre><code class="language-python">import graphbit
+
+# Basic initialization
+graphbit.init()
+</code></pre>
+<h3 id="advanced-initialization">Advanced Initialization</h3>
+<pre><code class="language-python"># With debugging and logging
+graphbit.init(
+    log_level=&quot;info&quot;,          # Log level: trace, debug, info, warn, error
+    enable_tracing=True,       # Enable detailed tracing
+    debug=True                 # Enable debug mode (alias for enable_tracing)
+)
+</code></pre>
+<h3 id="runtime-configuration">Runtime Configuration</h3>
+<p>Configure the runtime before initialization for advanced control:</p>
+<pre><code class="language-python"># Configure runtime (call before init)
+graphbit.configure_runtime(
+    worker_threads=8,          # Number of worker threads
+    max_blocking_threads=16,   # Maximum blocking threads
+    thread_stack_size_mb=8     # Thread stack size in MB
+)
+
+# Then initialize
+graphbit.init()
+</code></pre>
+<h2 id="llm-configuration">LLM Configuration</h2>
+<h3 id="openai-configuration">OpenAI Configuration</h3>
+<pre><code class="language-python"># Basic OpenAI configuration
+config = graphbit.LlmConfig.openai(
+    api_key=&quot;your-api-key&quot;,
+    model=&quot;gpt-4o-mini&quot;        # Optional, defaults to gpt-4o-mini
+)
+
+# With default model
+config = graphbit.LlmConfig.openai(&quot;your-api-key&quot;)
+</code></pre>
+<h3 id="anthropic-configuration">Anthropic Configuration</h3>
+<pre><code class="language-python"># Basic Anthropic configuration
+config = graphbit.LlmConfig.anthropic(
+    api_key=&quot;your-anthropic-key&quot;,
+    model=&quot;claude-3-5-sonnet-20241022&quot;  # Optional, defaults to claude-3-5-sonnet-20241022
+)
+
+# With default model
+config = graphbit.LlmConfig.anthropic(&quot;your-anthropic-key&quot;)
+</code></pre>
+<h3 id="perplexity-configuration">Perplexity Configuration</h3>
+<pre><code class="language-python"># Basic Perplexity configuration
+config = graphbit.LlmConfig.perplexity(
+    api_key=&quot;your-perplexity-key&quot;,
+    model=&quot;sonar&quot;             # Optional, defaults to sonar
+)
+
+# With default model
+config = graphbit.LlmConfig.perplexity(&quot;your-perplexity-key&quot;)
+=======
+### DeepSeek Configuration
+
+```python
+# Basic DeepSeek configuration
+config = graphbit.LlmConfig.deepseek(
+    api_key=&quot;your-deepseek-key&quot;,
+    model=&quot;deepseek-chat&quot;        # Optional, defaults to deepseek-chat
+)
+
+# With default model
+config = graphbit.LlmConfig.deepseek(&quot;your-deepseek-key&quot;)
+
+# Different models for specific use cases
+coding_config = graphbit.LlmConfig.deepseek(&quot;your-deepseek-key&quot;, &quot;deepseek-coder&quot;)
+reasoning_config = graphbit.LlmConfig.deepseek(&quot;your-deepseek-key&quot;, &quot;deepseek-reasoner&quot;)
+</code></pre>
+<h3 id="ollama-configuration">Ollama Configuration</h3>
+<pre><code class="language-python"># Local Ollama configuration
+config = graphbit.LlmConfig.ollama(
+    model=&quot;llama3.2&quot;          # Optional, defaults to llama3.2
+)
+
+# With default model
+config = graphbit.LlmConfig.ollama()
+</code></pre>
+<h3 id="configuration-properties">Configuration Properties</h3>
+<pre><code class="language-python"># Access configuration properties
+provider = config.provider()  # &quot;openai&quot;, &quot;anthropic&quot;, &quot;perplexity&quot;, &quot;ollama&quot;
+=======
+provider = config.provider()  # &quot;openai&quot;, &quot;anthropic&quot;, &quot;deepseek&quot;, &quot;ollama&quot;
+model = config.model()        # Model name
+</code></pre>
+<h2 id="llm-client-configuration">LLM Client Configuration</h2>
+<h3 id="basic-client">Basic Client</h3>
+<pre><code class="language-python"># Simple client
+client = graphbit.LlmClient(config)
+</code></pre>
+<h3 id="client-with-debug-mode">Client with Debug Mode</h3>
+<pre><code class="language-python"># Client with debugging enabled
+client = graphbit.LlmClient(config, debug=True)
+</code></pre>
+<h3 id="client-statistics-and-monitoring">Client Statistics and Monitoring</h3>
+<pre><code class="language-python"># Get performance statistics
+stats = client.get_stats()
+print(f&quot;Total requests: {stats['total_requests']}&quot;)
+print(f&quot;Success rate: {stats['success_rate']}&quot;)
+print(f&quot;Average response time: {stats['average_response_time_ms']}ms&quot;)
+
+# Reset statistics
+client.reset_stats()
+
+# Warm up client for better performance
+import asyncio
+asyncio.run(client.warmup())
+</code></pre>
+<h2 id="executor-configuration">Executor Configuration</h2>
+<h3 id="basic-executor">Basic Executor</h3>
+<pre><code class="language-python"># Simple executor
+executor = graphbit.Executor(llm_config)
+</code></pre>
+<h3 id="executor-with-options">Executor with Options</h3>
+<pre><code class="language-python"># Executor with configuration
+executor = graphbit.Executor(
+    config=llm_config,
+    lightweight_mode=False,    # Enable lightweight/low-latency mode
+    timeout_seconds=300,       # Execution timeout (1-3600 seconds)
+    debug=True                 # Enable debug mode
+)
+</code></pre>
+<h3 id="specialized-executors">Specialized Executors</h3>
+<h4 id="high-throughput-executor">High Throughput Executor</h4>
+<pre><code class="language-python"># Optimized for high throughput
+executor = graphbit.Executor.new_high_throughput(
+    llm_config,
+    timeout_seconds=600,       # Optional timeout override
+    debug=False                # Optional debug mode
+)
+</code></pre>
+<h4 id="low-latency-executor">Low Latency Executor</h4>
+<pre><code class="language-python"># Optimized for low latency
+executor = graphbit.Executor.new_low_latency(
+    llm_config,
+    timeout_seconds=30,        # Shorter timeout for low latency
+    debug=False
+)
+</code></pre>
+<h4 id="memory-optimized-executor">Memory Optimized Executor</h4>
+<pre><code class="language-python"># Optimized for memory usage
+executor = graphbit.Executor.new_memory_optimized(
+    llm_config,
+    timeout_seconds=300,
+    debug=False
+)
+</code></pre>
+<h3 id="runtime-configuration_1">Runtime Configuration</h3>
+<pre><code class="language-python"># Configure executor settings
+executor.configure(
+    timeout_seconds=600,       # Execution timeout (1-3600 seconds)
+    max_retries=5,            # Maximum retries (0-10)
+    enable_metrics=True,      # Enable performance metrics
+    debug=False               # Debug mode
+)
+
+# Legacy configuration methods
+executor.set_lightweight_mode(True)  # Enable lightweight mode
+is_lightweight = executor.is_lightweight_mode()  # Check mode
+</code></pre>
+<h3 id="executor-statistics">Executor Statistics</h3>
+<pre><code class="language-python"># Get execution statistics
+stats = executor.get_stats()
+print(f&quot;Total executions: {stats['total_executions']}&quot;)
+print(f&quot;Success rate: {stats['success_rate']}&quot;)
+print(f&quot;Average duration: {stats['average_duration_ms']}ms&quot;)
+print(f&quot;Execution mode: {stats['execution_mode']}&quot;)
+
+# Reset statistics
+executor.reset_stats()
+
+# Get current execution mode
+mode = executor.get_execution_mode()  # Returns: HighThroughput, LowLatency, etc.
+</code></pre>
+<h2 id="embeddings-configuration">Embeddings Configuration</h2>
+<h3 id="openai-embeddings">OpenAI Embeddings</h3>
+<pre><code class="language-python"># OpenAI embeddings configuration
+embed_config = graphbit.EmbeddingConfig.openai(
+    api_key=&quot;your-api-key&quot;,
+    model=&quot;text-embedding-3-small&quot;  # Optional, defaults to text-embedding-3-small
+)
+
+# With default model
+embed_config = graphbit.EmbeddingConfig.openai(&quot;your-api-key&quot;)
+</code></pre>
+<h3 id="huggingface-embeddings">HuggingFace Embeddings</h3>
+<pre><code class="language-python"># HuggingFace embeddings configuration
+embed_config = graphbit.EmbeddingConfig.huggingface(
+    api_key=&quot;your-hf-token&quot;,
+    model=&quot;sentence-transformers/all-MiniLM-L6-v2&quot;
+)
+</code></pre>
+<h3 id="embeddings-client">Embeddings Client</h3>
+<pre><code class="language-python"># Create embeddings client
+embed_client = graphbit.EmbeddingClient(embed_config)
+
+# Generate embeddings
+embedding = embed_client.embed(&quot;Hello world&quot;)
+embeddings = embed_client.embed_many([&quot;Text 1&quot;, &quot;Text 2&quot;])
+
+# Calculate similarity
+similarity = graphbit.EmbeddingClient.similarity(embedding1, embedding2)
+</code></pre>
+<h2 id="environment-variables">Environment Variables</h2>
+<h3 id="required-environment-variables">Required Environment Variables</h3>
+<pre><code class="language-bash"># OpenAI
+export OPENAI_API_KEY=&quot;your-openai-api-key&quot;
+
+# Anthropic
+export ANTHROPIC_API_KEY=&quot;your-anthropic-api-key&quot;
+
+# HuggingFace
+export HUGGINGFACE_API_KEY=&quot;your-huggingface-token&quot;
+</code></pre>
+<h3 id="graphbit-specific-environment-variables">GraphBit-Specific Environment Variables</h3>
+<pre><code class="language-bash"># Runtime configuration
+export GRAPHBIT_WORKER_THREADS=&quot;8&quot;
+export GRAPHBIT_MAX_BLOCKING_THREADS=&quot;16&quot;
+
+# Logging
+export GRAPHBIT_LOG_LEVEL=&quot;INFO&quot;
+export GRAPHBIT_DEBUG=&quot;true&quot;
+</code></pre>
+<h2 id="system-information-and-health">System Information and Health</h2>
+<h3 id="system-information">System Information</h3>
+<pre><code class="language-python"># Get comprehensive system information
+info = graphbit.get_system_info()
+print(f&quot;Version: {info['version']}&quot;)
+print(f&quot;CPU count: {info['cpu_count']}&quot;)
+print(f&quot;Runtime initialized: {info['runtime_initialized']}&quot;)
+print(f&quot;Worker threads: {info['runtime_worker_threads']}&quot;)
+print(f&quot;Memory allocator: {info['memory_allocator']}&quot;)
+</code></pre>
+<h3 id="health-checks">Health Checks</h3>
+<pre><code class="language-python"># Perform health check
+health = graphbit.health_check()
+if health['overall_healthy']:
+    print(&quot;✅ System is healthy&quot;)
+    print(f&quot;Memory healthy: {health['memory_healthy']}&quot;)
+    print(f&quot;Runtime healthy: {health['runtime_healthy']}&quot;)
+else:
+    print(&quot;❌ System has issues&quot;)
+</code></pre>
+<h3 id="version-information">Version Information</h3>
+<pre><code class="language-python"># Get current version
+version = graphbit.version()
+print(f&quot;GraphBit version: {version}&quot;)
+</code></pre>
+<h2 id="configuration-examples">Configuration Examples</h2>
+<h3 id="development-configuration">Development Configuration</h3>
+<pre><code class="language-python">def create_dev_config():
+    &quot;&quot;&quot;Configuration for development environment.&quot;&quot;&quot;
+
+    # Initialize with debugging
+    graphbit.init(debug=True, log_level=&quot;info&quot;)
+
+    # Use faster, cheaper model for development
+    config = graphbit.LlmConfig.openai(
+        api_key=os.getenv(&quot;OPENAI_API_KEY&quot;),
+        model=&quot;gpt-4o-mini&quot;
+    )
+
+    # Low-latency executor for development
+    executor = graphbit.Executor.new_low_latency(
+        config, 
+        timeout_seconds=60,
+        debug=True
+    )
+
+    return executor
+</code></pre>
+<h3 id="production-configuration">Production Configuration</h3>
+<pre><code class="language-python">def create_prod_config():
+    &quot;&quot;&quot;Configuration for production environment.&quot;&quot;&quot;
+
+    # Initialize without debugging
+    graphbit.init(debug=False, log_level=&quot;warn&quot;)
+
+    # High-quality model for production
+    config = graphbit.LlmConfig.openai(
+        api_key=os.getenv(&quot;OPENAI_API_KEY&quot;),
+        model=&quot;gpt-4o-mini&quot;
+    )
+
+    # High-throughput executor for production
+    executor = graphbit.Executor.new_high_throughput(
+        config,
+        timeout_seconds=300,
+        debug=False
+    )
+
+    # Configure for production reliability
+    executor.configure(
+        timeout_seconds=300,
+        max_retries=3,
+        enable_metrics=True,
+        debug=False
+    )
+
+    return executor
+</code></pre>
+<h3 id="high-volume-configuration">High-Volume Configuration</h3>
+<pre><code class="language-python">def create_high_volume_config():
+    &quot;&quot;&quot;Configuration for high-volume processing.&quot;&quot;&quot;
+
+    # Configure runtime for high throughput
+    graphbit.configure_runtime(
+        worker_threads=16,
+        max_blocking_threads=32
+    )
+    graphbit.init(debug=False)
+
+    # Fast, cost-effective model
+    config = graphbit.LlmConfig.openai(
+        api_key=os.getenv(&quot;OPENAI_API_KEY&quot;),
+        model=&quot;gpt-4o-mini&quot;
+    )
+
+    # Memory-optimized executor
+    executor = graphbit.Executor.new_memory_optimized(
+        config,
+        timeout_seconds=180,
+        debug=False
+    )
+
+    return executor
+</code></pre>
+<h3 id="local-development-configuration">Local Development Configuration</h3>
+<pre><code class="language-python">def create_local_config():
+    &quot;&quot;&quot;Configuration for local development with Ollama.&quot;&quot;&quot;
+
+    graphbit.init(debug=True, log_level=&quot;debug&quot;)
+
+    # Use local Ollama
+    config = graphbit.LlmConfig.ollama(&quot;llama3.2&quot;)
+
+    # Low-latency for quick iteration
+    executor = graphbit.Executor.new_low_latency(
+        config,
+        timeout_seconds=180,  # Longer timeout for local inference
+        debug=True
+    )
+
+    return executor
+</code></pre>
+<h2 id="configuration-validation">Configuration Validation</h2>
+<h3 id="environment-validation">Environment Validation</h3>
+<pre><code class="language-python">def validate_environment():
+    &quot;&quot;&quot;Validate environment setup.&quot;&quot;&quot;
+
+    import os
+
+    # Check required environment variables
+    required_vars = {
+        &quot;OPENAI_API_KEY&quot;: &quot;OpenAI API key&quot;,
+        # Add others as needed
+    }
+
+    missing_vars = []
+    for var, description in required_vars.items():
+        if not os.getenv(var):
+            missing_vars.append(f&quot;{var} ({description})&quot;)
+
+    if missing_vars:
+        raise ValueError(f&quot;Missing environment variables: {', '.join(missing_vars)}&quot;)
+
+    print(&quot;✅ Environment validation passed&quot;)
+</code></pre>
+<h3 id="configuration-testing">Configuration Testing</h3>
+<pre><code class="language-python">def test_configuration(config):
+    &quot;&quot;&quot;Test LLM configuration.&quot;&quot;&quot;
+
+    try:
+        # Create client
+        client = graphbit.LlmClient(config)
+
+        # Test simple completion
+        response = client.complete(&quot;Say 'Configuration test successful'&quot;)
+
+        if &quot;successful&quot; in response.lower():
+            print(&quot;Configuration test passed&quot;)
+            return True
+        else:
+            print(&quot;Configuration test failed - unexpected response&quot;)
+            return False
+
+    except Exception as e:
+        print(f&quot;Configuration test failed: {e}&quot;)
+        return False
+</code></pre>
+<h3 id="health-check-function">Health Check Function</h3>
+<pre><code class="language-python">def comprehensive_health_check():
+    &quot;&quot;&quot;Comprehensive system health check.&quot;&quot;&quot;
+
+    # Check system health
+    health = graphbit.health_check()
+    if not health['overall_healthy']:
+        print(&quot;System health check failed&quot;)
+        return False
+
+    # Check system info
+    info = graphbit.get_system_info()
+    if not info['runtime_initialized']:
+        print(&quot;Runtime not initialized&quot;)
+        return False
+
+    # Test basic functionality
+    try:
+        config = graphbit.LlmConfig.openai(os.getenv(&quot;OPENAI_API_KEY&quot;))
+        client = graphbit.LlmClient(config)
+
+        # Quick test
+        response = client.complete(&quot;Test&quot;)
+        if not response:
+            print(&quot;LLM test failed&quot;)
+            return False
+
+    except Exception as e:
+        print(f&quot;❌ LLM test failed: {e}&quot;)
+        return False
+
+    print(&quot;✅ Comprehensive health check passed&quot;)
+    return True
+</code></pre>
+<h2 id="best-practices">Best Practices</h2>
+<h3 id="1-environment-based-configuration">1. Environment-Based Configuration</h3>
+<pre><code class="language-python">def get_config_for_environment():
+    &quot;&quot;&quot;Get configuration based on environment.&quot;&quot;&quot;
+
+    env = os.getenv(&quot;ENVIRONMENT&quot;, &quot;development&quot;)
+
+    if env == &quot;production&quot;:
+        return create_prod_config()
+    elif env == &quot;staging&quot;:
+        return create_staging_config()
+    elif env == &quot;local&quot;:
+        return create_local_config()
+    else:
+        return create_dev_config()
+</code></pre>
+<h3 id="2-secure-configuration">2. Secure Configuration</h3>
+<pre><code class="language-python">def secure_config_setup():
+    &quot;&quot;&quot;Set up configuration securely.&quot;&quot;&quot;
+
+    # Validate API key exists
+    api_key = os.getenv(&quot;OPENAI_API_KEY&quot;)
+    if not api_key:
+        raise ValueError(&quot;OPENAI_API_KEY environment variable required&quot;)
+
+    # Validate API key format (basic check)
+    if len(api_key) &lt; 20:
+        raise ValueError(&quot;Invalid API key format&quot;)
+
+    config = graphbit.LlmConfig.openai(api_key)
+    return config
+</code></pre>
+<h3 id="3-performance-monitoring">3. Performance Monitoring</h3>
+<pre><code class="language-python">def monitor_performance(executor):
+    &quot;&quot;&quot;Monitor executor performance.&quot;&quot;&quot;
+
+    import time
+
+    # Get initial stats
+    initial_stats = executor.get_stats()
+
+    start_time = time.time()
+
+    # Your workflow execution here
+    # result = executor.execute(workflow)
+
+    end_time = time.time()
+    execution_time = end_time - start_time
+
+    # Get final stats
+    final_stats = executor.get_stats()
+
+    # Log performance metrics
+    print(f&quot;Execution time: {execution_time:.2f}s&quot;)
+    print(f&quot;Total executions: {final_stats['total_executions']}&quot;)
+    print(f&quot;Success rate: {final_stats['success_rate']:.2%}&quot;)
+
+    # Alert on performance issues
+    if execution_time &gt; 60:  # 60 second threshold
+        print(&quot;Slow execution detected - consider tuning configuration&quot;)
+
+    if final_stats['success_rate'] &lt; 0.95:  # 95% success rate threshold
+        print(&quot;Low success rate - check configuration and API health&quot;)
+</code></pre>
+<h3 id="4-graceful-error-handling">4. Graceful Error Handling</h3>
+<pre><code class="language-python">def robust_config_creation():
+    &quot;&quot;&quot;Create configuration with fallback options.&quot;&quot;&quot;
+
+    try:
+        # Primary configuration
+        config = graphbit.LlmConfig.openai(os.getenv(&quot;OPENAI_API_KEY&quot;))
+        executor = graphbit.Executor.new_high_throughput(config)
+
+        # Test configuration
+        if test_configuration(config):
+            return executor
+        else:
+            raise Exception(&quot;Configuration test failed&quot;)
+
+    except Exception as e:
+        print(f&quot;Primary configuration failed: {e}&quot;)
+
+        try:
+            # Fallback to local Ollama
+            print(&quot;Falling back to local Ollama...&quot;)
+            fallback_config = graphbit.LlmConfig.ollama()
+            fallback_executor = graphbit.Executor.new_low_latency(fallback_config)
+
+            if test_configuration(fallback_config):
+                return fallback_executor
+            else:
+                raise Exception(&quot;Fallback configuration failed&quot;)
+
+        except Exception as fallback_error:
+            print(f&quot;Fallback configuration failed: {fallback_error}&quot;)
+            raise Exception(&quot;All configuration options exhausted&quot;)
+</code></pre>
+<h3 id="5-resource-cleanup">5. Resource Cleanup</h3>
+<pre><code class="language-python">def cleanup_resources():
+    &quot;&quot;&quot;Clean up GraphBit resources.&quot;&quot;&quot;
+
+    try:
+        # Shutdown GraphBit (for testing/cleanup)
+        graphbit.shutdown()
+        print(&quot;Resources cleaned up successfully&quot;)
+    except Exception as e:
+        print(f&quot;Error during cleanup: {e}&quot;)
+</code></pre>
+<h2 id="configuration-troubleshooting">Configuration Troubleshooting</h2>
+<h3 id="common-issues-and-solutions">Common Issues and Solutions</h3>
+<h4 id="1-api-key-issues">1. API Key Issues</h4>
+<pre><code class="language-python"># Check API key validity
+api_key = os.getenv(&quot;OPENAI_API_KEY&quot;)
+if not api_key:
+    print(&quot;OPENAI_API_KEY not set&quot;)
+elif len(api_key) &lt; 20:
+    print(&quot;API key appears invalid (too short)&quot;)
+elif not api_key.startswith(&quot;sk-&quot;):
+    print(&quot;OpenAI API key should start with 'sk-'&quot;)
+else:
+    print(&quot;API key format looks correct&quot;)
+</code></pre>
+<h4 id="2-runtime-issues">2. Runtime Issues</h4>
+<pre><code class="language-python"># Check runtime status
+info = graphbit.get_system_info()
+if not info['runtime_initialized']:
+    print(&quot;Runtime not initialized - call graphbit.init()&quot;)
+else:
+    print(f&quot;Runtime initialized with {info['runtime_worker_threads']} workers&quot;)
+</code></pre>
+<h4 id="3-memory-issues">3. Memory Issues</h4>
+<pre><code class="language-python"># Check memory status
+health = graphbit.health_check()
+if not health['memory_healthy']:
+    print(f&quot;Low memory: {health['available_memory_mb']}MB available&quot;)
+    print(&quot;Consider using memory-optimized executor&quot;)
+else:
+    print(&quot;Memory status OK&quot;)
+</code></pre>
+<p>Proper configuration is essential for optimal GraphBit performance. Choose settings that match your use case, environment, and performance requirements.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.50899def.min.js"></script>
+      
+    
+  </body>
+</html>
