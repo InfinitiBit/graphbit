@@ -1,0 +1,4188 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../node-types/">
+      
+      
+        <link rel="next" href="../../connector/aws_boto3/">
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.16">
+    
+    
+      
+        <title>Python API - GraphBits AI</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.7e37652d.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#python-api-reference" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="GraphBits AI" class="md-header__button md-logo" aria-label="GraphBits AI" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            GraphBits AI
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Python API
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="GraphBits AI" class="md-nav__button md-logo" aria-label="GraphBits AI" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    GraphBits AI
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../index.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Home
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Getting Started
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Getting Started
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Quickstart
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Installation
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Examples
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    User Guide
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            User Guide
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Concepts
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Agents
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/async-vs-sync/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Async vs Sync
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/dynamics-graph/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Dynamics Graph
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/embeddings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Embeddings
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/llm-providers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    LLM Providers
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/monitoring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Monitoring
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/performance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Performance
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/reliability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Reliability
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/text-splitters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Text Splitters
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/validation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Validation
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/workflow-builder/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Workflow Builder
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    API Reference
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            API Reference
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Configuration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../node-types/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Node Types
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Python API
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    Python API
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#module-graphbit" class="md-nav__link">
+    <span class="md-ellipsis">
+      Module: graphbit
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Module: graphbit">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#core-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Core Functions
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Core Functions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#initlog_levelnone-enable_tracingnone-debugnone" class="md-nav__link">
+    <span class="md-ellipsis">
+      init(log_level=None, enable_tracing=None, debug=None)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#version" class="md-nav__link">
+    <span class="md-ellipsis">
+      version()
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get_system_info" class="md-nav__link">
+    <span class="md-ellipsis">
+      get_system_info()
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#health_check" class="md-nav__link">
+    <span class="md-ellipsis">
+      health_check()
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configure_runtimeworker_threadsnone-max_blocking_threadsnone-thread_stack_size_mbnone" class="md-nav__link">
+    <span class="md-ellipsis">
+      configure_runtime(worker_threads=None, max_blocking_threads=None, thread_stack_size_mb=None)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#shutdown" class="md-nav__link">
+    <span class="md-ellipsis">
+      shutdown()
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#llm-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      LLM Configuration
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="LLM Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#llmconfig" class="md-nav__link">
+    <span class="md-ellipsis">
+      LlmConfig
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="LlmConfig">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#static-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      Static Methods
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Static Methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#llmconfigopenaiapi_key-modelnone" class="md-nav__link">
+    <span class="md-ellipsis">
+      LlmConfig.openai(api_key, model=None)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#llmconfiganthropicapi_key-modelnone" class="md-nav__link">
+    <span class="md-ellipsis">
+      LlmConfig.anthropic(api_key, model=None)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#llmconfigdeepseekapi_key-modelnone" class="md-nav__link">
+    <span class="md-ellipsis">
+      LlmConfig.deepseek(api_key, model=None)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#llmconfighuggingfaceapi_key-modelnone-base_urlnone" class="md-nav__link">
+    <span class="md-ellipsis">
+      LlmConfig.huggingface(api_key, model=None, base_url=None)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#llmconfigollamamodelnone" class="md-nav__link">
+    <span class="md-ellipsis">
+      LlmConfig.ollama(model=None)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#instance-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      Instance Methods
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Instance Methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#provider" class="md-nav__link">
+    <span class="md-ellipsis">
+      provider()
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#model" class="md-nav__link">
+    <span class="md-ellipsis">
+      model()
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#llm-client" class="md-nav__link">
+    <span class="md-ellipsis">
+      LLM Client
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="LLM Client">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#llmclient" class="md-nav__link">
+    <span class="md-ellipsis">
+      LlmClient
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="LlmClient">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#constructor" class="md-nav__link">
+    <span class="md-ellipsis">
+      Constructor
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Constructor">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#llmclientconfig-debugnone" class="md-nav__link">
+    <span class="md-ellipsis">
+      LlmClient(config, debug=None)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      Methods
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#completeprompt-max_tokensnone-temperaturenone" class="md-nav__link">
+    <span class="md-ellipsis">
+      complete(prompt, max_tokens=None, temperature=None)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#complete_asyncprompt-max_tokensnone-temperaturenone" class="md-nav__link">
+    <span class="md-ellipsis">
+      complete_async(prompt, max_tokens=None, temperature=None)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#complete_batchprompts-max_tokensnone-temperaturenone-max_concurrencynone" class="md-nav__link">
+    <span class="md-ellipsis">
+      complete_batch(prompts, max_tokens=None, temperature=None, max_concurrency=None)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#chat_optimizedmessages-max_tokensnone-temperaturenone" class="md-nav__link">
+    <span class="md-ellipsis">
+      chat_optimized(messages, max_tokens=None, temperature=None)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#complete_streamprompt-max_tokensnone-temperaturenone" class="md-nav__link">
+    <span class="md-ellipsis">
+      complete_stream(prompt, max_tokens=None, temperature=None)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get_stats" class="md-nav__link">
+    <span class="md-ellipsis">
+      get_stats()
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#warmup" class="md-nav__link">
+    <span class="md-ellipsis">
+      warmup()
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reset_stats" class="md-nav__link">
+    <span class="md-ellipsis">
+      reset_stats()
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#embeddings" class="md-nav__link">
+    <span class="md-ellipsis">
+      Embeddings
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Embeddings">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#embeddingconfig" class="md-nav__link">
+    <span class="md-ellipsis">
+      EmbeddingConfig
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="EmbeddingConfig">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#static-methods_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Static Methods
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Static Methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#embeddingconfigopenaiapi_key-modelnone" class="md-nav__link">
+    <span class="md-ellipsis">
+      EmbeddingConfig.openai(api_key, model=None)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#embeddingconfighuggingfaceapi_key-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      EmbeddingConfig.huggingface(api_key, model)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#embeddingclient" class="md-nav__link">
+    <span class="md-ellipsis">
+      EmbeddingClient
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="EmbeddingClient">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#constructor_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Constructor
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Constructor">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#embeddingclientconfig" class="md-nav__link">
+    <span class="md-ellipsis">
+      EmbeddingClient(config)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#methods_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Methods
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#embedtext" class="md-nav__link">
+    <span class="md-ellipsis">
+      embed(text)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#embed_manytexts" class="md-nav__link">
+    <span class="md-ellipsis">
+      embed_many(texts)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#similaritya-b-static" class="md-nav__link">
+    <span class="md-ellipsis">
+      similarity(a, b) (static)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#workflow-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      Workflow Components
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Workflow Components">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#node" class="md-nav__link">
+    <span class="md-ellipsis">
+      Node
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Node">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#static-methods_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      Static Methods
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Static Methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#nodeagentname-prompt-agent_idnone" class="md-nav__link">
+    <span class="md-ellipsis">
+      Node.agent(name, prompt, agent_id=None)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nodetransformname-transformation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Node.transform(name, transformation)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nodeconditionname-expression" class="md-nav__link">
+    <span class="md-ellipsis">
+      Node.condition(name, expression)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#instance-methods_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Instance Methods
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Instance Methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#id" class="md-nav__link">
+    <span class="md-ellipsis">
+      id()
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#name" class="md-nav__link">
+    <span class="md-ellipsis">
+      name()
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Workflow
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Workflow">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#constructor_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      Constructor
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Constructor">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#workflowname" class="md-nav__link">
+    <span class="md-ellipsis">
+      Workflow(name)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#methods_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      Methods
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#add_nodenode" class="md-nav__link">
+    <span class="md-ellipsis">
+      add_node(node)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#connectfrom_id-to_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      connect(from_id, to_id)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validate" class="md-nav__link">
+    <span class="md-ellipsis">
+      validate()
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#workflowresult" class="md-nav__link">
+    <span class="md-ellipsis">
+      WorkflowResult
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="WorkflowResult">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#methods_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      Methods
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#is_success" class="md-nav__link">
+    <span class="md-ellipsis">
+      is_success()
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#is_failed" class="md-nav__link">
+    <span class="md-ellipsis">
+      is_failed()
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#state" class="md-nav__link">
+    <span class="md-ellipsis">
+      state()
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#execution_time_ms" class="md-nav__link">
+    <span class="md-ellipsis">
+      execution_time_ms()
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get_variablekey" class="md-nav__link">
+    <span class="md-ellipsis">
+      get_variable(key)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get_all_variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      get_all_variables()
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      variables()
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#workflow-execution" class="md-nav__link">
+    <span class="md-ellipsis">
+      Workflow Execution
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Workflow Execution">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#executor" class="md-nav__link">
+    <span class="md-ellipsis">
+      Executor
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Executor">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#constructors" class="md-nav__link">
+    <span class="md-ellipsis">
+      Constructors
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Constructors">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#executorconfig-lightweight_modenone-timeout_secondsnone-debugnone" class="md-nav__link">
+    <span class="md-ellipsis">
+      Executor(config, lightweight_mode=None, timeout_seconds=None, debug=None)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#executornew_high_throughputllm_config-timeout_secondsnone-debugnone-static" class="md-nav__link">
+    <span class="md-ellipsis">
+      Executor.new_high_throughput(llm_config, timeout_seconds=None, debug=None) (static)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#executornew_low_latencyllm_config-timeout_secondsnone-debugnone-static" class="md-nav__link">
+    <span class="md-ellipsis">
+      Executor.new_low_latency(llm_config, timeout_seconds=None, debug=None) (static)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#executornew_memory_optimizedllm_config-timeout_secondsnone-debugnone-static" class="md-nav__link">
+    <span class="md-ellipsis">
+      Executor.new_memory_optimized(llm_config, timeout_seconds=None, debug=None) (static)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configuration-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration Methods
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration Methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#configuretimeout_secondsnone-max_retriesnone-enable_metricsnone-debugnone" class="md-nav__link">
+    <span class="md-ellipsis">
+      configure(timeout_seconds=None, max_retries=None, enable_metrics=None, debug=None)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#set_lightweight_modeenabled" class="md-nav__link">
+    <span class="md-ellipsis">
+      set_lightweight_mode(enabled)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#is_lightweight_mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      is_lightweight_mode()
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#execution-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      Execution Methods
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Execution Methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#executeworkflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      execute(workflow)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#run_asyncworkflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      run_async(workflow)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#statistics-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      Statistics Methods
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Statistics Methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#get_stats_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      get_stats()
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reset_stats_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      reset_stats()
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get_execution_mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      get_execution_mode()
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#error-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      Error Handling
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage Examples
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Usage Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Basic Workflow
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#advanced-llm-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Advanced LLM Usage
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#high-performance-execution" class="md-nav__link">
+    <span class="md-ellipsis">
+      High-Performance Execution
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#embeddings-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Embeddings Usage
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Connector Integrations
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            Connector Integrations
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../connector/aws_boto3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    AWS Boto3
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../connector/chromadb_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    ChromaDB Integration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../connector/faiss_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    FAISS Integration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../connector/google_search_api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Google Search API
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../connector/mariadb_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    MariaDB Integration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../connector/milvus_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Milvus Integration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../connector/mongodb/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    MongoDB
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../connector/pgvector/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    PGVector
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../connector/pinecone_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Pinecone Integration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../connector/qdrant_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Qdrant Integration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../connector/weaviate_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Weaviate Integration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Development
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            Development
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Architecture
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Contributing
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/debugging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Debugging
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/python-bindings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Python Bindings
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Examples
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            Examples
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/comprehensive-pipeline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Comprehensive Pipeline
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/content-generation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Content Generation
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/data-processing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Data Processing
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/llm-integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    LLM Integration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/semantic-search/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Semantic Search
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#module-graphbit" class="md-nav__link">
+    <span class="md-ellipsis">
+      Module: graphbit
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Module: graphbit">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#core-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Core Functions
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Core Functions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#initlog_levelnone-enable_tracingnone-debugnone" class="md-nav__link">
+    <span class="md-ellipsis">
+      init(log_level=None, enable_tracing=None, debug=None)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#version" class="md-nav__link">
+    <span class="md-ellipsis">
+      version()
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get_system_info" class="md-nav__link">
+    <span class="md-ellipsis">
+      get_system_info()
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#health_check" class="md-nav__link">
+    <span class="md-ellipsis">
+      health_check()
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configure_runtimeworker_threadsnone-max_blocking_threadsnone-thread_stack_size_mbnone" class="md-nav__link">
+    <span class="md-ellipsis">
+      configure_runtime(worker_threads=None, max_blocking_threads=None, thread_stack_size_mb=None)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#shutdown" class="md-nav__link">
+    <span class="md-ellipsis">
+      shutdown()
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#llm-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      LLM Configuration
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="LLM Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#llmconfig" class="md-nav__link">
+    <span class="md-ellipsis">
+      LlmConfig
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="LlmConfig">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#static-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      Static Methods
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Static Methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#llmconfigopenaiapi_key-modelnone" class="md-nav__link">
+    <span class="md-ellipsis">
+      LlmConfig.openai(api_key, model=None)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#llmconfiganthropicapi_key-modelnone" class="md-nav__link">
+    <span class="md-ellipsis">
+      LlmConfig.anthropic(api_key, model=None)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#llmconfigdeepseekapi_key-modelnone" class="md-nav__link">
+    <span class="md-ellipsis">
+      LlmConfig.deepseek(api_key, model=None)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#llmconfighuggingfaceapi_key-modelnone-base_urlnone" class="md-nav__link">
+    <span class="md-ellipsis">
+      LlmConfig.huggingface(api_key, model=None, base_url=None)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#llmconfigollamamodelnone" class="md-nav__link">
+    <span class="md-ellipsis">
+      LlmConfig.ollama(model=None)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#instance-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      Instance Methods
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Instance Methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#provider" class="md-nav__link">
+    <span class="md-ellipsis">
+      provider()
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#model" class="md-nav__link">
+    <span class="md-ellipsis">
+      model()
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#llm-client" class="md-nav__link">
+    <span class="md-ellipsis">
+      LLM Client
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="LLM Client">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#llmclient" class="md-nav__link">
+    <span class="md-ellipsis">
+      LlmClient
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="LlmClient">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#constructor" class="md-nav__link">
+    <span class="md-ellipsis">
+      Constructor
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Constructor">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#llmclientconfig-debugnone" class="md-nav__link">
+    <span class="md-ellipsis">
+      LlmClient(config, debug=None)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      Methods
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#completeprompt-max_tokensnone-temperaturenone" class="md-nav__link">
+    <span class="md-ellipsis">
+      complete(prompt, max_tokens=None, temperature=None)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#complete_asyncprompt-max_tokensnone-temperaturenone" class="md-nav__link">
+    <span class="md-ellipsis">
+      complete_async(prompt, max_tokens=None, temperature=None)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#complete_batchprompts-max_tokensnone-temperaturenone-max_concurrencynone" class="md-nav__link">
+    <span class="md-ellipsis">
+      complete_batch(prompts, max_tokens=None, temperature=None, max_concurrency=None)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#chat_optimizedmessages-max_tokensnone-temperaturenone" class="md-nav__link">
+    <span class="md-ellipsis">
+      chat_optimized(messages, max_tokens=None, temperature=None)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#complete_streamprompt-max_tokensnone-temperaturenone" class="md-nav__link">
+    <span class="md-ellipsis">
+      complete_stream(prompt, max_tokens=None, temperature=None)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get_stats" class="md-nav__link">
+    <span class="md-ellipsis">
+      get_stats()
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#warmup" class="md-nav__link">
+    <span class="md-ellipsis">
+      warmup()
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reset_stats" class="md-nav__link">
+    <span class="md-ellipsis">
+      reset_stats()
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#embeddings" class="md-nav__link">
+    <span class="md-ellipsis">
+      Embeddings
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Embeddings">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#embeddingconfig" class="md-nav__link">
+    <span class="md-ellipsis">
+      EmbeddingConfig
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="EmbeddingConfig">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#static-methods_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Static Methods
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Static Methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#embeddingconfigopenaiapi_key-modelnone" class="md-nav__link">
+    <span class="md-ellipsis">
+      EmbeddingConfig.openai(api_key, model=None)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#embeddingconfighuggingfaceapi_key-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      EmbeddingConfig.huggingface(api_key, model)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#embeddingclient" class="md-nav__link">
+    <span class="md-ellipsis">
+      EmbeddingClient
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="EmbeddingClient">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#constructor_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Constructor
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Constructor">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#embeddingclientconfig" class="md-nav__link">
+    <span class="md-ellipsis">
+      EmbeddingClient(config)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#methods_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Methods
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#embedtext" class="md-nav__link">
+    <span class="md-ellipsis">
+      embed(text)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#embed_manytexts" class="md-nav__link">
+    <span class="md-ellipsis">
+      embed_many(texts)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#similaritya-b-static" class="md-nav__link">
+    <span class="md-ellipsis">
+      similarity(a, b) (static)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#workflow-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      Workflow Components
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Workflow Components">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#node" class="md-nav__link">
+    <span class="md-ellipsis">
+      Node
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Node">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#static-methods_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      Static Methods
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Static Methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#nodeagentname-prompt-agent_idnone" class="md-nav__link">
+    <span class="md-ellipsis">
+      Node.agent(name, prompt, agent_id=None)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nodetransformname-transformation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Node.transform(name, transformation)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nodeconditionname-expression" class="md-nav__link">
+    <span class="md-ellipsis">
+      Node.condition(name, expression)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#instance-methods_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Instance Methods
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Instance Methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#id" class="md-nav__link">
+    <span class="md-ellipsis">
+      id()
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#name" class="md-nav__link">
+    <span class="md-ellipsis">
+      name()
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Workflow
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Workflow">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#constructor_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      Constructor
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Constructor">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#workflowname" class="md-nav__link">
+    <span class="md-ellipsis">
+      Workflow(name)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#methods_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      Methods
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#add_nodenode" class="md-nav__link">
+    <span class="md-ellipsis">
+      add_node(node)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#connectfrom_id-to_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      connect(from_id, to_id)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validate" class="md-nav__link">
+    <span class="md-ellipsis">
+      validate()
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#workflowresult" class="md-nav__link">
+    <span class="md-ellipsis">
+      WorkflowResult
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="WorkflowResult">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#methods_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      Methods
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#is_success" class="md-nav__link">
+    <span class="md-ellipsis">
+      is_success()
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#is_failed" class="md-nav__link">
+    <span class="md-ellipsis">
+      is_failed()
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#state" class="md-nav__link">
+    <span class="md-ellipsis">
+      state()
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#execution_time_ms" class="md-nav__link">
+    <span class="md-ellipsis">
+      execution_time_ms()
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get_variablekey" class="md-nav__link">
+    <span class="md-ellipsis">
+      get_variable(key)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get_all_variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      get_all_variables()
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      variables()
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#workflow-execution" class="md-nav__link">
+    <span class="md-ellipsis">
+      Workflow Execution
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Workflow Execution">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#executor" class="md-nav__link">
+    <span class="md-ellipsis">
+      Executor
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Executor">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#constructors" class="md-nav__link">
+    <span class="md-ellipsis">
+      Constructors
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Constructors">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#executorconfig-lightweight_modenone-timeout_secondsnone-debugnone" class="md-nav__link">
+    <span class="md-ellipsis">
+      Executor(config, lightweight_mode=None, timeout_seconds=None, debug=None)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#executornew_high_throughputllm_config-timeout_secondsnone-debugnone-static" class="md-nav__link">
+    <span class="md-ellipsis">
+      Executor.new_high_throughput(llm_config, timeout_seconds=None, debug=None) (static)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#executornew_low_latencyllm_config-timeout_secondsnone-debugnone-static" class="md-nav__link">
+    <span class="md-ellipsis">
+      Executor.new_low_latency(llm_config, timeout_seconds=None, debug=None) (static)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#executornew_memory_optimizedllm_config-timeout_secondsnone-debugnone-static" class="md-nav__link">
+    <span class="md-ellipsis">
+      Executor.new_memory_optimized(llm_config, timeout_seconds=None, debug=None) (static)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configuration-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration Methods
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration Methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#configuretimeout_secondsnone-max_retriesnone-enable_metricsnone-debugnone" class="md-nav__link">
+    <span class="md-ellipsis">
+      configure(timeout_seconds=None, max_retries=None, enable_metrics=None, debug=None)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#set_lightweight_modeenabled" class="md-nav__link">
+    <span class="md-ellipsis">
+      set_lightweight_mode(enabled)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#is_lightweight_mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      is_lightweight_mode()
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#execution-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      Execution Methods
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Execution Methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#executeworkflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      execute(workflow)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#run_asyncworkflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      run_async(workflow)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#statistics-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      Statistics Methods
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Statistics Methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#get_stats_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      get_stats()
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reset_stats_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      reset_stats()
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get_execution_mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      get_execution_mode()
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#error-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      Error Handling
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage Examples
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Usage Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Basic Workflow
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#advanced-llm-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Advanced LLM Usage
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#high-performance-execution" class="md-nav__link">
+    <span class="md-ellipsis">
+      High-Performance Execution
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#embeddings-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Embeddings Usage
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="python-api-reference">Python API Reference</h1>
+<p>Complete reference for GraphBit's Python API. This document covers all classes, methods, and their usage based on the actual Python binding implementation.</p>
+<h2 id="module-graphbit">Module: <code>graphbit</code></h2>
+<h3 id="core-functions">Core Functions</h3>
+<h4 id="initlog_levelnone-enable_tracingnone-debugnone"><code>init(log_level=None, enable_tracing=None, debug=None)</code></h4>
+<p>Initialize the GraphBit library with optional configuration.</p>
+<pre><code class="language-python">import graphbit
+
+# Basic initialization
+graphbit.init()
+
+# With debugging enabled
+graphbit.init(debug=True)
+
+# With custom log level and tracing
+graphbit.init(log_level=&quot;info&quot;, enable_tracing=True)
+</code></pre>
+<p><strong>Parameters</strong>:
+- <code>log_level</code> (str, optional): Log level ("trace", "debug", "info", "warn", "error"). Default: "warn"
+- <code>enable_tracing</code> (bool, optional): Enable tracing. Default: False
+- <code>debug</code> (bool, optional): Enable debug mode (alias for enable_tracing). Default: False</p>
+<p><strong>Returns</strong>: <code>None</code><br />
+<strong>Raises</strong>: <code>RuntimeError</code> if initialization fails</p>
+<h4 id="version"><code>version()</code></h4>
+<p>Get the current GraphBit version.</p>
+<pre><code class="language-python">version = graphbit.version()
+print(f&quot;GraphBit version: {version}&quot;)
+</code></pre>
+<p><strong>Returns</strong>: <code>str</code> - Version string (e.g., "0.1.0")</p>
+<h4 id="get_system_info"><code>get_system_info()</code></h4>
+<p>Get comprehensive system information and health status.</p>
+<pre><code class="language-python">info = graphbit.get_system_info()
+print(f&quot;CPU count: {info['cpu_count']}&quot;)
+print(f&quot;Runtime initialized: {info['runtime_initialized']}&quot;)
+</code></pre>
+<p><strong>Returns</strong>: <code>dict</code> - Dictionary containing:
+- <code>version</code>: GraphBit version
+- <code>python_binding_version</code>: Python binding version
+- <code>runtime_uptime_seconds</code>: Runtime uptime
+- <code>runtime_worker_threads</code>: Number of worker threads
+- <code>cpu_count</code>: Number of CPU cores
+- <code>runtime_initialized</code>: Runtime initialization status
+- <code>memory_allocator</code>: Memory allocator type
+- <code>build_target</code>: Build target
+- <code>build_profile</code>: Build profile (debug/release)</p>
+<h4 id="health_check"><code>health_check()</code></h4>
+<p>Perform comprehensive health checks.</p>
+<pre><code class="language-python">health = graphbit.health_check()
+if health['overall_healthy']:
+    print(&quot;System is healthy&quot;)
+else:
+    print(&quot;System has issues&quot;)
+</code></pre>
+<p><strong>Returns</strong>: <code>dict</code> - Dictionary containing health status information</p>
+<h4 id="configure_runtimeworker_threadsnone-max_blocking_threadsnone-thread_stack_size_mbnone"><code>configure_runtime(worker_threads=None, max_blocking_threads=None, thread_stack_size_mb=None)</code></h4>
+<p>Configure the global runtime with custom settings (advanced).</p>
+<pre><code class="language-python"># Configure runtime before init()
+graphbit.configure_runtime(worker_threads=8, max_blocking_threads=16)
+graphbit.init()
+</code></pre>
+<p><strong>Parameters</strong>:
+- <code>worker_threads</code> (int, optional): Number of worker threads
+- <code>max_blocking_threads</code> (int, optional): Maximum blocking threads
+- <code>thread_stack_size_mb</code> (int, optional): Thread stack size in MB</p>
+<h4 id="shutdown"><code>shutdown()</code></h4>
+<p>Gracefully shutdown the library (for testing and cleanup).</p>
+<pre><code class="language-python">graphbit.shutdown()
+</code></pre>
+<hr />
+<h2 id="llm-configuration">LLM Configuration</h2>
+<h3 id="llmconfig"><code>LlmConfig</code></h3>
+<p>Configuration class for Large Language Model providers.</p>
+<h4 id="static-methods">Static Methods</h4>
+<h5 id="llmconfigopenaiapi_key-modelnone"><code>LlmConfig.openai(api_key, model=None)</code></h5>
+<p>Create OpenAI provider configuration.</p>
+<pre><code class="language-python">config = graphbit.LlmConfig.openai(&quot;sk-...&quot;, &quot;gpt-4o-mini&quot;)
+# With default model
+config = graphbit.LlmConfig.openai(&quot;sk-...&quot;)  # Uses gpt-4o-mini
+</code></pre>
+<p><strong>Parameters</strong>:
+- <code>api_key</code> (str): OpenAI API key
+- <code>model</code> (str, optional): Model name. Default: "gpt-4o-mini"</p>
+<p><strong>Returns</strong>: <code>LlmConfig</code> instance</p>
+<h5 id="llmconfiganthropicapi_key-modelnone"><code>LlmConfig.anthropic(api_key, model=None)</code></h5>
+<p>Create Anthropic provider configuration.</p>
+<pre><code class="language-python">config = graphbit.LlmConfig.anthropic(&quot;sk-ant-...&quot;, &quot;claude-3-5-sonnet-20241022&quot;)
+# With default model
+config = graphbit.LlmConfig.anthropic(&quot;sk-ant-...&quot;)  # Uses claude-3-5-sonnet-20241022
+</code></pre>
+<p><strong>Parameters</strong>:
+- <code>api_key</code> (str): Anthropic API key
+- <code>model</code> (str, optional): Model name. Default: "claude-3-5-sonnet-20241022"</p>
+<p><strong>Returns</strong>: <code>LlmConfig</code> instance</p>
+<h5 id="llmconfigdeepseekapi_key-modelnone"><code>LlmConfig.deepseek(api_key, model=None)</code></h5>
+<p>Create DeepSeek provider configuration.</p>
+<pre><code class="language-python">config = graphbit.LlmConfig.deepseek(&quot;your-deepseek-api-key&quot;, &quot;deepseek-chat&quot;)
+# With default model
+config = graphbit.LlmConfig.deepseek(&quot;your-deepseek-api-key&quot;)  # Uses deepseek-chat
+</code></pre>
+<p><strong>Parameters</strong>:
+- <code>api_key</code> (str): DeepSeek API key
+- <code>model</code> (str, optional): Model name. Default: "deepseek-chat"</p>
+<p><strong>Available Models</strong>:
+- <code>deepseek-chat</code>: General conversation and instruction following
+- <code>deepseek-coder</code>: Specialized for code generation and programming tasks
+- <code>deepseek-reasoner</code>: Advanced reasoning and mathematical problem solving</p>
+<p><strong>Returns</strong>: <code>LlmConfig</code> instance</p>
+<h5 id="llmconfighuggingfaceapi_key-modelnone-base_urlnone"><code>LlmConfig.huggingface(api_key, model=None, base_url=None)</code></h5>
+<p>Create HuggingFace provider configuration.</p>
+<pre><code class="language-python">config = graphbit.LlmConfig.huggingface(&quot;hf_...&quot;, &quot;microsoft/DialoGPT-medium&quot;)
+# With default model
+config = graphbit.LlmConfig.huggingface(&quot;hf_...&quot;)  # Uses microsoft/DialoGPT-medium
+# With custom endpoint
+config = graphbit.LlmConfig.huggingface(&quot;hf_...&quot;, &quot;mistralai/Mistral-7B-Instruct-v0.1&quot;, 
+                                        base_url=&quot;https://my-endpoint.huggingface.co&quot;)
+</code></pre>
+<p><strong>Parameters</strong>:
+- <code>api_key</code> (str): HuggingFace API key
+- <code>model</code> (str, optional): Model name. Default: "microsoft/DialoGPT-medium"
+- <code>base_url</code> (str, optional): Custom API endpoint. Default: HuggingFace Inference API</p>
+<p><strong>Returns</strong>: <code>LlmConfig</code> instance</p>
+<h5 id="llmconfigollamamodelnone"><code>LlmConfig.ollama(model=None)</code></h5>
+<p>Create Ollama provider configuration.</p>
+<pre><code class="language-python">config = graphbit.LlmConfig.ollama(&quot;llama3.2&quot;)
+# With default model
+config = graphbit.LlmConfig.ollama()  # Uses llama3.2
+</code></pre>
+<p><strong>Parameters</strong>:
+- <code>model</code> (str, optional): Model name. Default: "llama3.2"</p>
+<p><strong>Returns</strong>: <code>LlmConfig</code> instance</p>
+<h4 id="instance-methods">Instance Methods</h4>
+<h5 id="provider"><code>provider()</code></h5>
+<p>Get the provider name.</p>
+<pre><code class="language-python">provider = config.provider()  # &quot;openai&quot;, &quot;anthropic&quot;, &quot;ollama&quot;
+</code></pre>
+<h5 id="model"><code>model()</code></h5>
+<p>Get the model name.</p>
+<pre><code class="language-python">model = config.model()  # &quot;gpt-4o-mini&quot;, &quot;claude-3-5-sonnet-20241022&quot;, etc.
+</code></pre>
+<hr />
+<h2 id="llm-client">LLM Client</h2>
+<h3 id="llmclient"><code>LlmClient</code></h3>
+<p>Production-grade LLM client with resilience patterns.</p>
+<h4 id="constructor">Constructor</h4>
+<h5 id="llmclientconfig-debugnone"><code>LlmClient(config, debug=None)</code></h5>
+<p>Create a new LLM client.</p>
+<pre><code class="language-python">client = graphbit.LlmClient(config)
+# With debugging
+client = graphbit.LlmClient(config, debug=True)
+</code></pre>
+<p><strong>Parameters</strong>:
+- <code>config</code> (LlmConfig): LLM configuration
+- <code>debug</code> (bool, optional): Enable debug mode. Default: False</p>
+<h4 id="methods">Methods</h4>
+<h5 id="completeprompt-max_tokensnone-temperaturenone"><code>complete(prompt, max_tokens=None, temperature=None)</code></h5>
+<p>Synchronous completion with resilience.</p>
+<pre><code class="language-python">response = client.complete(&quot;Write a short story about a robot&quot;)
+print(response)
+
+# With parameters
+response = client.complete(
+    &quot;Explain quantum computing&quot;,
+    max_tokens=500,
+    temperature=0.7
+)
+</code></pre>
+<p><strong>Parameters</strong>:
+- <code>prompt</code> (str): Input prompt
+- <code>max_tokens</code> (int, optional): Maximum tokens to generate (1-100000)
+- <code>temperature</code> (float, optional): Sampling temperature (0.0-2.0)</p>
+<p><strong>Returns</strong>: <code>str</code> - Generated text
+<strong>Raises</strong>: <code>ValueError</code> for invalid parameters</p>
+<h5 id="complete_asyncprompt-max_tokensnone-temperaturenone"><code>complete_async(prompt, max_tokens=None, temperature=None)</code></h5>
+<p>Asynchronous completion with full resilience.</p>
+<pre><code class="language-python">import asyncio
+
+async def generate():
+    response = await client.complete_async(&quot;Tell me a joke&quot;)
+    return response
+
+result = asyncio.run(generate())
+</code></pre>
+<p><strong>Parameters</strong>: Same as <code>complete()</code>
+<strong>Returns</strong>: <code>Awaitable[str]</code> - Generated text</p>
+<h5 id="complete_batchprompts-max_tokensnone-temperaturenone-max_concurrencynone"><code>complete_batch(prompts, max_tokens=None, temperature=None, max_concurrency=None)</code></h5>
+<p>Ultra-fast batch processing with controlled concurrency.</p>
+<pre><code class="language-python">import asyncio
+
+prompts = [
+    &quot;Summarize AI trends&quot;,
+    &quot;Explain blockchain&quot;,
+    &quot;Describe quantum computing&quot;
+]
+
+async def batch_generate():
+    responses = await client.complete_batch(prompts, max_concurrency=5)
+    return responses
+
+results = asyncio.run(batch_generate())
+</code></pre>
+<p><strong>Parameters</strong>:
+- <code>prompts</code> (List[str]): List of prompts (max 1000)
+- <code>max_tokens</code> (int, optional): Maximum tokens per prompt
+- <code>temperature</code> (float, optional): Sampling temperature
+- <code>max_concurrency</code> (int, optional): Maximum concurrent requests. Default: CPU count * 2</p>
+<p><strong>Returns</strong>: <code>Awaitable[List[str]]</code> - List of generated responses</p>
+<h5 id="chat_optimizedmessages-max_tokensnone-temperaturenone"><code>chat_optimized(messages, max_tokens=None, temperature=None)</code></h5>
+<p>Optimized chat completion with message validation.</p>
+<pre><code class="language-python">import asyncio
+
+messages = [
+    (&quot;system&quot;, &quot;You are a helpful assistant&quot;),
+    (&quot;user&quot;, &quot;What is Python?&quot;),
+    (&quot;assistant&quot;, &quot;Python is a programming language&quot;),
+    (&quot;user&quot;, &quot;Tell me more about its features&quot;)
+]
+
+async def chat():
+    response = await client.chat_optimized(messages)
+    return response
+
+result = asyncio.run(chat())
+</code></pre>
+<p><strong>Parameters</strong>:
+- <code>messages</code> (List[Tuple[str, str]]): List of (role, content) tuples
+- <code>max_tokens</code> (int, optional): Maximum tokens to generate
+- <code>temperature</code> (float, optional): Sampling temperature</p>
+<p><strong>Returns</strong>: <code>Awaitable[str]</code> - Generated response</p>
+<h5 id="complete_streamprompt-max_tokensnone-temperaturenone"><code>complete_stream(prompt, max_tokens=None, temperature=None)</code></h5>
+<p>Stream completion (alias for async complete).</p>
+<pre><code class="language-python">import asyncio
+
+async def stream():
+    response = await client.complete_stream(&quot;Write a poem&quot;)
+    return response
+
+result = asyncio.run(stream())
+</code></pre>
+<h5 id="get_stats"><code>get_stats()</code></h5>
+<p>Get comprehensive client statistics.</p>
+<pre><code class="language-python">stats = client.get_stats()
+print(f&quot;Total requests: {stats['total_requests']}&quot;)
+print(f&quot;Success rate: {stats['success_rate']}&quot;)
+print(f&quot;Average response time: {stats['average_response_time_ms']}ms&quot;)
+</code></pre>
+<p><strong>Returns</strong>: <code>dict</code> - Dictionary containing performance metrics</p>
+<h5 id="warmup"><code>warmup()</code></h5>
+<p>Warm up the client to avoid initialization overhead.</p>
+<pre><code class="language-python">import asyncio
+
+async def prepare():
+    await client.warmup()
+    print(&quot;Client warmed up&quot;)
+
+asyncio.run(prepare())
+</code></pre>
+<h5 id="reset_stats"><code>reset_stats()</code></h5>
+<p>Reset client statistics.</p>
+<pre><code class="language-python">client.reset_stats()
+</code></pre>
+<hr />
+<h2 id="embeddings">Embeddings</h2>
+<h3 id="embeddingconfig"><code>EmbeddingConfig</code></h3>
+<p>Configuration for embedding providers.</p>
+<h4 id="static-methods_1">Static Methods</h4>
+<h5 id="embeddingconfigopenaiapi_key-modelnone"><code>EmbeddingConfig.openai(api_key, model=None)</code></h5>
+<p>Create OpenAI embeddings configuration.</p>
+<pre><code class="language-python">config = graphbit.EmbeddingConfig.openai(&quot;sk-...&quot;, &quot;text-embedding-3-small&quot;)
+# With default model
+config = graphbit.EmbeddingConfig.openai(&quot;sk-...&quot;)  # Uses text-embedding-3-small
+</code></pre>
+<p><strong>Parameters</strong>:
+- <code>api_key</code> (str): OpenAI API key
+- <code>model</code> (str, optional): Model name. Default: "text-embedding-3-small"</p>
+<h5 id="embeddingconfighuggingfaceapi_key-model"><code>EmbeddingConfig.huggingface(api_key, model)</code></h5>
+<p>Create HuggingFace embeddings configuration.</p>
+<pre><code class="language-python">config = graphbit.EmbeddingConfig.huggingface(&quot;hf_...&quot;, &quot;sentence-transformers/all-MiniLM-L6-v2&quot;)
+</code></pre>
+<p><strong>Parameters</strong>:
+- <code>api_key</code> (str): HuggingFace API token
+- <code>model</code> (str): Model name from HuggingFace hub</p>
+<h3 id="embeddingclient"><code>EmbeddingClient</code></h3>
+<p>Client for generating text embeddings.</p>
+<h4 id="constructor_1">Constructor</h4>
+<h5 id="embeddingclientconfig"><code>EmbeddingClient(config)</code></h5>
+<p>Create embedding client.</p>
+<pre><code class="language-python">client = graphbit.EmbeddingClient(config)
+</code></pre>
+<h4 id="methods_1">Methods</h4>
+<h5 id="embedtext"><code>embed(text)</code></h5>
+<p>Generate embedding for single text.</p>
+<pre><code class="language-python">embedding = client.embed(&quot;Hello world&quot;)
+print(f&quot;Embedding dimension: {len(embedding)}&quot;)
+</code></pre>
+<p><strong>Parameters</strong>:
+- <code>text</code> (str): Input text</p>
+<p><strong>Returns</strong>: <code>List[float]</code> - Embedding vector</p>
+<h5 id="embed_manytexts"><code>embed_many(texts)</code></h5>
+<p>Generate embeddings for multiple texts.</p>
+<pre><code class="language-python">texts = [&quot;Text 1&quot;, &quot;Text 2&quot;, &quot;Text 3&quot;]
+embeddings = client.embed_many(texts)
+print(f&quot;Generated {len(embeddings)} embeddings&quot;)
+</code></pre>
+<p><strong>Parameters</strong>:
+- <code>texts</code> (List[str]): List of input texts</p>
+<p><strong>Returns</strong>: <code>List[List[float]]</code> - List of embedding vectors</p>
+<h5 id="similaritya-b-static"><code>similarity(a, b)</code> (static)</h5>
+<p>Calculate cosine similarity between two embeddings.</p>
+<pre><code class="language-python">similarity = graphbit.EmbeddingClient.similarity(embed1, embed2)
+print(f&quot;Similarity: {similarity}&quot;)
+</code></pre>
+<p><strong>Parameters</strong>:
+- <code>a</code> (List[float]): First embedding vector
+- <code>b</code> (List[float]): Second embedding vector</p>
+<p><strong>Returns</strong>: <code>float</code> - Cosine similarity (-1.0 to 1.0)</p>
+<hr />
+<h2 id="workflow-components">Workflow Components</h2>
+<h3 id="node"><code>Node</code></h3>
+<p>Factory class for creating different types of workflow nodes.</p>
+<h4 id="static-methods_2">Static Methods</h4>
+<h5 id="nodeagentname-prompt-agent_idnone"><code>Node.agent(name, prompt, agent_id=None)</code></h5>
+<p>Create an AI agent node.</p>
+<pre><code class="language-python">agent = graphbit.Node.agent(
+    name=&quot;Content Analyzer&quot;,
+    prompt=&quot;Analyze the sentiment of: {input}&quot;,
+    agent_id=&quot;analyzer&quot;  # Optional, auto-generated if not provided
+)
+</code></pre>
+<p><strong>Parameters</strong>:
+- <code>name</code> (str): Human-readable node name
+- <code>prompt</code> (str): LLM prompt template with variables
+- <code>agent_id</code> (str, optional): Unique agent identifier. Auto-generated if not provided</p>
+<p><strong>Returns</strong>: <code>Node</code> instance</p>
+<h5 id="nodetransformname-transformation"><code>Node.transform(name, transformation)</code></h5>
+<p>Create a data transformation node.</p>
+<pre><code class="language-python">transformer = graphbit.Node.transform(
+    name=&quot;Uppercase&quot;,
+    transformation=&quot;uppercase&quot;
+)
+</code></pre>
+<p><strong>Parameters</strong>:
+- <code>name</code> (str): Node name
+- <code>transformation</code> (str): Transformation type</p>
+<p><strong>Returns</strong>: <code>Node</code> instance</p>
+<h5 id="nodeconditionname-expression"><code>Node.condition(name, expression)</code></h5>
+<p>Create a condition node for branching logic.</p>
+<pre><code class="language-python">condition = graphbit.Node.condition(
+    name=&quot;Quality Check&quot;,
+    expression=&quot;quality_score &gt; 0.8&quot;
+)
+</code></pre>
+<p><strong>Parameters</strong>:
+- <code>name</code> (str): Node name
+- <code>expression</code> (str): Boolean expression to evaluate</p>
+<p><strong>Returns</strong>: <code>Node</code> instance</p>
+<h4 id="instance-methods_1">Instance Methods</h4>
+<h5 id="id"><code>id()</code></h5>
+<p>Get the node ID.</p>
+<h5 id="name"><code>name()</code></h5>
+<p>Get the node name.</p>
+<h3 id="workflow"><code>Workflow</code></h3>
+<p>Represents a complete workflow.</p>
+<h4 id="constructor_2">Constructor</h4>
+<h5 id="workflowname"><code>Workflow(name)</code></h5>
+<p>Create a new workflow.</p>
+<pre><code class="language-python">workflow = graphbit.Workflow(&quot;My Workflow&quot;)
+</code></pre>
+<h4 id="methods_2">Methods</h4>
+<h5 id="add_nodenode"><code>add_node(node)</code></h5>
+<p>Add a node to the workflow.</p>
+<pre><code class="language-python">node_id = workflow.add_node(my_node)
+print(f&quot;Added node with ID: {node_id}&quot;)
+</code></pre>
+<p><strong>Parameters</strong>:
+- <code>node</code> (Node): Node to add</p>
+<p><strong>Returns</strong>: <code>str</code> - Unique node ID</p>
+<h5 id="connectfrom_id-to_id"><code>connect(from_id, to_id)</code></h5>
+<p>Connect two nodes.</p>
+<pre><code class="language-python">workflow.connect(node1_id, node2_id)
+</code></pre>
+<p><strong>Parameters</strong>:
+- <code>from_id</code> (str): Source node ID
+- <code>to_id</code> (str): Target node ID</p>
+<h5 id="validate"><code>validate()</code></h5>
+<p>Validate the workflow structure.</p>
+<pre><code class="language-python">try:
+    workflow.validate()
+    print(&quot;Workflow is valid&quot;)
+except Exception as e:
+    print(f&quot;Invalid workflow: {e}&quot;)
+</code></pre>
+<h3 id="workflowresult"><code>WorkflowResult</code></h3>
+<p>Contains workflow execution results.</p>
+<h4 id="methods_3">Methods</h4>
+<h5 id="is_success"><code>is_success()</code></h5>
+<p>Check if workflow completed successfully.</p>
+<pre><code class="language-python">if result.is_success():
+    print(&quot;Workflow completed successfully&quot;)
+</code></pre>
+<h5 id="is_failed"><code>is_failed()</code></h5>
+<p>Check if workflow failed.</p>
+<pre><code class="language-python">if result.is_failed():
+    print(&quot;Workflow failed&quot;)
+</code></pre>
+<h5 id="state"><code>state()</code></h5>
+<p>Get the workflow state.</p>
+<pre><code class="language-python">state = result.state()
+print(f&quot;Workflow state: {state}&quot;)
+</code></pre>
+<h5 id="execution_time_ms"><code>execution_time_ms()</code></h5>
+<p>Get execution time in milliseconds.</p>
+<pre><code class="language-python">time_ms = result.execution_time_ms()
+print(f&quot;Executed in {time_ms}ms&quot;)
+</code></pre>
+<h5 id="get_variablekey"><code>get_variable(key)</code></h5>
+<p>Get a variable value.</p>
+<pre><code class="language-python">output = result.get_variable(&quot;output&quot;)
+if output:
+    print(f&quot;Result: {output}&quot;)
+</code></pre>
+<h5 id="get_all_variables"><code>get_all_variables()</code></h5>
+<p>Get all variables as a dictionary.</p>
+<pre><code class="language-python">all_vars = result.get_all_variables()
+for key, value in all_vars.items():
+    print(f&quot;{key}: {value}&quot;)
+</code></pre>
+<h5 id="variables"><code>variables()</code></h5>
+<p>Get all variables as a list of tuples.</p>
+<pre><code class="language-python">vars_list = result.variables()
+for key, value in vars_list:
+    print(f&quot;{key}: {value}&quot;)
+</code></pre>
+<hr />
+<h2 id="workflow-execution">Workflow Execution</h2>
+<h3 id="executor"><code>Executor</code></h3>
+<p>Production-grade workflow executor with comprehensive features.</p>
+<h4 id="constructors">Constructors</h4>
+<h5 id="executorconfig-lightweight_modenone-timeout_secondsnone-debugnone"><code>Executor(config, lightweight_mode=None, timeout_seconds=None, debug=None)</code></h5>
+<p>Create a basic executor.</p>
+<pre><code class="language-python">executor = graphbit.Executor(llm_config)
+# With configuration
+executor = graphbit.Executor(
+    llm_config, 
+    lightweight_mode=False,
+    timeout_seconds=300,
+    debug=True
+)
+</code></pre>
+<p><strong>Parameters</strong>:
+- <code>config</code> (LlmConfig): LLM configuration
+- <code>lightweight_mode</code> (bool, optional): Enable lightweight mode (low latency)
+- <code>timeout_seconds</code> (int, optional): Execution timeout (1-3600 seconds)
+- <code>debug</code> (bool, optional): Enable debug mode</p>
+<h5 id="executornew_high_throughputllm_config-timeout_secondsnone-debugnone-static"><code>Executor.new_high_throughput(llm_config, timeout_seconds=None, debug=None)</code> (static)</h5>
+<p>Create executor optimized for high throughput.</p>
+<pre><code class="language-python">executor = graphbit.Executor.new_high_throughput(llm_config)
+</code></pre>
+<h5 id="executornew_low_latencyllm_config-timeout_secondsnone-debugnone-static"><code>Executor.new_low_latency(llm_config, timeout_seconds=None, debug=None)</code> (static)</h5>
+<p>Create executor optimized for low latency.</p>
+<pre><code class="language-python">executor = graphbit.Executor.new_low_latency(llm_config, timeout_seconds=30)
+</code></pre>
+<h5 id="executornew_memory_optimizedllm_config-timeout_secondsnone-debugnone-static"><code>Executor.new_memory_optimized(llm_config, timeout_seconds=None, debug=None)</code> (static)</h5>
+<p>Create executor optimized for memory usage.</p>
+<pre><code class="language-python">executor = graphbit.Executor.new_memory_optimized(llm_config)
+</code></pre>
+<h4 id="configuration-methods">Configuration Methods</h4>
+<h5 id="configuretimeout_secondsnone-max_retriesnone-enable_metricsnone-debugnone"><code>configure(timeout_seconds=None, max_retries=None, enable_metrics=None, debug=None)</code></h5>
+<p>Configure the executor with new settings.</p>
+<pre><code class="language-python">executor.configure(
+    timeout_seconds=600,
+    max_retries=5,
+    enable_metrics=True,
+    debug=False
+)
+</code></pre>
+<h5 id="set_lightweight_modeenabled"><code>set_lightweight_mode(enabled)</code></h5>
+<p>Legacy method for backward compatibility.</p>
+<pre><code class="language-python">executor.set_lightweight_mode(True)
+</code></pre>
+<h5 id="is_lightweight_mode"><code>is_lightweight_mode()</code></h5>
+<p>Check if lightweight mode is enabled.</p>
+<pre><code class="language-python">is_lightweight = executor.is_lightweight_mode()
+</code></pre>
+<h4 id="execution-methods">Execution Methods</h4>
+<h5 id="executeworkflow"><code>execute(workflow)</code></h5>
+<p>Execute a workflow synchronously.</p>
+<pre><code class="language-python">result = executor.execute(workflow)
+if result.is_success():
+    print(&quot;Success!&quot;)
+</code></pre>
+<p><strong>Parameters</strong>:
+- <code>workflow</code> (Workflow): Workflow to execute</p>
+<p><strong>Returns</strong>: <code>WorkflowResult</code> - Execution result</p>
+<h5 id="run_asyncworkflow"><code>run_async(workflow)</code></h5>
+<p>Execute a workflow asynchronously.</p>
+<pre><code class="language-python">import asyncio
+
+async def run_workflow():
+    result = await executor.run_async(workflow)
+    return result
+
+result = asyncio.run(run_workflow())
+</code></pre>
+<h4 id="statistics-methods">Statistics Methods</h4>
+<h5 id="get_stats_1"><code>get_stats()</code></h5>
+<p>Get comprehensive execution statistics.</p>
+<pre><code class="language-python">stats = executor.get_stats()
+print(f&quot;Total executions: {stats['total_executions']}&quot;)
+print(f&quot;Success rate: {stats['success_rate']}&quot;)
+print(f&quot;Average duration: {stats['average_duration_ms']}ms&quot;)
+</code></pre>
+<h5 id="reset_stats_1"><code>reset_stats()</code></h5>
+<p>Reset execution statistics.</p>
+<pre><code class="language-python">executor.reset_stats()
+</code></pre>
+<h5 id="get_execution_mode"><code>get_execution_mode()</code></h5>
+<p>Get the current execution mode.</p>
+<pre><code class="language-python">mode = executor.get_execution_mode()
+print(f&quot;Execution mode: {mode}&quot;)
+</code></pre>
+<hr />
+<h2 id="error-handling">Error Handling</h2>
+<p>GraphBit uses standard Python exceptions:</p>
+<ul>
+<li><code>ValueError</code> - Invalid parameters or workflow structure</li>
+<li><code>RuntimeError</code> - Execution errors</li>
+<li><code>TimeoutError</code> - Operation timeouts</li>
+</ul>
+<pre><code class="language-python">try:
+    result = executor.execute(workflow)
+except ValueError as e:
+    print(f&quot;Invalid workflow: {e}&quot;)
+except RuntimeError as e:
+    print(f&quot;Execution failed: {e}&quot;)
+except Exception as e:
+    print(f&quot;Unexpected error: {e}&quot;)
+</code></pre>
+<hr />
+<h2 id="usage-examples">Usage Examples</h2>
+<h3 id="basic-workflow">Basic Workflow</h3>
+<pre><code class="language-python">import graphbit
+import os
+
+# Initialize
+graphbit.init()
+
+# Configure LLM
+config = graphbit.LlmConfig.openai(os.getenv(&quot;OPENAI_API_KEY&quot;))
+
+# Create workflow
+workflow = graphbit.Workflow(&quot;Analysis Workflow&quot;)
+agent = graphbit.Node.agent(
+    &quot;Analyzer&quot;, 
+    &quot;Analyze the following text: {input}&quot;
+)
+node_id = workflow.add_node(agent)
+workflow.validate()
+
+# Execute
+executor = graphbit.Executor(config)
+result = executor.execute(workflow)
+
+if result.is_success():
+    output = result.get_variable(&quot;output&quot;)
+    print(f&quot;Analysis result: {output}&quot;)
+</code></pre>
+<h3 id="advanced-llm-usage">Advanced LLM Usage</h3>
+<pre><code class="language-python"># Create client with debugging
+client = graphbit.LlmClient(config, debug=True)
+
+# Batch processing
+prompts = [
+    &quot;Summarize: AI is transforming industries&quot;,
+    &quot;Explain: Machine learning algorithms&quot;,
+    &quot;Analyze: The future of automation&quot;
+]
+
+import asyncio
+async def process_batch():
+    responses = await client.complete_batch(prompts, max_concurrency=3)
+    return responses
+
+results = asyncio.run(process_batch())
+
+# Chat conversation
+messages = [
+    (&quot;system&quot;, &quot;You are a helpful AI assistant&quot;),
+    (&quot;user&quot;, &quot;What is machine learning?&quot;),
+    (&quot;assistant&quot;, &quot;Machine learning is a subset of AI...&quot;),
+    (&quot;user&quot;, &quot;Can you give me an example?&quot;)
+]
+
+async def chat():
+    response = await client.chat_optimized(messages, temperature=0.7)
+    return response
+
+chat_result = asyncio.run(chat())
+</code></pre>
+<h3 id="high-performance-execution">High-Performance Execution</h3>
+<pre><code class="language-python"># Create high-throughput executor
+executor = graphbit.Executor.new_high_throughput(
+    llm_config, 
+    timeout_seconds=600,
+    debug=False
+)
+
+# Configure for production
+executor.configure(
+    timeout_seconds=300,
+    max_retries=3,
+    enable_metrics=True
+)
+
+# Execute workflow
+result = executor.execute(workflow)
+
+# Monitor performance
+stats = executor.get_stats()
+print(f&quot;Execution stats: {stats}&quot;)
+</code></pre>
+<h3 id="embeddings-usage">Embeddings Usage</h3>
+<pre><code class="language-python"># Configure embeddings
+embed_config = graphbit.EmbeddingConfig.openai(os.getenv(&quot;OPENAI_API_KEY&quot;))
+embed_client = graphbit.EmbeddingClient(embed_config)
+
+# Generate embeddings
+texts = [&quot;Hello world&quot;, &quot;Goodbye world&quot;, &quot;Machine learning&quot;]
+embeddings = embed_client.embed_many(texts)
+
+# Calculate similarity
+similarity = graphbit.EmbeddingClient.similarity(embeddings[0], embeddings[1])
+print(f&quot;Similarity between texts: {similarity}&quot;)
+</code></pre>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.50899def.min.js"></script>
+      
+    
+  </body>
+</html>

@@ -1,0 +1,2211 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../comprehensive-pipeline/">
+      
+      
+        <link rel="next" href="../data-processing/">
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.16">
+    
+    
+      
+        <title>Content Generation - GraphBits AI</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.7e37652d.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#content-generation-pipeline" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="GraphBits AI" class="md-header__button md-logo" aria-label="GraphBits AI" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            GraphBits AI
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Content Generation
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="GraphBits AI" class="md-nav__button md-logo" aria-label="GraphBits AI" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    GraphBits AI
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../index.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Home
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Getting Started
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Getting Started
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Quickstart
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Installation
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Examples
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    User Guide
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            User Guide
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Concepts
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Agents
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/async-vs-sync/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Async vs Sync
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/dynamics-graph/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Dynamics Graph
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/embeddings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Embeddings
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/llm-providers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    LLM Providers
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/monitoring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Monitoring
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/performance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Performance
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/reliability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Reliability
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/text-splitters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Text Splitters
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/validation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Validation
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/workflow-builder/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Workflow Builder
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    API Reference
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            API Reference
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api-reference/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Configuration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api-reference/node-types/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Node Types
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api-reference/python-api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Python API
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Connector Integrations
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            Connector Integrations
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../connector/aws_boto3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    AWS Boto3
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../connector/chromadb_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    ChromaDB Integration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../connector/faiss_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    FAISS Integration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../connector/google_search_api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Google Search API
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../connector/mariadb_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    MariaDB Integration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../connector/milvus_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Milvus Integration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../connector/mongodb/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    MongoDB
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../connector/pgvector/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    PGVector
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../connector/pinecone_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Pinecone Integration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../connector/qdrant_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Qdrant Integration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../connector/weaviate_integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Weaviate Integration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Development
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            Development
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Architecture
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Contributing
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/debugging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Debugging
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/python-bindings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Python Bindings
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Examples
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            Examples
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../comprehensive-pipeline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Comprehensive Pipeline
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Content Generation
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    Content Generation
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Overview
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#complete-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      Complete Example
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#alternative-using-different-llm-providers" class="md-nav__link">
+    <span class="md-ellipsis">
+      Alternative: Using Different LLM Providers
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Alternative: Using Different LLM Providers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#using-anthropic-claude" class="md-nav__link">
+    <span class="md-ellipsis">
+      Using Anthropic Claude
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-local-ollama-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      Using Local Ollama Models
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#advanced-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      Advanced Features
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Advanced Features">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#high-performance-content-generation" class="md-nav__link">
+    <span class="md-ellipsis">
+      High-Performance Content Generation
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#async-content-generation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Async Content Generation
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#system-information-and-health-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      System Information and Health Checks
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#key-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      Key Features
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Key Features">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#content-pipeline-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      Content Pipeline Components
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reliability-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      Reliability Features
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../data-processing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Data Processing
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../llm-integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    LLM Integration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../semantic-search/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Semantic Search
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Overview
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#complete-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      Complete Example
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#alternative-using-different-llm-providers" class="md-nav__link">
+    <span class="md-ellipsis">
+      Alternative: Using Different LLM Providers
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Alternative: Using Different LLM Providers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#using-anthropic-claude" class="md-nav__link">
+    <span class="md-ellipsis">
+      Using Anthropic Claude
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-local-ollama-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      Using Local Ollama Models
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#advanced-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      Advanced Features
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Advanced Features">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#high-performance-content-generation" class="md-nav__link">
+    <span class="md-ellipsis">
+      High-Performance Content Generation
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#async-content-generation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Async Content Generation
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#system-information-and-health-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      System Information and Health Checks
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#key-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      Key Features
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Key Features">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#content-pipeline-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      Content Pipeline Components
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reliability-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      Reliability Features
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="content-generation-pipeline">Content Generation Pipeline</h1>
+<p>This example demonstrates how to build a sophisticated content generation workflow with GraphBit, featuring research, writing, editing, and quality assurance stages.</p>
+<h2 id="overview">Overview</h2>
+<p>We'll create a multi-agent pipeline that:
+1. <strong>Researches</strong> a given topic
+2. <strong>Writes</strong> initial content based on research
+3. <strong>Edits</strong> for clarity and engagement
+4. <strong>Reviews</strong> for quality and accuracy
+5. <strong>Formats</strong> the final output</p>
+<h2 id="complete-example">Complete Example</h2>
+<pre><code class="language-python">import graphbit
+import os
+from typing import Optional
+
+class ContentGenerationPipeline:
+    def __init__(self, api_key: str, model: str = &quot;gpt-4o-mini&quot;):
+        &quot;&quot;&quot;Initialize the content generation pipeline.&quot;&quot;&quot;
+        # Initialize GraphBit
+        graphbit.init(log_level=&quot;info&quot;, enable_tracing=True)
+
+        # Create LLM configuration
+        self.llm_config = graphbit.LlmConfig.openai(api_key, model)
+
+        # Create executor with custom settings
+        self.executor = graphbit.Executor(
+            self.llm_config,
+            timeout_seconds=300,  # 5 minutes
+            debug=True
+        )
+
+    def create_workflow(self, content_type: str = &quot;article&quot;) -&gt; graphbit.Workflow:
+        &quot;&quot;&quot;Create the content generation workflow.&quot;&quot;&quot;
+        # Create workflow
+        workflow = graphbit.Workflow(&quot;Content Generation Pipeline&quot;)
+
+        # Stage 1: Research Agent
+        researcher = graphbit.Node.agent(
+            name=&quot;Research Specialist&quot;,
+            prompt=&quot;&quot;&quot;Research the topic: {topic}
+
+Please provide:
+1. Key facts and statistics
+2. Current trends and developments
+3. Expert opinions or quotes
+4. Relevant examples or case studies
+5. Important considerations or nuances
+
+Focus on accuracy and credibility. Cite sources where possible.
+Format as structured research notes.
+&quot;&quot;&quot;,
+            agent_id=&quot;researcher&quot;
+        )
+
+        # Stage 2: Content Writer
+        writer = graphbit.Node.agent(
+            name=&quot;Content Writer&quot;,
+            prompt=&quot;&quot;&quot;Write a comprehensive {content_type} about: {topic}
+
+Based on this research: {research_data}
+
+Requirements:
+- Target length: {target_length} words
+- Tone: {tone}
+- Audience: {audience}
+- Include relevant examples and data from research
+- Use engaging headlines and subheadings
+- Ensure logical flow and structure
+
+Create compelling, informative content that captures reader attention.
+&quot;&quot;&quot;,
+            agent_id=&quot;writer&quot;
+        )
+
+        # Stage 3: Editor
+        editor = graphbit.Node.agent(
+            name=&quot;Content Editor&quot;,
+            prompt=&quot;&quot;&quot;Edit and improve the following {content_type}:
+
+{draft_content}
+
+Focus on:
+- Clarity and readability
+- Flow and structure
+- Engaging language
+- Grammar and style
+- Consistency in tone
+- Compelling headlines
+
+Maintain the core message while making it more engaging and polished.
+&quot;&quot;&quot;,
+            agent_id=&quot;editor&quot;
+        )
+
+        # Stage 4: Quality Reviewer
+        reviewer = graphbit.Node.agent(
+            name=&quot;Quality Reviewer&quot;,
+            prompt=&quot;&quot;&quot;Review this {content_type} for quality and accuracy:
+
+{edited_content}
+
+Provide feedback on:
+1. Factual accuracy
+2. Completeness of coverage
+3. Logical flow
+4. Audience appropriateness
+5. Areas for improvement
+
+Rate overall quality (1-10) and provide specific suggestions.
+If quality is 7 or above, mark as APPROVED, otherwise mark as NEEDS_REVISION.
+&quot;&quot;&quot;,
+            agent_id=&quot;reviewer&quot;
+        )
+
+        # Stage 5: Quality Gate (Condition Node)
+        quality_gate = graphbit.Node.condition(
+            name=&quot;Quality Gate&quot;,
+            expression=&quot;quality_rating &gt;= 7&quot;
+        )
+
+        # Stage 6: Final Formatter
+        formatter = graphbit.Node.agent(
+            name=&quot;Content Formatter&quot;,
+            prompt=&quot;&quot;&quot;Format this content for publication:
+
+{approved_content}
+
+Apply:
+- Professional formatting
+- Proper headings hierarchy
+- Bullet points where appropriate
+- Clear paragraph breaks
+- Call-to-action if needed
+
+Output clean, publication-ready content.
+&quot;&quot;&quot;,
+            agent_id=&quot;formatter&quot;
+        )
+
+        # Add nodes to workflow
+        research_id = workflow.add_node(researcher)
+        writer_id = workflow.add_node(writer)
+        editor_id = workflow.add_node(editor)
+        reviewer_id = workflow.add_node(reviewer)
+        quality_id = workflow.add_node(quality_gate)
+        formatter_id = workflow.add_node(formatter)
+
+        # Connect the workflow: Research → Write → Edit → Review → Quality Check → Format
+        workflow.connect(research_id, writer_id)
+        workflow.connect(writer_id, editor_id)
+        workflow.connect(editor_id, reviewer_id)
+        workflow.connect(reviewer_id, quality_id)
+        workflow.connect(quality_id, formatter_id)
+
+        # Validate workflow
+        workflow.validate()
+
+        return workflow
+
+    def generate_content(
+        self,
+        topic: str,
+        content_type: str = &quot;article&quot;,
+        target_length: int = 800,
+        tone: str = &quot;professional&quot;,
+        audience: str = &quot;general&quot;
+    ) -&gt; dict:
+        &quot;&quot;&quot;Generate content using the pipeline.&quot;&quot;&quot;
+
+        print(f&quot;🚀 Starting content generation for: {topic}&quot;)
+
+        # Create workflow
+        workflow = self.create_workflow(content_type)
+
+        # Execute workflow with input context
+        result = self.executor.execute(workflow)
+
+        if result.is_success():
+            execution_time = result.execution_time_ms()
+            print(f&quot;Content generation completed in {execution_time}ms&quot;)
+
+            return {
+                &quot;status&quot;: &quot;success&quot;,
+                &quot;content&quot;: result.get_output(),
+                &quot;execution_time_ms&quot;: execution_time,
+                &quot;workflow_stats&quot;: self.executor.get_stats()
+            }
+        else:
+            error_msg = result.get_error()
+            print(f&quot;Content generation failed: {error_msg}&quot;)
+
+            return {
+                &quot;status&quot;: &quot;error&quot;,
+                &quot;error&quot;: error_msg,
+                &quot;workflow_stats&quot;: self.executor.get_stats()
+            }
+
+# Example usage
+def main():
+    &quot;&quot;&quot;Run the content generation pipeline.&quot;&quot;&quot;
+
+    # Set up API key (you can also set OPENAI_API_KEY environment variable)
+    api_key = os.getenv(&quot;OPENAI_API_KEY&quot;)
+    if not api_key:
+        print(&quot;❌ Please set OPENAI_API_KEY environment variable&quot;)
+        return
+
+    # Create pipeline
+    pipeline = ContentGenerationPipeline(api_key, &quot;gpt-4o-mini&quot;)
+
+    # Generate content
+    result = pipeline.generate_content(
+        topic=&quot;Sustainable Energy Solutions&quot;,
+        content_type=&quot;blog post&quot;,
+        target_length=1200,
+        tone=&quot;informative yet engaging&quot;,
+        audience=&quot;technology enthusiasts&quot;
+    )
+
+    # Display results
+    if result[&quot;status&quot;] == &quot;success&quot;:
+        print(&quot;\nGenerated Content:&quot;)
+        print(&quot;=&quot; * 60)
+        print(result[&quot;content&quot;])
+        print(&quot;\nPerformance Stats:&quot;)
+        print(f&quot;Execution time: {result['execution_time_ms']}ms&quot;)
+    else:
+        print(f&quot;\nGeneration failed: {result['error']}&quot;)
+
+if __name__ == &quot;__main__&quot;:
+    main()
+</code></pre>
+<h2 id="alternative-using-different-llm-providers">Alternative: Using Different LLM Providers</h2>
+<h3 id="using-anthropic-claude">Using Anthropic Claude</h3>
+<pre><code class="language-python">import graphbit
+import os
+
+def create_anthropic_pipeline():
+    &quot;&quot;&quot;Create pipeline using Anthropic Claude.&quot;&quot;&quot;
+    graphbit.init()
+
+    # Configure for Anthropic
+    config = graphbit.LlmConfig.anthropic(
+        api_key=os.getenv(&quot;ANTHROPIC_API_KEY&quot;),
+        model=&quot;claude-3-5-sonnet-20241022&quot;
+    )
+
+    executor = graphbit.Executor(config, debug=True)
+
+    # Create simple workflow
+    workflow = graphbit.Workflow(&quot;Anthropic Content Generator&quot;)
+
+    writer = graphbit.Node.agent(
+        name=&quot;Claude Writer&quot;,
+        prompt=&quot;&quot;&quot;Write a comprehensive article about: {topic}
+
+Requirements:
+- Length: {word_count} words
+- Tone: {tone}
+- Include practical examples
+- Structure with clear headings
+
+Create engaging, well-researched content.
+&quot;&quot;&quot;,
+        agent_id=&quot;claude_writer&quot;
+    )
+
+    workflow.add_node(writer)
+    workflow.validate()
+
+    return executor, workflow
+
+# Usage
+executor, workflow = create_anthropic_pipeline()
+result = executor.execute(workflow)
+</code></pre>
+<h3 id="using-local-ollama-models">Using Local Ollama Models</h3>
+<pre><code class="language-python">import graphbit
+
+def create_ollama_pipeline():
+    &quot;&quot;&quot;Create pipeline using local Ollama models.&quot;&quot;&quot;
+    graphbit.init()
+
+    # Configure for Ollama (no API key needed)
+    config = graphbit.LlmConfig.ollama(&quot;llama3.2&quot;)
+
+    executor = graphbit.Executor(
+        config,
+        timeout_seconds=180,  # Longer timeout for local inference
+        debug=True
+    )
+
+    workflow = graphbit.Workflow(&quot;Local Content Generator&quot;)
+
+    writer = graphbit.Node.agent(
+        name=&quot;Llama Writer&quot;,
+        prompt=&quot;&quot;&quot;Write about: {topic}
+
+Keep it concise but informative.
+Focus on practical insights.
+&quot;&quot;&quot;,
+        agent_id=&quot;llama_writer&quot;
+    )
+
+    workflow.add_node(writer)
+    workflow.validate()
+
+    return executor, workflow
+
+# Usage
+executor, workflow = create_ollama_pipeline()
+result = executor.execute(workflow)
+</code></pre>
+<h2 id="advanced-features">Advanced Features</h2>
+<h3 id="high-performance-content-generation">High-Performance Content Generation</h3>
+<pre><code class="language-python">import graphbit
+import os
+
+def create_high_performance_pipeline():
+    &quot;&quot;&quot;Create optimized pipeline for high-throughput content generation.&quot;&quot;&quot;
+    graphbit.init()
+
+    config = graphbit.LlmConfig.openai(
+        api_key=os.getenv(&quot;OPENAI_API_KEY&quot;),
+        model=&quot;gpt-4o-mini&quot;  # Faster model for high throughput
+    )
+
+    # Use high-throughput executor
+    executor = graphbit.Executor.new_high_throughput(
+        config,
+        timeout_seconds=60,  # Shorter timeout
+        debug=False  # Disable debug for performance
+    )
+
+    return executor
+
+def create_low_latency_pipeline():
+    &quot;&quot;&quot;Create pipeline optimized for low latency.&quot;&quot;&quot;
+    graphbit.init()
+
+    config = graphbit.LlmConfig.openai(
+        api_key=os.getenv(&quot;OPENAI_API_KEY&quot;),
+        model=&quot;gpt-4o-mini&quot;
+    )
+
+    # Use low-latency executor
+    executor = graphbit.Executor.new_low_latency(
+        config,
+        timeout_seconds=30,  # Very short timeout
+        debug=False
+    )
+
+    return executor
+
+def create_memory_optimized_pipeline():
+    &quot;&quot;&quot;Create pipeline optimized for memory usage.&quot;&quot;&quot;
+    graphbit.init()
+
+    config = graphbit.LlmConfig.openai(
+        api_key=os.getenv(&quot;OPENAI_API_KEY&quot;),
+        model=&quot;gpt-4o-mini&quot;
+    )
+
+    # Use memory-optimized executor
+    executor = graphbit.Executor.new_memory_optimized(
+        config,
+        timeout_seconds=120,
+        debug=False
+    )
+
+    return executor
+</code></pre>
+<h3 id="async-content-generation">Async Content Generation</h3>
+<pre><code class="language-python">import graphbit
+import asyncio
+import os
+
+async def generate_content_async():
+    &quot;&quot;&quot;Generate content asynchronously.&quot;&quot;&quot;
+    graphbit.init()
+
+    config = graphbit.LlmConfig.openai(
+        api_key=os.getenv(&quot;OPENAI_API_KEY&quot;),
+        model=&quot;gpt-4o-mini&quot;
+    )
+
+    executor = graphbit.Executor(config)
+
+    # Create workflow
+    workflow = graphbit.Workflow(&quot;Async Content Generator&quot;)
+
+    writer = graphbit.Node.agent(
+        name=&quot;Async Writer&quot;,
+        prompt=&quot;Write a brief article about: {topic}&quot;,
+        agent_id=&quot;async_writer&quot;
+    )
+
+    workflow.add_node(writer)
+    workflow.validate()
+
+    # Execute asynchronously
+    result = await executor.run_async(workflow)
+
+    if result.is_success():
+        print(&quot;Async generation completed&quot;)
+        return result.get_output()
+    else:
+        print(f&quot;Async generation failed: {result.get_error()}&quot;)
+        return None
+
+# Usage
+async def main_async():
+    content = await generate_content_async()
+    if content:
+        print(f&quot;Generated: {content}&quot;)
+
+# Run async
+# asyncio.run(main_async())
+</code></pre>
+<h2 id="system-information-and-health-checks">System Information and Health Checks</h2>
+<pre><code class="language-python">import graphbit
+
+def check_system_health():
+    &quot;&quot;&quot;Check GraphBit system health and capabilities.&quot;&quot;&quot;
+    graphbit.init()
+
+    # Get system information
+    system_info = graphbit.get_system_info()
+    print(&quot;System Information:&quot;)
+    for key, value in system_info.items():
+        print(f&quot;  {key}: {value}&quot;)
+
+    # Perform health check
+    health_status = graphbit.health_check()
+    print(f&quot;\nHealth Status:&quot;)
+    for key, value in health_status.items():
+        print(f&quot;  {key}: {value}&quot;)
+
+    # Check version
+    version = graphbit.version()
+    print(f&quot;\nGraphBit Version: {version}&quot;)
+
+# Usage
+check_system_health()
+</code></pre>
+<h2 id="key-features">Key Features</h2>
+<h3 id="content-pipeline-components">Content Pipeline Components</h3>
+<ul>
+<li><strong>Research Agent</strong>: Gathers comprehensive information on topics</li>
+<li><strong>Content Writer</strong>: Creates initial drafts based on research</li>
+<li><strong>Editor</strong>: Improves clarity, flow, and engagement</li>
+<li><strong>Quality Reviewer</strong>: Ensures accuracy and completeness</li>
+<li><strong>Formatter</strong>: Prepares content for publication</li>
+</ul>
+<h3 id="reliability-features">Reliability Features</h3>
+<ul>
+<li><strong>Multiple LLM Providers</strong>: OpenAI, Anthropic, Ollama support</li>
+<li><strong>Execution Modes</strong>: High-throughput, low-latency, memory-optimized</li>
+<li><strong>Error Handling</strong>: Comprehensive error reporting and recovery</li>
+<li><strong>Performance Monitoring</strong>: Built-in execution statistics</li>
+<li><strong>Health Checks</strong>: System health and capability monitoring</li>
+</ul>
+<p>This example demonstrates GraphBit's capabilities for building production-ready content generation workflows with reliability, performance, and flexibility. </p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.50899def.min.js"></script>
+      
+    
+  </body>
+</html>
