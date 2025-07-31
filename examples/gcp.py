@@ -14,30 +14,46 @@ import os
 
 import psycopg2
 from dotenv import load_dotenv
-from google.cloud import aiplatform
-from vertexai.language_models import TextGenerationModel
 
 from graphbit import EmbeddingClient as gb_etc
 from graphbit import EmbeddingConfig as gb_ecg
 
+# from google.cloud import aiplatform
+# from vertexai.language_models import TextGenerationModel
+
+
 # Load environment variables
 load_dotenv()
 
-# Initialize Vertex AI
-aiplatform.init(project=os.getenv("GOOGLE_CLOUD_PROJECT"), location=os.getenv("GOOGLE_CLOUD_REGION", "us-central1"))
+# # Initialize Vertex AI
+# aiplatform.init(project=os.getenv("GOOGLE_CLOUD_PROJECT"), location=os.getenv("GOOGLE_CLOUD_REGION", "us-central1"))
 
-# Simple text completion using Vertex AI
+# # Simple text completion using Vertex AI
 
-prompt = "Hello, how are you?"
-model = TextGenerationModel.from_pretrained("text-bison@001")
-response = model.predict(prompt)
-print(response.text)
+# prompt = "Hello, how are you?"
+# model = TextGenerationModel.from_pretrained("text-bison@001")
+# response = model.predict(prompt)
+# print(response.text)
 
-# Connect to AlloyDB
+# Define the connection details
+dbname = os.getenv("DB_NAME")  # Replace with your actual database name
+user = os.getenv("DB_USER")  # Your PostgreSQL username
+password = os.getenv("DB_PASSWORD")  # Your PostgreSQL password
+host = os.getenv("DB_HOST")  # Public IP address (or use private IP if applicable)
+port = "5432"  # Default PostgreSQL port
+
+# Establish connection with AlloyDB
+
 conn = psycopg2.connect(
-    dbname=os.getenv("ALLOYDB_DATABASE"), user=os.getenv("ALLOYDB_USER"), password=os.getenv("ALLOYDB_PASSWORD"), host=os.getenv("ALLOYDB_HOST"), port=os.getenv("ALLOYDB_PORT", "5432")
+    dbname=dbname,
+    user=user,
+    password=password,
+    host=host,
+    port=port,
 )
 cur = conn.cursor()
+print("Connection successful")
+# Your queries or logic go here
 
 # Ensure pgvector extension and table exist
 cur.execute("CREATE EXTENSION IF NOT EXISTS vector;")
@@ -57,6 +73,7 @@ CREATE INDEX IF NOT EXISTS idx_alloydb_embedding_vector ON alloydb_vectors USING
 """
 )
 conn.commit()
+print("Connection successful!")
 
 # Initialize Graphbit and embedding client
 
