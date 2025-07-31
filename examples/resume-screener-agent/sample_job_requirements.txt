@@ -1,0 +1,55 @@
+Software Engineer - Full Stack Development
+
+Job Title: Senior Software Engineer
+Location: Remote/Hybrid
+Type: Full-time
+
+Job Description:
+We are seeking a talented Senior Software Engineer to join our dynamic development team. The ideal candidate will have strong experience in full-stack development and be passionate about creating high-quality, scalable software solutions.
+
+Required Skills and Qualifications:
+- 5+ years of experience in software development
+- Strong proficiency in Python, JavaScript, and React
+- Experience with cloud platforms (AWS, Azure, or GCP)
+- Knowledge of database design and SQL
+- Experience with RESTful APIs and microservices architecture
+- Familiarity with Docker and Kubernetes
+- Understanding of CI/CD pipelines
+- Strong problem-solving and analytical skills
+- Excellent communication and teamwork abilities
+
+Education Requirements:
+- Bachelor's degree in Computer Science, Software Engineering, or related field
+- Master's degree preferred but not required
+
+Key Responsibilities:
+- Design and develop scalable web applications
+- Collaborate with cross-functional teams to define and implement new features
+- Write clean, maintainable, and well-documented code
+- Participate in code reviews and technical discussions
+- Troubleshoot and debug complex issues
+- Mentor junior developers and share knowledge
+- Stay up-to-date with emerging technologies and best practices
+
+Preferred Qualifications:
+- Experience with TypeScript and Node.js
+- Knowledge of GraphQL
+- Experience with machine learning or AI integration
+- Familiarity with agile development methodologies
+- Open source contributions
+- Experience with performance optimization
+- Knowledge of security best practices
+
+Technical Stack:
+- Frontend: React, TypeScript, HTML5, CSS3
+- Backend: Python, Node.js, Express
+- Database: PostgreSQL, MongoDB
+- Cloud: AWS, Docker, Kubernetes
+- Tools: Git, Jira, Jenkins
+
+Benefits:
+- Competitive salary and equity
+- Health, dental, and vision insurance
+- Flexible work arrangements
+- Professional development opportunities
+- Collaborative and inclusive work environment 

@@ -1,0 +1,63 @@
+MIKE JOHNSON
+Junior Software Developer
+mike.johnson@email.com | (555) 456-7890 | linkedin.com/in/mikejohnson
+Austin, TX
+
+PROFESSIONAL SUMMARY
+Junior Software Developer with 2 years of experience in web development. Eager to learn and grow in a collaborative environment. Strong foundation in JavaScript and basic understanding of full-stack development.
+
+TECHNICAL SKILLS
+Programming Languages: JavaScript, HTML, CSS, Python (basic)
+Frontend: React, Bootstrap, jQuery
+Backend: Node.js (basic), Express (basic)
+Databases: MongoDB (basic)
+Tools: Git, VS Code, Chrome DevTools
+
+PROFESSIONAL EXPERIENCE
+
+Junior Developer | SmallTech Inc. | 2022 - Present
+- Develop frontend components using React and JavaScript
+- Assist in bug fixes and feature implementation
+- Work with senior developers on code reviews
+- Learn new technologies and frameworks
+- Participate in team meetings and standups
+
+Intern | WebStart | 2021 - 2022
+- Assisted in development of web applications
+- Learned React and modern JavaScript
+- Helped with testing and debugging
+- Supported senior developers with basic tasks
+
+EDUCATION
+Associate Degree in Computer Programming
+Austin Community College | 2021
+GPA: 3.4/4.0
+
+PROJECTS
+Todo List App (2022)
+- Simple React application for task management
+- Local storage for data persistence
+- Responsive design with Bootstrap
+
+Calculator App (2021)
+- JavaScript-based calculator
+- Basic arithmetic operations
+- Clean and intuitive interface
+
+Personal Blog (2021)
+- Static HTML/CSS website
+- Responsive design
+- Basic JavaScript functionality
+
+SKILLS & INTERESTS
+- Quick learner with new technologies
+- Good attention to detail
+- Team player with positive attitude
+- Interest in web development
+- Eager to learn and grow
+
+LANGUAGES
+English (Native)
+
+INTERESTS
+Web development, gaming, music, learning new technologies 

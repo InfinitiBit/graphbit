@@ -1,0 +1,72 @@
+JANE SMITH
+Software Engineer
+jane.smith@email.com | (555) 987-6543 | linkedin.com/in/janesmith
+Seattle, WA
+
+PROFESSIONAL SUMMARY
+Dedicated Software Engineer with 4 years of experience in web development, specializing in JavaScript and React. Passionate about creating user-friendly applications and learning new technologies.
+
+TECHNICAL SKILLS
+Programming Languages: JavaScript, Python, HTML, CSS, SQL
+Frontend: React, Vue.js, Bootstrap, jQuery
+Backend: Node.js, Express, Python Flask
+Databases: MongoDB, MySQL
+Cloud: AWS (basic), Heroku
+Tools: Git, VS Code, Postman, Slack
+
+PROFESSIONAL EXPERIENCE
+
+Software Engineer | WebTech Solutions | 2021 - Present
+- Develop and maintain web applications using React and Node.js
+- Collaborate with design team to implement responsive user interfaces
+- Write clean, maintainable code following best practices
+- Participate in code reviews and team meetings
+- Work with MongoDB and MySQL databases
+- Deploy applications using AWS and Heroku
+
+Frontend Developer | Digital Creations | 2019 - 2021
+- Built responsive web applications using React and JavaScript
+- Implemented user interface designs using HTML, CSS, and Bootstrap
+- Optimized website performance and user experience
+- Worked with RESTful APIs and JSON data
+- Collaborated with backend developers on API integration
+
+Junior Developer | StartupABC | 2018 - 2019
+- Assisted in development of web applications
+- Fixed bugs and implemented small features
+- Learned React and modern JavaScript frameworks
+- Worked with version control using Git
+
+EDUCATION
+Bachelor of Science in Information Technology
+University of Washington | 2018
+GPA: 3.6/4.0
+
+PROJECTS
+Personal Portfolio Website (2022)
+- Built with React and Node.js
+- Responsive design with modern UI/UX
+- Deployed on AWS
+
+Weather App (2021)
+- React application with weather API integration
+- Real-time weather data display
+- Mobile-responsive design
+
+Blog Platform (2020)
+- Full-stack application with React frontend
+- Node.js backend with MongoDB
+- User authentication and content management
+
+SKILLS & INTERESTS
+- Strong problem-solving abilities
+- Quick learner with new technologies
+- Good communication and teamwork skills
+- Interest in UI/UX design
+- Passion for clean code and best practices
+
+LANGUAGES
+English (Native), French (Basic)
+
+INTERESTS
+Web development, user experience design, open source projects, hiking 

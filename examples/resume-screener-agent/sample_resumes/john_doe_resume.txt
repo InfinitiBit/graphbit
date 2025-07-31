@@ -1,0 +1,70 @@
+JOHN DOE
+Senior Software Engineer
+john.doe@email.com | (555) 123-4567 | linkedin.com/in/johndoe
+San Francisco, CA
+
+PROFESSIONAL SUMMARY
+Experienced Senior Software Engineer with 7+ years of expertise in full-stack development, specializing in Python, JavaScript, React, and cloud technologies. Proven track record of delivering scalable web applications and mentoring junior developers.
+
+TECHNICAL SKILLS
+Programming Languages: Python, JavaScript, TypeScript, Java, SQL
+Frontend: React, Angular, HTML5, CSS3, Bootstrap, Redux
+Backend: Node.js, Express, Django, Flask, RESTful APIs
+Databases: PostgreSQL, MongoDB, MySQL, Redis
+Cloud & DevOps: AWS, Docker, Kubernetes, Jenkins, Git
+Tools & Platforms: Jira, Confluence, VS Code, Postman
+
+PROFESSIONAL EXPERIENCE
+
+Senior Software Engineer | TechCorp Inc. | 2021 - Present
+- Lead development of scalable microservices architecture serving 1M+ users
+- Implemented CI/CD pipelines reducing deployment time by 60%
+- Mentored 5 junior developers and conducted code reviews
+- Developed RESTful APIs using Python/Django and Node.js/Express
+- Optimized database queries improving application performance by 40%
+- Collaborated with cross-functional teams using agile methodologies
+
+Software Engineer | StartupXYZ | 2019 - 2021
+- Built full-stack web applications using React, TypeScript, and Python
+- Integrated third-party APIs and payment processing systems
+- Implemented automated testing achieving 90% code coverage
+- Deployed applications on AWS using Docker and Kubernetes
+- Participated in agile development with 2-week sprint cycles
+
+Junior Developer | WebSolutions | 2017 - 2019
+- Developed responsive web applications using JavaScript and React
+- Worked with PostgreSQL and MongoDB databases
+- Collaborated with UI/UX designers to implement user interfaces
+- Fixed bugs and implemented new features based on user feedback
+
+EDUCATION
+Bachelor of Science in Computer Science
+University of California, Berkeley | 2017
+GPA: 3.8/4.0
+
+CERTIFICATIONS
+- AWS Certified Developer Associate
+- Docker Certified Associate
+- MongoDB Certified Developer
+
+PROJECTS
+E-commerce Platform (2022)
+- Full-stack application with React frontend and Python backend
+- Integrated payment processing and inventory management
+- Deployed on AWS with Docker containers
+
+Task Management App (2021)
+- Real-time collaborative task management tool
+- Built with React, Node.js, and Socket.io
+- Features real-time updates and team collaboration
+
+Machine Learning API (2020)
+- RESTful API for image classification using TensorFlow
+- Python Flask backend with React frontend
+- Integrated with AWS S3 for image storage
+
+LANGUAGES
+English (Native), Spanish (Conversational)
+
+INTERESTS
+Open source contribution, machine learning, cloud architecture, mentoring 
