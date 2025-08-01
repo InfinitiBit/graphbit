@@ -1,0 +1,63 @@
+# Publish workflow for graphbit
+name: Publish
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up Rust
+        uses: actions/setup-rust@v1
+        with:
+          rust-version: 'stable'
+
+      - name: Install Poetry
+        run: |
+          pip install poetry
+
+      - name: Install Python dependencies
+        run: |
+          poetry install
+        working-directory: ./
+
+      - name: Install Rust dependencies
+        run: |
+          cargo fetch
+        working-directory: ./core
+
+      - name: Build Rust project
+        run: |
+          cargo build --release
+        working-directory: ./core
+
+      - name: Run Python tests
+        run: |
+          poetry run pytest
+        working-directory: ./
+
+      - name: Run Rust tests
+        run: |
+          cargo test --release
+        working-directory: ./core
+
+      # Add publish steps below as needed, e.g., PyPI, crates.io, docs, etc.
+      # - name: Publish to PyPI
+      #   run: poetry publish --build
+      #   env:
+      #     PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
+
+      # - name: Publish to crates.io
+      #   run: cargo publish --token ${{ secrets.CRATES_IO_TOKEN }}
