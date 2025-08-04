@@ -15,13 +15,14 @@ load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 GOOGLE_CSE_ID = os.getenv("GOOGLE_CSE_ID")
-NEWSAPI_KEY = os.getenv("NEWSAPI_KEY")
+# NEWSAPI_KEY = os.getenv("NEWSAPI_KEY")
 
 
 # -- 1. Web Search Tool using Google Custom Search API --
-#https://www.googleapis.com/customsearch/v1
+# https://www.googleapis.com/customsearch/v1
 def search_web(query):
-    url = ""
+    """Search web for results."""
+    url = "https://www.googleapis.com/customsearch/v1"
     params = {
         "key": GOOGLE_API_KEY,
         "cx": GOOGLE_CSE_ID,
@@ -36,10 +37,11 @@ def search_web(query):
 
 
 # -- 2. News/Trend Tool using NewsAPI --
-#https://newsapi.org/v2/everything
+# https://newsapi.org/v2/everything
 def search_news(company_name):
-    url = ""
-    params = {"q": company_name, "apiKey": NEWSAPI_KEY, "pageSize": 5, "language": "en"}
+    """Search news for results."""
+    url = "https://newsapi.org/v2/everything"
+    params = {"q": company_name, "apiKey": os.getenv("NEWSAPI_KEY"), "pageSize": 5, "language": "en"}
     response = requests.get(url, params=params)
     data = response.json()
     if "articles" in data:
@@ -50,7 +52,7 @@ def search_news(company_name):
 
 # -- 3. LLM Summariser Tool using OpenAI --
 async def llm_summarise(text, prompt="Summarize the following for a business meeting:"):
-
+    """Summarise the text for a business meeting."""
     config = gb_lcg.openai(api_key=OPENAI_API_KEY, model="gpt-4o")
 
     llm_client = gb_lct(config=config)

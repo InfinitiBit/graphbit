@@ -1,64 +1,68 @@
 """The agents that will be used for the meeting preparation agent."""
 
-
 import os
 
-from tools import llm_summarise, search_news, search_web
+from tools import search_news, search_web
 
 import graphbit
+from graphbit import Node
 
 company_name = "Tesla"
 
-# # Get company information
-# print("Getting company information...")
+# Get company information
+print("Getting company information...")
 company_info = search_web(company_name)
-# print("Getting industry information...")
-# industry_info = search_news(company_name)
+print("Getting industry information...")
+industry_info = search_news(company_name)
 
-# company_research_agent = gb_node.agent(
-#     name="company_research_agent",
-#     prompt= (
-#     "You've developed a software application with novel architecture and logic, but the patenting process "
-#     "will take time. Analyze and outline the key intellectual property threats during the pre-patent period, "
-#     "including unauthorized use, reverse engineering, and replication."
-#     ),
-#     agent_id="company_research_agent"
-# )
+company_research_agent = Node.agent(
+    name="company_research_agent",
+    prompt=f"""
+    You are an assistant preparing for a business meeting.
+    Summarize the key details about the following company for meeting preparation:
 
-# industry_trend_agent = gb_node.agent(
-#     name="Industry Trend Agent",
-#     prompt = f"""
-#     You are an assistant preparing for a business meeting.
-#     Summarize the latest industry trends and challenges related to the following company.
+    Company Information:
+    {company_info}
 
-#     Industry News and Information:
-#     {industry_info}
-
-#     Please provide a comprehensive summary of key industry trends, recent developments, and challenges that are relevant for a business meeting.
-#     """,
-#     agent_id="industry_trend_agent"
-# )
-
-ip_threat_analysis = graphbit.Node.agent(
-    name="ip_threat_analysis", prompt=("You are an assistant preparing for a business meeting. " "Analyze the company information." "Company Information: Tesla"), agent_id="ip_threat_analysis"
+    Please provide a comprehensive summary suitable for a business meeting.
+    """,
+    agent_id="company_research_agent",
 )
 
-summarizer_agent = graphbit.Node.agent(name="summarizer_agent", prompt=("Summarize the information of the company."), agent_id="summarizer_agent")
+industry_trend_agent = Node.agent(
+    name="Industry Trend Agent",
+    prompt=f"""
+    You are an assistant preparing for a business meeting.
+    Summarize the latest industry trends and challenges related to the following company.
 
-# sales_strategy_agent = gb_node.agent(
-#     name="Sales Strategy Agent",
-#     prompt="""
-#     You are an assistant preparing for a business meeting.
-#     Based on the company and industry summaries, generate a concise and actionable sales strategy tailored for this meeting.
+    Industry News and Information:
+    {industry_info}
 
-#     Please provide:
-#     - Key talking points for the meeting
-#     - Specific recommended actions to increase the chances of a successful outcome
+    Please provide a comprehensive summary of key industry trends, recent developments, and challenges that are relevant for a business meeting.
+    """,
+    agent_id="industry_trend_agent",
+)
 
-#     Ensure your response is comprehensive, relevant, and suitable for a business meeting context.
-#     """,
-#     agent_id="sales_strategy_agent"
+# ip_threat_analysis = graphbit.Node.agent(
+#     name="ip_threat_analysis", prompt=("You are an assistant preparing for a business meeting. " "Analyze the company information." "Company Information: Tesla"), agent_id="ip_threat_analysis"
 # )
+
+# summarizer_agent = graphbit.Node.agent(name="summarizer_agent", prompt=("Summarize the information of the company."), agent_id="summarizer_agent")
+
+sales_strategy_agent = Node.agent(
+    name="Sales Strategy Agent",
+    prompt="""
+    You are an assistant preparing for a business meeting.
+    Based on the company and industry summaries, generate a concise and actionable sales strategy tailored for this meeting.
+
+    Please provide:
+    - Key talking points for the meeting
+    - Specific recommended actions to increase the chances of a successful outcome
+
+    Ensure your response is comprehensive, relevant, and suitable for a business meeting context.
+    """,
+    agent_id="sales_strategy_agent",
+)
 
 
 # Check if API key is available
@@ -74,17 +78,18 @@ executor = graphbit.Executor.new_memory_optimized(llm_config, timeout_seconds=30
 workflow = graphbit.Workflow("Meeting Preparation Workflow")
 
 # Add all agent nodes to the workflow
-# company_research_id = workflow.add_node(company_research_agent)
+company_research_id = workflow.add_node(company_research_agent)
 
-ip_threat_analysis_id = workflow.add_node(ip_threat_analysis)
-# industry_trend_id = workflow.add_node(industry_trend_agent)
-# sales_strategy_id = workflow.add_node(sales_strategy_agent)
-summarizer_id = workflow.add_node(summarizer_agent)
+# ip_threat_analysis_id = workflow.add_node(ip_threat_analysis)
+industry_trend_id = workflow.add_node(industry_trend_agent)
+sales_strategy_id = workflow.add_node(sales_strategy_agent)
+# summarizer_id = workflow.add_node(summarizer_agent)
 
 # Set up dependencies: sales_strategy_agent depends on both company_research_agent and industry_trend_agent
-# workflow.connect(company_research_id, sales_strategy_id)
-# workflow.connect(industry_trend_id, sales_strategy_id)
-workflow.connect(ip_threat_analysis_id, summarizer_id)
+workflow.connect(company_research_id, sales_strategy_id)
+workflow.connect(industry_trend_id, sales_strategy_id)
+
+# workflow.connect(ip_threat_analysis_id, summarizer_id)
 
 print("Connected nodes successfully")
 
