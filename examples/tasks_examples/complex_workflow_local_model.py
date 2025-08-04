@@ -108,12 +108,14 @@ def extract_output(result, agent_id: str, fallback_name="Task") -> str:
 def run_complex_workflow_mistral():
     """Run a complex multi-step workflow using the LLaMA model with Graphbit."""
     print("[LOG]  Running Complex Workflow with LLaMA...")
-    os.environ["OLLAMA_MODEL"] = "llama3.2"
-    model = os.getenv("OLLAMA_MODEL", "llama3.2")
+    # os.environ["OLLAMA_MODEL"] = "tinyllama"
+    # model = os.getenv("OLLAMA_MODEL", "tinyllama")
+    api_key = os.getenv("OPENAI_API_KEY")
 
     graphbit.init()
-    print(f"[LOG] Using Ollama model: {model}")
-    llm_config = graphbit.LlmConfig.ollama(model)
+    # print(f"[LOG] Using Ollama model: {model}")
+    # llm_config = graphbit.LlmConfig.ollama(model)
+    llm_config = graphbit.LlmConfig.openai(api_key=api_key, model="gpt-4o")
 
     # Create memory-optimized executor with timeout
     executor = graphbit.Executor.new_memory_optimized(llm_config, timeout_seconds=300)
@@ -124,16 +126,37 @@ def run_complex_workflow_mistral():
     workflow = graphbit.Workflow("Complex Workflow Benchmark")
 
     # Create nodes and track their IDs
-    node_ids = {}
-    for step in COMPLEX_WORKFLOW_STEPS:
-        node = graphbit.Node.agent(name=step["task"], prompt=step["prompt"], agent_id=agent_id)
-        node_id = workflow.add_node(node)
-        node_ids[step["task"]] = node_id
+    # node_ids = {}
+    # for step in COMPLEX_WORKFLOW_STEPS:
+    #     node = graphbit.Node.agent(name=step["task"], prompt=step["prompt"], agent_id=agent_id)
+    #     node_id = workflow.add_node(node)
+    #     node_ids[step["task"]] = node_id
 
     # Connect nodes based on dependencies
-    for step in COMPLEX_WORKFLOW_STEPS:
-        for dep in step.get("depends_on", []):
-            workflow.connect(node_ids[dep], node_ids[step["task"]])
+    # for step in COMPLEX_WORKFLOW_STEPS:
+    #     for dep in step.get("depends_on", []):
+    #         workflow.connect(node_ids[dep], node_ids[step["task"]])
+
+    ip_threat_analysis = graphbit.Node.agent(
+    name="about_junaidinfiniti", 
+    prompt=("junaidinfiniti had recently started working in infinitibit, there he joined the GraphBit Dev team and is currently working on the Graphbit framework. He is a very good developer and is very good at problem solving."
+        "He has been ill lately but he is still contributing to the project, specially both in rust and python related task of the framework."
+        "Rate junaidinfiniti considering he is a fresher."
+    ), 
+    agent_id="ip_threat_analysis"
+    )
+
+    summarizer_agent = graphbit.Node.agent(
+        name="suggestion_agent", 
+        prompt=("Provide some feedback to help become 10x developer using the given context only."), 
+        agent_id="summarizer_agent"
+        )
+
+    ip_threat_analysis_id = workflow.add_node(ip_threat_analysis)
+    summarizer_agent_id = workflow.add_node(summarizer_agent)
+
+    workflow.connect(ip_threat_analysis_id, summarizer_agent_id)
+
 
     workflow.validate()
 
@@ -143,28 +166,30 @@ def run_complex_workflow_mistral():
         print("[ERROR] Workflow execution failed:", result.state())
         return
 
-    variables = result.variables()
-    total_tokens = 0
+    print(result.get_all_variables())
 
-    print("\n[LOG]  Complex Workflow Output:\n" + "-" * 60)
+    # variables = result.variables()
+    # total_tokens = 0
 
-    # Debug: print all variables to understand the structure
-    print(f"[DEBUG] Found {len(variables)} variables:")
-    for i, (_key, value) in enumerate(variables):
-        print(f"  Variable {i}: key='{_key}', value='{str(value)[:100]}...' (length: {len(str(value))})")
+    # print("\n[LOG]  Complex Workflow Output:\n" + "-" * 60)
 
-    for i, (_key, _value) in enumerate(variables):
-        if i < len(COMPLEX_WORKFLOW_STEPS):
-            prompt = COMPLEX_WORKFLOW_STEPS[i]["prompt"]
-            task = COMPLEX_WORKFLOW_STEPS[i]["task"]
-            output = extract_output(result, agent_id, task)
-            tokens = count_tokens_estimate(prompt + output)
-            total_tokens += tokens
+    # # Debug: print all variables to understand the structure
+    # print(f"[DEBUG] Found {len(variables)} variables:")
+    # for i, (_key, value) in enumerate(variables):
+    #     print(f"  Variable {i}: key='{_key}', value='{str(value)[:100]}...' (length: {len(str(value))})")
 
-            print(f"\nStep {i+1}: {task}\n→ {output[:300]}...\n[Tokens: {tokens}]")
+    # for i, (_key, _value) in enumerate(variables):
+    #     if i < len(COMPLEX_WORKFLOW_STEPS):
+    #         prompt = COMPLEX_WORKFLOW_STEPS[i]["prompt"]
+    #         task = COMPLEX_WORKFLOW_STEPS[i]["task"]
+    #         output = extract_output(result, agent_id, task)
+    #         tokens = count_tokens_estimate(prompt + output)
+    #         total_tokens += tokens
 
-    print("\n" + "-" * 60)
-    print(f"[LOG]  Total tokens used: {total_tokens}")
+    #         print(f"\nStep {i+1}: {task}\n→ {output[:300]}...\n[Tokens: {tokens}]")
+
+    # print("\n" + "-" * 60)
+    # print(f"[LOG]  Total tokens used: {total_tokens}")
     print("[LOG]  Complex workflow completed.")
 
 
