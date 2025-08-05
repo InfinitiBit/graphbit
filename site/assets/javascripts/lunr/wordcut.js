@@ -2169,9 +2169,9 @@ Glob.prototype._processReaddir2 = function (prefix, read, abs, remain, index, in
 
   // It will only match dot entries if it starts with a dot, or if
   // dot is set.  Stuff like @(.foo|.bar) isn't allowed.
-  var on = remain[0]
+  var pn = remain[0]
   var negate = !!this.minimatch.negate
-  var rawGlob = on._glob
+  var rawGlob = pn._glob
   var dotOk = this.dot || rawGlob.charAt(0) === '.'
 
   var matchedEntries = []
@@ -2180,9 +2180,9 @@ Glob.prototype._processReaddir2 = function (prefix, read, abs, remain, index, in
     if (e.charAt(0) !== '.' || dotOk) {
       var m
       if (negate && !prefix) {
-        m = !e.match(on)
+        m = !e.match(pn)
       } else {
-        m = e.match(on)
+        m = e.match(pn)
       }
       if (m)
         matchedEntries.push(e)
@@ -2710,9 +2710,9 @@ GlobSync.prototype._processReaddir = function (prefix, read, abs, remain, index,
 
   // It will only match dot entries if it starts with a dot, or if
   // dot is set.  Stuff like @(.foo|.bar) isn't allowed.
-  var on = remain[0]
+  var pn = remain[0]
   var negate = !!this.minimatch.negate
-  var rawGlob = on._glob
+  var rawGlob = pn._glob
   var dotOk = this.dot || rawGlob.charAt(0) === '.'
 
   var matchedEntries = []
@@ -2721,9 +2721,9 @@ GlobSync.prototype._processReaddir = function (prefix, read, abs, remain, index,
     if (e.charAt(0) !== '.' || dotOk) {
       var m
       if (negate && !prefix) {
-        m = !e.match(on)
+        m = !e.match(pn)
       } else {
-        m = e.match(on)
+        m = e.match(pn)
       }
       if (m)
         matchedEntries.push(e)
@@ -3331,7 +3331,7 @@ function parseNegate () {
 }
 
 // Brace expansion:
-// a{b,c}d -> and acd
+// a{b,c}d -> abd acd
 // a{b,}c -> abc ac
 // a{0..3}d -> a0d a1d a2d a3d
 // a{b,c{d,e}f}g -> abg acdfg acefg
@@ -4346,7 +4346,7 @@ var process = module.exports = {};
 var cachedSetTimeout;
 var cachedClearTimeout;
 
-function defaultSetTimeout() {
+function defaultSetTimout() {
     throw new Error('setTimeout has not been defined');
 }
 function defaultClearTimeout () {
@@ -4357,10 +4357,10 @@ function defaultClearTimeout () {
         if (typeof setTimeout === 'function') {
             cachedSetTimeout = setTimeout;
         } else {
-            cachedSetTimeout = defaultSetTimeout;
+            cachedSetTimeout = defaultSetTimout;
         }
     } catch (e) {
-        cachedSetTimeout = defaultSetTimeout;
+        cachedSetTimeout = defaultSetTimout;
     }
     try {
         if (typeof clearTimeout === 'function') {
@@ -4374,23 +4374,23 @@ function defaultClearTimeout () {
 } ())
 function runTimeout(fun) {
     if (cachedSetTimeout === setTimeout) {
-        //normal environments in sane situations
+        //normal enviroments in sane situations
         return setTimeout(fun, 0);
     }
     // if setTimeout wasn't available but was latter defined
-    if ((cachedSetTimeout === defaultSetTimeout || !cachedSetTimeout) && setTimeout) {
+    if ((cachedSetTimeout === defaultSetTimout || !cachedSetTimeout) && setTimeout) {
         cachedSetTimeout = setTimeout;
         return setTimeout(fun, 0);
     }
     try {
-        // when when somebody has screwed with setTimeout but no I.E. madness
+        // when when somebody has screwed with setTimeout but no I.E. maddness
         return cachedSetTimeout(fun, 0);
     } catch(e){
         try {
             // When we are in I.E. but the script has been evaled so I.E. doesn't trust the global object when called normally
             return cachedSetTimeout.call(null, fun, 0);
         } catch(e){
-            // same as above but when it's a version of I.E. that must have the global object for 'this', hopefully our context correct otherwise it will throw a global error
+            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error
             return cachedSetTimeout.call(this, fun, 0);
         }
     }
@@ -4399,7 +4399,7 @@ function runTimeout(fun) {
 }
 function runClearTimeout(marker) {
     if (cachedClearTimeout === clearTimeout) {
-        //normal environments in sane situations
+        //normal enviroments in sane situations
         return clearTimeout(marker);
     }
     // if clearTimeout wasn't available but was latter defined
@@ -4408,14 +4408,14 @@ function runClearTimeout(marker) {
         return clearTimeout(marker);
     }
     try {
-        // when when somebody has screwed with setTimeout but no I.E. madness
+        // when when somebody has screwed with setTimeout but no I.E. maddness
         return cachedClearTimeout(marker);
     } catch (e){
         try {
             // When we are in I.E. but the script has been evaled so I.E. doesn't  trust the global object when called normally
             return cachedClearTimeout.call(null, marker);
         } catch (e){
-            // same as above but when it's a version of I.E. that must have the global object for 'this', hopefully our context correct otherwise it will throw a global error.
+            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error.
             // Some versions of I.E. have different rules for clearTimeout vs setTimeout
             return cachedClearTimeout.call(this, marker);
         }
@@ -4481,7 +4481,7 @@ process.nextTick = function (fun) {
     }
 };
 
-// v8 likes predictable objects
+// v8 likes predictible objects
 function Item(fun, array) {
     this.fun = fun;
     this.array = array;
@@ -5617,7 +5617,7 @@ process.umask = function() { return 0; };
   // Internal recursive comparison function for `isEqual`.
   var eq = function(a, b, aStack, bStack) {
     // Identical objects are equal. `0 === -0`, but they aren't identical.
-    // See the [Harmony `equal` proposal](http://wiki.ecmascript.org/doku.php?id=harmony:egal).
+    // See the [Harmony `egal` proposal](http://wiki.ecmascript.org/doku.php?id=harmony:egal).
     if (a === b) return a !== 0 || 1 / a === 1 / b;
     // A strict comparison is necessary because `null == undefined`.
     if (a == null || b == null) return a === b;
@@ -5639,7 +5639,7 @@ process.umask = function() { return 0; };
         // `NaN`s are equivalent, but non-reflexive.
         // Object(NaN) is equivalent to NaN
         if (+a !== +a) return +b !== +b;
-        // An `equal` comparison is performed for other numeric values.
+        // An `egal` comparison is performed for other numeric values.
         return +a === 0 ? 1 / +a === 1 / b : +a === +b;
       case '[object Date]':
       case '[object Boolean]':
@@ -5961,7 +5961,7 @@ process.umask = function() { return 0; };
         source += "';\n" + evaluate + "\n__p+='";
       }
 
-      // Adobe VMs need the match returned to produce the correct offset.
+      // Adobe VMs need the match returned to produce the correct offest.
       return match;
     });
     source += "';\n";
@@ -6198,7 +6198,7 @@ exports.debuglog = function(set) {
 
 
 /**
- * Echos the value of a value. Tries to print the value out
+ * Echos the value of a value. Trys to print the value out
  * in the best way possible given the different types.
  *
  * @param {Object} obj The object to print out.
