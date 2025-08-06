@@ -368,6 +368,406 @@ client.reset_stats()
 
 ---
 
+## Document Processing
+
+### `DocumentLoaderConfig`
+
+Configuration class for document loading operations.
+
+#### Constructor
+
+##### `DocumentLoaderConfig(max_file_size=None, default_encoding=None, preserve_formatting=None)`
+Create a new document loader configuration.
+
+```python
+# Default configuration
+config = graphbit.DocumentLoaderConfig()
+
+# Custom configuration
+config = graphbit.DocumentLoaderConfig(
+    max_file_size=50_000_000,      # 50MB limit
+    default_encoding="utf-8",       # Text encoding
+    preserve_formatting=True        # Keep document formatting
+)
+```
+
+**Parameters**:
+- `max_file_size` (int, optional): Maximum file size in bytes. Must be greater than 0
+- `default_encoding` (str, optional): Default text encoding for text files. Cannot be empty
+- `preserve_formatting` (bool, optional): Whether to preserve document formatting. Default: False
+
+#### Properties
+
+##### `max_file_size`
+Get or set the maximum file size limit.
+
+```python
+size = config.max_file_size
+config.max_file_size = 100_000_000  # 100MB
+```
+
+##### `default_encoding`
+Get or set the default text encoding.
+
+```python
+encoding = config.default_encoding
+config.default_encoding = "utf-8"
+```
+
+##### `preserve_formatting`
+Get or set the formatting preservation flag.
+
+```python
+preserve = config.preserve_formatting
+config.preserve_formatting = True
+```
+
+##### `extraction_settings`
+Get or set extraction settings as a dictionary.
+
+```python
+settings = config.extraction_settings
+config.extraction_settings = {"pdf_parser": "advanced", "ocr_enabled": True}
+```
+
+### `DocumentContent`
+
+Contains the extracted content and metadata from a loaded document.
+
+#### Properties
+
+##### `source`
+Get the source path or URL of the document.
+
+```python
+source_path = content.source
+```
+
+##### `document_type`
+Get the detected document type.
+
+```python
+doc_type = content.document_type  # "pdf", "txt", "docx", etc.
+```
+
+##### `content`
+Get the extracted text content.
+
+```python
+text = content.content
+```
+
+##### `file_size`
+Get the file size in bytes.
+
+```python
+size = content.file_size
+```
+
+##### `extracted_at`
+Get the extraction timestamp as a UTC timestamp.
+
+```python
+timestamp = content.extracted_at
+```
+
+##### `metadata`
+Get document metadata as a dictionary.
+
+```python
+metadata = content.metadata
+print(f"Author: {metadata.get('author', 'Unknown')}")
+print(f"Pages: {metadata.get('pages', 'N/A')}")
+```
+
+#### Methods
+
+##### `content_length()`
+Get the length of extracted content.
+
+```python
+length = content.content_length()
+```
+
+##### `is_empty()`
+Check if the extracted content is empty.
+
+```python
+if content.is_empty():
+    print("No content extracted")
+```
+
+##### `preview(max_length=500)`
+Get a preview of the content.
+
+```python
+preview = content.preview(200)  # First 200 characters
+full_preview = content.preview()  # First 500 characters (default)
+```
+
+### `DocumentLoader`
+
+Main class for loading and processing documents from various sources.
+
+#### Constructor
+
+##### `DocumentLoader(config=None)`
+Create a new document loader.
+
+```python
+# With default configuration
+loader = graphbit.DocumentLoader()
+
+# With custom configuration
+config = graphbit.DocumentLoaderConfig(max_file_size=10_000_000)
+loader = graphbit.DocumentLoader(config)
+```
+
+#### Methods
+
+##### `load_document(source_path, document_type)`
+Load and extract content from a document.
+
+```python
+# Load a PDF document
+content = loader.load_document("/path/to/document.pdf", "pdf")
+print(f"Extracted {content.content_length()} characters")
+
+# Load a text file
+content = loader.load_document("data/report.txt", "txt")
+print(content.content)
+
+# Load a Word document
+content = loader.load_document("docs/manual.docx", "docx")
+print(f"Document metadata: {content.metadata}")
+```
+
+**Parameters**:
+- `source_path` (str): Path to the document file. Cannot be empty
+- `document_type` (str): Type of document. Cannot be empty
+
+**Returns**: `DocumentContent` - The extracted content and metadata
+**Raises**: `ValueError` for invalid parameters, `RuntimeError` for loading errors
+
+#### Static Methods
+
+##### `DocumentLoader.supported_types()`
+Get list of supported document types.
+
+```python
+types = graphbit.DocumentLoader.supported_types()
+print(f"Supported formats: {types}")
+# Output: ['txt', 'pdf', 'docx', 'json', 'csv', 'xml', 'html']
+```
+
+##### `DocumentLoader.detect_document_type(file_path)`
+Detect document type from file extension.
+
+```python
+doc_type = graphbit.DocumentLoader.detect_document_type("report.pdf")
+print(f"Detected type: {doc_type}")  # "pdf"
+
+# Returns None if type cannot be detected
+unknown_type = graphbit.DocumentLoader.detect_document_type("file.unknown")
+print(unknown_type)  # None
+```
+
+##### `DocumentLoader.validate_document_source(source_path, document_type)`
+Validate document source and type combination.
+
+```python
+try:
+    graphbit.DocumentLoader.validate_document_source("report.pdf", "pdf")
+    print("Valid document source")
+except Exception as e:
+    print(f"Invalid: {e}")
+```
+
+### Document Processing Examples
+
+#### Basic Document Loading
+```python
+import graphbit
+
+# Initialize GraphBit
+graphbit.init()
+
+# Create loader with default settings
+loader = graphbit.DocumentLoader()
+
+# Load different document types
+pdf_content = loader.load_document("research_paper.pdf", "pdf")
+txt_content = loader.load_document("notes.txt", "txt")
+docx_content = loader.load_document("proposal.docx", "docx")
+
+# Access content
+print(f"PDF content preview: {pdf_content.preview()}")
+print(f"Text file size: {txt_content.file_size} bytes")
+print(f"Word doc metadata: {docx_content.metadata}")
+```
+
+#### Advanced Configuration
+```python
+# Configure for large documents with formatting preservation
+config = graphbit.DocumentLoaderConfig(
+    max_file_size=100_000_000,     # 100MB limit
+    default_encoding="utf-8",       # UTF-8 encoding
+    preserve_formatting=True        # Keep formatting
+)
+
+# Set custom extraction settings
+config.extraction_settings = {
+    "pdf_parser": "advanced",
+    "ocr_enabled": True,
+    "extract_images": False,
+    "table_detection": True
+}
+
+# Create loader with custom config
+loader = graphbit.DocumentLoader(config)
+
+# Load with enhanced processing
+content = loader.load_document("complex_document.pdf", "pdf")
+```
+
+#### Document Type Detection and Validation
+```python
+import os
+
+def process_document(file_path):
+    # Auto-detect document type
+    doc_type = graphbit.DocumentLoader.detect_document_type(file_path)
+    
+    if doc_type is None:
+        print(f"Unsupported file type: {file_path}")
+        return None
+    
+    # Validate before processing
+    try:
+        graphbit.DocumentLoader.validate_document_source(file_path, doc_type)
+    except Exception as e:
+        print(f"Validation failed: {e}")
+        return None
+    
+    # Load the document
+    loader = graphbit.DocumentLoader()
+    content = loader.load_document(file_path, doc_type)
+    
+    return content
+
+# Process multiple files
+files = ["report.pdf", "data.csv", "manual.docx", "notes.txt"]
+for file_path in files:
+    if os.path.exists(file_path):
+        content = process_document(file_path)
+        if content:
+            print(f"Processed {file_path}: {content.content_length()} characters")
+```
+
+#### Batch Document Processing
+```python
+import os
+import asyncio
+
+def load_documents_from_directory(directory_path):
+    """Load all supported documents from a directory"""
+    loader = graphbit.DocumentLoader()
+    supported_types = set(graphbit.DocumentLoader.supported_types())
+    
+    contents = []
+    
+    for filename in os.listdir(directory_path):
+        file_path = os.path.join(directory_path, filename)
+        
+        if os.path.isfile(file_path):
+            # Auto-detect type
+            doc_type = graphbit.DocumentLoader.detect_document_type(file_path)
+            
+            if doc_type in supported_types:
+                try:
+                    content = loader.load_document(file_path, doc_type)
+                    contents.append({
+                        'filename': filename,
+                        'type': doc_type,
+                        'content': content,
+                        'size': content.file_size,
+                        'length': content.content_length()
+                    })
+                    print(f"Loaded: {filename} ({doc_type})")
+                except Exception as e:
+                    print(f"Failed to load {filename}: {e}")
+            else:
+                print(f"Skipped unsupported file: {filename}")
+    
+    return contents
+
+# Process all documents in a directory
+document_data = load_documents_from_directory("./documents")
+
+# Summary
+total_docs = len(document_data)
+total_size = sum(doc['size'] for doc in document_data)
+total_content = sum(doc['length'] for doc in document_data)
+
+print(f"\nSummary:")
+print(f"Documents processed: {total_docs}")
+print(f"Total file size: {total_size:,} bytes")
+print(f"Total extracted content: {total_content:,} characters")
+```
+
+#### Error Handling Best Practices
+```python
+import graphbit
+
+def safe_document_loading(file_path, doc_type=None):
+    """Safely load a document with comprehensive error handling"""
+    
+    try:
+        # Auto-detect type if not provided
+        if doc_type is None:
+            doc_type = graphbit.DocumentLoader.detect_document_type(file_path)
+            if doc_type is None:
+                raise ValueError(f"Cannot detect document type for: {file_path}")
+        
+        # Validate source
+        graphbit.DocumentLoader.validate_document_source(file_path, doc_type)
+        
+        # Create loader with reasonable limits
+        config = graphbit.DocumentLoaderConfig(
+            max_file_size=50_000_000,  # 50MB limit
+            default_encoding="utf-8"
+        )
+        loader = graphbit.DocumentLoader(config)
+        
+        # Load document
+        content = loader.load_document(file_path, doc_type)
+        
+        # Validate result
+        if content.is_empty():
+            print(f"Warning: No content extracted from {file_path}")
+            return None
+        
+        return content
+        
+    except ValueError as e:
+        print(f"Invalid input: {e}")
+        return None
+    except RuntimeError as e:
+        print(f"Loading failed: {e}")
+        return None
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return None
+
+# Usage
+content = safe_document_loading("document.pdf")
+if content:
+    print(f"Successfully loaded document: {content.source}")
+    print(f"Content preview: {content.preview(100)}")
+```
+
+---
+
 ## Embeddings
 
 ### `EmbeddingConfig`

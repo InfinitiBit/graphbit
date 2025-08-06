@@ -85,6 +85,15 @@ impl DocumentLoader {
         // Check if source is a URL or file path
         let content = if source_path.starts_with("http://") || source_path.starts_with("https://") {
             self.load_from_url(source_path, document_type).await?
+        } else if source_path.contains("://") {
+            // This looks like a URL but not HTTP/HTTPS
+            return Err(GraphBitError::validation(
+                "document_loader",
+                format!(
+                    "Invalid URL format: {}. Only HTTP and HTTPS URLs are supported",
+                    source_path
+                ),
+            ));
         } else {
             self.load_from_file(source_path, document_type).await?
         };
@@ -171,14 +180,159 @@ impl DocumentLoader {
     /// Load document from URL
     async fn load_from_url(
         &self,
-        _url: &str,
-        _document_type: &str,
+        url: &str,
+        document_type: &str,
     ) -> GraphBitResult<DocumentContent> {
-        // For now, return an error - URL loading can be implemented later
-        Err(GraphBitError::validation(
-            "document_loader",
-            "URL loading not yet implemented. Please use local file paths.",
-        ))
+        // Validate URL format
+        if !url.starts_with("http://") && !url.starts_with("https://") {
+            return Err(GraphBitError::validation(
+                "document_loader",
+                format!("Invalid URL format: {}", url),
+            ));
+        }
+
+        // Create HTTP client with timeout and user agent
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(30))
+            .user_agent("GraphBit Document Loader/1.0")
+            .build()
+            .map_err(|e| {
+                GraphBitError::validation(
+                    "document_loader",
+                    format!("Failed to create HTTP client: {}", e),
+                )
+            })?;
+
+        // Fetch the document
+        let response = client.get(url).send().await.map_err(|e| {
+            GraphBitError::validation(
+                "document_loader",
+                format!("Failed to fetch URL {}: {}", url, e),
+            )
+        })?;
+
+        // Check response status
+        if !response.status().is_success() {
+            return Err(GraphBitError::validation(
+                "document_loader",
+                format!("HTTP error {}: {}", response.status(), url),
+            ));
+        }
+
+        // Check content length
+        if let Some(content_length) = response.content_length() {
+            if content_length as usize > self.config.max_file_size {
+                return Err(GraphBitError::validation(
+                    "document_loader",
+                    format!(
+                        "Remote file size ({} bytes) exceeds maximum allowed size ({} bytes)",
+                        content_length, self.config.max_file_size
+                    ),
+                ));
+            }
+        }
+
+        // Get content type from response headers
+        let content_type = response
+            .headers()
+            .get("content-type")
+            .and_then(|h| h.to_str().ok())
+            .unwrap_or("")
+            .to_lowercase();
+
+        // Download the content
+        let content_bytes = response.bytes().await.map_err(|e| {
+            GraphBitError::validation(
+                "document_loader",
+                format!("Failed to read response body: {}", e),
+            )
+        })?;
+
+        // Check actual size
+        if content_bytes.len() > self.config.max_file_size {
+            return Err(GraphBitError::validation(
+                "document_loader",
+                format!(
+                    "Downloaded file size ({} bytes) exceeds maximum allowed size ({} bytes)",
+                    content_bytes.len(),
+                    self.config.max_file_size
+                ),
+            ));
+        }
+
+        // Convert bytes to string based on document type
+        let content = match document_type.to_lowercase().as_str() {
+            "txt" | "json" | "csv" | "xml" | "html" => String::from_utf8(content_bytes.to_vec())
+                .map_err(|e| {
+                    GraphBitError::validation(
+                        "document_loader",
+                        format!("Failed to decode text content: {}", e),
+                    )
+                })?,
+            "pdf" | "docx" => {
+                return Err(GraphBitError::validation(
+                    "document_loader",
+                    format!(
+                        "URL loading for {} documents is not yet supported",
+                        document_type
+                    ),
+                ));
+            }
+            _ => {
+                return Err(GraphBitError::validation(
+                    "document_loader",
+                    format!(
+                        "Unsupported document type for URL loading: {}",
+                        document_type
+                    ),
+                ));
+            }
+        };
+
+        // Process content based on type
+        let processed_content = match document_type.to_lowercase().as_str() {
+            "json" => {
+                // Validate and format JSON
+                let json_value: serde_json::Value =
+                    serde_json::from_str(&content).map_err(|e| {
+                        GraphBitError::validation(
+                            "document_loader",
+                            format!("Invalid JSON content: {}", e),
+                        )
+                    })?;
+                serde_json::to_string_pretty(&json_value).map_err(|e| {
+                    GraphBitError::validation(
+                        "document_loader",
+                        format!("Failed to format JSON: {}", e),
+                    )
+                })?
+            }
+            _ => content,
+        };
+
+        // Create metadata
+        let mut metadata = HashMap::new();
+        metadata.insert(
+            "file_size".to_string(),
+            serde_json::Value::Number(content_bytes.len().into()),
+        );
+        metadata.insert(
+            "url".to_string(),
+            serde_json::Value::String(url.to_string()),
+        );
+        metadata.insert(
+            "content_type".to_string(),
+            serde_json::Value::String(content_type),
+        );
+
+        Ok(DocumentContent {
+            source: url.to_string(),
+            document_type: document_type.to_string(),
+            content: processed_content,
+            metadata,
+            file_size: content_bytes.len(),
+            extracted_at: chrono::Utc::now(),
+        })
     }
 
     /// Extract content from plain text files
