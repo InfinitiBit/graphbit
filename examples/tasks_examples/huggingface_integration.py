@@ -1,3 +1,9 @@
+"""
+HuggingFace Integration Module.
+
+This module provides utilities for integrating HuggingFace models with GraphBit.
+"""
+
 import asyncio
 import os
 
@@ -23,13 +29,12 @@ graphbit.init()
 # Try different models that don't require 'sentences' parameter
 models_to_try = [
     "sentence-transformers/paraphrase-MiniLM-L3-v2",
-    "sentence-transformers/all-mpnet-base-v2", 
+    "sentence-transformers/all-mpnet-base-v2",
     "sentence-transformers/all-MiniLM-L12-v2",
     "sentence-transformers/msmarco-MiniLM-L-6-v3",
-    # Try some non-sentence-transformers models
     "intfloat/multilingual-e5-large",
     "BAAI/bge-large-en-v1.5",
-    "BAAI/bge-base-en-v1.5"
+    "BAAI/bge-base-en-v1.5",
 ]
 
 working_embedding_client = None
@@ -43,13 +48,13 @@ for model in models_to_try:
                 api_key=api_key,
             )
         )
-        
+
         # Test with single embedding
         test_embedding = embedding_client.embed("test")
         print(f"✅ Model {model} works! Generated {len(test_embedding)}-dimensional embedding")
         working_embedding_client = embedding_client
         break
-        
+
     except Exception as e:
         print(f"❌ Model {model} failed: {e}")
 
@@ -76,16 +81,12 @@ except Exception as e:
 
 # Generate embeddings with error handling
 try:
-    texts = [
-        "GraphBit is a framework for LLM workflows and agent orchestration.", 
-        "Hugging Face provides transformers and models for NLP tasks.", 
-        "OpenAI offers tools for LLMs and embeddings."
-    ]
-    
+    texts = ["GraphBit is a framework for LLM workflows and agent orchestration.", "Hugging Face provides transformers and models for NLP tasks.", "OpenAI offers tools for LLMs and embeddings."]
+
     print("📊 Generating embeddings...")
     embeddings = working_embedding_client.embed_many(texts)
     print(f"✅ Generated {len(embeddings)} embeddings")
-    
+
     query = "GraphBit"
     print(f"🔍 Generating query embedding for: '{query}'")
     query_embedding = working_embedding_client.embed(query)
@@ -95,7 +96,7 @@ try:
     context = []
     threshold = 0.3  # Lower threshold for better results
     print("🎯 Calculating similarities...")
-    
+
     for i, (text, embedding) in enumerate(zip(texts, embeddings)):
         try:
             similarity = working_embedding_client.similarity(query_embedding, embedding)
@@ -104,11 +105,11 @@ try:
                 context.append((text, similarity))
         except Exception as e:
             print(f"  ❌ Error calculating similarity for text {i+1}: {e}")
-    
+
     print(f"✅ Found {len(context)} texts above threshold")
 
     # Try LLM if available
-    if 'llm_client' in locals():
+    if "llm_client" in locals():
         # Simple prompt for text generation
         if context:
             context_text = "\n".join([f"- {text} (similarity: {sim:.3f})" for text, sim in context])
@@ -120,7 +121,7 @@ Context:
 Answer:"""
         else:
             prompt = "Explain what GraphBit is in one sentence."
-        
+
         print("🤖 Generating LLM response...")
         try:
             # Use asyncio.run() which creates a new event loop
