@@ -3,9 +3,14 @@
 # GraphBit - High Performance Agentic Framework
 
 
+<p align="center">
+    <img src="assets/Logo.png" width="140px" alt="Logo" />
+</p>
+
+
 <!-- Added placeholders for links, fill it up when the corresponding links are available. -->
 <p align="center">
-    <a href="https://graphbit-docs.vercel.app/">Website</a> |
+    <a href="https://graphbit.ai/">Website</a> |
     <a href=" ">Blog</a> |
     <a href="https://graphbit-docs.vercel.app/docs">Docs</a> 
     <br /><br />
