@@ -1,595 +1,161 @@
-# GraphBit Examples
+# Python Task Examples
 
-This directory contains example workflows and configurations to help you get started with GraphBit.
+This directory contains ready-to-run Python scripts demonstrating various GraphBit workflow patterns using both local and cloud LLMs.
 
-## Quick Start
+## How to Run
 
-1. **Set up your environment**:
-   ```bash
-   # For OpenAI (if using cloud models)
-   export OPENAI_API_KEY="your-api-key"
-   
-   # For Ollama (if using local models)
-   ollama serve
-   ollama pull llama3.1
-   ```
-
-2. **Run a basic example**:
-   ```bash
-   # Validate the workflow
-   graphbit validate examples/workflows/simple_analysis.json
-   
-   # Execute the workflow
-   graphbit run examples/workflows/simple_analysis.json
-   ```
-
-## Available Examples
-
-### Basic Workflows
-
-#### Simple Analysis (`workflows/simple_analysis.json`)
-A single-node workflow that demonstrates basic agent usage.
-
-**Use case**: Text analysis and summarization
-**LLM provider**: Any (OpenAI, Anthropic, Ollama)
-**Run time**: ~30 seconds
-
-```bash
-graphbit run examples/workflows/simple_analysis.json
-```
-
-#### Data Pipeline (`workflows/data_pipeline.json`)
-Multi-stage data processing workflow with sequential execution.
-
-**Use case**: Extract → Transform → Load pattern
-**Features**: Data flow between nodes, error handling
-**Run time**: ~1-2 minutes
-
-```bash
-graphbit run examples/workflows/data_pipeline.json
-```
-
-### Advanced Workflows
-
-#### Parallel Processing (`workflows/parallel_processing.json`)
-Demonstrates concurrent execution of independent tasks.
-
-**Use case**: Batch processing, parallel analysis
-**Features**: Concurrent execution, result aggregation
-**Run time**: ~45 seconds (vs 2+ minutes sequential)
-
-```bash
-graphbit run examples/workflows/parallel_processing.json
-```
-
-#### Conditional Workflow (`workflows/conditional_flow.json`)
-Shows conditional branching based on analysis results.
-
-**Use case**: Dynamic workflow routing, quality control
-**Features**: Conditional edges, validation nodes
-**Run time**: ~1 minute
-
-```bash
-graphbit run examples/workflows/conditional_flow.json
-```
-
-#### Content Generation (`workflows/content_generation.json`)
-Multi-agent content creation pipeline.
-
-**Use case**: Research → Write → Edit workflow
-**Features**: Specialized agents, content refinement
-**Run time**: ~2-3 minutes
-
-```bash
-graphbit run examples/workflows/content_generation.json
-```
-
-### Domain-Specific Examples
-
-#### Code Review (`workflows/code_review.json`)
-Automated code review using specialized models.
-
-**Use case**: Code quality analysis, security scanning
-**Recommended models**: CodeLlama, GPT-4, Claude
-**Run time**: ~1-2 minutes
-
-```bash
-graphbit run examples/workflows/code_review.json
-```
-
-#### Research Assistant (`workflows/research_assistant.json`)
-Academic research and citation workflow.
-
-**Use case**: Literature review, fact-checking
-**Features**: Web search integration, citation formatting
-**Run time**: ~3-5 minutes
-
-```bash
-graphbit run examples/workflows/research_assistant.json
-```
-
-#### Customer Support (`workflows/customer_support.json`)
-Multi-stage customer inquiry processing.
-
-**Use case**: Ticket classification, response generation
-**Features**: Sentiment analysis, priority routing
-**Run time**: ~1 minute
-
-```bash
-graphbit run examples/workflows/customer_support.json
-```
-
-## Configurations
-
-### Provider Configurations
-
-#### OpenAI Configuration (`configs/openai.json`)
-```json
-{
-  "llm": {
-    "provider": "openai",
-    "model": "gpt-4",
-    "api_key": "${OPENAI_API_KEY}"
-  },
-  "agents": {
-    "default": {
-      "max_tokens": 1000,
-      "temperature": 0.7
-    }
-  }
-}
-```
-
-#### Ollama Configuration (`configs/ollama.json`)
-```json
-{
-  "llm": {
-    "provider": "ollama",
-    "model": "llama3.1",
-    "base_url": "http://localhost:11434"
-  },
-  "agents": {
-    "default": {
-      "max_tokens": 1000,
-      "temperature": 0.7
-    }
-  }
-}
-```
-
-#### Multi-Provider Configuration (`configs/multi_provider.json`)
-```json
-{
-  "llm": {
-    "provider": "openai",
-    "base_url": "https://api.openai.com/v1"
-  },
-  "agents": {
-    "fast_agent": {
-      "provider": "ollama",
-      "model": "phi3",
-      "temperature": 0.8
-    },
-    "quality_agent": {
-      "provider": "openai", 
-      "model": "gpt-4",
-      "temperature": 0.3
-    }
-  }
-}
-```
-
-### Specialized Configurations
-
-#### Development Configuration (`configs/development.json`)
-Optimized for fast iteration and debugging.
-
-- Lower token limits for faster responses
-- Higher temperature for creative outputs
-- Verbose logging enabled
-
-#### Production Configuration (`configs/production.json`)
-Optimized for reliability and quality.
-
-- Conservative retry settings
-- Lower temperature for consistent outputs
-- Comprehensive error handling
-
-## Python Examples
-
-### Basic Usage (`example.py`)
-
-```python
-import graphbit
-import os
-
-# Set up configuration
-graphbit.init()
-
-# Create LLM configuration
-api_key = os.getenv("OPENAI_API_KEY")
-llm_config = graphbit.PyLlmConfig.openai(api_key, "gpt-4")
-
-# Create and run workflow
-builder = graphbit.PyWorkflowBuilder("Example Workflow")
-node = graphbit.PyWorkflowNode.agent_node(
-    "Analyzer",
-    "Analyzes input text",
-    "analyzer",
-    "Analyze this text: {input}"
-)
-
-workflow, _ = builder.add_node(node)
-workflow = builder.build()
-
-# Execute
-executor = graphbit.PyWorkflowExecutor(llm_config)
-result = executor.execute(workflow, {"input": "Hello, world!"})
-print(f"Result: {result}")
-```
-
-### Advanced Python Example
-
-```python
-import asyncio
-import graphbit
-
-async def advanced_workflow():
-    # Create multi-agent workflow
-    builder = graphbit.PyWorkflowBuilder("Advanced Analysis")
-    
-    # Research node
-    research_node = graphbit.PyWorkflowNode.agent_node(
-        "Researcher",
-        "Conducts research on the topic",
-        "researcher",
-        "Research the topic: {topic}"
-    )
-    
-    # Analysis node
-    analysis_node = graphbit.PyWorkflowNode.agent_node(
-        "Analyst", 
-        "Analyzes research findings",
-        "analyst",
-        "Analyze these findings: {research_data}"
-    )
-    
-    # Build workflow
-    workflow, research_id = builder.add_node(research_node)
-    workflow, analysis_id = builder.add_node(analysis_node)
-    
-    # Connect nodes
-    workflow = builder.add_edge(
-        research_id, 
-        analysis_id, 
-        graphbit.EdgeType.DataFlow
-    )
-    
-    workflow = builder.build()
-    
-    # Execute with input
-    executor = graphbit.PyWorkflowExecutor(config)
-    result = await executor.execute_async(workflow, {
-        "topic": "Artificial Intelligence trends"
-    })
-    
-    return result
-
-# Run the workflow
-result = asyncio.run(advanced_workflow())
-print(f"Analysis complete: {result}")
-```
-
-## Creating Your Own Examples
-
-### Workflow Structure
-
-All workflows follow this basic structure:
-
-```json
-{
-  "name": "Your Workflow Name",
-  "description": "Brief description of what this workflow does",
-  "nodes": [
-    {
-      "id": "unique-node-id",
-      "type": "agent|condition|transform|delay",
-      "name": "Human-readable name", 
-      "description": "What this node does",
-      "config": {
-        // Node-specific configuration
-      }
-    }
-  ],
-  "edges": [
-    {
-      "from": "source-node-id",
-      "to": "target-node-id", 
-      "type": "data_flow|control_flow|conditional"
-    }
-  ]
-}
-```
-
-### Node Types and Configurations
-
-#### Agent Node
-```json
-{
-  "id": "analyzer",
-  "type": "agent",
-  "name": "Data Analyzer",
-  "config": {
-    "agent_id": "default",
-    "prompt": "Analyze this data: {input}",
-    "max_tokens": 1000,
-    "temperature": 0.7
-  }
-}
-```
-
-#### Condition Node
-```json
-{
-  "id": "quality_check",
-  "type": "condition", 
-  "name": "Quality Gate",
-  "config": {
-    "expression": "confidence > 0.8 && length > 100"
-  }
-}
-```
-
-#### Transform Node
-```json
-{
-  "id": "formatter",
-  "type": "transform",
-  "name": "Format Output",
-  "config": {
-    "transformation": "uppercase|lowercase|json_extract",
-    "field": "content"
-  }
-}
-```
-
-#### Delay Node
-```json
-{
-  "id": "wait",
-  "type": "delay",
-  "name": "Wait Period", 
-  "config": {
-    "duration_seconds": 30
-  }
-}
-```
-
-### Edge Types
-
-#### Data Flow
-Passes output from source node as input to target node.
-```json
-{"from": "analyzer", "to": "processor", "type": "data_flow"}
-```
-
-#### Control Flow  
-Ensures execution order without passing data.
-```json
-{"from": "setup", "to": "main_task", "type": "control_flow"}
-```
-
-#### Conditional
-Only executes if condition is met.
-```json
-{
-  "from": "validator", 
-  "to": "publisher", 
-  "type": "conditional",
-  "condition": "validation_passed == true"
-}
-```
-
-### Best Practices
-
-#### Prompt Design
-- Use clear, specific instructions
-- Include examples for complex tasks
-- Use template variables for dynamic content
-- Test prompts independently before workflow integration
-
-```json
-{
-  "prompt": "Analyze the following text for sentiment and key themes:\n\nText: {input_text}\n\nProvide your analysis in JSON format:\n{\n  \"sentiment\": \"positive|negative|neutral\",\n  \"confidence\": 0.95,\n  \"key_themes\": [\"theme1\", \"theme2\"]\n}"
-}
-```
-
-#### Error Handling
-- Set appropriate timeout values
-- Configure retry logic for unreliable operations
-- Use validation nodes to catch errors early
-- Provide fallback paths for critical workflows
-
-```json
-{
-  "config": {
-    "retry": {
-      "max_attempts": 3,
-      "delay_seconds": 5,
-      "exponential_backoff": true
-    },
-    "timeout_seconds": 120
-  }
-}
-```
-
-#### Performance Optimization
-- Use parallel execution for independent tasks
-- Choose appropriate model sizes for each task
-- Cache results when possible
-- Monitor token usage and costs
-
-### Testing Your Examples
-
-1. **Validate syntax**:
-   ```bash
-   graphbit validate examples/workflows/your_workflow.json
-   ```
-
-2. **Test with mock data**:
-   ```bash
-   echo '{"input": "test data"}' | graphbit run examples/workflows/your_workflow.json
-   ```
-
-3. **Debug mode**:
-   ```bash
-   RUST_LOG=debug graphbit run examples/workflows/your_workflow.json --verbose
-   ```
-
-4. **Benchmark performance**:
-   ```bash
-   time graphbit run examples/workflows/your_workflow.json
-   ```
-
-## Common Patterns
-
-### Fan-Out/Fan-In
-Process multiple items in parallel, then aggregate results.
-
-```json
-{
-  "nodes": [
-    {"id": "splitter", "type": "transform", "config": {"transformation": "split"}},
-    {"id": "processor1", "type": "agent", "config": {"prompt": "Process: {item}"}},
-    {"id": "processor2", "type": "agent", "config": {"prompt": "Process: {item}"}}, 
-    {"id": "processor3", "type": "agent", "config": {"prompt": "Process: {item}"}},
-    {"id": "aggregator", "type": "agent", "config": {"prompt": "Combine results: {results}"}}
-  ],
-  "edges": [
-    {"from": "splitter", "to": "processor1", "type": "data_flow"},
-    {"from": "splitter", "to": "processor2", "type": "data_flow"},
-    {"from": "splitter", "to": "processor3", "type": "data_flow"},
-    {"from": "processor1", "to": "aggregator", "type": "data_flow"},
-    {"from": "processor2", "to": "aggregator", "type": "data_flow"},
-    {"from": "processor3", "to": "aggregator", "type": "data_flow"}
-  ]
-}
-```
-
-### Pipeline Pattern
-Sequential processing stages with validation.
-
-```json
-{
-  "nodes": [
-    {"id": "extract", "type": "agent", "config": {"prompt": "Extract data from: {input}"}},
-    {"id": "validate1", "type": "condition", "config": {"expression": "extracted_items > 0"}},
-    {"id": "transform", "type": "agent", "config": {"prompt": "Transform data: {data}"}},
-    {"id": "validate2", "type": "condition", "config": {"expression": "quality_score > 0.8"}},
-    {"id": "load", "type": "agent", "config": {"prompt": "Format for output: {data}"}}
-  ],
-  "edges": [
-    {"from": "extract", "to": "validate1", "type": "data_flow"},
-    {"from": "validate1", "to": "transform", "type": "conditional", "condition": "passed"},
-    {"from": "transform", "to": "validate2", "type": "data_flow"},
-    {"from": "validate2", "to": "load", "type": "conditional", "condition": "passed"}
-  ]
-}
-```
-
-### Router Pattern
-Dynamic routing based on content analysis.
-
-```json
-{
-  "nodes": [
-    {"id": "classifier", "type": "agent", "config": {"prompt": "Classify this request: {input}"}},
-    {"id": "route_simple", "type": "agent", "config": {"prompt": "Handle simple request: {input}"}},
-    {"id": "route_complex", "type": "agent", "config": {"prompt": "Handle complex request: {input}"}},
-    {"id": "route_escalate", "type": "agent", "config": {"prompt": "Escalate request: {input}"}}
-  ],
-  "edges": [
-    {"from": "classifier", "to": "route_simple", "type": "conditional", "condition": "classification == 'simple'"},
-    {"from": "classifier", "to": "route_complex", "type": "conditional", "condition": "classification == 'complex'"},
-    {"from": "classifier", "to": "route_escalate", "type": "conditional", "condition": "classification == 'escalate'"}
-  ]
-}
-```
-
-## Troubleshooting
-
-### Common Issues
-
-#### API Key Not Set
-```bash
-Error: Authentication failed
-```
-**Solution**: Set your API key environment variable
-```bash
-export OPENAI_API_KEY="your-key-here"
-```
-
-#### Ollama Not Running
-```bash
-Error: Connection refused
-```
-**Solution**: Start Ollama server
+1. **Set up your environment:**
+- For local models (Ollama):  
 ```bash
 ollama serve
+ollama pull llama3.2
 ```
-
-#### Model Not Found
+- For Perplexity (cloud):  
 ```bash
-Error: Model not available
+export PERPLEXITY_API_KEY="your-api-key"
 ```
-**Solution**: Pull the required model
+
+2. **Run an example:**
 ```bash
-ollama pull llama3.1
-```
-
-#### Timeout Errors
-```bash
-Error: Request timeout
-```
-**Solution**: Increase timeout in configuration
-```json
-{"timeout_seconds": 300}
-```
-
-### Debug Tips
-
-1. **Start simple**: Begin with single-node workflows
-2. **Use verbose mode**: Add `--verbose` flag for detailed logs
-3. **Check node outputs**: Use transform nodes to inspect intermediate results
-4. **Validate incrementally**: Add nodes one at a time and test
-5. **Monitor resources**: Watch CPU/memory usage for large workflows
-
-## Contributing Examples
-
-We welcome contributions of new examples! Please:
-
-1. **Follow naming conventions**: Use descriptive, kebab-case names
-2. **Add documentation**: Include clear descriptions and use cases
-3. **Test thoroughly**: Ensure examples work with different providers
-4. **Add variety**: Cover different domains and complexity levels
-5. **Include configs**: Provide appropriate configuration files
-
-### Example Submission Template
-
-```json
-{
-  "name": "Your Example Name",
-  "description": "Detailed description of what this example demonstrates",
-  "use_case": "Real-world scenario this solves",
-  "complexity": "basic|intermediate|advanced",
-  "estimated_runtime": "30 seconds - 2 minutes",
-  "required_models": ["gpt-4", "llama3.1"],
-  "dependencies": ["ollama", "internet_access"],
-  "nodes": [...],
-  "edges": [...]
-}
+python examples/tasks_examples/simple_task_local_model.py
 ```
 
 ---
 
-For more examples and patterns, visit our [GitHub repository](https://github.com/InfinitiBit/graphbit) or join our [Discord community](https://discord.gg/graphbit). 
+## 🛠️ GraphBit Python API Tutorial
+
+All example scripts in this directory use the **GraphBit Python API** to build and run AI workflows. Here’s a minimal step-by-step guide to the core GraphBit workflow pattern, as seen in these scripts:
+
+### 1. **Initialize GraphBit**
+```python
+import graphbit
+graphbit.init()
+```
+This sets up the GraphBit runtime and logging.
+
+---
+
+### 2. **Configure Your LLM Provider**
+- **openai (cloud):**
+  ```python
+  llm_config = graphbit.LlmConfig.openai(model=gpt-3.5-turbo, api_key=api_key)
+  ```
+- **Ollama (local):**
+  ```python
+  llm_config = graphbit.LlmConfig.ollama("llama3.2")
+  ```
+- **Perplexity (cloud):**
+  ```python
+  llm_config = graphbit.LlmConfig.perplexity(api_key, "sonar")
+  ```
+
+---
+
+### 3. **Create an Executor**
+Choose the executor type based on your use case:
+```python
+executor = graphbit.Executor.new_low_latency(llm_config)
+
+# or for high-throughput pipelines:
+executor = graphbit.Executor.new_high_throughput(llm_config, timeout_seconds=60)
+
+# or for memory-intensive tasks:
+executor = graphbit.Executor.new_memory_optimized(llm_config, timeout_seconds=300)
+
+# Configure additional settings for memory-intensive tasks if needed
+executor.configure(timeout_seconds=300, max_retries=3, enable_metrics=True, debug=False)
+```
+---
+
+### 4. **Build a Workflow**
+Create a workflow and add agent nodes:
+```python
+workflow = graphbit.Workflow("My Example Workflow")
+node = graphbit.Node.agent(
+    name="Task Executor",
+    prompt="Summarize this text: {input}",
+    agent_id="unique-agent-id"
+)
+workflow.add_node(node1)
+workflow.add_node(node2)
+workflow.connect(node1,node2)
+workflow.validate()
+```
+For multi-step or complex workflows, add multiple nodes and connect them as needed.
+
+---
+
+### 5. **Run the Workflow**
+```python
+result = executor.execute(workflow)
+if result.is_failed():
+    print("Workflow failed:", result.state())
+else:
+    print("Output:", result.variables())
+```
+
+---
+
+### 6. **Example: Minimal End-to-End Script**
+```python
+import graphbit
+import uuid
+
+graphbit.init()
+llm_config = graphbit.LlmConfig.ollama("llama3.2")
+executor = graphbit.Executor.new_low_latency(llm_config)
+workflow = graphbit.Workflow("Simple Task")
+agent_id = str(uuid.uuid4())
+node = graphbit.Node.agent(
+    name="Summarizer",
+    prompt="Summarize: {input}",
+    agent_id=agent_id
+)
+workflow.add_node(node1)
+workflow.add_node(node2)
+workflow.connect(node1,node2)
+workflow.validate()
+result = executor.execute(workflow)
+print("Result:", result.variables())
+```
+
+---
+
+**Explore the scripts in this folder for more advanced patterns:**
+- Real-time web search with Perplexity (`simple_task_perplexity.py`)
+- Memory-optimized large prompt tasks (`memory_task_local_model.py`)
+- Multi-step and dependency-based workflows (`sequential_task_local_model.py`, `complex_workflow_local_model.py`)
+
+*For more details, see the [GraphBit Python API documentation](../docs/index.md).*
+
+---
+
+## Available Python Examples
+
+**simple_task_local_model.py**  
+*Single-agent workflow using the local Llama 3.2 model via Ollama. Summarizes a fictional journal entry.*  
+_Requires Ollama running locally._
+
+**sequential_task_local_model.py**  
+*Sequential multi-step pipeline using Llama 3.2. Each step addresses a different aspect of software IP protection, with outputs chained stepwise.*  
+_Requires Ollama running locally._
+
+**complex_workflow_local_model.py**  
+*Complex, multi-step workflow with explicit dependencies between tasks, covering a comprehensive IP protection strategy.*  
+_Requires Ollama running locally._
+
+**memory_task_local_model.py**  
+*Memory-intensive, single-agent task with a large prompt, using Llama 3.2 via Ollama. Provides a deep legal/technical analysis.*  
+_Requires Ollama running locally._
+
+**simple_task_perplexity.py**  
+*Single-agent workflow using Perplexity’s cloud models (with real-time web search). Summarizes recent AI/ML developments.*  
+_Requires `PERPLEXITY_API_KEY` environment variable._
+
+**chatbot**  
+*A conversational AI chatbot with vector database integration for context retrieval and memory storage. Includes a FastAPI backend and Streamlit frontend.*  
+_Requires OpenAI API key and ChromaDB._
+
+**llm_guided_browser_automation.py**  
+*Automates browser interactions using LLMs to guide actions. Demonstrates how to use GraphBit for real-time decision-making in web automation tasks.*  
+_Requires Selenium and a configured LLM provider._
