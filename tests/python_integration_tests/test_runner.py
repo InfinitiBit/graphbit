@@ -13,6 +13,7 @@ class IntegrationTestRunner:
     def __init__(self) -> None:
         """Initialize the test runner with default test modules."""
         self.test_modules = [
+            ("tests_document_loader.py", "Document Loader Integration Tests"),
             ("tests_embeddings.py", "Embedding Integration Tests"),
             ("tests_llm.py", "LLM Integration Tests"),
             ("tests_static_workflow.py", "Static Workflow Integration Tests"),

@@ -52,6 +52,7 @@ use std::sync::Once;
 use tracing::{error, info, warn};
 
 // Module declarations
+mod document_loader;
 mod embeddings;
 mod errors;
 mod llm;
@@ -61,6 +62,7 @@ mod validation;
 mod workflow;
 
 // Re-export all public types and functions
+pub use document_loader::{PyDocumentContent, PyDocumentLoader, PyDocumentLoaderConfig};
 pub use embeddings::{EmbeddingClient, EmbeddingConfig};
 pub use llm::{LlmClient, LlmConfig};
 pub use text_splitter::{
@@ -349,6 +351,11 @@ fn graphbit(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(health_check, m)?)?;
     m.add_function(wrap_pyfunction!(configure_runtime, m)?)?;
     m.add_function(wrap_pyfunction!(shutdown, m)?)?;
+
+    // Document loader classes
+    m.add_class::<PyDocumentLoaderConfig>()?;
+    m.add_class::<PyDocumentContent>()?;
+    m.add_class::<PyDocumentLoader>()?;
 
     // LLM classes
     m.add_class::<LlmConfig>()?;

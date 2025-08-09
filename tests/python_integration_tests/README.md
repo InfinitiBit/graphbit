@@ -4,7 +4,16 @@ This directory contains comprehensive integration tests for the GraphBit Python 
 
 ## Test Categories
 
-### 1. Embedding Integration Tests (`tests_embeddings.py`)
+### 1. Document Loader Integration Tests (`tests_document_loader.py`)
+- **Document Loading**: Text, JSON, CSV, XML, HTML document loading and content extraction
+- **Configuration**: DocumentLoaderConfig creation, validation, and property management
+- **File Handling**: Unicode support, empty files, large files, size limits
+- **Validation**: Input validation, file existence checks, type validation
+- **Error Handling**: Non-existent files, unsupported types, size limit exceeded
+- **Performance**: Multiple document loading, large file processing
+- **Utility Functions**: Document type detection, source validation, metadata extraction
+
+### 2. Embedding Integration Tests (`tests_embeddings.py`)
 - **OpenAI Embeddings**: Configuration, single/multiple text embedding, dimensions, consistency
 - **HuggingFace Embeddings**: Configuration, text embedding, API integration
 - **Utility Functions**: Cosine similarity, embedding requests/responses
