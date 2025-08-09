@@ -2,6 +2,7 @@
 
 use graphbit_core::types::{WorkflowContext, WorkflowState};
 use pyo3::prelude::*;
+use serde_json;
 use std::collections::HashMap;
 
 #[pyclass]
@@ -61,6 +62,38 @@ impl WorkflowResult {
             .variables
             .iter()
             .filter_map(|(k, v)| v.as_str().map(|s| (k.clone(), s.to_string())))
+            .collect()
+    }
+
+    /// Get a node's output by name or ID
+    fn get_node_output(&self, node_name: &str) -> Option<String> {
+        self.inner.get_node_output(node_name).and_then(|v| {
+            // Try to get as string first, then fall back to JSON serialization
+            if let Some(s) = v.as_str() {
+                Some(s.to_string())
+            } else {
+                serde_json::to_string(v).ok()
+            }
+        })
+    }
+
+    /// Get all node outputs as a dictionary
+    fn get_all_node_outputs(&self) -> HashMap<String, String> {
+        self.inner
+            .node_outputs
+            .iter()
+            .filter_map(|(k, v)| {
+                // Try to get as string first, then fall back to JSON serialization
+                let value_str = if let Some(s) = v.as_str() {
+                    s.to_string()
+                } else {
+                    match serde_json::to_string(v) {
+                        Ok(s) => s,
+                        Err(_) => return None,
+                    }
+                };
+                Some((k.clone(), value_str))
+            })
             .collect()
     }
 }

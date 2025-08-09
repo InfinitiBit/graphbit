@@ -21,6 +21,9 @@ pub mod types;
 pub mod validation;
 pub mod workflow;
 
+#[cfg(test)]
+mod workflow_tests;
+
 // Re-export important types for convenience - only keep what's actually used
 pub use agents::{Agent, AgentBuilder, AgentConfig, AgentTrait};
 pub use document_loader::{DocumentContent, DocumentLoader, DocumentLoaderConfig};

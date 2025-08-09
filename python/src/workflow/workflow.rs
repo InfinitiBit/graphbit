@@ -29,12 +29,28 @@ impl Workflow {
     }
 
     fn connect(&mut self, from_id: String, to_id: String) -> PyResult<()> {
-        let from_node_id = NodeId::from_string(&from_id).map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Invalid from_id: {}", e))
-        })?;
-        let to_node_id = NodeId::from_string(&to_id).map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Invalid to_id: {}", e))
-        })?;
+        // First try to look up by name, if that fails try to parse as UUID
+        let from_node_id = if let Some(id) = self.inner.graph.get_node_id_by_name(&from_id) {
+            id
+        } else if let Ok(id) = NodeId::from_string(&from_id) {
+            id
+        } else {
+            return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                "Source node {} not found",
+                from_id
+            )));
+        };
+
+        let to_node_id = if let Some(id) = self.inner.graph.get_node_id_by_name(&to_id) {
+            id
+        } else if let Ok(id) = NodeId::from_string(&to_id) {
+            id
+        } else {
+            return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                "Target node {} not found",
+                to_id
+            )));
+        };
 
         self.inner
             .connect_nodes(from_node_id, to_node_id, WorkflowEdge::data_flow())

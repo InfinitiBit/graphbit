@@ -69,7 +69,7 @@ pub use text_splitter::{
     CharacterSplitter, RecursiveSplitter, SentenceSplitter, TextChunk, TextSplitterConfig,
     TokenSplitter,
 };
-pub use workflow::{Executor, Node, Workflow, WorkflowResult};
+pub use workflow::{Executor, Node, Workflow, WorkflowContext, WorkflowResult};
 
 /// Global initialization flag to ensure init is called only once
 static INIT: Once = Once::new();
@@ -364,6 +364,7 @@ fn graphbit(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // Workflow classes
     m.add_class::<Node>()?;
     m.add_class::<Workflow>()?;
+    m.add_class::<WorkflowContext>()?;
     m.add_class::<WorkflowResult>()?;
     m.add_class::<Executor>()?;
 
