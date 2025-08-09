@@ -13,10 +13,16 @@ use crate::types::{
     TaskInfo, WorkflowContext, WorkflowExecutionStats, WorkflowId, WorkflowState,
 };
 use futures::future::join_all;
+use lazy_static::lazy_static;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
+
+lazy_static! {
+    static ref NODE_REF_PATTERN: Regex = Regex::new(r"\{\{node\.([a-zA-Z0-9_\-\.]+)\}\}").unwrap();
+}
 
 /// A complete workflow definition
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -353,19 +359,60 @@ impl WorkflowExecutor {
             }
         }
 
+        // Pre-compute and store dependency map and id->name map into context metadata
+        {
+            // Build dependency map: node_id -> [parent_node_ids...]
+            let mut deps_map: HashMap<String, Vec<String>> = HashMap::new();
+            // Build id->name map for better labeling
+            let mut id_name_map: HashMap<String, String> = HashMap::new();
+
+            for (nid, node) in workflow.graph.get_nodes() {
+                id_name_map.insert(nid.to_string(), node.name.clone());
+            }
+
+            // We need a mutable graph to call get_dependencies (it caches)
+            let mut graph_clone = workflow.graph.clone();
+            for nid in id_name_map.keys() {
+                // Convert back to NodeId via from_string (deterministic for UUIDs)
+                if let Ok(node_id) = NodeId::from_string(nid) {
+                    let parents = graph_clone
+                        .get_dependencies(&node_id)
+                        .into_iter()
+                        .map(|p| p.to_string())
+                        .collect::<Vec<_>>();
+                    deps_map.insert(nid.clone(), parents);
+                }
+            }
+
+            context.set_metadata(
+                "node_dependencies".to_string(),
+                serde_json::to_value(deps_map).unwrap_or(serde_json::json!({})),
+            );
+            context.set_metadata(
+                "node_id_to_name".to_string(),
+                serde_json::to_value(id_name_map).unwrap_or(serde_json::json!({})),
+            );
+        }
+
         let nodes = self.collect_executable_nodes(&workflow.graph)?;
         if nodes.is_empty() {
             context.complete();
             return Ok(context);
         }
 
-        // Execute nodes in optimized batches
-        let batches = self.create_execution_batches(nodes).await?;
+        // Execute nodes in dependency-aware batches (parents before children)
+        let batches = self.create_dependency_batches(&workflow.graph).await?;
+        tracing::info!(
+            batch_count = batches.len(),
+            "Planned dependency-aware batches"
+        );
         let mut total_executed = 0;
         let mut total_successful = 0;
 
         for batch in batches {
             let batch_size = batch.len();
+            let batch_ids: Vec<String> = batch.iter().map(|n| n.id.to_string()).collect();
+            tracing::info!(batch_size, batch_node_ids = ?batch_ids, "Executing batch");
 
             // Execute batch concurrently with optimized spawning
             let shared_context = Arc::new(Mutex::new(context));
@@ -431,13 +478,47 @@ impl WorkflowExecutor {
                             total_successful += 1;
                         }
 
-                        // Update context with results
+                        // Update context with results using meaningful variable names
+                        // 1) Populate node_outputs (JSON) by ID and by Name for automatic data flow
+                        // 2) Also populate variables with stringified output for backward compatibility
                         let mut ctx = shared_context.lock().await;
-                        if let Ok(output_str) = serde_json::to_string(&node_result.output) {
-                            ctx.set_variable(
-                                format!("node_result_{}", total_executed),
-                                serde_json::Value::String(output_str),
+                        if let Some(node) = workflow.graph.get_node(&node_result.node_id) {
+                            // Store raw JSON output for data flow
+                            ctx.set_node_output(&node.id, node_result.output.clone());
+                            ctx.set_node_output_by_name(&node.name, node_result.output.clone());
+
+                            // Debug: confirm keys present after store
+                            let keys_now: Vec<String> = ctx.node_outputs.keys().cloned().collect();
+                            tracing::debug!(
+                                stored_node_id = %node.id,
+                                stored_node_name = %node.name,
+                                node_output_keys_now = ?keys_now,
+                                "Stored node output in context.node_outputs"
                             );
+
+                            // Back-compat: also set variables as strings
+                            if let Ok(output_str) = serde_json::to_string(&node_result.output) {
+                                ctx.set_variable(
+                                    node.name.clone(),
+                                    serde_json::Value::String(output_str.clone()),
+                                );
+                                ctx.set_variable(
+                                    node.id.to_string(),
+                                    serde_json::Value::String(output_str),
+                                );
+                            }
+                        } else {
+                            // Fallback to generic naming if node not found (shouldn't happen)
+                            if let Ok(output_str) = serde_json::to_string(&node_result.output) {
+                                ctx.set_variable(
+                                    format!("node_result_{}", total_executed),
+                                    serde_json::Value::String(output_str),
+                                );
+                                tracing::debug!(
+                                    executed_index = total_executed,
+                                    "Stored output under generic variable name (node not found)"
+                                );
+                            }
                         }
                     }
                     Ok(Err(e)) => {
@@ -531,9 +612,11 @@ impl WorkflowExecutor {
                     let error = GraphBitError::workflow_execution(
                         "Circuit breaker is open - requests are being rejected".to_string(),
                     );
-                    return Ok(NodeExecutionResult::failure(error.to_string())
-                        .with_duration(start_time.elapsed().as_millis() as u64)
-                        .with_retry_count(attempt));
+                    return Ok(
+                        NodeExecutionResult::failure(error.to_string(), node.id.clone())
+                            .with_duration(start_time.elapsed().as_millis() as u64)
+                            .with_retry_count(attempt),
+                    );
                 }
             }
 
@@ -544,6 +627,7 @@ impl WorkflowExecutor {
                     prompt_template,
                 } => {
                     Self::execute_agent_node_static(
+                        &node.id,
                         agent_id,
                         prompt_template,
                         context.clone(),
@@ -580,6 +664,22 @@ impl WorkflowExecutor {
 
             match result {
                 Ok(output) => {
+                    // Store the node output in the context for automatic data flow
+                    // Store using both NodeId and node name for flexible access
+                    {
+                        let mut ctx = context.lock().await;
+                        ctx.set_node_output(&node.id, output.clone());
+                        ctx.set_node_output_by_name(&node.name, output.clone());
+                        // Debug: confirm storage keys available after this node completes
+                        let keys: Vec<String> = ctx.node_outputs.keys().cloned().collect();
+                        tracing::debug!(
+                            node_id = %node.id,
+                            node_name = %node.name,
+                            available_output_keys = ?keys,
+                            "Stored node output"
+                        );
+                    }
+
                     // Record success in circuit breaker
                     if let Some(ref mut breaker) = circuit_breaker {
                         breaker.record_success();
@@ -590,7 +690,7 @@ impl WorkflowExecutor {
                     }
 
                     let duration = start_time.elapsed();
-                    return Ok(NodeExecutionResult::success(output)
+                    return Ok(NodeExecutionResult::success(output, node.id.clone())
                         .with_duration(duration.as_millis() as u64)
                         .with_retry_count(attempt));
                 }
@@ -622,9 +722,11 @@ impl WorkflowExecutor {
 
                     // No more retries, return the error
                     let duration = start_time.elapsed();
-                    return Ok(NodeExecutionResult::failure(error.to_string())
-                        .with_duration(duration.as_millis() as u64)
-                        .with_retry_count(attempt));
+                    return Ok(
+                        NodeExecutionResult::failure(error.to_string(), node.id.clone())
+                            .with_duration(duration.as_millis() as u64)
+                            .with_retry_count(attempt),
+                    );
                 }
             }
         }
@@ -632,6 +734,7 @@ impl WorkflowExecutor {
 
     /// Execute an agent node (static version)
     async fn execute_agent_node_static(
+        current_node_id: &NodeId,
         agent_id: &crate::types::AgentId,
         prompt_template: &str,
         context: Arc<Mutex<WorkflowContext>>,
@@ -645,23 +748,188 @@ impl WorkflowExecutor {
             .clone();
         drop(agents_guard); // Release the lock early
 
-        // Get context variables for prompt interpolation
-        let variables = {
+        // Build implicit preamble from upstream (parent) node outputs, then resolve templates
+        let resolved_prompt = {
             let ctx = context.lock().await;
-            ctx.variables.clone()
+
+            // Extract dependency map and name map from metadata
+            let deps_map = ctx
+                .metadata
+                .get("node_dependencies")
+                .cloned()
+                .unwrap_or(serde_json::json!({}));
+            let id_name_map = ctx
+                .metadata
+                .get("node_id_to_name")
+                .cloned()
+                .unwrap_or(serde_json::json!({}));
+
+            // Collect preamble sections from DIRECT parents of this node
+            let mut sections: Vec<String> = Vec::new();
+            // Also collect a JSON map of parent outputs for CrewAI-style context passing
+            let mut parents_json: serde_json::Map<String, serde_json::Value> =
+                serde_json::Map::new();
+
+            // Use id->name map for titles
+            let id_name_obj = id_name_map.as_object();
+
+            // Resolve current node id string and direct parents from deps map
+            let cur_id_str = current_node_id.to_string();
+            let parent_ids: Vec<String> = deps_map
+                .as_object()
+                .and_then(|m| m.get(&cur_id_str))
+                .and_then(|v| v.as_array())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                        .collect::<Vec<String>>()
+                })
+                .unwrap_or_default();
+
+            // Debug: log parent ids and available node_outputs keys
+            let available_keys: Vec<String> = ctx.node_outputs.keys().cloned().collect();
+            tracing::debug!(
+                current_node_id = %cur_id_str,
+                parent_ids = ?parent_ids,
+                available_output_keys = ?available_keys,
+                "Implicit preamble: checking direct parents and available outputs"
+            );
+
+            // Build a set of keys to include: each parent by id and by name (if known)
+            let mut include_keys: Vec<String> = Vec::new();
+            if let Some(map) = id_name_obj {
+                for pid in &parent_ids {
+                    include_keys.push(pid.clone());
+                    if let Some(name_val) = map.get(pid).and_then(|v| v.as_str()) {
+                        include_keys.push(name_val.to_string());
+                    }
+                }
+            } else {
+                include_keys.extend(parent_ids.iter().cloned());
+            }
+
+            // Preserve order by iterating parent_ids, using id->name for titles, and fetching outputs by key
+            for pid in &parent_ids {
+                // Determine title from id->name map; fallback to id
+                let title = id_name_obj
+                    .and_then(|m| m.get(pid))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or(pid.as_str())
+                    .to_string();
+
+                // Prefer fetching by id first, then by name key
+                let val_opt = ctx.node_outputs.get(pid).or_else(|| {
+                    id_name_obj
+                        .and_then(|m| m.get(pid))
+                        .and_then(|v| v.as_str())
+                        .and_then(|name| ctx.node_outputs.get(name))
+                });
+
+                if let Some(value) = val_opt {
+                    let value_str = match value {
+                        serde_json::Value::String(s) => s.clone(),
+                        _ => value.to_string(),
+                    };
+                    // Original titled section
+                    sections.push(format!("=== {} ===\n{}", title, value_str));
+
+                    // Always add to JSON context by id as a fallback key
+                    parents_json.insert(pid.to_string(), value.clone());
+
+                    // Also add a generic alias label derived from parent name (fully generic behavior)
+                    if let Some(parent_name) = id_name_obj
+                        .and_then(|m| m.get(pid))
+                        .and_then(|v| v.as_str())
+                    {
+                        // Add to JSON context by name
+                        parents_json.insert(parent_name.to_string(), value.clone());
+
+                        // Generic alias label: normalize separators, title-case tokens, uppercased heading
+                        let generic_label = parent_name
+                            .replace(['_', '-'], " ")
+                            .split_whitespace()
+                            .map(|w| {
+                                let mut ch = w.chars();
+                                match ch.next() {
+                                    Some(first) => {
+                                        first.to_uppercase().collect::<String>() + ch.as_str()
+                                    }
+                                    None => String::new(),
+                                }
+                            })
+                            .collect::<Vec<_>>()
+                            .join(" ")
+                            .to_uppercase();
+                        sections.push(format!("{}:\n{}", generic_label, value_str));
+                    }
+                } else {
+                    // Debug: could not find value for this parent id/name
+                    let name_try = id_name_obj
+                        .and_then(|m| m.get(pid))
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string());
+                    tracing::debug!(
+                        current_node_id = %cur_id_str,
+                        parent_id = %pid,
+                        parent_name = ?name_try,
+                        "Implicit preamble: no output found for parent"
+                    );
+                }
+            }
+
+            // Append a CrewAI-style Context JSON block aggregating direct parent outputs
+            let context_json_block = if parents_json.is_empty() {
+                String::new()
+            } else {
+                let pretty = serde_json::to_string_pretty(&serde_json::Value::Object(parents_json))
+                    .unwrap_or("{}".to_string());
+                format!("\n[Context JSON]\n{}\n\n", pretty)
+            };
+
+            // Debug: summarize what we built
+            tracing::debug!(
+                current_node_id = %cur_id_str,
+                section_count = sections.len(),
+                has_context_json = !context_json_block.is_empty(),
+                "Implicit preamble: built sections and JSON presence"
+            );
+
+            let implicit_preamble = if sections.is_empty() && context_json_block.is_empty() {
+                // No alias sections and no context JSON -> no preamble
+                "".to_string()
+            } else {
+                // Strong CrewAI-style directive to ensure models use the JSON context
+                let directive_line = "Instruction: You MUST use the [Context JSON] below as prior outputs from your direct parents. Base your answer strictly on it.";
+                let sections_block = if sections.is_empty() {
+                    String::new()
+                } else {
+                    sections.join("\n\n") + "\n\n"
+                };
+                format!(
+                    "Context from prior nodes (auto-injected):\n{}{}\n{}",
+                    sections_block, directive_line, context_json_block
+                )
+            };
+
+            let combined = format!("{}[Task]\n{}", implicit_preamble, prompt_template);
+            let resolved = Self::resolve_template_variables(&combined, &ctx);
+            // Debug log the resolved prompt (trimmed) to verify implicit context presence
+            let preview: String = resolved.chars().take(400).collect();
+            tracing::debug!(
+                current_node_id = %cur_id_str,
+                parent_count = parent_ids.len(),
+                preview = %preview,
+                "Resolved prompt preview with implicit parent context"
+            );
+            resolved
         };
 
-        // Simple variable substitution in prompt template
-        let mut prompt = prompt_template.to_string();
-        for (key, value) in variables {
-            let placeholder = format!("{{{}}}", key);
-            if let Ok(value_str) = serde_json::to_string(&value) {
-                prompt = prompt.replace(&placeholder, value_str.trim_matches('"'));
-            }
-        }
-
-        // Create agent message
-        let message = AgentMessage::new(agent_id.clone(), None, MessageContent::Text(prompt));
+        // Create agent message with resolved prompt
+        let message = AgentMessage::new(
+            agent_id.clone(),
+            None,
+            MessageContent::Text(resolved_prompt),
+        );
 
         // Execute agent
         agent.execute(message).await
@@ -958,6 +1226,7 @@ impl WorkflowExecutor {
     }
 
     /// Helper method to create execution batches for optimal concurrency
+    #[allow(dead_code)]
     async fn create_execution_batches(
         &self,
         nodes: Vec<WorkflowNode>,
@@ -969,6 +1238,55 @@ impl WorkflowExecutor {
 
         for chunk in nodes.chunks(batch_size) {
             batches.push(chunk.to_vec());
+        }
+
+        Ok(batches)
+    }
+
+    /// Create batches that strictly respect dependencies: only direct-ready nodes per layer
+    async fn create_dependency_batches(
+        &self,
+        graph: &WorkflowGraph,
+    ) -> GraphBitResult<Vec<Vec<WorkflowNode>>> {
+        use std::collections::HashSet;
+
+        let mut graph_clone = graph.clone();
+        let mut completed: HashSet<NodeId> = HashSet::new();
+        let mut remaining: HashSet<NodeId> = graph_clone.get_nodes().keys().cloned().collect();
+        let mut batches: Vec<Vec<WorkflowNode>> = Vec::new();
+
+        // Iterate until all nodes are scheduled
+        while !remaining.is_empty() {
+            // Select nodes whose dependencies are all completed
+            let mut ready_ids: Vec<NodeId> = Vec::new();
+            for nid in remaining.iter() {
+                let deps = graph_clone.get_dependencies(nid);
+                if deps.iter().all(|d| completed.contains(d)) {
+                    ready_ids.push(nid.clone());
+                }
+            }
+
+            if ready_ids.is_empty() {
+                // Cycle or unresolved dependency
+                return Err(GraphBitError::workflow_execution(
+                    "No dependency-ready nodes found; graph may be cyclic or invalid".to_string(),
+                ));
+            }
+
+            // Build the batch of WorkflowNode
+            let mut batch: Vec<WorkflowNode> = Vec::with_capacity(ready_ids.len());
+            for nid in &ready_ids {
+                if let Some(node) = graph_clone.get_nodes().get(nid) {
+                    batch.push(node.clone());
+                }
+            }
+            batches.push(batch);
+
+            // Update completed/remaining
+            for nid in ready_ids {
+                completed.insert(nid.clone());
+                remaining.remove(&nid);
+            }
         }
 
         Ok(batches)
@@ -998,4 +1316,36 @@ fn extract_agent_ids_from_workflow(workflow: &Workflow) -> Vec<String> {
     }
 
     agent_ids.into_iter().collect()
+}
+
+impl WorkflowExecutor {
+    /// Resolve template variables in a string, supporting both node references and regular variables
+    pub fn resolve_template_variables(template: &str, context: &WorkflowContext) -> String {
+        let mut result = template.to_string();
+
+        // Replace node references like {{node.node_id}} or {{node.node_id.property}}
+        for cap in NODE_REF_PATTERN.captures_iter(template) {
+            if let Some(reference) = cap.get(1) {
+                let reference = reference.as_str();
+                if let Some(value) = context.get_nested_output(reference) {
+                    let value_str = match value {
+                        serde_json::Value::String(s) => s.clone(),
+                        _ => value.to_string().trim_matches('"').to_string(),
+                    };
+                    result = result.replace(&cap[0], &value_str);
+                }
+            }
+        }
+
+        // Replace simple variables for backward compatibility
+        for (key, value) in &context.variables {
+            let placeholder = format!("{{{}}}", key);
+            if let Ok(value_str) = serde_json::to_string(value) {
+                let value_str = value_str.trim_matches('"');
+                result = result.replace(&placeholder, value_str);
+            }
+        }
+
+        result
+    }
 }

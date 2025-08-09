@@ -15,17 +15,22 @@ pub struct Node {
 #[pymethods]
 impl Node {
     #[staticmethod]
-    #[pyo3(signature = (name, prompt, agent_id=None))]
-    fn agent(name: String, prompt: String, agent_id: Option<String>) -> PyResult<Self> {
+    #[pyo3(signature = (name, prompt, agent_id=None, output_name=None))]
+    fn agent(
+        name: String,
+        prompt: String,
+        agent_id: Option<String>,
+        output_name: Option<String>,
+    ) -> PyResult<Self> {
         // Validate required parameters
         if name.trim().is_empty() {
             return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
-                "Agent name cannot be empty",
+                "Name cannot be empty",
             ));
         }
         if prompt.trim().is_empty() {
             return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
-                "Agent prompt cannot be empty",
+                "Prompt cannot be empty",
             ));
         }
 
@@ -38,7 +43,7 @@ impl Node {
                     .as_nanos()
             )
         });
-        let node = WorkflowNode::new(
+        let mut node = WorkflowNode::new(
             name.clone(),
             format!("Agent: {}", name),
             NodeType::Agent {
@@ -48,6 +53,14 @@ impl Node {
                 prompt_template: prompt,
             },
         );
+
+        // Store output name in metadata if provided
+        if let Some(output_name) = output_name {
+            node.config.insert(
+                "output_name".to_string(),
+                serde_json::Value::String(output_name),
+            );
+        }
 
         Ok(Self { inner: node })
     }

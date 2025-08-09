@@ -385,6 +385,14 @@ impl WorkflowGraph {
     pub fn edge_count(&self) -> usize {
         self.edges.len()
     }
+
+    /// Get node ID by name
+    pub fn get_node_id_by_name(&self, name: &str) -> Option<NodeId> {
+        self.nodes
+            .values()
+            .find(|node| node.name == name)
+            .map(|node| node.id.clone())
+    }
 }
 
 impl Default for WorkflowGraph {

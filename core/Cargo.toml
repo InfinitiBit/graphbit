@@ -4,6 +4,7 @@ async-trait = "0.1"
 chrono = {version = "0.4", features = ["serde"]}
 docx-rs = "0.4"
 futures = "0.3"
+lazy_static = "1.4"
 lopdf = "0.32"
 petgraph = "0.6"
 rand = "0.8"
