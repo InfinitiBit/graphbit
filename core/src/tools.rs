@@ -14,7 +14,8 @@ use std::sync::{Arc, RwLock};
 use tracing::{debug, error, info, warn};
 
 /// A function that can be called by the LLM
-pub type ToolFunction = Box<dyn Fn(serde_json::Value) -> GraphBitResult<serde_json::Value> + Send + Sync>;
+pub type ToolFunction =
+    Box<dyn Fn(serde_json::Value) -> GraphBitResult<serde_json::Value> + Send + Sync>;
 
 /// Tool execution result
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -31,7 +32,11 @@ pub struct ToolResult {
 
 impl ToolResult {
     /// Create a successful tool result
-    pub fn success(tool_name: impl Into<String>, data: serde_json::Value, execution_time_ms: u64) -> Self {
+    pub fn success(
+        tool_name: impl Into<String>,
+        data: serde_json::Value,
+        execution_time_ms: u64,
+    ) -> Self {
         Self {
             success: true,
             data,
@@ -41,7 +46,11 @@ impl ToolResult {
     }
 
     /// Create a failed tool result
-    pub fn failure(tool_name: impl Into<String>, error: impl Into<String>, execution_time_ms: u64) -> Self {
+    pub fn failure(
+        tool_name: impl Into<String>,
+        error: impl Into<String>,
+        execution_time_ms: u64,
+    ) -> Self {
         Self {
             success: false,
             data: serde_json::Value::String(error.into()),
@@ -260,7 +269,10 @@ impl ToolManager {
     }
 
     /// Execute multiple tool calls in parallel
-    pub async fn execute_tools_parallel(&self, tool_calls: &[LlmToolCall]) -> GraphBitResult<Vec<ToolResult>> {
+    pub async fn execute_tools_parallel(
+        &self,
+        tool_calls: &[LlmToolCall],
+    ) -> GraphBitResult<Vec<ToolResult>> {
         if tool_calls.is_empty() {
             return Ok(Vec::new());
         }
@@ -271,9 +283,7 @@ impl ToolManager {
             let manager_clone = self.clone();
             let tool_call_clone = tool_call.clone();
 
-            let task = tokio::spawn(async move {
-                manager_clone.execute_tool(&tool_call_clone)
-            });
+            let task = tokio::spawn(async move { manager_clone.execute_tool(&tool_call_clone) });
             tasks.push(task);
         }
 
@@ -348,7 +358,11 @@ impl ToolManager {
 
         if let Some(tool) = tools.get_mut(tool_name) {
             tool.enabled = enabled;
-            info!("Tool '{}' {} ", tool_name, if enabled { "enabled" } else { "disabled" });
+            info!(
+                "Tool '{}' {} ",
+                tool_name,
+                if enabled { "enabled" } else { "disabled" }
+            );
             Ok(true)
         } else {
             warn!("Tool '{}' not found for enable/disable", tool_name);
@@ -361,11 +375,17 @@ impl ToolManager {
     fn validate_tool_schema(&self, tool: &LlmTool) -> GraphBitResult<()> {
         // Basic validation
         if tool.name.is_empty() {
-            return Err(GraphBitError::validation("name", "Tool name cannot be empty"));
+            return Err(GraphBitError::validation(
+                "name",
+                "Tool name cannot be empty",
+            ));
         }
 
         if tool.description.is_empty() {
-            return Err(GraphBitError::validation("description", "Tool description cannot be empty"));
+            return Err(GraphBitError::validation(
+                "description",
+                "Tool description cannot be empty",
+            ));
         }
 
         // Validate that parameters is a valid JSON schema object
@@ -379,7 +399,12 @@ impl ToolManager {
         Ok(())
     }
 
-    fn update_stats(&self, tool_name: &str, success: bool, execution_time_ms: u64) -> GraphBitResult<()> {
+    fn update_stats(
+        &self,
+        tool_name: &str,
+        success: bool,
+        execution_time_ms: u64,
+    ) -> GraphBitResult<()> {
         let mut stats = self.stats.write().map_err(|e| {
             GraphBitError::concurrency(format!("Failed to acquire stats write lock: {}", e))
         })?;
@@ -393,7 +418,10 @@ impl ToolManager {
             stats.failed_calls += 1;
         }
 
-        *stats.tool_call_counts.entry(tool_name.to_string()).or_insert(0) += 1;
+        *stats
+            .tool_call_counts
+            .entry(tool_name.to_string())
+            .or_insert(0) += 1;
 
         Ok(())
     }
@@ -462,13 +490,14 @@ mod tests {
                 },
                 "required": ["name"]
             }),
-            Box::new(|params| {
-                Ok(json!({"result": format!("Hello, {}!", params["name"])}))
-            }),
+            Box::new(|params| Ok(json!({"result": format!("Hello, {}!", params["name"])}))),
         );
 
         assert!(manager.register_tool(tool).is_ok());
-        assert!(manager.list_tools().unwrap().contains(&"test_tool".to_string()));
+        assert!(manager
+            .list_tools()
+            .unwrap()
+            .contains(&"test_tool".to_string()));
     }
 
     #[test]

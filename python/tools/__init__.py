@@ -6,7 +6,7 @@ Python functions as tools that can be called by LLMs through GraphBit.
 
 Usage:
     from tools import tool
-    
+
     @tool(
         description="Get the current weather for a location",
         parameters={
@@ -32,7 +32,7 @@ __author__ = "GraphBit Team"
 
 __all__ = [
     "tool",
-    "ToolRegistry", 
+    "ToolRegistry",
     "generate_schema",
     "SchemaGenerator",
     "validate_tool_function",

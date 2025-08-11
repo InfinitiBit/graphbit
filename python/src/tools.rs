@@ -7,8 +7,9 @@ use crate::errors::to_py_runtime_error;
 use crate::runtime::get_runtime;
 use graphbit_core::llm::LlmToolCall;
 use graphbit_core::tools::{
+    execute_global_tool, get_global_tool_definitions,
+    get_global_tool_manager as core_get_global_tool_manager, register_global_tool,
     ToolExecutionStats, ToolInfo, ToolManager, ToolMetadata, ToolResult,
-    execute_global_tool, get_global_tool_definitions, get_global_tool_manager as core_get_global_tool_manager, register_global_tool,
 };
 use graphbit_core::GraphBitResult;
 use pyo3::exceptions::PyValueError;
@@ -302,15 +303,27 @@ impl PyToolManager {
             let function = function.clone_ref(py);
             Box::new(move |params: Value| -> GraphBitResult<Value> {
                 Python::with_gil(|py| {
-                    let py_params = json_to_python(py, &params)
-                        .map_err(|e| graphbit_core::GraphBitError::config(format!("Failed to convert params: {}", e)))?;
-                    
-                    let result = function.call1(py, (py_params,))
-                        .map_err(|e| graphbit_core::GraphBitError::config(format!("Python function call failed: {}", e)))?;
-                    
-                    let json_result = python_to_json(&result.bind(py))
-                        .map_err(|e| graphbit_core::GraphBitError::config(format!("Failed to convert result: {}", e)))?;
-                    
+                    let py_params = json_to_python(py, &params).map_err(|e| {
+                        graphbit_core::GraphBitError::config(format!(
+                            "Failed to convert params: {}",
+                            e
+                        ))
+                    })?;
+
+                    let result = function.call1(py, (py_params,)).map_err(|e| {
+                        graphbit_core::GraphBitError::config(format!(
+                            "Python function call failed: {}",
+                            e
+                        ))
+                    })?;
+
+                    let json_result = python_to_json(&result.bind(py)).map_err(|e| {
+                        graphbit_core::GraphBitError::config(format!(
+                            "Failed to convert result: {}",
+                            e
+                        ))
+                    })?;
+
                     Ok(json_result)
                 })
             })
@@ -332,13 +345,20 @@ impl PyToolManager {
         }
 
         // Register the tool
-        self.inner.register_tool(metadata).map_err(to_py_runtime_error)?;
+        self.inner
+            .register_tool(metadata)
+            .map_err(to_py_runtime_error)?;
 
         Ok(())
     }
 
     /// Execute a tool call
-    fn execute_tool(&self, tool_name: String, parameters: PyObject, py: Python<'_>) -> PyResult<PyToolResult> {
+    fn execute_tool(
+        &self,
+        tool_name: String,
+        parameters: PyObject,
+        py: Python<'_>,
+    ) -> PyResult<PyToolResult> {
         // Convert Python parameters to JSON
         let parameters_json = python_to_json(&parameters.bind(py))?;
 
@@ -350,7 +370,10 @@ impl PyToolManager {
         };
 
         // Execute the tool
-        let result = self.inner.execute_tool(&tool_call).map_err(to_py_runtime_error)?;
+        let result = self
+            .inner
+            .execute_tool(&tool_call)
+            .map_err(to_py_runtime_error)?;
 
         Ok(PyToolResult { inner: result })
     }
@@ -391,22 +414,29 @@ pub fn register_tool(
         let function = function.clone_ref(py);
         Box::new(move |params: Value| -> GraphBitResult<Value> {
             Python::with_gil(|py| {
-                let py_params = json_to_python(py, &params)
-                    .map_err(|e| graphbit_core::GraphBitError::config(format!("Failed to convert params: {}", e)))?;
-                
-                let result = function.call1(py, (py_params,))
-                    .map_err(|e| graphbit_core::GraphBitError::config(format!("Python function call failed: {}", e)))?;
-                
-                let json_result = python_to_json(&result.bind(py))
-                    .map_err(|e| graphbit_core::GraphBitError::config(format!("Failed to convert result: {}", e)))?;
-                
+                let py_params = json_to_python(py, &params).map_err(|e| {
+                    graphbit_core::GraphBitError::config(format!("Failed to convert params: {}", e))
+                })?;
+
+                let result = function.call1(py, (py_params,)).map_err(|e| {
+                    graphbit_core::GraphBitError::config(format!(
+                        "Python function call failed: {}",
+                        e
+                    ))
+                })?;
+
+                let json_result = python_to_json(&result.bind(py)).map_err(|e| {
+                    graphbit_core::GraphBitError::config(format!("Failed to convert result: {}", e))
+                })?;
+
                 Ok(json_result)
             })
         })
     };
 
     // Create tool metadata
-    let mut metadata = ToolMetadata::new(name.clone(), description, parameters_json, function_wrapper);
+    let mut metadata =
+        ToolMetadata::new(name.clone(), description, parameters_json, function_wrapper);
 
     if let Some(category) = category {
         metadata = metadata.with_category(category);
@@ -429,7 +459,11 @@ pub fn register_tool(
 
 /// Execute a tool globally
 #[pyfunction]
-pub fn execute_tool(py: Python<'_>, tool_name: String, parameters: PyObject) -> PyResult<PyToolResult> {
+pub fn execute_tool(
+    py: Python<'_>,
+    tool_name: String,
+    parameters: PyObject,
+) -> PyResult<PyToolResult> {
     // Convert Python parameters to JSON
     let parameters_json = python_to_json(&parameters.bind(py))?;
 
@@ -450,7 +484,7 @@ pub fn execute_tool(py: Python<'_>, tool_name: String, parameters: PyObject) -> 
 #[pyfunction]
 pub fn get_tool_definitions(py: Python<'_>) -> PyResult<PyObject> {
     let definitions = get_global_tool_definitions().map_err(to_py_runtime_error)?;
-    
+
     let py_list = PyList::empty(py);
     for definition in definitions {
         let py_tool = PyDict::new(py);
@@ -459,7 +493,7 @@ pub fn get_tool_definitions(py: Python<'_>) -> PyResult<PyObject> {
         py_tool.set_item("parameters", json_to_python(py, &definition.parameters)?)?;
         py_list.append(py_tool)?;
     }
-    
+
     Ok(py_list.to_object(py))
 }
 
