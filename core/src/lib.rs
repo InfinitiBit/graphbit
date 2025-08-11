@@ -17,6 +17,7 @@ pub mod errors;
 pub mod graph;
 pub mod llm;
 pub mod text_splitter;
+pub mod tools;
 pub mod types;
 pub mod validation;
 pub mod workflow;
@@ -33,6 +34,10 @@ pub use llm::{LlmConfig, LlmProvider, LlmResponse};
 pub use text_splitter::{
     CharacterSplitter, RecursiveSplitter, SentenceSplitter, SplitterStrategy, TextChunk,
     TextSplitterConfig, TextSplitterFactory, TextSplitterTrait, TokenSplitter,
+};
+pub use tools::{
+    ToolExecutionStats, ToolFunction, ToolInfo, ToolManager, ToolMetadata, ToolResult,
+    execute_global_tool, get_global_tool_definitions, get_global_tool_manager, register_global_tool,
 };
 pub use types::{
     AgentCapability, AgentId, AgentMessage, MessageContent, NodeExecutionResult, NodeId,

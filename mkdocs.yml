@@ -19,6 +19,7 @@ nav:
   - Performance: user-guide/performance.md
   - Reliability: user-guide/reliability.md
   - Text Splitters: user-guide/text-splitters.md
+  - Tool Calling: user-guide/tool-calling.md
   - Validation: user-guide/validation.md
   - Workflow Builder: user-guide/workflow-builder.md
 - API Reference:

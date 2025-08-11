@@ -58,6 +58,7 @@ mod errors;
 mod llm;
 mod runtime;
 mod text_splitter;
+mod tools;
 mod validation;
 mod workflow;
 
@@ -68,6 +69,10 @@ pub use llm::{LlmClient, LlmConfig};
 pub use text_splitter::{
     CharacterSplitter, RecursiveSplitter, SentenceSplitter, TextChunk, TextSplitterConfig,
     TokenSplitter,
+};
+pub use tools::{
+    PyToolExecutionStats, PyToolInfo, PyToolManager, PyToolResult,
+    execute_tool, get_tool_manager, get_tool_definitions, register_tool,
 };
 pub use workflow::{Executor, Node, Workflow, WorkflowResult};
 
@@ -379,6 +384,18 @@ fn graphbit(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<SentenceSplitter>()?;
     m.add_class::<RecursiveSplitter>()?;
     m.add_class::<text_splitter::splitter::TextSplitter>()?;
+
+    // Tool calling classes
+    m.add_class::<PyToolManager>()?;
+    m.add_class::<PyToolResult>()?;
+    m.add_class::<PyToolInfo>()?;
+    m.add_class::<PyToolExecutionStats>()?;
+
+    // Tool calling functions
+    m.add_function(wrap_pyfunction!(register_tool, m)?)?;
+    m.add_function(wrap_pyfunction!(execute_tool, m)?)?;
+    m.add_function(wrap_pyfunction!(get_tool_definitions, m)?)?;
+    m.add_function(wrap_pyfunction!(get_tool_manager, m)?)?;
 
     // Module metadata
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;

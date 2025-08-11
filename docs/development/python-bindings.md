@@ -385,7 +385,398 @@ if not health['overall_healthy']:
     print("System issues detected!")
 ```
 
+## Tool Calling Integration
+
+GraphBit provides comprehensive tool calling capabilities, allowing LLMs to execute Python functions dynamically. The tool calling system consists of two layers:
+
+1. **Low-level Rust bindings**: High-performance core functionality
+2. **High-level Python decorators**: Easy-to-use Python interface
+
+### Quick Start
+
+```python
+import graphbit
+from tools import tool
+
+# Initialize GraphBit
+graphbit.init()
+
+# Register a tool using the decorator
+@tool(
+    description="Get current weather for a location",
+    parameters={
+        "type": "object", 
+        "properties": {
+            "location": {"type": "string", "description": "City and state, e.g. San Francisco, CA"},
+            "unit": {"type": "string", "enum": ["celsius", "fahrenheit"], "description": "Temperature unit"}
+        },
+        "required": ["location"]
+    },
+    category="weather"
+)
+def get_weather(location: str, unit: str = "fahrenheit") -> dict:
+    """Get weather information for a location."""
+    # Your implementation here
+    return {
+        "location": location,
+        "temperature": 72,
+        "condition": "sunny", 
+        "unit": unit
+    }
+
+# The tool is automatically registered and available for LLM use
+```
+
+### Core Components
+
+#### 1. Low-Level Rust Bindings
+
+The core tool calling functionality is implemented in Rust for maximum performance:
+
+```python
+# Create a tool manager
+manager = graphbit.ToolManager()
+
+# Register a tool manually 
+def my_tool(params):
+    return {"result": "success", "data": params}
+
+manager.register_tool(
+    name="my_tool",
+    description="A sample tool",
+    parameters={"type": "object", "properties": {}},
+    function=my_tool,
+    category="utilities",
+    version="1.0.0",
+    enabled=True
+)
+
+# Execute a tool
+result = manager.execute_tool("my_tool", {"input": "test"})
+print(f"Success: {result.success}")
+print(f"Data: {result.data}")
+print(f"Execution time: {result.execution_time_ms}ms")
+```
+
+#### 2. Python Decorator Interface
+
+The high-level Python interface provides automatic registration and schema generation:
+
+```python
+from tools import tool, get_registry, list_tools
+
+@tool(
+    description="Calculate the area of a rectangle",
+    auto_schema=True,  # Automatically generate schema from type hints
+    category="math",
+    version="1.0.0"
+)
+def calculate_area(length: float, width: float) -> dict:
+    """
+    Calculate the area of a rectangle.
+    
+    Args:
+        length: Length of the rectangle in units
+        width: Width of the rectangle in units
+        
+    Returns:
+        Dictionary containing the calculated area
+    """
+    area = length * width
+    return {
+        "length": length,
+        "width": width, 
+        "area": area,
+        "unit": "square units"
+    }
+
+# List all registered tools
+tools = list_tools()
+print(f"Registered tools: {tools}")
+
+# Get tool registry for advanced operations
+registry = get_registry()
+tool_info = registry.get_tool("calculate_area")
+```
+
+### Automatic Schema Generation
+
+GraphBit can automatically generate JSON schemas from Python function signatures and type hints:
+
+```python
+from tools import tool, generate_schema
+from typing import List, Optional, Union
+
+@tool(
+    description="Process a list of items",
+    auto_schema=True  # Enable automatic schema generation
+)
+def process_items(
+    items: List[str], 
+    operation: str,
+    count: int = 10,
+    verbose: Optional[bool] = False
+) -> dict:
+    """
+    Process a list of items with specified operation.
+    
+    Args:
+        items: List of items to process
+        operation: Type of operation to perform
+        count: Maximum number of items to process
+        verbose: Whether to include detailed output
+    """
+    return {
+        "processed": items[:count],
+        "operation": operation,
+        "total_processed": min(len(items), count),
+        "verbose": verbose
+    }
+
+# The decorator automatically generates this schema:
+# {
+#     "type": "object",
+#     "properties": {
+#         "items": {"type": "array", "items": {"type": "string"}},
+#         "operation": {"type": "string"},
+#         "count": {"type": "integer", "default": 10},
+#         "verbose": {"type": "boolean", "default": false, "nullable": true}
+#     },
+#     "required": ["items", "operation"]
+# }
+```
+
+### Advanced Features
+
+#### Tool Categories and Management
+
+```python
+from tools import get_registry, enable_tool, disable_tool
+
+# Organize tools by category
+@tool(description="Database query tool", category="database")
+def query_db(sql: str) -> dict:
+    return {"result": "query_result"}
+
+@tool(description="File system tool", category="filesystem") 
+def read_file(path: str) -> str:
+    return "file_content"
+
+# List tools by category
+registry = get_registry()
+db_tools = registry.list_tools(category="database")
+fs_tools = registry.list_tools(category="filesystem")
+
+# Enable/disable tools dynamically
+disable_tool("query_db")  # Temporarily disable
+enable_tool("query_db")   # Re-enable
+```
+
+#### Tool Validation and Error Handling
+
+```python
+from tools import tool, ToolValidationError, validate_tool_function
+
+# Validation happens automatically when registering tools
+@tool(description="Invalid tool example")
+def invalid_tool(*args, **kwargs):  # This will raise ToolValidationError
+    pass
+
+# Manual validation
+def my_function(param: str) -> str:
+    return param.upper()
+
+try:
+    validate_tool_function(my_function)
+    print("Function is valid for tool use")
+except ToolValidationError as e:
+    print(f"Validation failed: {e}")
+```
+
+#### Tool Metrics and Monitoring
+
+```python
+from tools.utils import get_tool_metrics
+
+# Execute some tools...
+# ...
+
+# Get metrics
+metrics = get_tool_metrics()
+stats = metrics.get_stats()
+
+print(f"Total tools: {stats['total_tools']}")
+print(f"Total calls: {stats['total_calls']}") 
+print(f"Success rate: {stats['total_successes'] / stats['total_calls'] * 100:.1f}%")
+
+# Get stats for specific tool
+tool_stats = metrics.get_stats("get_weather")
+print(f"Weather tool called {tool_stats['total_calls']} times")
+print(f"Average execution time: {tool_stats['avg_execution_time']:.2f}ms")
+```
+
+### Global vs Instance Management
+
+#### Global Registration (Recommended)
+
+```python
+from tools import tool
+
+# Tools registered with the decorator are globally available
+@tool(description="Global tool")
+def global_tool(param: str) -> str:
+    return f"Processed: {param}"
+
+# Access global tools
+import graphbit
+definitions = graphbit.get_tool_definitions()
+result = graphbit.execute_tool("global_tool", {"param": "test"})
+```
+
+#### Instance Management
+
+```python
+import graphbit
+
+# Create isolated tool manager
+manager = graphbit.ToolManager()
+
+def instance_tool(param: str) -> str:
+    return f"Instance: {param}"
+
+manager.register_tool(
+    name="instance_tool",
+    description="Instance-specific tool",
+    parameters={"type": "object", "properties": {"param": {"type": "string"}}},
+    function=instance_tool
+)
+
+# Execute on specific instance
+result = manager.execute_tool("instance_tool", {"param": "test"})
+```
+
+### Integration with LLM Workflows
+
+```python
+import graphbit
+from tools import tool
+
+# Initialize system
+graphbit.init()
+
+# Register tools
+@tool(description="Search for information")
+def search_web(query: str) -> dict:
+    return {"results": f"Search results for: {query}"}
+
+@tool(description="Save data to file")
+def save_data(filename: str, data: str) -> dict:
+    # Implementation here
+    return {"saved": True, "filename": filename}
+
+# Create LLM client with tool access
+config = graphbit.LlmConfig.openai(api_key="your-key")
+client = graphbit.LlmClient(config)
+
+# The LLM can now use registered tools automatically
+response = client.complete(
+    prompt="Search for 'GraphBit features' and save the results to 'features.txt'",
+    max_tokens=200,
+    tools=graphbit.get_tool_definitions()  # Provide available tools
+)
+```
+
+### Type System Integration
+
+GraphBit's schema generator supports Python's type system comprehensively:
+
+```python
+from typing import List, Dict, Optional, Union, Literal
+from tools import tool
+
+@tool(description="Complex type example", auto_schema=True)
+def complex_function(
+    # Basic types
+    name: str,
+    age: int,
+    height: float,
+    active: bool,
+    
+    # Collections
+    tags: List[str],
+    metadata: Dict[str, str],
+    
+    # Optional and Union types
+    nickname: Optional[str] = None,
+    priority: Union[int, str] = "normal",
+    
+    # Literal types (enums)
+    status: Literal["active", "inactive", "pending"] = "active"
+) -> dict:
+    """Function with comprehensive type annotations."""
+    return {
+        "name": name,
+        "age": age,
+        "status": status,
+        "tags": tags
+    }
+
+# Schema is automatically generated with proper type constraints
+```
+
+### Error Handling and Debugging
+
+```python
+from tools import tool
+import graphbit
+
+@tool(description="Tool that might fail")
+def risky_tool(value: int) -> dict:
+    if value < 0:
+        raise ValueError("Value must be positive")
+    return {"result": value * 2}
+
+# Enable debug mode for detailed error information
+graphbit.init(debug=True, log_level="debug")
+
+try:
+    result = graphbit.execute_tool("risky_tool", {"value": -1})
+except Exception as e:
+    print(f"Tool execution failed: {e}")
+
+# Check tool execution results
+result = graphbit.execute_tool("risky_tool", {"value": 5})
+if result.success:
+    print(f"Success: {result.data}")
+else:
+    print(f"Failed after {result.execution_time_ms}ms")
+```
+
 ## Best Practices
+
+### Tool Design
+
+1. **Single Responsibility**: Each tool should have a clear, focused purpose
+2. **Type Annotations**: Use comprehensive type hints for automatic schema generation
+3. **Documentation**: Include docstrings with parameter descriptions
+4. **Error Handling**: Implement proper error handling and validation
+5. **JSON Serializable Returns**: Ensure return values are JSON serializable
+
+### Registration
+
+1. Use the `@tool` decorator for most use cases
+2. Enable auto_schema for automatic schema generation
+3. Organize tools with meaningful categories
+4. Use semantic versioning for tool versions
+5. Register tools at application startup
+
+### Performance
+
+1. Keep tool functions lightweight and fast
+2. Use caching for expensive operations
+3. Monitor tool execution metrics
+4. Disable unused tools in production
+5. Consider tool execution timeouts
 
 ### Initialization
 
@@ -436,6 +827,35 @@ import graphbit
 graphbit.init()
 config = graphbit.LlmConfig.openai(api_key="key")
 client = graphbit.LlmClient(config)
+```
+
+### Tool Calling Migration
+
+Tool calling is a new feature in v0.1.x. If you were previously using custom function calling approaches:
+
+```python
+# Before: Manual function management
+def my_functions():
+    return {"get_weather": get_weather_func}
+
+# After: Use the @tool decorator
+from tools import tool
+
+@tool(
+    description="Get current weather",
+    parameters={
+        "type": "object",
+        "properties": {
+            "location": {"type": "string", "description": "City and state"}
+        },
+        "required": ["location"]
+    }
+)
+def get_weather(location: str) -> dict:
+    # Your implementation
+    return {"temperature": 72, "condition": "sunny"}
+
+# Tools are automatically registered and available to LLMs
 ```
 
 This comprehensive Python binding provides a robust, production-ready interface to GraphBit's core functionality while maintaining excellent performance and reliability characteristics. 
