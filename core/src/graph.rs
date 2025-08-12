@@ -539,6 +539,7 @@ pub enum NodeType {
     Agent {
         agent_id: crate::types::AgentId,
         prompt_template: String,
+        tools: Option<Vec<crate::types::ToolDefinition>>,
     },
     /// Conditional branching node
     Condition { expression: String },

@@ -7,11 +7,10 @@ tool registration and management.
 
 import functools
 import inspect
-import json
 import logging
-from typing import Any, Callable, Dict, List, Optional, Type, Union
+from typing import Any, Callable, Dict, List, Optional
 
-from .schemas import generate_schema, SchemaGenerator
+from .schemas import generate_schema
 from .utils import validate_tool_function, ToolValidationError
 
 # Set up logging
@@ -51,6 +50,16 @@ class ToolRegistry:
             raise
 
         # Store tool metadata
+        try:
+            source_file = inspect.getfile(func)
+        except (OSError, TypeError):
+            source_file = "<unknown>"
+
+        try:
+            source_line = inspect.getsourcelines(func)[1]
+        except (OSError, TypeError):
+            source_line = 0
+
         tool_metadata = {
             "name": name,
             "function": func,
@@ -60,8 +69,8 @@ class ToolRegistry:
             "version": version,
             "enabled": enabled,
             "signature": inspect.signature(func),
-            "source_file": inspect.getfile(func),
-            "source_line": inspect.getsourcelines(func)[1],
+            "source_file": source_file,
+            "source_line": source_line,
         }
 
         self._tools[name] = tool_metadata

@@ -508,7 +508,7 @@ class TestActualAsyncPerformanceMetrics:
             assert all(isinstance(r, str) and len(r) > 0 for r in concurrent_results)
 
             # Concurrent should generally be faster
-            print(f"Sequential: {sequential_time:.2f}s, Concurrent: {concurrent_time:.2f}s")
+            print(f"Sequential: {sequential_time:.2f}s, " f"Concurrent: {concurrent_time:.2f}s")
 
             # Should complete in reasonable time
             assert concurrent_time < 60, f"Concurrent took too long: {concurrent_time}s"
@@ -518,7 +518,8 @@ class TestActualAsyncPerformanceMetrics:
 
     @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="Requires OpenAI API key")
     async def test_async_batch_vs_individual_performance(self, openai_client: Any) -> None:
-        """Test performance comparison between batch and individual async operations."""
+        """Test performance comparison between batch \
+        and individual async operations."""
         try:
             prompts = ["Say hello", "Say goodbye", "Say thank you"]
 

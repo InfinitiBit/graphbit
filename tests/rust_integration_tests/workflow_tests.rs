@@ -23,6 +23,7 @@ async fn test_simple_workflow_creation() -> GraphBitResult<()> {
         llm_config,
         max_tokens: None,
         temperature: None,
+        tools: None,
         custom_config: std::collections::HashMap::with_capacity(4),
     };
 
@@ -33,6 +34,7 @@ async fn test_simple_workflow_creation() -> GraphBitResult<()> {
         NodeType::Agent {
             agent_id: agent_config.id.clone(),
             prompt_template: agent_config.system_prompt.clone(),
+            tools: None,
         },
     );
 
@@ -59,6 +61,7 @@ async fn test_multi_node_workflow() -> GraphBitResult<()> {
         llm_config: llm_config1,
         max_tokens: None,
         temperature: None,
+        tools: None,
         custom_config: std::collections::HashMap::with_capacity(4),
     };
 
@@ -73,6 +76,7 @@ async fn test_multi_node_workflow() -> GraphBitResult<()> {
         llm_config: llm_config2,
         max_tokens: None,
         temperature: None,
+        tools: None,
         custom_config: std::collections::HashMap::with_capacity(4),
     };
 
@@ -83,6 +87,7 @@ async fn test_multi_node_workflow() -> GraphBitResult<()> {
         NodeType::Agent {
             agent_id: agent_config1.id.clone(),
             prompt_template: agent_config1.system_prompt.clone(),
+            tools: None,
         },
     );
 
@@ -92,6 +97,7 @@ async fn test_multi_node_workflow() -> GraphBitResult<()> {
         NodeType::Agent {
             agent_id: agent_config2.id.clone(),
             prompt_template: agent_config2.system_prompt.clone(),
+            tools: None,
         },
     );
 
@@ -120,6 +126,7 @@ async fn test_workflow_with_connections() -> GraphBitResult<()> {
         llm_config: llm_config1,
         max_tokens: None,
         temperature: None,
+        tools: None,
         custom_config: std::collections::HashMap::with_capacity(4),
     };
 
@@ -134,6 +141,7 @@ async fn test_workflow_with_connections() -> GraphBitResult<()> {
         llm_config: llm_config2,
         max_tokens: None,
         temperature: None,
+        tools: None,
         custom_config: std::collections::HashMap::with_capacity(4),
     };
 
@@ -144,6 +152,7 @@ async fn test_workflow_with_connections() -> GraphBitResult<()> {
         NodeType::Agent {
             agent_id: agent_config1.id.clone(),
             prompt_template: agent_config1.system_prompt.clone(),
+            tools: None,
         },
     );
 
@@ -153,6 +162,7 @@ async fn test_workflow_with_connections() -> GraphBitResult<()> {
         NodeType::Agent {
             agent_id: agent_config2.id.clone(),
             prompt_template: agent_config2.system_prompt.clone(),
+            tools: None,
         },
     );
 
@@ -181,6 +191,7 @@ async fn test_workflow_complex_graph() {
         NodeType::Agent {
             agent_id: agent_id.clone(),
             prompt_template: "Start processing".to_string(),
+            tools: None,
         },
     );
 
@@ -191,6 +202,7 @@ async fn test_workflow_complex_graph() {
         NodeType::Agent {
             agent_id: agent_id.clone(),
             prompt_template: "Process left branch".to_string(),
+            tools: None,
         },
     );
 
@@ -201,6 +213,7 @@ async fn test_workflow_complex_graph() {
         NodeType::Agent {
             agent_id: agent_id.clone(),
             prompt_template: "Process right branch".to_string(),
+            tools: None,
         },
     );
 
@@ -211,6 +224,7 @@ async fn test_workflow_complex_graph() {
         NodeType::Agent {
             agent_id: agent_id.clone(),
             prompt_template: "Merge results".to_string(),
+            tools: None,
         },
     );
 
@@ -259,6 +273,7 @@ async fn test_workflow_metadata_preservation() {
         NodeType::Agent {
             agent_id: AgentId::new(),
             prompt_template: "Test prompt".to_string(),
+            tools: None,
         },
     );
 
@@ -304,6 +319,7 @@ async fn test_workflow_validation_cycles() {
         NodeType::Agent {
             agent_id: AgentId::new(),
             prompt_template: "Test prompt".to_string(),
+            tools: None,
         },
     );
 

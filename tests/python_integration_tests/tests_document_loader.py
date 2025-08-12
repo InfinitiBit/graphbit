@@ -4,7 +4,6 @@
 import json
 import os
 import tempfile
-from typing import Any, Dict
 
 import pytest
 
@@ -211,7 +210,7 @@ class TestDocumentLoader:
         """Test handling of empty files."""
         # Create an empty file
         empty_file = os.path.join(self.temp_path, "empty.txt")
-        with open(empty_file, "w") as f:
+        with open(empty_file, "w") as _:
             pass  # Create empty file
 
         # Load the document
@@ -380,11 +379,11 @@ class TestDocumentLoader:
         graphbit.DocumentLoader.validate_document_source(text_file, "txt")
 
         # Invalid type should raise exception
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError, match="Unsupported document type"):
             graphbit.DocumentLoader.validate_document_source(text_file, "unknown")
 
         # Non-existent file should raise exception
-        with pytest.raises(Exception):
+        with pytest.raises(FileNotFoundError):
             graphbit.DocumentLoader.validate_document_source("/nonexistent/file.txt", "txt")
 
     def test_document_content_methods(self):
@@ -490,7 +489,7 @@ class TestDocumentLoader:
 
         assert "invalid url format" in str(exc_info.value).lower()
 
-    @pytest.mark.skipif(not os.environ.get("TEST_REMOTE_URLS", "").lower() == "true", reason="Remote URL testing disabled (set TEST_REMOTE_URLS=true to enable)")
+    @pytest.mark.skipif(os.environ.get("TEST_REMOTE_URLS", "").lower() != "true", reason="Remote URL testing disabled (set TEST_REMOTE_URLS=true to enable)")
     def test_url_loading_remote_json(self):
         """Test loading JSON document from URL (requires internet)."""
         loader = graphbit.DocumentLoader()
@@ -578,7 +577,7 @@ class TestDocumentLoaderPerformance:
         for file_path in file_paths:
             document = loader.load_document(file_path, "txt")
             documents.append(document)
-            assert f"test document number" in document.content
+            assert "test document number" in document.content
 
         end_time = time.time()
         duration = end_time - start_time

@@ -22,6 +22,7 @@ async fn test_add_single_node() {
         NodeType::Agent {
             agent_id: AgentId::new(),
             prompt_template: "Test prompt".to_string(),
+            tools: None,
         },
     );
 
@@ -42,6 +43,7 @@ async fn test_add_multiple_nodes() {
         NodeType::Agent {
             agent_id: AgentId::new(),
             prompt_template: "First prompt".to_string(),
+            tools: None,
         },
     );
 
@@ -74,6 +76,7 @@ async fn test_duplicate_node_id() {
         NodeType::Agent {
             agent_id: AgentId::new(),
             prompt_template: "Test prompt".to_string(),
+            tools: None,
         },
     );
 
@@ -98,6 +101,7 @@ async fn test_remove_node() {
         NodeType::Agent {
             agent_id: AgentId::new(),
             prompt_template: "Test prompt".to_string(),
+            tools: None,
         },
     );
 
@@ -121,6 +125,7 @@ async fn test_add_edge() {
         NodeType::Agent {
             agent_id: AgentId::new(),
             prompt_template: "First prompt".to_string(),
+            tools: None,
         },
     );
 
@@ -155,6 +160,7 @@ async fn test_get_single_node_no_edges() {
         NodeType::Agent {
             agent_id: AgentId::new(),
             prompt_template: "Test prompt".to_string(),
+            tools: None,
         },
     );
 
@@ -176,6 +182,7 @@ async fn test_get_multiple_nodes_with_edges() {
         NodeType::Agent {
             agent_id: AgentId::new(),
             prompt_template: "First prompt".to_string(),
+            tools: None,
         },
     );
 
@@ -217,6 +224,7 @@ async fn test_large_graph() {
             NodeType::Agent {
                 agent_id: AgentId::new(),
                 prompt_template: format!("Prompt {i}"),
+                tools: None,
             },
         );
 
@@ -246,6 +254,7 @@ async fn test_self_loop() {
         NodeType::Agent {
             agent_id: AgentId::new(),
             prompt_template: "Self loop prompt".to_string(),
+            tools: None,
         },
     );
 
@@ -277,6 +286,7 @@ async fn test_complex_graph() {
             NodeType::Agent {
                 agent_id: AgentId::new(),
                 prompt_template: format!("Prompt for {}", names[i]),
+                tools: None,
             },
         );
 
@@ -318,6 +328,7 @@ async fn test_node_with_config() {
         NodeType::Agent {
             agent_id: AgentId::new(),
             prompt_template: "Test prompt".to_string(),
+            tools: None,
         },
     )
     .with_config("priority".to_string(), serde_json::json!(1))
@@ -347,6 +358,7 @@ async fn test_edge_with_metadata() {
         NodeType::Agent {
             agent_id: AgentId::new(),
             prompt_template: "First prompt".to_string(),
+            tools: None,
         },
     );
 

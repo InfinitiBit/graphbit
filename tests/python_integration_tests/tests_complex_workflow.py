@@ -449,7 +449,10 @@ class TestDataPipelineWorkflows:
     """Tests for complex data pipeline workflow patterns."""
 
     def test_etl_pipeline_workflow(self) -> None:
-        """Test workflow implementing ETL (Extract, Transform, Load) pattern."""
+        """Test workflow implementing ETL (Extract, Transform, Load) pattern.
+
+        This test validates the ETL workflow functionality.
+        """
         workflow = graphbit.Workflow("etl_pipeline")
 
         # Extract phase

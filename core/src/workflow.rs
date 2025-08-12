@@ -542,6 +542,7 @@ impl WorkflowExecutor {
                 NodeType::Agent {
                     agent_id,
                     prompt_template,
+                    tools: _,
                 } => {
                     Self::execute_agent_node_static(
                         agent_id,

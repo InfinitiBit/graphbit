@@ -202,7 +202,8 @@ class ComprehensiveBenchmarkRunner:
         ]
 
     def log(self, message: str, level: str = "INFO") -> None:
-        """Log message with timestamp, including number of runs if averaging."""
+        """Log message with timestamp, including number of runs \
+        if averaging."""
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         prefix = f"[Averaged over {self.num_runs} runs] " if self.num_runs > 1 else ""
         click.echo(f"[{timestamp}] {level}: {prefix}{message}")
@@ -222,7 +223,8 @@ class ComprehensiveBenchmarkRunner:
             self.log(f"Starting {framework_name} benchmark")
 
     def print_scenario_metrics(self, scenario_name: str, metrics: BenchmarkMetrics) -> None:
-        """Print benchmark metrics in a formatted way, mentioning averaging if num_runs > 1."""
+        """Print benchmark metrics in a formatted way, mentioning averaging \
+        if num_runs > 1."""
         avg_note = f" (averaged over {self.num_runs} runs)" if self.num_runs > 1 else ""
         if self.verbose:
             click.echo(f"\n{scenario_name} Results{avg_note}:")
@@ -252,7 +254,10 @@ class ComprehensiveBenchmarkRunner:
         scenario: BenchmarkScenario,
         scenario_name: str,
     ) -> Tuple[Optional[BenchmarkMetrics], Optional[Exception]]:
-        """Run a specific benchmark scenario for a framework, repeated num_runs times and averaged."""
+        """Run a specific benchmark scenario for a framework.
+
+        The scenario is repeated num_runs times and averaged.
+        """
         framework_info = self.frameworks[framework_type]
         framework_name: str = framework_info["name"]
         benchmark: BaseBenchmark = framework_info["benchmark"]
@@ -392,8 +397,7 @@ class ComprehensiveBenchmarkRunner:
                     print(
                         f"{framework_name:<15} {metrics.execution_time_ms:<12.1f} "
                         f"{metrics.memory_usage_mb:<13.3f} {metrics.cpu_usage_percent:<10.3f} "
-                        f"{metrics.token_count:<10} "
-                        f"{metrics.throughput_tasks_per_sec:<12.2f}"
+                        f"{metrics.token_count:<10} {metrics.throughput_tasks_per_sec:<12.2f}"
                     )
                 else:
                     print(f"{framework_name:<15} {'FAILED':<12} {'FAILED':<13} {'FAILED':<10} {'FAILED':<10} {'FAILED':<12}")
@@ -456,7 +460,8 @@ class ComprehensiveBenchmarkRunner:
         self.log(f"Visualization saved to: {Path(str(self.config['results_dir'])).absolute()}")
 
     def create_simple_dashboard(self) -> None:
-        """Create a simple dashboard with execution time comparison and performance table."""
+        """Create a simple dashboard with execution time comparison \
+        and performance table."""
         if plt is None or np is None:
             self.log("Visualization libraries missing - skipping dashboard", "WARNING")
             return
@@ -609,13 +614,18 @@ class ComprehensiveBenchmarkRunner:
 @click.option("--model", type=str, default=DEFAULT_MODEL, help="Model name to use for benchmarking", show_default=True)
 @click.option("--temperature", type=float, default=DEFAULT_TEMPERATURE, help="Temperature parameter for LLM", show_default=True)
 @click.option("--max-tokens", type=int, default=DEFAULT_MAX_TOKENS, help="Maximum tokens for LLM responses", show_default=True)
-@click.option("--api-key", type=str, help="API key for the LLM provider (overrides environment variable)")
+@click.option("--api-key", type=str, help="API key for the LLM provider (overrides " "environment variable)")
 @click.option("--base-url", type=str, help="Base URL for custom endpoints (e.g., Ollama)")
 @click.option("--concurrency", type=int, default=DEFAULT_CONCURRENCY, show_default=True, help="Maximum number of concurrent tasks")
-@click.option("--cpu-cores", type=str, help="Comma-separated cores or 'auto:N' to select least busy cores")
+@click.option(
+    "--cpu-cores",
+    type=str,
+    help="Comma-separated cores \
+or 'auto:N' to select least busy cores",
+)
 @click.option("--membind", type=int, help="Bind memory allocations to the specified NUMA node")
-@click.option("--frameworks", type=str, help="Comma-separated list of frameworks to test (e.g., 'graphbit,langchain')")
-@click.option("--scenarios", type=str, help="Comma-separated list of scenarios to run (e.g., 'simple_task,parallel_pipeline')")
+@click.option("--frameworks", type=str, help="Comma-separated list of frameworks to te" "st (e.g., 'graphbit,langchain')")
+@click.option("--scenarios", type=str, help="Comma-separated list of scenarios to run" " (e.g., 'simple_task,parallel_pipeline')")
 @click.option("--num-runs", type=int, default=NUM_RUNS, show_default=True, help="Number of times to repeat each scenario (results are averaged)")
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose output")
 @click.option("--list-models", is_flag=True, help="List available models for the selected provider and exit")

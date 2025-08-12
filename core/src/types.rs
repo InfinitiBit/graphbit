@@ -1161,3 +1161,107 @@ impl ConcurrencyStats {
         }
     }
 }
+
+/// Tool definition for agent tool calling
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ToolDefinition {
+    /// Tool name (must match the function name decorated with @tool)
+    pub name: String,
+    /// Tool description
+    pub description: String,
+    /// JSON schema for tool parameters
+    pub parameters: serde_json::Value,
+    /// Tool category for organization
+    pub category: Option<String>,
+    /// Tool version
+    pub version: Option<String>,
+    /// Whether the tool is enabled
+    pub enabled: bool,
+}
+
+impl ToolDefinition {
+    /// Create a new tool definition
+    pub fn new(
+        name: impl Into<String>,
+        description: impl Into<String>,
+        parameters: serde_json::Value,
+    ) -> Self {
+        Self {
+            name: name.into(),
+            description: description.into(),
+            parameters,
+            category: None,
+            version: None,
+            enabled: true,
+        }
+    }
+
+    /// Set tool category
+    pub fn with_category(mut self, category: impl Into<String>) -> Self {
+        self.category = Some(category.into());
+        self
+    }
+
+    /// Set tool version
+    pub fn with_version(mut self, version: impl Into<String>) -> Self {
+        self.version = Some(version.into());
+        self
+    }
+
+    /// Enable or disable the tool
+    pub fn with_enabled(mut self, enabled: bool) -> Self {
+        self.enabled = enabled;
+        self
+    }
+}
+
+/// Tool call execution result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ToolCallResult {
+    /// Whether the tool call was successful
+    pub success: bool,
+    /// Tool call result data
+    pub result: serde_json::Value,
+    /// Error message if the call failed
+    pub error: Option<String>,
+    /// Tool execution metadata
+    pub metadata: HashMap<String, serde_json::Value>,
+    /// Execution duration in milliseconds
+    pub duration_ms: u64,
+}
+
+impl ToolCallResult {
+    /// Create a successful tool call result
+    pub fn success(result: serde_json::Value) -> Self {
+        Self {
+            success: true,
+            result,
+            error: None,
+            metadata: HashMap::new(),
+            duration_ms: 0,
+        }
+    }
+
+    /// Create a failed tool call result
+    pub fn failure(error: impl Into<String>) -> Self {
+        Self {
+            success: false,
+            result: serde_json::Value::Null,
+            error: Some(error.into()),
+            metadata: HashMap::new(),
+            duration_ms: 0,
+        }
+    }
+
+    /// Add metadata to the result
+    pub fn with_metadata(mut self, key: String, value: serde_json::Value) -> Self {
+        self.metadata.insert(key, value);
+        self
+    }
+
+    /// Set the execution duration
+    pub fn with_duration(mut self, duration_ms: u64) -> Self {
+        self.duration_ms = duration_ms;
+        self
+    }
+}

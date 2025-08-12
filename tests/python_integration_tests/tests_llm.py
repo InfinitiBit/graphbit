@@ -151,7 +151,7 @@ class TestAnthropicLLM:
     def test_anthropic_simple_completion(self, anthropic_client: Any) -> None:
         """Test simple text completion with Anthropic."""
         try:
-            response = anthropic_client.complete("Hello, world!", max_tokens=10)
+            response = anthropic_client.complete("Hello, " "world!", max_tokens=10)
             assert isinstance(response, str)
             assert len(response) > 0
         except Exception as e:
@@ -407,7 +407,7 @@ class TestAdvancedLLMClient:
 
         except RuntimeError as e:
             if "no running event loop" in str(e):
-                pytest.skip("Test requires async event loop - async interface not available in sync context")
+                pytest.skip("Test requires async event loop - async i" "nterface not available in sync context")
             else:
                 pytest.fail(f"Batch completion async interface test failed: {e}")
         except Exception as e:
@@ -431,7 +431,7 @@ class TestAdvancedLLMClient:
 
         except RuntimeError as e:
             if "no running event loop" in str(e):
-                pytest.skip("Test requires async event loop - async interface not available in sync context")
+                pytest.skip("Test requires async event loop - async i" "nterface not available in sync context")
             else:
                 pytest.fail(f"Chat optimized async interface test failed: {e}")
         except Exception as e:
@@ -450,7 +450,7 @@ class TestAdvancedLLMClient:
 
         except RuntimeError as e:
             if "no running event loop" in str(e):
-                pytest.skip("Test requires async event loop - async interface not available in sync context")
+                pytest.skip("Test requires async event loop - async i" "nterface not available in sync context")
             else:
                 pytest.fail(f"Streaming completion async interface test failed: {e}")
         except Exception as e:
@@ -500,7 +500,7 @@ class TestAdvancedLLMClient:
 
         except RuntimeError as e:
             if "no running event loop" in str(e):
-                pytest.skip("Test requires async event loop - async interface not available in sync context")
+                pytest.skip("Test requires async event loop - async i" "nterface not available in sync context")
             else:
                 pytest.fail(f"Client warmup async interface test failed: {e}")
         except Exception as e:
@@ -522,7 +522,7 @@ class TestAdvancedLLMClient:
 
         except RuntimeError as e:
             if "no running event loop" in str(e):
-                pytest.skip("Test requires async event loop - async interface not available in sync context")
+                pytest.skip("Test requires async event loop - async i" "nterface not available in sync context")
             else:
                 pytest.fail(f"Async completion interface test failed: {e}")
         except Exception as e:
@@ -659,7 +659,7 @@ class TestLLMPerformance:
 
         except RuntimeError as e:
             if "no running event loop" in str(e):
-                pytest.skip("Test requires async event loop - async interface not available in sync context")
+                pytest.skip("Test requires async event loop - async i" "nterface not available in sync context")
             else:
                 pytest.fail(f"Concurrent requests interface test failed: {e}")
         except Exception as e:

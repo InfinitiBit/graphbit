@@ -16,6 +16,7 @@ async fn test_workflow_validation_errors() {
         graph::NodeType::Agent {
             agent_id: types::AgentId::new(),
             prompt_template: "Test prompt".to_string(),
+            tools: None,
         },
     );
 
@@ -25,6 +26,7 @@ async fn test_workflow_validation_errors() {
         graph::NodeType::Agent {
             agent_id: types::AgentId::new(),
             prompt_template: "Test prompt".to_string(),
+            tools: None,
         },
     );
 
@@ -45,6 +47,7 @@ async fn test_workflow_validation_errors() {
         graph::NodeType::Agent {
             agent_id: types::AgentId::new(),
             prompt_template: "Test prompt".to_string(),
+            tools: None,
         },
     );
 
@@ -74,6 +77,7 @@ async fn test_circular_dependency_detection() {
         graph::NodeType::Agent {
             agent_id: types::AgentId::new(),
             prompt_template: "Test prompt".to_string(),
+            tools: None,
         },
     );
 
@@ -83,6 +87,7 @@ async fn test_circular_dependency_detection() {
         graph::NodeType::Agent {
             agent_id: types::AgentId::new(),
             prompt_template: "Test prompt".to_string(),
+            tools: None,
         },
     );
 
@@ -92,6 +97,7 @@ async fn test_circular_dependency_detection() {
         graph::NodeType::Agent {
             agent_id: types::AgentId::new(),
             prompt_template: "Test prompt".to_string(),
+            tools: None,
         },
     );
 
@@ -185,6 +191,7 @@ async fn test_error_propagation_chain() {
         graph::NodeType::Agent {
             agent_id: types::AgentId::new(),
             prompt_template: "Test prompt".to_string(),
+            tools: None,
         },
     );
 

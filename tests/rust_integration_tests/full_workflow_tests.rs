@@ -24,6 +24,7 @@ async fn test_simple_agent_workflow_execution() {
         NodeType::Agent {
             agent_id: agent_config.id.clone(),
             prompt_template: "Process this input: {{input}}".to_string(),
+            tools: None,
         },
     );
 
@@ -60,6 +61,7 @@ async fn test_sequential_agent_workflow() {
         NodeType::Agent {
             agent_id: agent1_config.id.clone(),
             prompt_template: "Analyze: {{input}}".to_string(),
+            tools: None,
         },
     );
 
@@ -69,6 +71,7 @@ async fn test_sequential_agent_workflow() {
         NodeType::Agent {
             agent_id: agent2_config.id.clone(),
             prompt_template: "Summarize: {{previous_output}}".to_string(),
+            tools: None,
         },
     );
 
@@ -117,6 +120,7 @@ async fn test_parallel_agent_workflow() {
         NodeType::Agent {
             agent_id: sentiment_agent.id.clone(),
             prompt_template: "Sentiment of: {{input}}".to_string(),
+            tools: None,
         },
     );
 
@@ -126,6 +130,7 @@ async fn test_parallel_agent_workflow() {
         NodeType::Agent {
             agent_id: topic_agent.id.clone(),
             prompt_template: "Topic of: {{input}}".to_string(),
+            tools: None,
         },
     );
 
@@ -135,6 +140,7 @@ async fn test_parallel_agent_workflow() {
         NodeType::Agent {
             agent_id: length_agent.id.clone(),
             prompt_template: "Length of: {{input}}".to_string(),
+            tools: None,
         },
     );
 
@@ -251,6 +257,7 @@ async fn test_workflow_with_document_loading() {
         NodeType::Agent {
             agent_id: agent_config.id.clone(),
             prompt_template: "Summarize this text: {{document_content}}".to_string(),
+            tools: None,
         },
     );
 
@@ -334,6 +341,7 @@ async fn test_workflow_retry_configuration() {
         NodeType::Agent {
             agent_id: AgentId::new(),
             prompt_template: "Process with retry: {{input}}".to_string(),
+            tools: None,
         },
     )
     .with_retry_config(retry_config);
@@ -403,6 +411,7 @@ async fn test_complex_branching_workflow() {
         NodeType::Agent {
             agent_id: classifier_agent.id.clone(),
             prompt_template: "Classify: {{input}}".to_string(),
+            tools: None,
         },
     );
 
@@ -417,6 +426,7 @@ async fn test_complex_branching_workflow() {
         NodeType::Agent {
             agent_id: text_processor.id.clone(),
             prompt_template: "Process text: {{input}}".to_string(),
+            tools: None,
         },
     );
 
@@ -434,6 +444,7 @@ async fn test_complex_branching_workflow() {
         NodeType::Agent {
             agent_id: number_processor.id.clone(),
             prompt_template: "Process number: {{input}}".to_string(),
+            tools: None,
         },
     );
 
@@ -451,6 +462,7 @@ async fn test_complex_branching_workflow() {
         NodeType::Agent {
             agent_id: other_processor.id.clone(),
             prompt_template: "Process other: {{input}}".to_string(),
+            tools: None,
         },
     );
 
@@ -464,6 +476,7 @@ async fn test_complex_branching_workflow() {
         NodeType::Agent {
             agent_id: aggregator.id.clone(),
             prompt_template: "Combine results: {{all_outputs}}".to_string(),
+            tools: None,
         },
     );
 
@@ -595,6 +608,7 @@ async fn test_real_llm_workflow_execution() {
                 NodeType::Agent {
                     agent_id: agent_config.id.clone(),
                     prompt_template: "Say hello briefly: {{input}}".to_string(),
+                    tools: None,
                 },
             );
 
@@ -741,6 +755,7 @@ async fn test_workflow_error_propagation() {
         NodeType::Agent {
             agent_id: invalid_agent_id,
             prompt_template: "This will fail".to_string(),
+            tools: None,
         },
     );
 
@@ -824,6 +839,7 @@ async fn test_multi_provider_workflow_execution() {
                 NodeType::Agent {
                     agent_id: agent_config.id.clone(),
                     prompt_template: "Say hello: {{input}}".to_string(),
+                    tools: None,
                 },
             );
 
@@ -938,6 +954,7 @@ async fn test_comprehensive_real_api_workflow() {
         NodeType::Agent {
             agent_id: analyzer_config.id.clone(),
             prompt_template: "Analyze this: {{input}}".to_string(),
+            tools: None,
         },
     );
 
@@ -947,6 +964,7 @@ async fn test_comprehensive_real_api_workflow() {
         NodeType::Agent {
             agent_id: summarizer_config.id.clone(),
             prompt_template: "Summarize: {{previous_output}}".to_string(),
+            tools: None,
         },
     );
 

@@ -858,6 +858,96 @@ print(f"Similarity: {similarity}")
 
 ---
 
+## Tool Integration
+
+### Tool Decorator
+
+GraphBit provides a powerful `@tool` decorator for creating functions that can be called by agents during workflow execution.
+
+#### `@tool(description, parameters=None, name=None, category="general", version="1.0.0", enabled=True, auto_schema=True, auto_register=True)`
+
+Decorator to register a Python function as a tool for LLM calling.
+
+```python
+from tools import tool
+
+@tool(
+    description="Get current weather for a location",
+    parameters={
+        "type": "object",
+        "properties": {
+            "location": {"type": "string", "description": "City and state"},
+            "unit": {"type": "string", "enum": ["celsius", "fahrenheit"]}
+        },
+        "required": ["location"]
+    },
+    category="weather"
+)
+def get_weather(location: str, unit: str = "fahrenheit") -> dict:
+    return {"temperature": 72, "condition": "sunny", "unit": unit}
+```
+
+**Parameters**:
+- `description` (str): Human-readable description of what the tool does
+- `parameters` (dict, optional): JSON schema for tool parameters (auto-generated if None)
+- `name` (str, optional): Tool name (defaults to function name)
+- `category` (str, optional): Tool category for organization. Default: "general"
+- `version` (str, optional): Tool version. Default: "1.0.0"
+- `enabled` (bool, optional): Whether the tool is enabled by default. Default: True
+- `auto_schema` (bool, optional): Whether to auto-generate schema from function signature. Default: True
+- `auto_register` (bool, optional): Whether to automatically register with GraphBit. Default: True
+
+**Returns**: Decorated function with tool metadata attached
+
+### Using Tools with Agents
+
+Tools can be attached to agents and will be automatically available during workflow execution:
+
+```python
+import graphbit
+from tools import tool
+
+# Define tools
+@tool(description="Calculate rectangle area")
+def calculate_area(width: float, height: float) -> dict:
+    return {"area": width * height, "perimeter": 2 * (width + height)}
+
+@tool(description="Send notification")
+def send_notification(message: str, priority: str = "medium") -> dict:
+    return {"message": message, "priority": priority, "sent": True}
+
+# Create agent with tools
+agent = graphbit.Node.agent(
+    name="Math Helper",
+    prompt="You are a helpful assistant that can calculate areas and send notifications.",
+    tools=[calculate_area, send_notification]
+)
+
+# The agent can now call these tools during workflow execution
+```
+
+### Tool Execution Modes
+
+Tools can be executed in two ways:
+
+1. **Direct Tool Calls**: When a workflow explicitly sends a tool call message
+2. **LLM-Triggered Calls**: When the agent's LLM response indicates a tool should be called
+
+```python
+# Direct tool call via workflow message
+message_content = {
+    "type": "tool_call",
+    "tool_name": "calculate_area",
+    "parameters": {"width": 10, "height": 5}
+}
+
+# LLM-triggered call (agent detects patterns in LLM response)
+# The agent will automatically detect and execute tool calls when the LLM
+# response contains patterns like "call calculate_area" or "use calculate_area with {params}"
+```
+
+---
+
 ## Workflow Components
 
 ### `Node`
@@ -866,14 +956,29 @@ Factory class for creating different types of workflow nodes.
 
 #### Static Methods
 
-##### `Node.agent(name, prompt, agent_id=None)`
-Create an AI agent node.
+##### `Node.agent(name, prompt, agent_id=None, tools=None)`
+Create an AI agent node with optional tool calling capabilities.
 
 ```python
+# Basic agent without tools
 agent = graphbit.Node.agent(
     name="Content Analyzer",
     prompt="Analyze the sentiment of: {input}",
     agent_id="analyzer"  # Optional, auto-generated if not provided
+)
+
+# Agent with tools
+from tools import tool
+
+@tool(description="Get weather information")
+def get_weather(location: str) -> dict:
+    return {"location": location, "temperature": 22, "condition": "sunny"}
+
+agent_with_tools = graphbit.Node.agent(
+    name="Weather Assistant",
+    prompt="You are a weather assistant. Use tools when needed: {input}",
+    agent_id="weather_agent",
+    tools=[get_weather]  # List of decorated tool functions
 )
 ```
 
@@ -881,6 +986,7 @@ agent = graphbit.Node.agent(
 - `name` (str): Human-readable node name
 - `prompt` (str): LLM prompt template with variables
 - `agent_id` (str, optional): Unique agent identifier. Auto-generated if not provided
+- `tools` (List[function], optional): List of functions decorated with @tool that the agent can call
 
 **Returns**: `Node` instance
 

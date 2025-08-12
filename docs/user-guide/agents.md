@@ -32,6 +32,76 @@ print(f"Agent ID: {analyzer.id()}")
 print(f"Agent Name: {analyzer.name()}")
 ```
 
+### Agent with Tools
+
+GraphBit agents can be equipped with tools that extend their capabilities beyond text generation. Tools are Python functions decorated with the `@tool` decorator.
+
+```python
+import graphbit
+from tools import tool
+
+# Define tools for the agent
+@tool(
+    description="Get weather information for a specific location",
+    parameters={
+        "type": "object",
+        "properties": {
+            "location": {"type": "string", "description": "City and state/country"},
+            "unit": {"type": "string", "enum": ["celsius", "fahrenheit"], "description": "Temperature unit"}
+        },
+        "required": ["location"]
+    },
+    category="weather"
+)
+def get_weather(location: str, unit: str = "fahrenheit") -> dict:
+    """Get weather information (simulated)."""
+    return {
+        "location": location,
+        "temperature": 22 if unit == "celsius" else 72,
+        "condition": "sunny",
+        "humidity": 65,
+        "unit": unit
+    }
+
+@tool(
+    description="Send an email notification",
+    parameters={
+        "type": "object", 
+        "properties": {
+            "recipient": {"type": "string", "description": "Email recipient"},
+            "subject": {"type": "string", "description": "Email subject"},
+            "message": {"type": "string", "description": "Email body"}
+        },
+        "required": ["recipient", "subject", "message"]
+    },
+    category="communication"
+)
+def send_email(recipient: str, subject: str, message: str) -> dict:
+    """Send email (simulated)."""
+    return {
+        "recipient": recipient,
+        "subject": subject,
+        "message": message,
+        "sent_at": "2024-01-01T12:00:00Z",
+        "status": "delivered"
+    }
+
+# Create agent with tools
+weather_agent = graphbit.Node.agent(
+    name="Weather Assistant",
+    prompt="""You are a helpful weather assistant. You can:
+    - Get weather information using the get_weather tool
+    - Send email notifications using the send_email tool
+    
+    When asked about weather, use the appropriate tools to provide accurate information.
+    User request: {input}""",
+    agent_id="weather_assistant",
+    tools=[get_weather, send_email]  # Attach tools to agent
+)
+
+print(f"Agent created with {len([get_weather, send_email])} tools available")
+```
+
 ### Agent with Explicit Configuration
 
 ```python
@@ -706,6 +776,137 @@ def test_agent_configuration():
     except Exception as e:
         print(f"❌ Agent configuration failed: {e}")
         return False
+```
+
+## Tool Integration Best Practices
+
+### 1. Tool Design Guidelines
+
+```python
+# Good: Specific, well-documented tool
+@tool(
+    description="Calculate the area and perimeter of a rectangle",
+    parameters={
+        "type": "object",
+        "properties": {
+            "width": {"type": "number", "description": "Width in meters", "minimum": 0},
+            "height": {"type": "number", "description": "Height in meters", "minimum": 0}
+        },
+        "required": ["width", "height"]
+    },
+    category="geometry"
+)
+def calculate_rectangle(width: float, height: float) -> dict:
+    """Calculate rectangle area and perimeter with validation."""
+    if width <= 0 or height <= 0:
+        raise ValueError("Width and height must be positive")
+    
+    return {
+        "width": width,
+        "height": height,
+        "area": width * height,
+        "perimeter": 2 * (width + height),
+        "calculated_at": "2024-01-01T12:00:00Z"
+    }
+
+# Avoid: Vague, poorly documented tools
+@tool(description="Do math stuff")
+def math_thing(x, y):
+    return x + y
+```
+
+### 2. Tool Categories
+
+Organize tools into logical categories for better management:
+
+```python
+# Weather tools
+@tool(description="Get current weather", category="weather")
+def get_weather(location: str) -> dict: ...
+
+@tool(description="Get weather forecast", category="weather") 
+def get_forecast(location: str, days: int = 5) -> dict: ...
+
+# Math tools
+@tool(description="Calculate area", category="mathematics")
+def calculate_area(shape: str, **kwargs) -> dict: ...
+
+@tool(description="Solve equation", category="mathematics")
+def solve_equation(equation: str) -> dict: ...
+
+# Communication tools
+@tool(description="Send email", category="communication")
+def send_email(recipient: str, subject: str, body: str) -> dict: ...
+
+@tool(description="Send SMS", category="communication")
+def send_sms(phone: str, message: str) -> dict: ...
+```
+
+### 3. Tool Error Handling
+
+```python
+@tool(
+    description="Divide two numbers",
+    parameters={
+        "type": "object",
+        "properties": {
+            "a": {"type": "number", "description": "Dividend"},
+            "b": {"type": "number", "description": "Divisor"}
+        },
+        "required": ["a", "b"]
+    }
+)
+def divide_numbers(a: float, b: float) -> dict:
+    """Divide two numbers with error handling."""
+    try:
+        if b == 0:
+            return {
+                "error": "Division by zero is not allowed",
+                "success": False
+            }
+        
+        result = a / b
+        return {
+            "dividend": a,
+            "divisor": b,
+            "result": result,
+            "success": True
+        }
+    except Exception as e:
+        return {
+            "error": str(e),
+            "success": False
+        }
+```
+
+### 4. Multi-Tool Agent Example
+
+```python
+# Create a comprehensive assistant with multiple tools
+assistant_tools = [
+    get_weather,
+    send_email,
+    calculate_rectangle,
+    divide_numbers
+]
+
+multi_tool_agent = graphbit.Node.agent(
+    name="Comprehensive Assistant",
+    prompt="""You are a helpful assistant with access to multiple tools:
+    
+    Available Tools:
+    - get_weather: Get weather information for any location
+    - send_email: Send email notifications
+    - calculate_rectangle: Calculate area and perimeter of rectangles
+    - divide_numbers: Perform division with error handling
+    
+    Use the appropriate tools to help the user with their request: {input}
+    
+    When using tools, explain what you're doing and interpret the results for the user.
+    """,
+    agent_id="multi_tool_assistant",
+    tools=assistant_tools
+)
 ```
 
 ## What's Next

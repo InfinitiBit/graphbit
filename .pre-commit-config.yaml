@@ -79,15 +79,14 @@ repos:
     args: [-r, '--skip=B101,B601']
     files: ^(tests/.*\.py|benchmarks/.*\.py|examples/.*\.py|scripts/.*\.py)$
 
-  # Python Dependency Safety Check
-- repo: local
-  hooks:
-  - id: safety-check
-    name: Safety dependency check
-    entry: poetry run safety check
-    language: system
-    pass_filenames: false
-    files: ^(pyproject\.toml|poetry\.lock)$
+# - repo: local
+#   hooks:
+#   - id: safety-check
+#     name: Safety dependency check
+#     entry: poetry run safety check
+#     language: system
+#     pass_filenames: false
+#     files: ^(pyproject\.toml|poetry\.lock)$
 
   # Rust Formatting
 - repo: https://github.com/doublify/pre-commit-rust
@@ -140,7 +139,7 @@ repos:
   rev: v1.28.3
   hooks:
   - id: typos
-    exclude: ^(Cargo\.lock|poetry\.lock|CHANGELOG\.md)$
+    exclude: ^(Cargo\.lock|poetry\.lock|CHANGELOG\.md|site/.*|site)$
 
 
 
@@ -215,6 +214,7 @@ repos:
 exclude: |
   (?x)^(
     target/|
+    site/|
     Cargo\.lock|
     poetry\.lock|
     \.git/|

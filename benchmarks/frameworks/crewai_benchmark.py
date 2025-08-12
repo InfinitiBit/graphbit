@@ -51,7 +51,10 @@ class CrewAIBenchmark(BaseBenchmark):
         if llm_config_obj.provider == LLMProvider.OPENAI:
             api_key = llm_config_obj.api_key or os.getenv("OPENAI_API_KEY")
             if not api_key:
-                raise ValueError("OpenAI API key not found in environment or config")
+                raise ValueError(
+                    "OpenAI API key not found in environment \
+                or config"
+                )
 
             self.llm = LLM(
                 model=f"openai/{llm_config_obj.model}",
@@ -63,7 +66,10 @@ class CrewAIBenchmark(BaseBenchmark):
         elif llm_config_obj.provider == LLMProvider.ANTHROPIC:
             api_key = llm_config_obj.api_key or os.getenv("ANTHROPIC_API_KEY")
             if not api_key:
-                raise ValueError("Anthropic API key not found in environment or config")
+                raise ValueError(
+                    "Anthropic API key not found in environment \
+                or config"
+                )
 
             self.llm = LLM(
                 model=f"anthropic/{llm_config_obj.model}",
@@ -104,25 +110,26 @@ class CrewAIBenchmark(BaseBenchmark):
         self.agents["general"] = create_agent(
             "General Assistant",
             "Complete assigned tasks efficiently and accurately",
-            "You are an experienced assistant capable of handling various tasks.",
+            "You are an experienced assistant capable" " of handling various tasks.",
         )
 
         self.agents["analyst"] = create_agent(
             "Data Analyst",
             "Analyze data and provide insights",
-            "You are a skilled data analyst with expertise in pattern recognition.",
+            "You are a skilled data analyst with expe" "rtise in pattern recognition.",
         )
 
         self.agents["creator"] = create_agent(
             "Content Creator",
             "Create engaging and informative content",
-            "You are a creative writer with expertise in marketing and communication.",
+            "You are a creative writer with expertise in marketing \
+            and communication.",
         )
 
         self.agents["technical"] = create_agent(
             "Technical Expert",
             "Provide technical solutions and explanations",
-            "You are a technical expert with deep knowledge across various domains.",
+            "You are a technical expert with deep kno" "wledge across various domains.",
         )
 
     async def teardown(self) -> None:
@@ -152,6 +159,7 @@ class CrewAIBenchmark(BaseBenchmark):
                     result = await asyncio.get_event_loop().run_in_executor(None, crew.kickoff)
                     break  # If the task succeeds, exit the retry loop
                 except Exception as e:
+
                     if attempt < max_retries - 1:  # Retry if we haven't reached the max attempts
                         self.logger.error(f"Error in simple task on attempt {attempt + 1}: {e}. Retrying...")
                         await asyncio.sleep(retry_delay)  # Retry delay
@@ -298,7 +306,8 @@ class CrewAIBenchmark(BaseBenchmark):
                 task = Task(
                     description=full_prompt,
                     agent=self.agents[agent_key],
-                    expected_output="Comprehensive analysis and recommendations",
+                    expected_output="Comprehensive analysis \
+                    and recommendations",
                 )
                 crew = Crew(agents=[self.agents[agent_key]], tasks=[task], verbose=False)
 
@@ -373,7 +382,8 @@ class CrewAIBenchmark(BaseBenchmark):
             task = Task(
                 description=MEMORY_INTENSIVE_PROMPT,
                 agent=self.agents["analyst"],
-                expected_output="Detailed data analysis with insights and recommendations",
+                expected_output="Detailed data analysis with insights \
+                and recommendations",
             )
             crew = Crew(agents=[self.agents["analyst"]], tasks=[task], verbose=False)
 
@@ -410,7 +420,10 @@ class CrewAIBenchmark(BaseBenchmark):
         return metrics
 
     async def async_cleanup_resources(self) -> None:
-        """Asynchronously clean up any additional resources (e.g., files, data)."""
+        """Asynchronously clean up any additional resources.
+
+        This includes cleaning up files, data, and other resources.
+        """
         # Example cleanup: freeing up additional resources, deleting temporary files, etc.
         await asyncio.sleep(1)  # Simulate async cleanup
 
@@ -437,6 +450,7 @@ class CrewAIBenchmark(BaseBenchmark):
                     try:
                         return await asyncio.get_event_loop().run_in_executor(None, crew.kickoff)
                     except Exception as e:
+
                         if attempt < max_retries - 1:  # Retry if we haven't reached the max attempts
                             self.logger.error(f"Error in task '{task_desc}' on attempt {attempt + 1}: {e}. Retrying...")
                             await asyncio.sleep(retry_delay)  # Exponential backoff could be added here
