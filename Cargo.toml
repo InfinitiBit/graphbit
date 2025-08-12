@@ -12,6 +12,7 @@ tokio = {version = "1.38", features = ["full"]}
 
 [features]
 default = []
+llm = []
 
 [package]
 authors = ["GraphBit Team"]

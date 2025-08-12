@@ -1,6 +1,5 @@
-#!/usr/bin/env python3
 """Integration tests for GraphBit LLM functionality."""
-import asyncio
+
 import inspect
 import os
 import time
@@ -313,10 +312,7 @@ class TestOllamaLLM:
                 # Check if model exists
                 model = "llama3.2"
                 try:
-                    async with session.post(
-                        f"{base_url}/api/show",
-                        json={"name": model}
-                    ) as response:
+                    async with session.post(f"{base_url}/api/show", json={"name": model}) as response:
                         if response.status != 200:
                             pytest.skip(f"Ollama model {model} not available")
                             return
@@ -478,25 +474,25 @@ class TestAdvancedLLMClient:
 
             # If it's an async iterable, consume chunks
             if hasattr(obj, "__aiter__"):
-                chunks: list[str] = []
+                async_chunks: list[str] = []
                 async for chunk in obj:  # type: ignore[func-returns-value]
                     if inspect.isawaitable(chunk):
                         chunk = await chunk  # type: ignore[assignment]
                     assert isinstance(chunk, str)
-                    chunks.append(chunk)
-                full = "".join(chunks)
+                    async_chunks.append(chunk)
+                full = "".join(async_chunks)
                 assert len(full) > 0
                 return
 
             # If it's a synchronous iterable of chunks, consume (await items if needed)
             if hasattr(obj, "__iter__") and not isinstance(obj, (str, bytes)):
-                chunks: list[str] = []
+                sync_chunks: list[str] = []
                 for item in obj:  # type: ignore[assignment]
                     if inspect.isawaitable(item):
                         item = await item
                     assert isinstance(item, str)
-                    chunks.append(item)
-                full = "".join(chunks)
+                    sync_chunks.append(item)
+                full = "".join(sync_chunks)
                 assert len(full) > 0
                 return
 
@@ -708,7 +704,7 @@ class TestLLMPerformance:
             for i, result in enumerate(results):
                 assert len(result) > 0
                 # Result should contain a number since we asked for addition
-                assert any(str(i+i) in result for i in range(3))
+                assert any(str(i + i) in result for i in range(3))
 
         except Exception as e:
             pytest.fail(f"Concurrent requests interface test failed: {e}")
