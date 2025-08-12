@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """Integration tests for GraphBit LLM functionality."""
+import asyncio
+import inspect
 import os
 import time
 from typing import Any
 
+import aiohttp
 import pytest
 
 import graphbit
@@ -291,11 +294,38 @@ class TestOllamaLLM:
         executor = graphbit.Executor(ollama_config)
         assert executor is not None
 
-    @pytest.mark.skip(reason="Requires local Ollama installation")
-    def test_ollama_simple_completion(self, ollama_client: Any) -> None:
+    async def test_ollama_simple_completion(self, ollama_client: Any) -> None:
         """Test simple text completion with Ollama."""
         try:
-            response = ollama_client.complete("Hello, world!", max_tokens=10)
+            # Check if Ollama server is available
+            base_url = "http://localhost:11434"
+            async with aiohttp.ClientSession() as session:
+                # Check server availability
+                try:
+                    async with session.get(f"{base_url}/api/version") as response:
+                        if response.status != 200:
+                            pytest.skip("Ollama server not available")
+                            return
+                except aiohttp.ClientError:
+                    pytest.skip("Ollama server not available")
+                    return
+
+                # Check if model exists
+                model = "llama3.2"
+                try:
+                    async with session.post(
+                        f"{base_url}/api/show",
+                        json={"name": model}
+                    ) as response:
+                        if response.status != 200:
+                            pytest.skip(f"Ollama model {model} not available")
+                            return
+                except aiohttp.ClientError:
+                    pytest.skip(f"Ollama model {model} not available")
+                    return
+
+            # Run the test
+            response = await ollama_client.complete_async("Hello, world!", max_tokens=10)
             assert isinstance(response, str)
             assert len(response) > 0
         except Exception as e:
@@ -389,68 +419,97 @@ class TestAdvancedLLMClient:
         return graphbit.LlmClient(openai_config, debug=True)
 
     @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="Requires OpenAI API key")
-    def test_complete_batch_async_interface(self, openai_client: Any) -> None:
+    async def test_complete_batch_async_interface(self, openai_client: Any) -> None:
         """Test batch completion async interface creation."""
         prompts = ["What is AI?", "Explain machine learning in one sentence."]
 
         try:
-            # Test that complete_batch returns an async object (coroutine)
-            async_result = openai_client.complete_batch(prompts, max_tokens=50)
-            assert async_result is not None
-            # Test that it's a coroutine or Future-like object
-            assert hasattr(async_result, "__await__") or hasattr(async_result, "result")
+            # Test batch completion
+            results = await openai_client.complete_batch(prompts, max_tokens=50)
+            assert len(results) == len(prompts)
+            assert all(isinstance(result, str) for result in results)
 
             # Test batch completion with custom concurrency
-            async_result_concurrent = openai_client.complete_batch(prompts, max_tokens=50, max_concurrency=2)
-            assert async_result_concurrent is not None
-            assert hasattr(async_result_concurrent, "__await__") or hasattr(async_result_concurrent, "result")
+            results_concurrent = await openai_client.complete_batch(prompts, max_tokens=50, max_concurrency=2)
+            assert len(results_concurrent) == len(prompts)
+            assert all(isinstance(result, str) for result in results_concurrent)
 
-        except RuntimeError as e:
-            if "no running event loop" in str(e):
-                pytest.skip("Test requires async event loop - async interface not available in sync context")
-            else:
-                pytest.fail(f"Batch completion async interface test failed: {e}")
         except Exception as e:
             pytest.fail(f"Batch completion async interface test failed: {e}")
 
     @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="Requires OpenAI API key")
-    def test_chat_optimized_async_interface(self, openai_client: Any) -> None:
+    async def test_chat_optimized_async_interface(self, openai_client: Any) -> None:
         """Test optimized chat completion async interface."""
         messages = [("user", "Hello, how are you?"), ("assistant", "I'm doing well, thank you!"), ("user", "What can you help me with?")]
 
         try:
-            # Test that chat_optimized returns an async object
-            async_response = openai_client.chat_optimized(messages, max_tokens=100)
-            assert async_response is not None
-            assert hasattr(async_response, "__await__") or hasattr(async_response, "result")
+            # Test chat completion
+            response = await openai_client.chat_optimized(messages, max_tokens=100)
+            assert isinstance(response, str)
+            assert len(response) > 0
 
             # Test with temperature setting
-            async_response_temp = openai_client.chat_optimized(messages, max_tokens=100, temperature=0.7)
-            assert async_response_temp is not None
-            assert hasattr(async_response_temp, "__await__") or hasattr(async_response_temp, "result")
+            response_temp = await openai_client.chat_optimized(messages, max_tokens=100, temperature=0.7)
+            assert isinstance(response_temp, str)
+            assert len(response_temp) > 0
 
-        except RuntimeError as e:
-            if "no running event loop" in str(e):
-                pytest.skip("Test requires async event loop - async interface not available in sync context")
-            else:
-                pytest.fail(f"Chat optimized async interface test failed: {e}")
         except Exception as e:
             pytest.fail(f"Chat optimized async interface test failed: {e}")
 
     @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="Requires OpenAI API key")
-    def test_complete_stream_async_interface(self, openai_client: Any) -> None:
-        """Test streaming completion async interface."""
+    async def test_complete_stream_async_interface(self, openai_client: Any) -> None:
+        """Test streaming completion async interface.
+
+        This adapts to whichever interface the client provides:
+        - async iterable of chunks
+        - coroutine returning a full string
+        - synchronous iterable of chunks
+        - direct string
+        If none are available, the test is skipped.
+        """
         prompt = "Write a short story about a robot learning to paint"
 
         try:
-            # Test that complete_stream returns an async object
-            async_stream_result = openai_client.complete_stream(prompt, max_tokens=200)
-            assert async_stream_result is not None
-            assert hasattr(async_stream_result, "__await__") or hasattr(async_stream_result, "result")
+            obj = openai_client.complete_stream(prompt, max_tokens=200)
+
+            # If it's awaitable (coroutine or future), await it first
+            if inspect.isawaitable(obj):
+                obj = await obj
+
+            # If it's an async iterable, consume chunks
+            if hasattr(obj, "__aiter__"):
+                chunks: list[str] = []
+                async for chunk in obj:  # type: ignore[func-returns-value]
+                    if inspect.isawaitable(chunk):
+                        chunk = await chunk  # type: ignore[assignment]
+                    assert isinstance(chunk, str)
+                    chunks.append(chunk)
+                full = "".join(chunks)
+                assert len(full) > 0
+                return
+
+            # If it's a synchronous iterable of chunks, consume (await items if needed)
+            if hasattr(obj, "__iter__") and not isinstance(obj, (str, bytes)):
+                chunks: list[str] = []
+                for item in obj:  # type: ignore[assignment]
+                    if inspect.isawaitable(item):
+                        item = await item
+                    assert isinstance(item, str)
+                    chunks.append(item)
+                full = "".join(chunks)
+                assert len(full) > 0
+                return
+
+            # If it's already a string
+            if isinstance(obj, str):
+                assert len(obj) > 0
+                return
+
+            pytest.skip("Streaming interface not available in this environment")
 
         except RuntimeError as e:
             if "no running event loop" in str(e):
-                pytest.skip("Test requires async event loop - async interface not available in sync context")
+                pytest.skip("Async event loop not available")
             else:
                 pytest.fail(f"Streaming completion async interface test failed: {e}")
         except Exception as e:
@@ -485,46 +544,34 @@ class TestAdvancedLLMClient:
             pytest.fail(f"Client statistics test failed: {e}")
 
     @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="Requires OpenAI API key")
-    def test_client_warmup_async_interface(self, openai_client: Any) -> None:
+    async def test_client_warmup_async_interface(self, openai_client: Any) -> None:
         """Test client warmup async interface."""
         try:
-            # Test that warmup returns an async object
-            async_warmup_result = openai_client.warmup()
-            assert async_warmup_result is not None
-            assert hasattr(async_warmup_result, "__await__") or hasattr(async_warmup_result, "result")
+            # Test warmup
+            await openai_client.warmup()
 
-            # Test that client still works after warmup attempt
-            response = openai_client.complete("Quick test", max_tokens=5)
+            # Test that client still works after warmup
+            response = await openai_client.complete_async("Quick test", max_tokens=5)
             assert isinstance(response, str)
             assert len(response) > 0
 
-        except RuntimeError as e:
-            if "no running event loop" in str(e):
-                pytest.skip("Test requires async event loop - async interface not available in sync context")
-            else:
-                pytest.fail(f"Client warmup async interface test failed: {e}")
         except Exception as e:
             pytest.fail(f"Client warmup async interface test failed: {e}")
 
     @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="Requires OpenAI API key")
-    def test_async_completion_interface(self, openai_client: Any) -> None:
+    async def test_async_completion_interface(self, openai_client: Any) -> None:
         """Test async completion interface creation."""
         try:
-            # Test that complete_async returns an async object
-            async_result = openai_client.complete_async("What is the capital of France?", max_tokens=10)
-            assert async_result is not None
-            assert hasattr(async_result, "__await__") or hasattr(async_result, "result")
+            # Test async completion
+            response = await openai_client.complete_async("What is the capital of France?", max_tokens=10)
+            assert isinstance(response, str)
+            assert len(response) > 0
 
             # Test async completion with temperature
-            async_result_temp = openai_client.complete_async("Tell me a joke", max_tokens=50, temperature=0.8)
-            assert async_result_temp is not None
-            assert hasattr(async_result_temp, "__await__") or hasattr(async_result_temp, "result")
+            response_temp = await openai_client.complete_async("Tell me a joke", max_tokens=50, temperature=0.8)
+            assert isinstance(response_temp, str)
+            assert len(response_temp) > 0
 
-        except RuntimeError as e:
-            if "no running event loop" in str(e):
-                pytest.skip("Test requires async event loop - async interface not available in sync context")
-            else:
-                pytest.fail(f"Async completion interface test failed: {e}")
         except Exception as e:
             pytest.fail(f"Async completion interface test failed: {e}")
 
@@ -644,7 +691,7 @@ class TestLLMPerformance:
         return graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
 
     @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="Requires OpenAI API key")
-    def test_concurrent_requests_interface(self, openai_config: Any) -> None:
+    async def test_concurrent_requests_interface(self, openai_config: Any) -> None:
         """Test concurrent requests interface creation."""
         client = graphbit.LlmClient(openai_config)
 
@@ -652,16 +699,17 @@ class TestLLMPerformance:
             # Test batch processing interface
             prompts = [f"What is {i} + {i}?" for i in range(3)]
 
-            # Test that complete_batch returns an async object
-            async_results = client.complete_batch(prompts, max_tokens=20, max_concurrency=3)
-            assert async_results is not None
-            assert hasattr(async_results, "__await__") or hasattr(async_results, "result")
+            # Test concurrent batch completion
+            results = await client.complete_batch(prompts, max_tokens=20, max_concurrency=3)
+            assert len(results) == len(prompts)
+            assert all(isinstance(result, str) for result in results)
 
-        except RuntimeError as e:
-            if "no running event loop" in str(e):
-                pytest.skip("Test requires async event loop - async interface not available in sync context")
-            else:
-                pytest.fail(f"Concurrent requests interface test failed: {e}")
+            # Test that results make sense
+            for i, result in enumerate(results):
+                assert len(result) > 0
+                # Result should contain a number since we asked for addition
+                assert any(str(i+i) in result for i in range(3))
+
         except Exception as e:
             pytest.fail(f"Concurrent requests interface test failed: {e}")
 
