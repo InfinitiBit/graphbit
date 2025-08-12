@@ -502,10 +502,10 @@ class TestDocumentLoader:
         
         assert "invalid url format" in str(exc_info.value).lower()
 
-    @pytest.mark.skipif(
-        not os.environ.get("TEST_REMOTE_URLS", "").lower() == "true",
-        reason="Remote URL testing disabled (set TEST_REMOTE_URLS=true to enable)"
-    )
+    # @pytest.mark.skipif(
+    #     not os.environ.get("TEST_REMOTE_URLS", "").lower() == "true",
+    #     reason="Remote URL testing disabled (set TEST_REMOTE_URLS=true to enable)"
+    # )
     def test_url_loading_remote_json(self):
         """Test loading JSON document from URL (requires internet)."""
         loader = graphbit.DocumentLoader()
@@ -542,12 +542,12 @@ class TestDocumentLoader:
         
         # PDF and DOCX should not be supported for URL loading yet
         with pytest.raises(Exception) as exc_info:
-            loader.load_document("https://example.com/document.pdf", "pdf")
-        
+            loader.load_document("https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf", "pdf")
+
         assert "not yet supported" in str(exc_info.value).lower()
 
         with pytest.raises(Exception) as exc_info:
-            loader.load_document("https://example.com/document.docx", "docx")
+            loader.load_document("https://calibre-ebook.com/downloads/demos/demo.docx", "docx")
         
         assert "not yet supported" in str(exc_info.value).lower()
 
