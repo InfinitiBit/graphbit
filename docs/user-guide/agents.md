@@ -38,7 +38,7 @@ GraphBit agents can be equipped with tools that extend their capabilities beyond
 
 ```python
 import graphbit
-from tools import tool
+from graphbit.tools.decorators import tool
 
 # Define tools for the agent
 @tool(

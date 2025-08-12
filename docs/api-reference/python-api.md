@@ -869,7 +869,7 @@ GraphBit provides a powerful `@tool` decorator for creating functions that can b
 Decorator to register a Python function as a tool for LLM calling.
 
 ```python
-from tools import tool
+from graphbit.tools.decorators import tool
 
 @tool(
     description="Get current weather for a location",
@@ -905,7 +905,7 @@ Tools can be attached to agents and will be automatically available during workf
 
 ```python
 import graphbit
-from tools import tool
+from graphbit.tools.decorators import tool
 
 # Define tools
 @tool(description="Calculate rectangle area")
@@ -968,7 +968,7 @@ agent = graphbit.Node.agent(
 )
 
 # Agent with tools
-from tools import tool
+from graphbit.tools.decorators import tool
 
 @tool(description="Get weather information")
 def get_weather(location: str) -> dict:

@@ -396,7 +396,7 @@ GraphBit provides comprehensive tool calling capabilities, allowing LLMs to exec
 
 ```python
 import graphbit
-from tools import tool
+from graphbit.tools.decorators import tool
 
 # Initialize GraphBit
 graphbit.init()
@@ -463,7 +463,8 @@ print(f"Execution time: {result.execution_time_ms}ms")
 The high-level Python interface provides automatic registration and schema generation:
 
 ```python
-from tools import tool, get_registry, list_tools
+from graphbit.tools.decorators import tool, get_registry
+from graphbit.tools.decorators import list_tools
 
 @tool(
     description="Calculate the area of a rectangle",
@@ -504,7 +505,8 @@ tool_info = registry.get_tool("calculate_area")
 GraphBit can automatically generate JSON schemas from Python function signatures and type hints:
 
 ```python
-from tools import tool, generate_schema
+from graphbit.tools.decorators import tool
+from graphbit.tools.schemas import generate_schema
 from typing import List, Optional, Union
 
 @tool(
@@ -551,7 +553,7 @@ def process_items(
 #### Tool Categories and Management
 
 ```python
-from tools import get_registry, enable_tool, disable_tool
+from graphbit.tools.decorators import get_registry, enable_tool, disable_tool
 
 # Organize tools by category
 @tool(description="Database query tool", category="database")
@@ -575,7 +577,8 @@ enable_tool("query_db")   # Re-enable
 #### Tool Validation and Error Handling
 
 ```python
-from tools import tool, ToolValidationError, validate_tool_function
+from graphbit.tools.decorators import tool
+from graphbit.tools.utils import ToolValidationError, validate_tool_function
 
 # Validation happens automatically when registering tools
 @tool(description="Invalid tool example")
@@ -596,7 +599,7 @@ except ToolValidationError as e:
 #### Tool Metrics and Monitoring
 
 ```python
-from tools.utils import get_tool_metrics
+from graphbit.tools.utils import get_tool_metrics
 
 # Execute some tools...
 # ...
@@ -620,7 +623,7 @@ print(f"Average execution time: {tool_stats['avg_execution_time']:.2f}ms")
 #### Global Registration (Recommended)
 
 ```python
-from tools import tool
+from graphbit.tools.decorators import tool
 
 # Tools registered with the decorator are globally available
 @tool(description="Global tool")
@@ -659,7 +662,7 @@ result = manager.execute_tool("instance_tool", {"param": "test"})
 
 ```python
 import graphbit
-from tools import tool
+from graphbit.tools.decorators import tool
 
 # Initialize system
 graphbit.init()
@@ -692,7 +695,7 @@ GraphBit's schema generator supports Python's type system comprehensively:
 
 ```python
 from typing import List, Dict, Optional, Union, Literal
-from tools import tool
+from graphbit.tools.decorators import tool
 
 @tool(description="Complex type example", auto_schema=True)
 def complex_function(
@@ -727,7 +730,7 @@ def complex_function(
 ### Error Handling and Debugging
 
 ```python
-from tools import tool
+from graphbit.tools.decorators import tool
 import graphbit
 
 @tool(description="Tool that might fail")
@@ -839,7 +842,7 @@ def my_functions():
     return {"get_weather": get_weather_func}
 
 # After: Use the @tool decorator
-from tools import tool
+from graphbit.tools.decorators import tool
 
 @tool(
     description="Get current weather",
