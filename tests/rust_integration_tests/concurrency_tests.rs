@@ -229,11 +229,13 @@ async fn test_node_execution_result_tracking() {
 
     let start_time = chrono::Utc::now();
 
-    let success_result = NodeExecutionResult::success(serde_json::json!({"output": "success"}))
-        .with_metadata("node_type".to_string(), serde_json::json!("agent"))
-        .with_duration(1500)
-        .with_retry_count(0)
-        .mark_completed();
+    let node_id = NodeId::new();
+    let success_result =
+        NodeExecutionResult::success(serde_json::json!({"output": "success"}), node_id.clone())
+            .with_metadata("node_type".to_string(), serde_json::json!("agent"))
+            .with_duration(1500)
+            .with_retry_count(0)
+            .mark_completed();
 
     assert!(success_result.success);
     assert_eq!(
@@ -245,7 +247,7 @@ async fn test_node_execution_result_tracking() {
     assert!(success_result.completed_at.is_some());
     assert!(success_result.started_at >= start_time);
 
-    let failure_result = NodeExecutionResult::failure("Processing failed".to_string())
+    let failure_result = NodeExecutionResult::failure("Processing failed".to_string(), node_id)
         .with_metadata("error_type".to_string(), serde_json::json!("timeout"))
         .with_duration(5000)
         .with_retry_count(3);
