@@ -4,8 +4,10 @@
 import json
 import os
 import tempfile
+from typing import Any, Dict
+
 import pytest
-from typing import Dict, Any
+
 import graphbit
 
 
@@ -35,11 +37,7 @@ class TestDocumentLoader:
         assert config.preserve_formatting is False
 
         # Test custom configuration
-        custom_config = graphbit.DocumentLoaderConfig(
-            max_file_size=5 * 1024 * 1024,  # 5MB
-            default_encoding="utf-8",
-            preserve_formatting=True
-        )
+        custom_config = graphbit.DocumentLoaderConfig(max_file_size=5 * 1024 * 1024, default_encoding="utf-8", preserve_formatting=True)  # 5MB
         assert custom_config.max_file_size == 5 * 1024 * 1024
         assert custom_config.preserve_formatting is True
 
@@ -100,7 +98,7 @@ class TestDocumentLoader:
         assert document.file_size > 0
         assert document.extracted_at > 0
         assert not document.is_empty()
-        # Note: content_length() returns byte length of the content string, 
+        # Note: content_length() returns byte length of the content string,
         # which may differ from character count for unicode text
         assert document.content_length() >= len(text_content)  # Unicode chars may take more bytes
 
@@ -112,17 +110,7 @@ class TestDocumentLoader:
     def test_json_document_loading(self):
         """Test loading JSON documents."""
         # Create a test JSON file
-        json_data = {
-            "name": "Test Document",
-            "type": "JSON",
-            "data": {
-                "values": [1, 2, 3, 4, 5],
-                "metadata": {
-                    "created": "2024-01-01",
-                    "author": "Test User"
-                }
-            }
-        }
+        json_data = {"name": "Test Document", "type": "JSON", "data": {"values": [1, 2, 3, 4, 5], "metadata": {"created": "2024-01-01", "author": "Test User"}}}
         json_file = os.path.join(self.temp_path, "test.json")
         with open(json_file, "w", encoding="utf-8") as f:
             json.dump(json_data, f, indent=2)
@@ -160,7 +148,7 @@ class TestDocumentLoader:
     def test_xml_document_loading(self):
         """Test loading XML documents."""
         # Create a test XML file
-        xml_content = '''<?xml version="1.0" encoding="UTF-8"?>
+        xml_content = """<?xml version="1.0" encoding="UTF-8"?>
 <document>
     <title>Test Document</title>
     <content>
@@ -171,7 +159,7 @@ class TestDocumentLoader:
         <author>Test User</author>
         <date>2024-01-01</date>
     </metadata>
-</document>'''
+</document>"""
         xml_file = os.path.join(self.temp_path, "test.xml")
         with open(xml_file, "w", encoding="utf-8") as f:
             f.write(xml_content)
@@ -190,7 +178,7 @@ class TestDocumentLoader:
     def test_html_document_loading(self):
         """Test loading HTML documents."""
         # Create a test HTML file
-        html_content = '''<!DOCTYPE html>
+        html_content = """<!DOCTYPE html>
 <html>
 <head>
     <title>Test Document</title>
@@ -203,7 +191,7 @@ class TestDocumentLoader:
         <li>List item 2</li>
     </ul>
 </body>
-</html>'''
+</html>"""
         html_file = os.path.join(self.temp_path, "test.html")
         with open(html_file, "w", encoding="utf-8") as f:
             f.write(html_content)
@@ -286,7 +274,7 @@ class TestDocumentLoader:
         loader = graphbit.DocumentLoader()
         with pytest.raises(Exception) as exc_info:
             loader.load_document(oversized_file, "txt")
-        
+
         assert "exceeds maximum" in str(exc_info.value)
 
     def test_custom_size_limit(self):
@@ -314,16 +302,16 @@ class TestDocumentLoader:
         # Should fail to load
         with pytest.raises(Exception) as exc_info:
             loader.load_document(large_file, "txt")
-        
+
         assert "exceeds maximum" in str(exc_info.value)
 
     def test_nonexistent_file_handling(self):
         """Test handling of non-existent files."""
         loader = graphbit.DocumentLoader()
-        
+
         with pytest.raises(Exception) as exc_info:
             loader.load_document("/nonexistent/path/file.txt", "txt")
-        
+
         assert "not found" in str(exc_info.value).lower()
 
     def test_unsupported_file_type(self):
@@ -334,10 +322,10 @@ class TestDocumentLoader:
             f.write("Some content")
 
         loader = graphbit.DocumentLoader()
-        
+
         with pytest.raises(Exception) as exc_info:
             loader.load_document(unknown_file, "unknown")
-        
+
         assert "unsupported" in str(exc_info.value).lower()
 
     def test_invalid_input_validation(self):
@@ -359,7 +347,7 @@ class TestDocumentLoader:
     def test_supported_types(self):
         """Test getting supported document types."""
         supported_types = graphbit.DocumentLoader.supported_types()
-        
+
         assert isinstance(supported_types, list)
         assert "txt" in supported_types
         assert "json" in supported_types
@@ -414,11 +402,11 @@ class TestDocumentLoader:
         # Test content methods
         assert document.content_length() >= len(content)  # May be larger due to unicode encoding
         assert not document.is_empty()
-        
+
         # Test preview method
         preview = document.preview(10)
         assert len(preview) <= 10 + 3  # +3 for "..."
-        
+
         full_preview = document.preview(1000)  # Larger than content
         assert full_preview == content  # Should return full content
 
@@ -439,7 +427,7 @@ class TestDocumentLoader:
         assert isinstance(metadata, dict)
         assert "file_size" in metadata
         assert "file_path" in metadata
-        
+
         # Test property access
         assert document.source == text_file
         assert document.document_type == "txt"
@@ -488,67 +476,65 @@ class TestDocumentLoader:
     def test_url_loading_invalid_format(self):
         """Test URL loading with invalid URL formats."""
         loader = graphbit.DocumentLoader()
-        
+
         # Test invalid URL format (no protocol) - this will be treated as a file path
         with pytest.raises(Exception) as exc_info:
             loader.load_document("invalid-url", "txt")
-        
+
         # This will fail as "file not found" since it's treated as a file path
         assert "file not found" in str(exc_info.value).lower() or "invalid url format" in str(exc_info.value).lower()
 
         # Test unsupported protocol
         with pytest.raises(Exception) as exc_info:
             loader.load_document("ftp://example.com/document.txt", "txt")
-        
+
         assert "invalid url format" in str(exc_info.value).lower()
 
-    @pytest.mark.skipif(
-        not os.environ.get("TEST_REMOTE_URLS", "").lower() == "true",
-        reason="Remote URL testing disabled (set TEST_REMOTE_URLS=true to enable)"
-    )
+    @pytest.mark.skipif(not os.environ.get("TEST_REMOTE_URLS", "").lower() == "true", reason="Remote URL testing disabled (set TEST_REMOTE_URLS=true to enable)")
     def test_url_loading_remote_json(self):
         """Test loading JSON document from URL (requires internet)."""
         loader = graphbit.DocumentLoader()
-        
+
         # Use a reliable JSON API endpoint
         url = "https://httpbin.org/json"
-        
+
         try:
             document = loader.load_document(url, "json")
-            
+
             # Verify document properties
             assert document is not None
             assert document.source == url
             assert document.document_type == "json"
             assert document.file_size > 0
             assert document.extracted_at > 0
-            
+
             # Should contain valid JSON
             import json
+
             parsed = json.loads(document.content)
             assert isinstance(parsed, dict)
-            
+
             # Check metadata
             metadata = document.metadata
             assert "url" in metadata
             assert "content_type" in metadata
-            
+
         except Exception as e:
             pytest.skip(f"URL loading test skipped due to network error: {e}")
 
     def test_url_loading_unsupported_types(self):
         """Test URL loading with unsupported document types."""
         loader = graphbit.DocumentLoader()
-        
+
         # PDF and DOCX should not be supported for URL loading yet
         with pytest.raises(Exception) as exc_info:
             loader.load_document("https://example.com/document.pdf", "pdf")
-        
+
         assert "not yet supported" in str(exc_info.value).lower()
 
         with pytest.raises(Exception) as exc_info:
             loader.load_document("https://example.com/document.docx", "docx")
-        
+
         assert "not yet supported" in str(exc_info.value).lower()
 
 
@@ -572,11 +558,11 @@ class TestDocumentLoaderPerformance:
     def test_multiple_document_loading_performance(self):
         """Test loading multiple documents for performance."""
         import time
-        
+
         # Create multiple test files
         num_files = 10
         file_paths = []
-        
+
         for i in range(num_files):
             content = f"This is test document number {i}.\n" * 100
             file_path = os.path.join(self.temp_path, f"test_{i}.txt")
@@ -587,26 +573,26 @@ class TestDocumentLoaderPerformance:
         # Load documents and measure time
         loader = graphbit.DocumentLoader()
         start_time = time.time()
-        
+
         documents = []
         for file_path in file_paths:
             document = loader.load_document(file_path, "txt")
             documents.append(document)
             assert f"test document number" in document.content
-        
+
         end_time = time.time()
         duration = end_time - start_time
-        
+
         # Verify all documents loaded
         assert len(documents) == num_files
-        
+
         # Should complete reasonably quickly
         assert duration < 2.0, f"Loading {num_files} files took {duration:.2f}s, expected < 2.0s"
 
     def test_large_file_performance(self):
         """Test loading large files for performance."""
         import time
-        
+
         # Create a large file (1MB)
         large_content = "Performance test content. " * (1024 * 1024 // 25)  # ~1MB
         large_file = os.path.join(self.temp_path, "large_perf.txt")
@@ -616,16 +602,16 @@ class TestDocumentLoaderPerformance:
         # Load the large document and measure time
         loader = graphbit.DocumentLoader()
         start_time = time.time()
-        
+
         document = loader.load_document(large_file, "txt")
-        
+
         end_time = time.time()
         duration = end_time - start_time
-        
+
         # Verify document loaded correctly
         assert document is not None
         assert len(document.content) >= 1024 * 1024
-        
+
         # Should complete reasonably quickly
         assert duration < 1.0, f"Loading 1MB file took {duration:.2f}s, expected < 1.0s"
 
