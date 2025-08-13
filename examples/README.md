@@ -1,4 +1,4 @@
-# Python Task Examples
+# GraphBit Examples
 
 This directory contains ready-to-run Python scripts demonstrating various GraphBit workflow patterns using both local and cloud LLMs.
 
