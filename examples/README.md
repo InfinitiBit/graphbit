@@ -71,10 +71,17 @@ executor.configure(timeout_seconds=300, max_retries=3, enable_metrics=True, debu
 Create a workflow and add agent nodes:
 ```python
 workflow = graphbit.Workflow("My Example Workflow")
-node = graphbit.Node.agent(
+agent_id1 = str(uuid.uuid4())
+node1 = graphbit.Node.agent(
+    name="Summarizer",
+    prompt="Summarize: {input}",
+    agent_id=agent_id1
+)
+agent_id2 = str(uuid.uuid4())
+node2 = graphbit.Node.agent(
     name="Task Executor",
     prompt="Summarize this text: {input}",
-    agent_id="unique-agent-id"
+    agent_id=agent_id2
 )
 workflow.add_node(node1)
 workflow.add_node(node2)
@@ -105,11 +112,17 @@ graphbit.init()
 llm_config = graphbit.LlmConfig.ollama("llama3.2")
 executor = graphbit.Executor.new_low_latency(llm_config)
 workflow = graphbit.Workflow("Simple Task")
-agent_id = str(uuid.uuid4())
-node = graphbit.Node.agent(
+agent_id1 = str(uuid.uuid4())
+node1 = graphbit.Node.agent(
     name="Summarizer",
     prompt="Summarize: {input}",
-    agent_id=agent_id
+    agent_id=agent_id1
+)
+agent_id2 = str(uuid.uuid4())
+node2 = graphbit.Node.agent(
+    name="Task Executor",
+    prompt="Summarize this text: {input}",
+    agent_id=agent_id2
 )
 workflow.add_node(node1)
 workflow.add_node(node2)
