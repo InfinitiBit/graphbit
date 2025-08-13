@@ -22,28 +22,30 @@
 - **[Bugfix]** Added document loader support in Python binding ([#84](https://github.com/InfinitiBit/graphbit/pull/84)) — *by @yeahia-sarker* 
 
 ### Documentation
-- **[Documentation]** MongoDB integration ([#53](https://github.com/InfinitiBit/graphbit/pull/53)) — *by @JunaidHossain04*  
-- **[Documentation]** Pinecone integration ([#44](https://github.com/InfinitiBit/graphbit/pull/44)) — *by @tanimahossain-infiniti*  
-- **[Documentation]** Qdrant integration ([#54](https://github.com/InfinitiBit/graphbit/pull/54)) — *by @tanimahossain-infiniti*  
-- **[Documentation]** PGVector integration ([#55](https://github.com/InfinitiBit/graphbit/pull/55)) — *by @JunaidHossain04*  
-- **[Documentation]** Updated embeddings documentation ([#58](https://github.com/InfinitiBit/graphbit/pull/58)) — *by @JunaidHossain04*  
-- **[Documentation]** MariaDB integration ([#56](https://github.com/InfinitiBit/graphbit/pull/56)) — *by @tanimahossain-infiniti*  
-- **[Documentation]** ChromaDB integration ([#59](https://github.com/InfinitiBit/graphbit/pull/59)) — *by @tanimahossain-infiniti*  
-- **[Documentation]** Created `async-vs-sync.md` ([#62](https://github.com/InfinitiBit/graphbit/pull/62)) — *by @JunaidHossain04*  
-- **[Documentation]** AI LLM multi-agent framework benchmark comparison across Intel & AMD VMs ([#65](https://github.com/InfinitiBit/graphbit/pull/65)) — *by @jj-devhub*  
-- **[Documentation]** AWS boto3 integration ([#63](https://github.com/InfinitiBit/graphbit/pull/63)) — *by @JunaidHossain04*  
-- **[Documentation]** FAISS integration ([#60](https://github.com/InfinitiBit/graphbit/pull/60)) — *by @tanimahossain-infiniti*  
-- **[Documentation]** Milvus integration ([#74](https://github.com/InfinitiBit/graphbit/pull/74)) — *by @tanimahossain-infiniti*  
-- **[Documentation]** Weaviate integration ([#75](https://github.com/InfinitiBit/graphbit/pull/75)) — *by @tanimahossain-infiniti*  
-- **[Documentation]** IBM Db2 integration ([#76](https://github.com/InfinitiBit/graphbit/pull/76)) — *by @JunaidHossain04*  
-- **[Documentation]** Elasticsearch integration ([#77](https://github.com/InfinitiBit/graphbit/pull/77)) — *by @tanimahossain-infiniti*  
+- **[Documentation]** MongoDB integration with GraphBit documentation([#53](https://github.com/InfinitiBit/graphbit/pull/53)) — *by @JunaidHossain04*  
+- **[Documentation]** Pinecone integration with GraphBit documentation ([#44](https://github.com/InfinitiBit/graphbit/pull/44)) — *by @tanimahossain-infiniti*  
+- **[Documentation]** Qdrant integration with GraphBit ([#54](https://github.com/InfinitiBit/graphbit/pull/54)) — *by @tanimahossain-infiniti*  
+- **[Documentation]** PGVector integration with GraphBit documentation ([#55](https://github.com/InfinitiBit/graphbit/pull/55)) — *by @JunaidHossain04*  
+- **[Documentation]** Updated embeddings documentation file ([#58](https://github.com/InfinitiBit/graphbit/pull/58)) — *by @JunaidHossain04*  
+- **[Documentation]** MariaDB basic integration with GraphBit ([#56](https://github.com/InfinitiBit/graphbit/pull/56)) — *by @tanimahossain-infiniti*  
+- **[Documentation]** ChromaDB Integration with GraphBit ([#59](https://github.com/InfinitiBit/graphbit/pull/59)) — *by @tanimahossain-infiniti*  
+- **[Documentation]** Created async-vs-sync.md file ([#62](https://github.com/InfinitiBit/graphbit/pull/62)) — *by @JunaidHossain04*  
+- **[Documentation]** AI LLM Multi-Agent Framework Benchmark Comparison Performance Report Summary Across Intel and AMD Virtual Machines ([#65](https://github.com/InfinitiBit/graphbit/pull/65)) — *by @jj-devhub*  
+- **[Documentation]** AWS boto3 integration with Graphbit ([#63](https://github.com/InfinitiBit/graphbit/pull/63)) — *by @JunaidHossain04*  
+- **[Documentation]** FAISS integration with GraphBit ([#60](https://github.com/InfinitiBit/graphbit/pull/60)) — *by @tanimahossain-infiniti*  
+- **[Documentation]** Milvus Integration with Graphbit ([#74](https://github.com/InfinitiBit/graphbit/pull/74)) — *by @tanimahossain-infiniti*  
+- **[Documentation]** Weaviate Integration with Graphbit ([#75](https://github.com/InfinitiBit/graphbit/pull/75)) — *by @tanimahossain-infiniti*  
+- **[Documentation]** IBM Db2 integration with graphbit ([#76](https://github.com/InfinitiBit/graphbit/pull/76)) — *by @JunaidHossain04*  
+- **[Documentation]** Elasticsearch Integration with GraphBit ([#77](https://github.com/InfinitiBit/graphbit/pull/77)) — *by @tanimahossain-infiniti*  
+- **[Documentation]** Updated README.md file in examples folder ([#85](https://github.com/InfinitiBit/graphbit/pull/85)) — *by @tanimahossain-infiniti*  
+- **[Documentation]** Updated documentation in python folder ([#86](https://github.com/InfinitiBit/graphbit/pull/86)) — *by @JunaidHossain04*  
 
 ### Info
-- **[Info]** Added `SECURITY.md` ([#68](https://github.com/InfinitiBit/graphbit/pull/68)) — *by @yeahia-sarker*  
+- **[Info]** Added SECURITY.md ([#68](https://github.com/InfinitiBit/graphbit/pull/68)) — *by @yeahia-sarker*  
 
 ### New Contributors
-- @JunaidHossain04 — first contribution in [#47](https://github.com/InfinitiBit/graphbit/pull/47)  
-- @tanimahossain-infiniti — first contribution in [#38](https://github.com/InfinitiBit/graphbit/pull/38)  
+- @JunaidHossain04 made their first contribution in [#47](https://github.com/InfinitiBit/graphbit/pull/47)  
+- @tanimahossain-infiniti made their first contribution in [#38](https://github.com/InfinitiBit/graphbit/pull/38)  
 
 **Full Changelog**: [v0.3.0...v0.4.0](https://github.com/InfinitiBit/graphbit/compare/v0.3.0...v0.4.0)
 
@@ -70,38 +72,34 @@
 
 ## [0.2.0-alpha] – 2025-06-28
 
-### Added
-- **Concurrency & Workflow Enhancements**  
-  - Introduced asynchronous task execution with retry mechanisms for improved resilience.  
-  - Enabled parallel execution of independent workflow steps with optimized task dependencies.  
-  - Added example workflows to showcase system capabilities in local environments.  
-- **Developer Experience**  
-  - Interactive setup for missing environment variables.  
-  - Auto-generation of configuration files.  
-- **Testing**  
-  - Added unit and integration tests for critical components to ensure reliability.  
+### Features
+- **[Feature]** Added ollama python support ([#11](https://github.com/InfinitiBit/graphbit/pull/11)) — *by @yeahia-sarker*  
+- **[Feature]** Added new integration tests ([#12](https://github.com/InfinitiBit/graphbit/pull/12)) — *by @jj-devhub*  
+- **[Feature]** Added langgraph in benchmark framework ([#13](https://github.com/InfinitiBit/graphbit/pull/13)) — *by @jj-devhub*  
+- **[Feature]** Added python examples for graphbit demonstration ([#16](https://github.com/InfinitiBit/graphbit/pull/16)) — *by @jj-devhub*  
+- **[Feature]** Huggingface python binding ([#20](https://github.com/InfinitiBit/graphbit/pull/20)) — *by @yeahia-sarker*  
 
-### Changed
-- **Performance**  
-  - Reduced CPU usage by approximately **5×** through core execution optimizations.  
-  - Optimized memory usage with improved handling and garbage collection.  
-  - Reduced idle times during task execution.  
-- **Code Quality**  
-  - Enforced stricter checks, including type checks and linting.  
-  - Improved code consistency across the codebase.  
-- **Workflows**  
-  - Modularized workflow definitions.  
-  - Enhanced build and testing with parallel execution and caching.  
+### Bugfixes
+- **[Bug]** Fix python integration test for github actions ([#6](https://github.com/InfinitiBit/graphbit/pull/6)) — *by @jj-devhub*  
+- **[Bugfix]** Fix pre-test commit for all files ([#7](https://github.com/InfinitiBit/graphbit/pull/7)) — *by @jj-devhub*  
+- **[Bugfix]** makefile ([#8](https://github.com/InfinitiBit/graphbit/pull/8)) — *by @jj-devhub*  
+- **[Bugfix]** Minor pre-commit issues ([#15](https://github.com/InfinitiBit/graphbit/pull/15)) — *by @yeahia-sarker*  
+- **[Bugfix]** Updated benchmark evaluation ([#24](https://github.com/InfinitiBit/graphbit/pull/24)) — *by @yeahia-sarker*  
+- **[Hotfix]** Python integration tests ([#21](https://github.com/InfinitiBit/graphbit/pull/21)) — *by @yeahia-sarker*  
+- **[Hotfix]** Updated example code ([#23](https://github.com/InfinitiBit/graphbit/pull/23)) — *by @yeahia-sarker*  
 
-### Fixed
-- **Cross-Platform Builds**  
-  - Resolved build issues across multiple platforms.  
-  - Cleaned up configuration files.  
-  - Removed outdated license information.  
+### Refactoring
+- **[Refactor]** Update Readme ([#1](https://github.com/InfinitiBit/graphbit/pull/1)) — *by @yeahia-sarker*  
+- **[Refactor]** Python Documentation ([#9](https://github.com/InfinitiBit/graphbit/pull/9)) — *by @yeahia-sarker*  
+- **[Refactor]** Removing github actions ([#14](https://github.com/InfinitiBit/graphbit/pull/14)) — *by @yeahia-sarker*  
+- **[Refactor]** Performance optimization ([#17](https://github.com/InfinitiBit/graphbit/pull/17)) — *by @yeahia-sarker*  
+- **[Refactor]** Benchmark and python binding ([#18](https://github.com/InfinitiBit/graphbit/pull/18)) — *by @yeahia-sarker*  
+- **[Refactor]** crewai-benchmark Optimize of Scenarios for Improved Performance and Reliability ([#22](https://github.com/InfinitiBit/graphbit/pull/22)) — *by @jj-devhub*  
 
-### CI/CD
-- Limited test execution to the main branch.  
-- Improved multi-platform test configurations for reliability and speed.  
+### Documentation
+- **[Documentation]** Updated python documentation ([#19](https://github.com/InfinitiBit/graphbit/pull/19)) — *by @yeahia-sarker*  
+
+**Full Changelog**: [v0.1.0...v0.2.0](https://github.com/InfinitiBit/graphbit/compare/v0.1.0...v0.2.0)  
 
 
 ## [0.1.0] - 2025-06-11
