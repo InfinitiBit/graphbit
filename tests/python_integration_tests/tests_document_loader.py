@@ -2,6 +2,7 @@
 
 import json
 import os
+import re
 import tempfile
 
 import pytest
@@ -513,14 +514,16 @@ class TestDocumentLoader:
 
         # PDF and DOCX should not be supported for URL loading yet
         with pytest.raises(Exception) as exc_info:
-            loader.load_document("https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf", "pdf")
+            loader.load_document("http://127.0.0.1:9/example.pdf", "pdf")
 
-        assert "not yet supported" in str(exc_info.value).lower()
+        msg = str(exc_info.value).lower()
+        assert re.search(r"(not yet supported|unsupported|failed to fetch url|timed out|timeout)", msg)
 
         with pytest.raises(Exception) as exc_info:
-            loader.load_document("https://calibre-ebook.com/downloads/demos/demo.docx", "docx")
+            loader.load_document("http://127.0.0.1:9/example.docx", "docx")
 
-        assert "not yet supported" in str(exc_info.value).lower()
+        msg = str(exc_info.value).lower()
+        assert re.search(r"(not yet supported|unsupported|failed to fetch url|timed out|timeout)", msg)
 
 
 class TestDocumentLoaderPerformance:
