@@ -26,10 +26,10 @@
 - **[Documentation]** Pinecone integration with GraphBit documentation ([#44](https://github.com/InfinitiBit/graphbit/pull/44)) — *by @tanimahossain-infiniti*  
 - **[Documentation]** Qdrant integration with GraphBit ([#54](https://github.com/InfinitiBit/graphbit/pull/54)) — *by @tanimahossain-infiniti*  
 - **[Documentation]** PGVector integration with GraphBit documentation ([#55](https://github.com/InfinitiBit/graphbit/pull/55)) — *by @JunaidHossain04*  
-- **[Documentation]** Updated embeddings documentation file ([#58](https://github.com/InfinitiBit/graphbit/pull/58)) — *by @JunaidHossain04*  
-- **[Documentation]** MariaDB basic integration with GraphBit ([#56](https://github.com/InfinitiBit/graphbit/pull/56)) — *by @tanimahossain-infiniti*  
+- **[Documentation]** Updated embeddings documentation ([#58](https://github.com/InfinitiBit/graphbit/pull/58)) — *by @JunaidHossain04*  
+- **[Documentation]** MariaDB integration with GraphBit ([#56](https://github.com/InfinitiBit/graphbit/pull/56)) — *by @tanimahossain-infiniti*  
 - **[Documentation]** ChromaDB Integration with GraphBit ([#59](https://github.com/InfinitiBit/graphbit/pull/59)) — *by @tanimahossain-infiniti*  
-- **[Documentation]** Created async-vs-sync.md file ([#62](https://github.com/InfinitiBit/graphbit/pull/62)) — *by @JunaidHossain04*  
+- **[Documentation]** Created `async-vs-sync.md` file ([#62](https://github.com/InfinitiBit/graphbit/pull/62)) — *by @JunaidHossain04*  
 - **[Documentation]** AI LLM Multi-Agent Framework Benchmark Comparison Performance Report Summary Across Intel and AMD Virtual Machines ([#65](https://github.com/InfinitiBit/graphbit/pull/65)) — *by @jj-devhub*  
 - **[Documentation]** AWS boto3 integration with Graphbit ([#63](https://github.com/InfinitiBit/graphbit/pull/63)) — *by @JunaidHossain04*  
 - **[Documentation]** FAISS integration with GraphBit ([#60](https://github.com/InfinitiBit/graphbit/pull/60)) — *by @tanimahossain-infiniti*  
@@ -41,11 +41,11 @@
 - **[Documentation]** Updated documentation in python folder ([#86](https://github.com/InfinitiBit/graphbit/pull/86)) — *by @JunaidHossain04*  
 
 ### Info
-- **[Info]** Added SECURITY.md ([#68](https://github.com/InfinitiBit/graphbit/pull/68)) — *by @yeahia-sarker*  
+- **[Info]** Added `SECURITY.md` ([#68](https://github.com/InfinitiBit/graphbit/pull/68)) — *by @yeahia-sarker*  
 
 ### New Contributors
-- @JunaidHossain04 made their first contribution in [#47](https://github.com/InfinitiBit/graphbit/pull/47)  
-- @tanimahossain-infiniti made their first contribution in [#38](https://github.com/InfinitiBit/graphbit/pull/38)  
+- @tanimahossain-infiniti made their first contribution in [#38](https://github.com/InfinitiBit/graphbit/pull/38)
+- @JunaidHossain04 made their first contribution in [#47](https://github.com/InfinitiBit/graphbit/pull/47)
 
 **Full Changelog**: [v0.3.0...v0.4.0](https://github.com/InfinitiBit/graphbit/compare/v0.3.0...v0.4.0)
 
