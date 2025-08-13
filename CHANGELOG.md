@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.4.0] – 2025-07-25
+## [0.4.0] – Draft
 
 ### Features
 - **[Feature]** Google Search API integration with GraphBit ([#47](https://github.com/InfinitiBit/graphbit/pull/47)) — *by @JunaidHossain04*  
