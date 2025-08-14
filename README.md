@@ -2,20 +2,18 @@
 
 # GraphBit - High Performance Agentic Framework
 
-
 <p align="center">
     <img src="assets/Logo.png" width="140px" alt="Logo" />
 </p>
 
-
 <!-- Added placeholders for links, fill it up when the corresponding links are available. -->
 <p align="center">
-    <a href="https://graphbit.ai/">Website</a> |
-    <a href="https://graphbit-docs.vercel.app/docs">Docs</a> 
+    <a href="https://graphbit.ai/">Website</a> | 
+    <a href="https://graphbit-docs.vercel.app/docs">Docs</a> |
+    <a href="https://discord.gg/8TvUK6uf">Discord</a> |
+    <a href="https://docs.google.com/spreadsheets/d/1deQk0p7cCJUeeZw3t8FimxVg4jc99w0Bw1XQyLPN0Zk/edit?usp=sharing">Roadmap</a> 
     <br /><br />
 </p>
-
-
 
 [![Build Status](https://img.shields.io/github/actions/workflow/status/InfinitiBit/graphbit/python-integration-tests.yml?branch=main)](https://github.com/InfinitiBit/graphbit/actions/workflows/python-integration-tests.yml)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/InfinitiBit/graphbit/blob/main/CONTRIBUTING.md)
@@ -25,13 +23,16 @@
 [![Downloads](https://img.shields.io/pypi/dm/graphbit)](https://pypi.org/project/graphbit/)
 [![Rust Version](https://img.shields.io/badge/rust-1.70+-blue.svg)](https://www.rust-lang.org)
 [![Python Version](https://img.shields.io/pypi/pyversions/graphbit)](https://pypi.org/project/graphbit/)
-[![Roadmap 2025](https://img.shields.io/badge/Roadmap-2025-bc1439.svg?style=flat-square)](https://docs.google.com/spreadsheets/d/1deQk0p7cCJUeeZw3t8FimxVg4jc99w0Bw1XQyLPN0Zk/edit?usp=sharing)
 
 **Type-Safe AI Agent Workflows with Rust Performance**
 
 </div>
 
-A framework for building reliable AI agent workflows with strong type safety, comprehensive error handling, and predictable performance. Built with a Rust core and Python bindings.
+Graphbit is an **industry-grade agentic AI framework** built for developers and AI teams that demand stability, scalability, and low resource usage. 
+
+Written in **Rust** for maximum performance and safety, it delivers up to **68× lower CPU usage** and **140× lower memory** footprint than leading alternatives, all while maintaining comparable throughput and execution speed. See [benchmarks](benchmarks/README.md).
+
+Designed to run **multi-agent workflows in parallel**, Graphbit persists memory across steps, recovers from failures, and ensures **100% task success** under load. Its lightweight, resource-efficient architecture enables deployment in both **high-scale enterprise environments** and **low-resource edge scenarios**. With built-in observability and concurrency support, Graphbit eliminates the bottlenecks that slow decision-making and erode ROI. 
 
 ##  Key Features
 
@@ -63,32 +64,46 @@ export ANTHROPIC_API_KEY=your_anthropic_api_key_here
 
 ### Basic Usage
 ```python
-import graphbit
 import os
 
+from graphbit import LlmConfig, LlmClient, Executor, Workflow, Node
+from graphbit.tools.decorators import tool
+
 # Initialize and configure
-graphbit.init()
-config = graphbit.LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4o-mini")
+config = LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4o-mini")
 
 # Create executor
-executor = graphbit.Executor(config)
+executor = Executor(config)
+
+# Create a tool
+@tool(description="Get weather information")
+def get_weather(location: str) -> dict:
+    return {"location": location, "temperature": 22, "condition": "sunny"}
 
 # Build workflow
-workflow = graphbit.Workflow("Analysis Pipeline")
+workflow = Workflow("Analysis Pipeline")
 
-analyzer = graphbit.Node.agent(
-    "Data Analyzer", 
-    "Analyze the following data: {input}"
+analyzer = Node.agent(
+    name = "Data Analyzer", 
+    prompt = f"Analyze the following data: {input}"
 )
 
-processor = graphbit.Node.agent(
-    "Data Processor",
-    "Process and summarize: {analyzed_data}"
+processor = Node.agent(
+    name = "Data Processor",
+    prompt = "Process and summarize the data from Data Analyzer."
+)
+
+agent_with_tools = graphbit.Node.agent(
+    name="Weather Assistant",
+    prompt= f"You are a weather assistant. Use tools when needed: {input}",
+    agent_id="weather_agent",  # Optional, auto-generated if not provided
+    tools=[get_weather]  # List of decorated tool functions
 )
 
 # Connect and execute
 id1 = workflow.add_node(analyzer)
 id2 = workflow.add_node(processor)
+id3 = workflow.add_node(agent_with_tools)
 workflow.connect(id1, id2)
 
 result = executor.execute(workflow)
@@ -102,35 +117,9 @@ Three-tier design for reliability and performance:
 - **CLI Tool** - Project management and execution
 - **Rust Core** - Workflow engine, agents, and LLM providers
 
-
 ## Python API Integrations
 
 GraphBit provides a rich Python API for building and integrating agentic workflows, including executors, nodes, LLM clients, and embeddings. For the complete list of classes, methods, and usage examples, see the [Python API Reference](docs/api-reference/python-api.md).
-
-## Release Plan
-
-|Integrations                                           |Type                         |Status   |
-|-------------------------------------------------------|-----------------------------|---------|
-|Workflow                                               |Core Feature                 |Completed|
-|Single step agents                                     |Core Feature                 |Completed|
-|Multi step agents                                      |Core Feature                 |Completed|
-|Models                                                 |Core Feature                 |Completed|
-|Embeddings                                             |Core Feature                 |Completed|
-|Text Splitters                                         |Core Feature                 |Completed|
-|Document Loaders                                       |Core Feature                 |Completed|
-|llm-guided-browser-automation-agent-graphbit-playwright|tutorials                    |Completed|
-|chatbot                                                |tutorials                    |Completed|
-|Aws                                                    |Cloud Service                |Completed|
-|ChromaDB                                               |Vector Database              |Completed|
-|Faiss                                                  |Vector Search Library        |Completed|
-|MariaDB                                                |Relational Database          |Completed|
-|Milvus                                                 |Vector Database              |Completed|
-|MongoDB                                                |NoSQL Database               |Completed|
-|Pgvector                                               |Vector Extension (PostgreSQL)|Completed|
-|Pinecone                                               |Vector Database              |Completed|
-|Qdrant                                                 |Vector Database              |Completed|
-|Weaviate                                               |Vector Search Engine         |Completed|
-
 
 ## Contributing to GraphBit
 
