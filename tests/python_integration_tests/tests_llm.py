@@ -8,7 +8,7 @@ from typing import Any
 import aiohttp
 import pytest
 
-import graphbit
+from graphbit import LlmConfig, LlmClient, Executor, Workflow, Node
 
 
 class TestOpenAILLM:
@@ -25,17 +25,17 @@ class TestOpenAILLM:
     @pytest.fixture
     def openai_gpt4_config(self, api_key: str) -> Any:
         """Create OpenAI GPT-4 configuration."""
-        return graphbit.LlmConfig.openai(api_key, "gpt-4")
+        return LlmConfig.openai(api_key, "gpt-4")
 
     @pytest.fixture
     def openai_gpt35_config(self, api_key: str) -> Any:
         """Create OpenAI GPT-3.5 configuration."""
-        return graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
+        return LlmConfig.openai(api_key, "gpt-3.5-turbo")
 
     @pytest.fixture
     def openai_client(self, openai_gpt4_config: Any) -> Any:
         """Create OpenAI client."""
-        return graphbit.LlmClient(openai_gpt4_config)
+        return LlmClient(openai_gpt4_config)
 
     def test_openai_gpt4_config_creation(self, openai_gpt4_config: Any) -> None:
         """Test OpenAI GPT-4 config creation and properties."""
@@ -53,21 +53,21 @@ class TestOpenAILLM:
 
     def test_openai_executor_creation(self, openai_gpt4_config: Any) -> None:
         """Test creating workflow executor with OpenAI config."""
-        executor = graphbit.Executor(openai_gpt4_config)
+        executor = Executor(openai_gpt4_config)
         assert executor is not None
 
     def test_openai_executor_configurations(self, openai_gpt4_config: Any) -> None:
         """Test different executor configurations with OpenAI."""
         # Test high throughput configuration
-        executor_ht = graphbit.Executor.new_high_throughput(openai_gpt4_config)
+        executor_ht = Executor.new_high_throughput(openai_gpt4_config)
         assert executor_ht is not None
 
         # Test low latency configuration
-        executor_ll = graphbit.Executor.new_low_latency(openai_gpt4_config)
+        executor_ll = Executor.new_low_latency(openai_gpt4_config)
         assert executor_ll is not None
 
         # Test memory optimized configuration
-        executor_mo = graphbit.Executor.new_memory_optimized(openai_gpt4_config)
+        executor_mo = Executor.new_memory_optimized(openai_gpt4_config)
         assert executor_mo is not None
 
     def test_openai_simple_completion(self, openai_client: Any) -> None:
@@ -82,11 +82,11 @@ class TestOpenAILLM:
     def test_openai_simple_workflow_execution(self, openai_gpt4_config: Any) -> None:
         """Test executing a simple workflow with OpenAI."""
         # Create a simple workflow
-        workflow = graphbit.Workflow("test_openai_workflow")
+        workflow = Workflow("test_openai_workflow")
 
         # Create a simple agent node
         try:
-            agent_node = graphbit.Node.agent("test_agent", "Respond with 'Hello from OpenAI'", "agent_001")
+            agent_node = Node.agent("test_agent", "Respond with 'Hello from OpenAI'", "agent_001")
             node_id = workflow.add_node(agent_node)
             assert node_id is not None
 
@@ -94,7 +94,7 @@ class TestOpenAILLM:
             workflow.validate()
 
             # Create executor and test basic execution capability
-            executor = graphbit.Executor(openai_gpt4_config)
+            executor = Executor(openai_gpt4_config)
             assert executor is not None
 
         except Exception as e:
@@ -115,12 +115,12 @@ class TestAnthropicLLM:
     @pytest.fixture
     def anthropic_config(self, api_key: str) -> Any:
         """Create Anthropic configuration."""
-        return graphbit.LlmConfig.anthropic(api_key, "claude-3-sonnet-20240229")
+        return LlmConfig.anthropic(api_key, "claude-3-sonnet-20240229")
 
     @pytest.fixture
     def anthropic_client(self, anthropic_config: Any) -> Any:
         """Create Anthropic client."""
-        return graphbit.LlmClient(anthropic_config)
+        return LlmClient(anthropic_config)
 
     def test_anthropic_config_creation(self, anthropic_config: Any) -> None:
         """Test Anthropic config creation and properties."""
@@ -133,21 +133,21 @@ class TestAnthropicLLM:
 
     def test_anthropic_executor_creation(self, anthropic_config: Any) -> None:
         """Test creating workflow executor with Anthropic config."""
-        executor = graphbit.Executor(anthropic_config)
+        executor = Executor(anthropic_config)
         assert executor is not None
 
     def test_anthropic_executor_configurations(self, anthropic_config: Any) -> None:
         """Test different executor configurations with Anthropic."""
         # Test high throughput configuration
-        executor_ht = graphbit.Executor.new_high_throughput(anthropic_config)
+        executor_ht = Executor.new_high_throughput(anthropic_config)
         assert executor_ht is not None
 
         # Test low latency configuration
-        executor_ll = graphbit.Executor.new_low_latency(anthropic_config)
+        executor_ll = Executor.new_low_latency(anthropic_config)
         assert executor_ll is not None
 
         # Test memory optimized configuration
-        executor_mo = graphbit.Executor.new_memory_optimized(anthropic_config)
+        executor_mo = Executor.new_memory_optimized(anthropic_config)
         assert executor_mo is not None
 
     def test_anthropic_simple_completion(self, anthropic_client: Any) -> None:
@@ -162,11 +162,11 @@ class TestAnthropicLLM:
     def test_anthropic_simple_workflow_execution(self, anthropic_config: Any) -> None:
         """Test executing a simple workflow with Anthropic."""
         # Create a simple workflow
-        workflow = graphbit.Workflow("test_anthropic_workflow")
+        workflow = Workflow("test_anthropic_workflow")
 
         # Create a simple agent node
         try:
-            agent_node = graphbit.Node.agent("test_agent", "Respond with 'Hello from Claude'", "agent_002")
+            agent_node = Node.agent("test_agent", "Respond with 'Hello from Claude'", "agent_002")
             node_id = workflow.add_node(agent_node)
             assert node_id is not None
 
@@ -174,7 +174,7 @@ class TestAnthropicLLM:
             workflow.validate()
 
             # Create executor and test basic execution capability
-            executor = graphbit.Executor(anthropic_config)
+            executor = Executor(anthropic_config)
             assert executor is not None
 
         except Exception as e:
@@ -196,12 +196,12 @@ class TestHuggingFaceLLM:
     def hf_config(self, api_key: str) -> Any:
         """Create HuggingFace configuration."""
         # Use a more reliable model that's available on HuggingFace
-        return graphbit.LlmConfig.huggingface(api_key, "gpt2")
+        return LlmConfig.huggingface(api_key, "gpt2")
 
     @pytest.fixture
     def hf_client(self, hf_config: Any) -> Any:
         """Create HuggingFace client."""
-        return graphbit.LlmClient(hf_config)
+        return LlmClient(hf_config)
 
     def test_hf_config_creation(self, hf_config: Any) -> None:
         """Test HuggingFace config creation and properties."""
@@ -214,21 +214,21 @@ class TestHuggingFaceLLM:
 
     def test_hf_executor_creation(self, hf_config: Any) -> None:
         """Test creating workflow executor with HuggingFace config."""
-        executor = graphbit.Executor(hf_config)
+        executor = Executor(hf_config)
         assert executor is not None
 
     def test_hf_executor_configurations(self, hf_config: Any) -> None:
         """Test different executor configurations with HuggingFace."""
         # Test high throughput configuration
-        executor_ht = graphbit.Executor.new_high_throughput(hf_config)
+        executor_ht = Executor.new_high_throughput(hf_config)
         assert executor_ht is not None
 
         # Test low latency configuration
-        executor_ll = graphbit.Executor.new_low_latency(hf_config)
+        executor_ll = Executor.new_low_latency(hf_config)
         assert executor_ll is not None
 
         # Test memory optimized configuration
-        executor_mo = graphbit.Executor.new_memory_optimized(hf_config)
+        executor_mo = Executor.new_memory_optimized(hf_config)
         assert executor_mo is not None
 
     def test_hf_simple_completion(self, hf_client: Any) -> None:
@@ -247,11 +247,11 @@ class TestHuggingFaceLLM:
     def test_hf_simple_workflow_execution(self, hf_config: Any) -> None:
         """Test executing a simple workflow with HuggingFace."""
         # Create a simple workflow
-        workflow = graphbit.Workflow("test_hf_workflow")
+        workflow = Workflow("test_hf_workflow")
 
         # Create a simple agent node
         try:
-            agent_node = graphbit.Node.agent("test_agent", "Respond with 'Hello from HuggingFace'", "agent_003")
+            agent_node = Node.agent("test_agent", "Respond with 'Hello from HuggingFace'", "agent_003")
             node_id = workflow.add_node(agent_node)
             assert node_id is not None
 
@@ -259,7 +259,7 @@ class TestHuggingFaceLLM:
             workflow.validate()
 
             # Create executor and test basic execution capability
-            executor = graphbit.Executor(hf_config)
+            executor = Executor(hf_config)
             assert executor is not None
 
         except Exception as e:
@@ -272,12 +272,12 @@ class TestOllamaLLM:
     @pytest.fixture
     def ollama_config(self) -> Any:
         """Create Ollama configuration."""
-        return graphbit.LlmConfig.ollama("llama3.2")
+        return LlmConfig.ollama("llama3.2")
 
     @pytest.fixture
     def ollama_client(self, ollama_config: Any) -> Any:
         """Create Ollama client."""
-        return graphbit.LlmClient(ollama_config)
+        return LlmClient(ollama_config)
 
     def test_ollama_config_creation(self, ollama_config: Any) -> None:
         """Test Ollama config creation and properties."""
@@ -290,7 +290,7 @@ class TestOllamaLLM:
 
     def test_ollama_executor_creation(self, ollama_config: Any) -> None:
         """Test creating workflow executor with Ollama config."""
-        executor = graphbit.Executor(ollama_config)
+        executor = Executor(ollama_config)
         assert executor is not None
 
     async def test_ollama_simple_completion(self, ollama_client: Any) -> None:
@@ -338,12 +338,12 @@ class TestCrossProviderLLM:
         configs = {}
 
         if os.getenv("OPENAI_API_KEY"):
-            configs["openai"] = graphbit.LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-3.5-turbo")
+            configs["openai"] = LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-3.5-turbo")
 
         if os.getenv("ANTHROPIC_API_KEY"):
-            configs["anthropic"] = graphbit.LlmConfig.anthropic(os.getenv("ANTHROPIC_API_KEY"), "claude-3-sonnet-20240229")
+            configs["anthropic"] = LlmConfig.anthropic(os.getenv("ANTHROPIC_API_KEY"), "claude-3-sonnet-20240229")
 
-        configs["ollama"] = graphbit.LlmConfig.ollama("llama3.2")
+        configs["ollama"] = LlmConfig.ollama("llama3.2")
 
         return configs
 
@@ -353,7 +353,7 @@ class TestCrossProviderLLM:
 
         for provider_name, config in providers.items():
             try:
-                executor = graphbit.Executor(config)
+                executor = Executor(config)
                 executors[provider_name] = executor
                 assert executor is not None
             except Exception as e:
@@ -368,7 +368,7 @@ class TestCrossProviderLLM:
 
         for provider_name, config in providers.items():
             try:
-                client = graphbit.LlmClient(config)
+                client = LlmClient(config)
                 clients[provider_name] = client
                 assert client is not None
             except Exception as e:
@@ -407,12 +407,12 @@ class TestAdvancedLLMClient:
     @pytest.fixture
     def openai_config(self, api_key: str) -> Any:
         """Create OpenAI configuration."""
-        return graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
+        return LlmConfig.openai(api_key, "gpt-3.5-turbo")
 
     @pytest.fixture
     def openai_client(self, openai_config: Any) -> Any:
         """Create OpenAI client."""
-        return graphbit.LlmClient(openai_config, debug=True)
+        return LlmClient(openai_config, debug=True)
 
     @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="Requires OpenAI API key")
     async def test_complete_batch_async_interface(self, openai_client: Any) -> None:
@@ -586,15 +586,15 @@ class TestLLMErrorHandling:
     @pytest.fixture
     def openai_config(self, api_key: str) -> Any:
         """Create OpenAI configuration."""
-        return graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
+        return LlmConfig.openai(api_key, "gpt-3.5-turbo")
 
     @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="Requires OpenAI API key")
     def test_invalid_model_error(self, api_key: str) -> None:
         """Test error handling for invalid model."""
         try:
             # Create config with invalid model
-            invalid_config = graphbit.LlmConfig.openai(api_key, "gpt-nonexistent-model")
-            client = graphbit.LlmClient(invalid_config)
+            invalid_config = LlmConfig.openai(api_key, "gpt-nonexistent-model")
+            client = LlmClient(invalid_config)
 
             # This should raise an error
             with pytest.raises((ValueError, RuntimeError)):
@@ -607,7 +607,7 @@ class TestLLMErrorHandling:
     @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="Requires OpenAI API key")
     def test_invalid_parameters_error(self, openai_config: Any) -> None:
         """Test error handling for invalid parameters."""
-        client = graphbit.LlmClient(openai_config)
+        client = LlmClient(openai_config)
 
         try:
             # Test with invalid max_tokens (too high) - some providers may accept this
@@ -635,8 +635,8 @@ class TestLLMErrorHandling:
         """Test error handling for invalid API key."""
         try:
             # Create config with invalid API key
-            invalid_config = graphbit.LlmConfig.openai("invalid-key", "gpt-3.5-turbo")
-            client = graphbit.LlmClient(invalid_config)
+            invalid_config = LlmConfig.openai("invalid-key", "gpt-3.5-turbo")
+            client = LlmClient(invalid_config)
 
             # This should raise an authentication error
             with pytest.raises((ValueError, RuntimeError)):
@@ -649,7 +649,7 @@ class TestLLMErrorHandling:
     @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="Requires OpenAI API key")
     def test_empty_prompt_handling(self, openai_config: Any) -> None:
         """Test handling of empty or invalid prompts."""
-        client = graphbit.LlmClient(openai_config)
+        client = LlmClient(openai_config)
 
         try:
             # Test empty prompt - expect validation error
@@ -684,12 +684,12 @@ class TestLLMPerformance:
     @pytest.fixture
     def openai_config(self, api_key: str) -> Any:
         """Create OpenAI configuration."""
-        return graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
+        return LlmConfig.openai(api_key, "gpt-3.5-turbo")
 
     @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="Requires OpenAI API key")
     async def test_concurrent_requests_interface(self, openai_config: Any) -> None:
         """Test concurrent requests interface creation."""
-        client = graphbit.LlmClient(openai_config)
+        client = LlmClient(openai_config)
 
         try:
             # Test batch processing interface
@@ -712,7 +712,7 @@ class TestLLMPerformance:
     @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="Requires OpenAI API key")
     def test_response_time_consistency(self, openai_config: Any) -> None:
         """Test response time consistency."""
-        client = graphbit.LlmClient(openai_config)
+        client = LlmClient(openai_config)
 
         try:
             response_times = []
@@ -737,9 +737,4 @@ class TestLLMPerformance:
 
 
 if __name__ == "__main__":
-    # Initialize GraphBit
-    graphbit.init()
-    print(f"GraphBit version: {graphbit.version()}")
-
-    # Run specific test cases
     pytest.main([__file__, "-v"])
