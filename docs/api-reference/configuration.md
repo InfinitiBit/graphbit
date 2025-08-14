@@ -7,17 +7,19 @@ GraphBit provides extensive configuration options to customize workflow executio
 ### Basic Initialization
 
 ```python
-import graphbit
+from graphbit import init
 
 # Basic initialization
-graphbit.init()
+init()
 ```
 
 ### Advanced Initialization
 
 ```python
+from graphbit import init
+
 # With debugging and logging
-graphbit.init(
+init(
     log_level="info",          # Log level: trace, debug, info, warn, error
     enable_tracing=True,       # Enable detailed tracing
     debug=True                 # Enable debug mode (alias for enable_tracing)
@@ -29,15 +31,17 @@ graphbit.init(
 Configure the runtime before initialization for advanced control:
 
 ```python
+from graphbit import configure_runtime, init
+
 # Configure runtime (call before init)
-graphbit.configure_runtime(
+runtime_config = configure_runtime(
     worker_threads=8,          # Number of worker threads
     max_blocking_threads=16,   # Maximum blocking threads
     thread_stack_size_mb=8     # Thread stack size in MB
 )
 
 # Then initialize
-graphbit.init()
+init()
 ```
 
 ## LLM Configuration
@@ -45,78 +49,89 @@ graphbit.init()
 ### OpenAI Configuration
 
 ```python
+from graphbit import LlmConfig
+
 # Basic OpenAI configuration
-config = graphbit.LlmConfig.openai(
+llm_config = LlmConfig.openai(
     api_key="your-api-key",
     model="gpt-4o-mini"        # Optional, defaults to gpt-4o-mini
 )
 
 # With default model
-config = graphbit.LlmConfig.openai("your-api-key")
+llm_config = LlmConfig.openai("your-api-key")
 ```
 
 ### Anthropic Configuration
 
 ```python
+from graphbit import LlmConfig
+
 # Basic Anthropic configuration
-config = graphbit.LlmConfig.anthropic(
+llm_config = LlmConfig.anthropic(
     api_key="your-anthropic-key",
     model="claude-3-5-sonnet-20241022"  # Optional, defaults to claude-3-5-sonnet-20241022
 )
 
 # With default model
-config = graphbit.LlmConfig.anthropic("your-anthropic-key")
+llm_config = LlmConfig.anthropic("your-anthropic-key")
 ```
 
 ### Perplexity Configuration
 
 ```python
+from graphbit import LlmConfig
+
 # Basic Perplexity configuration
-config = graphbit.LlmConfig.perplexity(
+llm_config = LlmConfig.perplexity(
     api_key="your-perplexity-key",
     model="sonar"             # Optional, defaults to sonar
 )
 
 # With default model
-config = graphbit.LlmConfig.perplexity("your-perplexity-key")
-=======
+llm_config = LlmConfig.perplexity("your-perplexity-key")
+```
+
 ### DeepSeek Configuration
 
 ```python
+from graphbit import LlmConfig
+
 # Basic DeepSeek configuration
-config = graphbit.LlmConfig.deepseek(
+llm_config = LlmConfig.deepseek(
     api_key="your-deepseek-key",
     model="deepseek-chat"        # Optional, defaults to deepseek-chat
 )
 
 # With default model
-config = graphbit.LlmConfig.deepseek("your-deepseek-key")
+llm_config = LlmConfig.deepseek("your-deepseek-key")
 
 # Different models for specific use cases
-coding_config = graphbit.LlmConfig.deepseek("your-deepseek-key", "deepseek-coder")
-reasoning_config = graphbit.LlmConfig.deepseek("your-deepseek-key", "deepseek-reasoner")
+coding_config = LlmConfig.deepseek("your-deepseek-key", "deepseek-coder")
+reasoning_config = LlmConfig.deepseek("your-deepseek-key", "deepseek-reasoner")
 ```
 
 ### Ollama Configuration
 
 ```python
+from graphbit import LlmConfig
+
 # Local Ollama configuration
-config = graphbit.LlmConfig.ollama(
+llm_config = LlmConfig.ollama(
     model="llama3.2"          # Optional, defaults to llama3.2
 )
 
 # With default model
-config = graphbit.LlmConfig.ollama()
+llm_config = LlmConfig.ollama()
 ```
 
 ### Configuration Properties
 
 ```python
 # Access configuration properties
-provider = config.provider()  # "openai", "anthropic", "perplexity", "ollama"
-=======
-provider = config.provider()  # "openai", "anthropic", "deepseek", "ollama"
-model = config.model()        # Model name
+provider = llm_config.provider()  # "openai", "anthropic", "perplexity", "ollama"
+
+provider = llm_config.provider()  # "openai", "anthropic", "deepseek", "ollama"
+model = llm_config.model()        # Model name
 ```
 
 ## LLM Client Configuration
@@ -124,15 +139,21 @@ model = config.model()        # Model name
 ### Basic Client
 
 ```python
+from graphbit import LlmConfig, LlmClient
+
 # Simple client
-client = graphbit.LlmClient(config)
+llm_config = LlmConfig.openai("your-api-key")
+client = LlmClient(llm_config)
 ```
 
 ### Client with Debug Mode
 
 ```python
+from graphbit import LlmConfig, LlmClient
+
 # Client with debugging enabled
-client = graphbit.LlmClient(config, debug=True)
+llm_config = LlmConfig.openai("your-api-key")
+client = LlmClient(llm_config, debug=True)
 ```
 
 ### Client Statistics and Monitoring
@@ -157,15 +178,21 @@ asyncio.run(client.warmup())
 ### Basic Executor
 
 ```python
+from graphbit import LlmConfig, Executor
+
 # Simple executor
-executor = graphbit.Executor(llm_config)
+llm_config = LlmConfig.openai("your-api-key")
+executor = Executor(llm_config)
 ```
 
 ### Executor with Options
 
 ```python
+from graphbit import LlmConfig, Executor
+
 # Executor with configuration
-executor = graphbit.Executor(
+llm_config = LlmConfig.openai("your-api-key")
+executor = Executor(
     config=llm_config,
     lightweight_mode=False,    # Enable lightweight/low-latency mode
     timeout_seconds=300,       # Execution timeout (1-3600 seconds)
@@ -179,7 +206,7 @@ executor = graphbit.Executor(
 
 ```python
 # Optimized for high throughput
-executor = graphbit.Executor.new_high_throughput(
+executor = Executor.new_high_throughput(
     llm_config,
     timeout_seconds=600,       # Optional timeout override
     debug=False                # Optional debug mode
@@ -190,7 +217,7 @@ executor = graphbit.Executor.new_high_throughput(
 
 ```python
 # Optimized for low latency
-executor = graphbit.Executor.new_low_latency(
+executor = Executor.new_low_latency(
     llm_config,
     timeout_seconds=30,        # Shorter timeout for low latency
     debug=False
@@ -201,7 +228,7 @@ executor = graphbit.Executor.new_low_latency(
 
 ```python
 # Optimized for memory usage
-executor = graphbit.Executor.new_memory_optimized(
+executor = Executor.new_memory_optimized(
     llm_config,
     timeout_seconds=300,
     debug=False
@@ -246,21 +273,25 @@ mode = executor.get_execution_mode()  # Returns: HighThroughput, LowLatency, etc
 ### OpenAI Embeddings
 
 ```python
+from graphbit import EmbeddingConfig
+
 # OpenAI embeddings configuration
-embed_config = graphbit.EmbeddingConfig.openai(
+embed_config = EmbeddingConfig.openai(
     api_key="your-api-key",
     model="text-embedding-3-small"  # Optional, defaults to text-embedding-3-small
 )
 
 # With default model
-embed_config = graphbit.EmbeddingConfig.openai("your-api-key")
+embed_config = EmbeddingConfig.openai("your-api-key")
 ```
 
 ### HuggingFace Embeddings
 
 ```python
+from graphbit import EmbeddingConfig
+
 # HuggingFace embeddings configuration
-embed_config = graphbit.EmbeddingConfig.huggingface(
+embed_config = EmbeddingConfig.huggingface(
     api_key="your-hf-token",
     model="sentence-transformers/all-MiniLM-L6-v2"
 )
@@ -269,15 +300,20 @@ embed_config = graphbit.EmbeddingConfig.huggingface(
 ### Embeddings Client
 
 ```python
-# Create embeddings client
-embed_client = graphbit.EmbeddingClient(embed_config)
+from graphbit import EmbeddingConfig, EmbeddingClient
 
-# Generate embeddings
+# Create embeddings client
+embed_config = EmbeddingConfig.openai("your-api-key")
+embed_client = EmbeddingClient(embed_config)
+
+# Generate single embedding
 embedding = embed_client.embed("Hello world")
+
+# Generate multiple embeddings
 embeddings = embed_client.embed_many(["Text 1", "Text 2"])
 
 # Calculate similarity
-similarity = graphbit.EmbeddingClient.similarity(embedding1, embedding2)
+similarity = EmbeddingClient.similarity(embedding1, embedding2)
 ```
 
 ## Environment Variables
@@ -312,8 +348,10 @@ export GRAPHBIT_DEBUG="true"
 ### System Information
 
 ```python
+from graphbit import get_system_info
+
 # Get comprehensive system information
-info = graphbit.get_system_info()
+info = get_system_info()
 print(f"Version: {info['version']}")
 print(f"CPU count: {info['cpu_count']}")
 print(f"Runtime initialized: {info['runtime_initialized']}")
@@ -324,8 +362,10 @@ print(f"Memory allocator: {info['memory_allocator']}")
 ### Health Checks
 
 ```python
+from graphbit import health_check
+
 # Perform health check
-health = graphbit.health_check()
+health = health_check()
 if health['overall_healthy']:
     print("✅ System is healthy")
     print(f"Memory healthy: {health['memory_healthy']}")
@@ -337,9 +377,11 @@ else:
 ### Version Information
 
 ```python
+from graphbit import version
+
 # Get current version
-version = graphbit.version()
-print(f"GraphBit version: {version}")
+graphbit_version = version()
+print(f"GraphBit version: {graphbit_version}")
 ```
 
 ## Configuration Examples
@@ -347,20 +389,23 @@ print(f"GraphBit version: {version}")
 ### Development Configuration
 
 ```python
+import os
+from graphbit import init, LlmConfig, Executor
+
 def create_dev_config():
     """Configuration for development environment."""
     
     # Initialize with debugging
-    graphbit.init(debug=True, log_level="info")
+    init(debug=True, log_level="info")
     
     # Use faster, cheaper model for development
-    config = graphbit.LlmConfig.openai(
+    config = LlmConfig.openai(
         api_key=os.getenv("OPENAI_API_KEY"),
         model="gpt-4o-mini"
     )
     
     # Low-latency executor for development
-    executor = graphbit.Executor.new_low_latency(
+    executor = Executor.new_low_latency(
         config, 
         timeout_seconds=60,
         debug=True
@@ -372,20 +417,23 @@ def create_dev_config():
 ### Production Configuration
 
 ```python
+import os
+from graphbit import init, LlmConfig, Executor
+
 def create_prod_config():
     """Configuration for production environment."""
     
     # Initialize without debugging
-    graphbit.init(debug=False, log_level="warn")
+    init(debug=False, log_level="warn")
     
     # High-quality model for production
-    config = graphbit.LlmConfig.openai(
+    config = LlmConfig.openai(
         api_key=os.getenv("OPENAI_API_KEY"),
         model="gpt-4o-mini"
     )
     
     # High-throughput executor for production
-    executor = graphbit.Executor.new_high_throughput(
+    executor = Executor.new_high_throughput(
         config,
         timeout_seconds=300,
         debug=False
@@ -405,24 +453,27 @@ def create_prod_config():
 ### High-Volume Configuration
 
 ```python
+import os
+from graphbit import init, LlmConfig, Executor, configure_runtime
+
 def create_high_volume_config():
     """Configuration for high-volume processing."""
     
     # Configure runtime for high throughput
-    graphbit.configure_runtime(
+    runtime_config = configure_runtime(
         worker_threads=16,
         max_blocking_threads=32
     )
-    graphbit.init(debug=False)
+    init(debug=False)
     
     # Fast, cost-effective model
-    config = graphbit.LlmConfig.openai(
+    config = LlmConfig.openai(
         api_key=os.getenv("OPENAI_API_KEY"),
         model="gpt-4o-mini"
     )
     
     # Memory-optimized executor
-    executor = graphbit.Executor.new_memory_optimized(
+    executor = Executor.new_memory_optimized(
         config,
         timeout_seconds=180,
         debug=False
@@ -434,16 +485,18 @@ def create_high_volume_config():
 ### Local Development Configuration
 
 ```python
+from graphbit import init, LlmConfig, Executor
+
 def create_local_config():
     """Configuration for local development with Ollama."""
     
-    graphbit.init(debug=True, log_level="debug")
+    init(debug=True, log_level="debug")
     
     # Use local Ollama
-    config = graphbit.LlmConfig.ollama("llama3.2")
+    config = LlmConfig.ollama("llama3.2")
     
     # Low-latency for quick iteration
-    executor = graphbit.Executor.new_low_latency(
+    executor = Executor.new_low_latency(
         config,
         timeout_seconds=180,  # Longer timeout for local inference
         debug=True
@@ -459,8 +512,6 @@ def create_local_config():
 ```python
 def validate_environment():
     """Validate environment setup."""
-    
-    import os
     
     # Check required environment variables
     required_vars = {
@@ -482,12 +533,16 @@ def validate_environment():
 ### Configuration Testing
 
 ```python
+from graphbit import LlmConfig, LlmClient
+
+llm_config = LlmConfig.openai("your-api-key")
+
 def test_configuration(config):
     """Test LLM configuration."""
     
     try:
         # Create client
-        client = graphbit.LlmClient(config)
+        client = LlmClient(llm_config)
         
         # Test simple completion
         response = client.complete("Say 'Configuration test successful'")
@@ -507,25 +562,28 @@ def test_configuration(config):
 ### Health Check Function
 
 ```python
+import os
+from graphbit import health_check, get_system_info, LlmConfig, LlmClient
+
 def comprehensive_health_check():
     """Comprehensive system health check."""
     
     # Check system health
-    health = graphbit.health_check()
+    health = health_check()
     if not health['overall_healthy']:
         print("System health check failed")
         return False
     
     # Check system info
-    info = graphbit.get_system_info()
+    info = get_system_info()
     if not info['runtime_initialized']:
         print("Runtime not initialized")
         return False
     
     # Test basic functionality
     try:
-        config = graphbit.LlmConfig.openai(os.getenv("OPENAI_API_KEY"))
-        client = graphbit.LlmClient(config)
+        config = LlmConfig.openai(os.getenv("OPENAI_API_KEY"))
+        client = LlmClient(config)
         
         # Quick test
         response = client.complete("Test")
@@ -564,6 +622,9 @@ def get_config_for_environment():
 ### 2. Secure Configuration
 
 ```python
+import os
+from graphbit import LlmConfig
+
 def secure_config_setup():
     """Set up configuration securely."""
     
@@ -576,7 +637,7 @@ def secure_config_setup():
     if len(api_key) < 20:
         raise ValueError("Invalid API key format")
     
-    config = graphbit.LlmConfig.openai(api_key)
+    config = LlmConfig.openai(api_key)
     return config
 ```
 
@@ -618,13 +679,16 @@ def monitor_performance(executor):
 ### 4. Graceful Error Handling
 
 ```python
+import os
+from graphbit import LlmConfig, Executor
+
 def robust_config_creation():
     """Create configuration with fallback options."""
     
     try:
         # Primary configuration
-        config = graphbit.LlmConfig.openai(os.getenv("OPENAI_API_KEY"))
-        executor = graphbit.Executor.new_high_throughput(config)
+        config = LlmConfig.openai(os.getenv("OPENAI_API_KEY"))
+        executor = Executor.new_high_throughput(config)
         
         # Test configuration
         if test_configuration(config):
@@ -638,8 +702,8 @@ def robust_config_creation():
         try:
             # Fallback to local Ollama
             print("Falling back to local Ollama...")
-            fallback_config = graphbit.LlmConfig.ollama()
-            fallback_executor = graphbit.Executor.new_low_latency(fallback_config)
+            fallback_config = LlmConfig.ollama()
+            fallback_executor = Executor.new_low_latency(fallback_config)
             
             if test_configuration(fallback_config):
                 return fallback_executor
@@ -654,12 +718,14 @@ def robust_config_creation():
 ### 5. Resource Cleanup
 
 ```python
+from graphbit import shutdown
+
 def cleanup_resources():
     """Clean up GraphBit resources."""
     
     try:
         # Shutdown GraphBit (for testing/cleanup)
-        graphbit.shutdown()
+        shutdown()
         print("Resources cleaned up successfully")
     except Exception as e:
         print(f"Error during cleanup: {e}")
@@ -687,8 +753,10 @@ else:
 #### 2. Runtime Issues
 
 ```python
+from graphbit import get_system_info
+
 # Check runtime status
-info = graphbit.get_system_info()
+info = get_system_info()
 if not info['runtime_initialized']:
     print("Runtime not initialized - call graphbit.init()")
 else:
@@ -698,8 +766,10 @@ else:
 #### 3. Memory Issues
 
 ```python
+from graphbit import health_check
+
 # Check memory status
-health = graphbit.health_check()
+health = health_check()
 if not health['memory_healthy']:
     print(f"Low memory: {health['available_memory_mb']}MB available")
     print("Consider using memory-optimized executor")
