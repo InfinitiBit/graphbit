@@ -170,19 +170,20 @@ Metrics captured include:
 * * *
 
 ![VM1 - AWS t3.small Ubuntu Intel Xeon Skylake8175M / CascadeLake8259CL](assets/VM1_benchmark_results_of_aws_t3_small_ubuntu_intel_xeon_skylake8175M_cascadelake8259CL_2vcpu_24cpucredits_2gib_ebs_only_up5gbps_network.png)  
-**VM1** – AWS t3.small, Ubuntu, Intel Xeon Skylake8175M / CascadeLake8259CL, 2 vCPU, 24 CPU credits, 2 GiB RAM, EBS only, up to 5 Gbps network
+<p align="center"><b>VM1</b> – AWS t3.small, Ubuntu, Intel Xeon Skylake8175M / CascadeLake8259CL, 2 vCPU, 24 CPU credits, 2 GiB RAM, EBS only, up to 5 Gbps network</p>
 
 ![VM2 - AWS t3a.small Ubuntu AMD EPYC 7000 Series 7571](assets/VM2_benchmark_results_of_aws_t3a_small_ubuntu_amd_epyc_7000series_7571_2vcpu_24cpucredits_2gib_ebs_only_up5gbps_network.png)  
-**VM2** – AWS t3a.small, Ubuntu, AMD EPYC 7000 Series 7571, 2 vCPU, 24 CPU credits, 2 GiB RAM, EBS only, up to 5 Gbps network
+<p align="center"><b>VM2</b> – AWS t3a.small, Ubuntu, AMD EPYC 7000 Series 7571, 2 vCPU, 24 CPU credits, 2 GiB RAM, EBS only, up to 5 Gbps network</p>
 
 ![VM3 - AWS t3.medium Windows Intel Xeon Skylake8175M / CascadeLake8259CL](assets/VM3_benchmark_results_of_aws_t3_medium_windows_intel_xeon_skylake8175M_cascadelake8259CL_2vcpu_24cpucredits_4gib_ebs_only_up5gbps_network.png)  
-**VM3** – AWS t3.medium, Windows, Intel Xeon Skylake8175M / CascadeLake8259CL, 2 vCPU, 24 CPU credits, 4 GiB RAM, EBS only, up to 5 Gbps network
+<p align="center"><b>VM3</b> – AWS t3.medium, Windows, Intel Xeon Skylake8175M / CascadeLake8259CL, 2 vCPU, 24 CPU credits, 4 GiB RAM, EBS only, up to 5 Gbps network</p>
 
 ![VM4 - AWS t3a.medium Windows AMD EPYC 7000 Series 7571](assets/VM4_benchmark_results_of_aws_t3a_medium_windows_amd_epyc_7000series_7571_2vcpu_24cpucredits_4gib_ebs_only_up5gbps_network.png)  
-**VM4** – AWS t3a.medium, Windows, AMD EPYC 7000 Series 7571, 2 vCPU, 24 CPU credits, 4 GiB RAM, EBS only, up to 5 Gbps network
+<p align="center"><b>VM4</b> – AWS t3a.medium, Windows, AMD EPYC 7000 Series 7571, 2 vCPU, 24 CPU credits, 4 GiB RAM, EBS only, up to 5 Gbps network</p>
 
 ![VM_5 - AWS mac2.metal Apple M1](assets/VM_5benchmark_results_of_aws_mac2_metal_apple_m1_4performance_4efficiency_8vcpu_16gib_ebs_only_10gbps_network_8gbps_ebs.png)  
-**VM_5** – AWS mac2.metal, Apple M1 (4 performance + 4 efficiency cores), 8 vCPU, 16 GiB RAM, EBS only, 10 Gbps network, 8 Gbps EBS
+<p align="center"><b>VM_5</b> – AWS mac2.metal, Apple M1 (4 performance + 4 efficiency cores), 8 vCPU, 16 GiB RAM, EBS only, 10 Gbps network, 8 Gbps EBS</p>
+
 
 
 
