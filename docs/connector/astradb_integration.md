@@ -53,29 +53,34 @@ except Exception as e:
 
 
 
-## Step 2: Store and Search Vectors with OpenAI Embeddings
+## Step 2: Generate and Store Embeddings
 
-### 2.1. Generate and Store an Embedding
+### 2.1 Configure Embedding Model & Create Vector Collection
 
 ```python
 from graphbit import EmbeddingConfig, EmbeddingClient
-
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
     raise ValueError("Please set the OPENAI_API_KEY environment variable.")
 
+# Create embedding client
 embedding_config = EmbeddingConfig.openai(OPENAI_API_KEY, "text-embedding-3-small")
 embedding_client = EmbeddingClient(embedding_config)
 
-text = "This is a sample document for vector search."
-embedding = embedding_client.embed(text)
-
-# Create vector collection
+# Create vector collection in AstraDB
 vector_collection = astra_db.create_collection(
     name="vector_data",
     definition={"vector": {"dimension": 1536, "metric": "cosine"}}
 )
+
+```
+
+### 2.2 Insert Single Embedded Document
+
+```python
+text = "This is a sample document for vector search."
+embedding = embedding_client.embed(text)
 
 vector_doc = {
     "_id": "item123", 
@@ -83,9 +88,34 @@ vector_doc = {
     "metadata": {"category": "test"}
 }
 vector_collection.insert_one(vector_doc)
+print("Inserted single document into AstraDB vector collection.")
+
 ```
 
-### 2.2. Vector Search Example
+### 2.3 Insert Batch Embedded Documents
+
+```python
+batch_texts = [
+    "Graph databases are great for relationships.",
+    "Vector search enables semantic retrieval.",
+    "OpenAI provides powerful embedding models.",
+]
+batch_embeddings = embedding_client.embed_many(batch_texts)
+
+docs = [
+    {
+        "_id": f"batch_{idx}", 
+        "$vector": emb, 
+        "metadata": {"text": text}
+    }
+    for idx, (text, emb) in enumerate(zip(batch_texts, batch_embeddings))
+]
+vector_collection.insert_many(docs)
+print(f"Inserted {len(batch_texts)} documents into AstraDB vector collection.")
+```
+---
+
+## Step 3: Search Vectors
 
 ```python
 query_text = "Find documents related to vector search."
@@ -105,33 +135,9 @@ for doc in results:
         best_similarity = similarity
         best_doc = doc
 
-if best_doc is not None:
+if best_doc:
     print(f"Most similar document: {best_doc['_id']} with similarity {best_similarity:.4f}")
 else:
     print("No documents found in vector collection.")
-```
-
----
-
-## Step 3: Batch Embedding Example
-
-```python
-batch_texts = [
-    "Graph databases are great for relationships.",
-    "Vector search enables semantic retrieval.",
-    "OpenAI provides powerful embedding models.",
-]
-batch_embeddings = embedding_client.embed_many(batch_texts)
-
-docs = [
-    {
-        "_id": f"batch_{idx}", 
-        "$vector": emb, 
-        "metadata": {"text": text}
-    }
-    for idx, (text, emb) in enumerate(zip(batch_texts, batch_embeddings))
-]
-vector_collection.insert_many(docs)
-print(f"Inserted {len(batch_texts)} documents with OpenAI embeddings.")
 ```
 ---
