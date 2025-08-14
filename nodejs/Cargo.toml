@@ -1,0 +1,55 @@
+[dependencies]
+chrono = { version = "0.4", features = ["serde"] }
+futures = "0.3"
+graphbit-core = { path = "../core", features = [] }
+napi = { version = "2.16", default-features = false, features = ["napi8", "tokio_rt", "serde-json"] }
+napi-derive = "2.16"
+num_cpus = "1.16"
+reqwest = { version = "0.11", features = ["json"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+# System information and monitoring
+sys-info = "0.9"
+tokio = { version = "1.38", features = ["full"] }
+# Production-grade logging and tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+[build-dependencies]
+napi-build = "2.1"
+
+[features]
+default = []
+# Production features
+production = ["tracing-subscriber/json"]
+# Performance profiling features
+profiling = ["tracing-subscriber/env-filter"]
+
+[lib]
+crate-type = ["cdylib"]
+
+[package]
+authors = ["GraphBit Team"]
+description = "Production-grade TypeScript/JavaScript bindings for GraphBit agentic workflow automation"
+edition = "2021"
+name = "graphbit"
+publish = false
+repository = "https://github.com/InfinitiBit/graphbit"
+version = "0.1.0"
+
+# Optimized debug builds for development
+[profile.dev]
+debug = true
+opt-level = 1
+
+# Performance optimizations for release builds
+[profile.release]
+codegen-units = 1
+debug = false
+lto = true
+opt-level = 3
+panic = "abort"
+strip = true
+
+# [target.'cfg(unix)'.dependencies]
+# jemallocator = "0.5"  # Disabled for Node.js bindings to avoid TLS issues
