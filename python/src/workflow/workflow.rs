@@ -73,4 +73,13 @@ impl Workflow {
     fn name(&self) -> String {
         self.inner.name.clone()
     }
+
+    /// Set graph-level metadata key to a boolean value
+    /// Exposes core graph.set_metadata for Python tests and configuration
+    fn set_graph_metadata(&mut self, key: String, value: bool) -> PyResult<()> {
+        self.inner
+            .graph
+            .set_metadata(key, serde_json::Value::Bool(value));
+        Ok(())
+    }
 }

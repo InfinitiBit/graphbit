@@ -104,9 +104,15 @@ impl WorkflowGraph {
         let node_id = node.id.clone();
 
         if self.nodes.contains_key(&node_id) {
+            let incoming_name = node.name.clone();
+            let existing_name = self
+                .nodes
+                .get(&node_id)
+                .map(|n| n.name.clone())
+                .unwrap_or_else(|| "<unknown>".to_string());
             return Err(GraphBitError::graph(format!(
-                "Node with ID {} already exists",
-                node_id
+                "Node already exists: id={} (existing name='{}', incoming name='{}'). Hint: create a fresh Node instance; do not add the same Node object twice.",
+                node_id, existing_name, incoming_name
             )));
         }
 
@@ -359,6 +365,80 @@ impl WorkflowGraph {
         // Validate individual nodes
         for node in self.nodes.values() {
             node.validate()?;
+        }
+
+        // Enforce unique agent IDs across all agent nodes
+        {
+            use std::collections::HashMap;
+            let mut agent_index: HashMap<String, Vec<(NodeId, String)>> = HashMap::new();
+            for node in self.nodes.values() {
+                if let NodeType::Agent { agent_id, .. } = &node.node_type {
+                    agent_index
+                        .entry(agent_id.to_string())
+                        .or_default()
+                        .push((node.id.clone(), node.name.clone()));
+                }
+            }
+            let mut duplicates: Vec<(String, Vec<(NodeId, String)>)> = Vec::new();
+            for (aid, entries) in agent_index.into_iter() {
+                if entries.len() > 1 {
+                    duplicates.push((aid, entries));
+                }
+            }
+            if !duplicates.is_empty() {
+                // Build a helpful error message listing conflicts
+                let mut parts: Vec<String> = Vec::new();
+                for (aid, entries) in duplicates {
+                    let detail = entries
+                        .into_iter()
+                        .map(|(id, name)| format!("{{id={}, name='{}'}}", id, name))
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    parts.push(format!("agent_id='{}' used by: [{}]", aid, detail));
+                }
+                return Err(GraphBitError::graph(format!(
+                    "Duplicate agent_id detected. Each agent_id must be unique across the workflow. Conflicts: {}",
+                    parts.join("; ")
+                )));
+            }
+        }
+
+        // Optionally enforce unique node names if metadata flag is set
+        if self
+            .metadata
+            .get("enforce_unique_node_names")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false)
+        {
+            use std::collections::HashMap;
+            let mut name_index: HashMap<String, Vec<NodeId>> = HashMap::new();
+            for node in self.nodes.values() {
+                name_index
+                    .entry(node.name.clone())
+                    .or_default()
+                    .push(node.id.clone());
+            }
+            let mut dup_names: Vec<(String, Vec<NodeId>)> = Vec::new();
+            for (name, ids) in name_index.into_iter() {
+                if ids.len() > 1 {
+                    dup_names.push((name, ids));
+                }
+            }
+            if !dup_names.is_empty() {
+                let mut parts: Vec<String> = Vec::new();
+                for (name, ids) in dup_names {
+                    let ids_str = ids
+                        .into_iter()
+                        .map(|id| id.to_string())
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    parts.push(format!("name='{}' used by node ids: [{}]", name, ids_str));
+                }
+                return Err(GraphBitError::graph(format!(
+                    "Duplicate node names not allowed (enforce_unique_node_names=true). Conflicts: {}",
+                    parts.join("; ")
+                )));
+            }
         }
 
         Ok(())
