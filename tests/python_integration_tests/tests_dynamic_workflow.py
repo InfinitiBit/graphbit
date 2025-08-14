@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-import graphbit
+from graphbit import Executor, LlmConfig, Node, Workflow, WorkflowResult, init, version
 
 
 class TestDynamicWorkflowCreation:
@@ -14,23 +14,23 @@ class TestDynamicWorkflowCreation:
 
     def test_dynamic_workflow_creation(self) -> None:
         """Test creating workflows dynamically at runtime."""
-        workflow = graphbit.Workflow("dynamic_test")
+        workflow = Workflow("dynamic_test")
 
-        base_agent = graphbit.Node.agent("base_processor", "Process input", "agent_001")
+        base_agent = Node.agent("base_processor", "Process input", "agent_001")
         workflow.add_node(base_agent)
 
-        condition_node = graphbit.Node.condition("quality_check", "quality > 0.7")
+        condition_node = Node.condition("quality_check", "quality > 0.7")
         workflow.add_node(condition_node)
 
         assert workflow.name() == "dynamic_test"
 
     def test_dynamic_node_addition(self) -> None:
         """Test adding nodes to workflow dynamically."""
-        workflow = graphbit.Workflow("dynamic_addition")
+        workflow = Workflow("dynamic_addition")
 
         # Add nodes one by one
         for i in range(3):
-            agent = graphbit.Node.agent(f"agent_{i}", f"Process step {i}", f"agent_{i:03d}")
+            agent = Node.agent(f"agent_{i}", f"Process step {i}", f"agent_{i:03d}")
             node_id = workflow.add_node(agent)
             assert node_id is not None
 
@@ -41,23 +41,23 @@ class TestDynamicWorkflowCreation:
 
     def test_conditional_workflow_building(self) -> None:
         """Test building workflows based on runtime conditions."""
-        workflow = graphbit.Workflow("conditional_build")
+        workflow = Workflow("conditional_build")
 
         # Simulate different workflow paths based on conditions
         use_complex_processing = True  # Runtime condition
 
         if use_complex_processing:
             # Add complex processing chain
-            agent1 = graphbit.Node.agent("complex_start", "Start complex processing", "complex_001")
-            transform1 = graphbit.Node.transform("complex_transform", "complex_operation")
-            agent2 = graphbit.Node.agent("complex_end", "Finish complex processing", "complex_002")
+            agent1 = Node.agent("complex_start", "Start complex processing", "complex_001")
+            transform1 = Node.transform("complex_transform", "complex_operation")
+            agent2 = Node.agent("complex_end", "Finish complex processing", "complex_002")
 
             workflow.add_node(agent1)
             workflow.add_node(transform1)
             workflow.add_node(agent2)
         else:
             # Add simple processing
-            agent = graphbit.Node.agent("simple_processor", "Simple processing", "simple_001")
+            agent = Node.agent("simple_processor", "Simple processing", "simple_001")
             workflow.add_node(agent)
 
         with contextlib.suppress(Exception):
@@ -74,17 +74,17 @@ class TestDynamicWorkflowExecution:
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             pytest.skip("OPENAI_API_KEY not set for dynamic workflow tests")
-        return graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
+        return LlmConfig.openai(api_key, "gpt-3.5-turbo")
 
     @pytest.fixture
     def dynamic_workflow(self) -> Any:
         """Create a dynamic workflow for testing."""
-        workflow = graphbit.Workflow("dynamic_execution_test")
+        workflow = Workflow("dynamic_execution_test")
 
         # Create a basic dynamic workflow
-        start_agent = graphbit.Node.agent("start", "Begin processing", "start_001")
-        decision_node = graphbit.Node.condition("decision", "continue_processing == true")
-        end_agent = graphbit.Node.agent("end", "Complete processing", "end_001")
+        start_agent = Node.agent("start", "Begin processing", "start_001")
+        decision_node = Node.condition("decision", "continue_processing == true")
+        end_agent = Node.agent("end", "Complete processing", "end_001")
 
         workflow.add_node(start_agent)
         workflow.add_node(decision_node)
@@ -104,7 +104,7 @@ class TestDynamicWorkflowExecution:
     def test_dynamic_workflow_execution_setup(self, llm_config: Any, dynamic_workflow: Any) -> None:
         """Test setting up dynamic workflow execution."""
         try:
-            executor = graphbit.Executor(llm_config)
+            executor = Executor(llm_config)
             assert executor is not None
 
             # Validate the dynamic workflow
@@ -117,7 +117,7 @@ class TestDynamicWorkflowExecution:
     def test_dynamic_workflow_execution(self, llm_config: Any, dynamic_workflow: Any) -> None:
         """Test executing dynamic workflows."""
         try:
-            executor = graphbit.Executor(llm_config)
+            executor = Executor(llm_config)
 
             # Validate workflow first
             dynamic_workflow.validate()
@@ -125,7 +125,7 @@ class TestDynamicWorkflowExecution:
             # Execute the dynamic workflow
             result = executor.execute(dynamic_workflow)
             assert result is not None
-            assert isinstance(result, graphbit.WorkflowResult)
+            assert isinstance(result, WorkflowResult)
 
         except Exception as e:
             pytest.skip(f"Dynamic workflow execution test skipped: {e}")
@@ -136,17 +136,17 @@ class TestWorkflowModification:
 
     def test_runtime_node_modification(self) -> None:
         """Test modifying workflow nodes at runtime."""
-        workflow = graphbit.Workflow("modification_test")
+        workflow = Workflow("modification_test")
 
         # Add initial nodes
-        agent1 = graphbit.Node.agent("modifiable_agent", "Initial prompt", "mod_001")
+        agent1 = Node.agent("modifiable_agent", "Initial prompt", "mod_001")
         workflow.add_node(agent1)
 
         # Add additional nodes based on runtime logic
         runtime_condition = True  # Simulate runtime decision
 
         if runtime_condition:
-            agent2 = graphbit.Node.agent("additional_agent", "Additional processing", "add_001")
+            agent2 = Node.agent("additional_agent", "Additional processing", "add_001")
             workflow.add_node(agent2)
 
             # Connect new node
@@ -156,10 +156,10 @@ class TestWorkflowModification:
 
     def test_workflow_branch_addition(self) -> None:
         """Test adding workflow branches dynamically."""
-        workflow = graphbit.Workflow("branch_test")
+        workflow = Workflow("branch_test")
 
         # Create main workflow branch
-        main_agent = graphbit.Node.agent("main_processor", "Main processing", "main_001")
+        main_agent = Node.agent("main_processor", "Main processing", "main_001")
         workflow.add_node(main_agent)
 
         # Add conditional branches
@@ -167,11 +167,11 @@ class TestWorkflowModification:
 
         for i, condition in enumerate(conditions):
             # Add condition node
-            cond_node = graphbit.Node.condition(f"check_{condition}", f"priority == '{condition}'")
+            cond_node = Node.condition(f"check_{condition}", f"priority == '{condition}'")
             workflow.add_node(cond_node)
 
             # Add processing node for this branch
-            branch_agent = graphbit.Node.agent(f"process_{condition}", f"Process {condition} items", f"branch_{i:03d}")
+            branch_agent = Node.agent(f"process_{condition}", f"Process {condition} items", f"branch_{i:03d}")
             workflow.add_node(branch_agent)
 
         # Validate the branched workflow
@@ -199,10 +199,10 @@ class TestDynamicExecutorConfiguration:
                 if not api_key:
                     pytest.skip("OPENAI_API_KEY not set")
 
-                llm_config = graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
+                llm_config = LlmConfig.openai(api_key, "gpt-3.5-turbo")
 
                 # Create executor with different configurations
-                executor = graphbit.Executor(llm_config, **config_params)
+                executor = Executor(llm_config, **config_params)
                 assert executor is not None
 
             except Exception as e:
@@ -215,12 +215,12 @@ class TestDynamicExecutorConfiguration:
             if not api_key:
                 pytest.skip("OPENAI_API_KEY not set")
 
-            llm_config = graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
+            llm_config = LlmConfig.openai(api_key, "gpt-3.5-turbo")
 
             # Test different executor modes
-            high_throughput = graphbit.Executor.new_high_throughput(llm_config)
-            low_latency = graphbit.Executor.new_low_latency(llm_config)
-            memory_optimized = graphbit.Executor.new_memory_optimized(llm_config)
+            high_throughput = Executor.new_high_throughput(llm_config)
+            low_latency = Executor.new_low_latency(llm_config)
+            memory_optimized = Executor.new_memory_optimized(llm_config)
 
             assert high_throughput is not None
             assert low_latency is not None
@@ -235,7 +235,7 @@ class TestConditionalWorkflowLogic:
 
     def test_conditional_node_creation(self) -> None:
         """Test creating conditional workflow nodes."""
-        workflow = graphbit.Workflow("conditional_logic_test")
+        workflow = Workflow("conditional_logic_test")
 
         # Create different types of conditional nodes
         conditions = [
@@ -246,26 +246,26 @@ class TestConditionalWorkflowLogic:
         ]
 
         for name, expression in conditions:
-            cond_node = graphbit.Node.condition(name, expression)
+            cond_node = Node.condition(name, expression)
             workflow.add_node(cond_node)
 
             assert cond_node.name() == name
 
     def test_workflow_branching_logic(self) -> None:
         """Test workflow branching based on conditions."""
-        workflow = graphbit.Workflow("branching_test")
+        workflow = Workflow("branching_test")
 
         # Create entry point
-        entry_agent = graphbit.Node.agent("entry", "Process input", "entry_001")
+        entry_agent = Node.agent("entry", "Process input", "entry_001")
         workflow.add_node(entry_agent)
 
         # Create decision point
-        decision = graphbit.Node.condition("routing_decision", "route_type == 'priority'")
+        decision = Node.condition("routing_decision", "route_type == 'priority'")
         workflow.add_node(decision)
 
         # Create different processing branches
-        priority_agent = graphbit.Node.agent("priority_processor", "Handle priority items", "priority_001")
-        normal_agent = graphbit.Node.agent("normal_processor", "Handle normal items", "normal_001")
+        priority_agent = Node.agent("priority_processor", "Handle priority items", "priority_001")
+        normal_agent = Node.agent("normal_processor", "Handle normal items", "normal_001")
 
         workflow.add_node(priority_agent)
         workflow.add_node(normal_agent)
@@ -282,7 +282,7 @@ class TestDynamicDataTransformation:
 
     def test_dynamic_transform_creation(self) -> None:
         """Test creating transformation nodes dynamically."""
-        workflow = graphbit.Workflow("transform_test")
+        workflow = Workflow("transform_test")
 
         # Create different transformation types
         transformations = [
@@ -294,21 +294,21 @@ class TestDynamicDataTransformation:
         ]
 
         for name, operation in transformations:
-            transform_node = graphbit.Node.transform(name, operation)
+            transform_node = Node.transform(name, operation)
             workflow.add_node(transform_node)
 
             assert transform_node.name() == name
 
     def test_chained_transformations(self) -> None:
         """Test chaining multiple transformations."""
-        workflow = graphbit.Workflow("chained_transforms")
+        workflow = Workflow("chained_transforms")
 
         # Create a chain of transformations
-        input_agent = graphbit.Node.agent("input", "Receive data", "input_001")
-        transform1 = graphbit.Node.transform("clean", "clean_text")
-        transform2 = graphbit.Node.transform("normalize", "normalize")
-        transform3 = graphbit.Node.transform("validate", "validate_format")
-        output_agent = graphbit.Node.agent("output", "Send processed data", "output_001")
+        input_agent = Node.agent("input", "Receive data", "input_001")
+        transform1 = Node.transform("clean", "clean_text")
+        transform2 = Node.transform("normalize", "normalize")
+        transform3 = Node.transform("validate", "validate_format")
+        output_agent = Node.agent("output", "Send processed data", "output_001")
 
         # Add all nodes
         for node in [input_agent, transform1, transform2, transform3, output_agent]:
@@ -333,27 +333,27 @@ class TestCrossProviderDynamicWorkflows:
         configs = {}
 
         if os.getenv("OPENAI_API_KEY"):
-            configs["openai"] = graphbit.LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-3.5-turbo")
+            configs["openai"] = LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-3.5-turbo")
 
         if os.getenv("ANTHROPIC_API_KEY"):
-            configs["anthropic"] = graphbit.LlmConfig.anthropic(os.getenv("ANTHROPIC_API_KEY"), "claude-3-sonnet-20240229")
+            configs["anthropic"] = LlmConfig.anthropic(os.getenv("ANTHROPIC_API_KEY"), "claude-3-sonnet-20240229")
 
-        configs["ollama"] = graphbit.LlmConfig.ollama("llama3.2")
+        configs["ollama"] = LlmConfig.ollama("llama3.2")
 
         return configs
 
     def test_dynamic_provider_switching(self, providers: Any) -> None:
         """Test switching providers dynamically."""
-        workflow = graphbit.Workflow("provider_switching_test")
+        workflow = Workflow("provider_switching_test")
 
         # Create a simple workflow
-        agent = graphbit.Node.agent("test_agent", "Test provider switching", "switch_001")
+        agent = Node.agent("test_agent", "Test provider switching", "switch_001")
         workflow.add_node(agent)
 
         # Test with different providers
         for provider_name, config in providers.items():
             try:
-                executor = graphbit.Executor(config)
+                executor = Executor(config)
                 assert executor is not None
 
                 # Validate workflow with this provider
@@ -367,17 +367,17 @@ class TestCrossProviderDynamicWorkflows:
         for provider_name, config in providers.items():
             try:
                 # Create a test workflow
-                workflow = graphbit.Workflow(f"validation_{provider_name}")
+                workflow = Workflow(f"validation_{provider_name}")
 
                 # Add test nodes
-                agent = graphbit.Node.agent(f"agent_{provider_name}", f"Test for {provider_name}", f"test_{provider_name}")
+                agent = Node.agent(f"agent_{provider_name}", f"Test for {provider_name}", f"test_{provider_name}")
                 workflow.add_node(agent)
 
                 # Validate workflow
                 workflow.validate()
 
                 # Create executor
-                executor = graphbit.Executor(config)
+                executor = Executor(config)
                 assert executor is not None
 
             except Exception as e:
@@ -386,8 +386,8 @@ class TestCrossProviderDynamicWorkflows:
 
 if __name__ == "__main__":
     # Initialize GraphBit
-    graphbit.init()
-    print(f"GraphBit version: {graphbit.version()}")
+    init()
+    print(f"GraphBit version: {version()}")
 
     # Run specific test cases
     pytest.main([__file__, "-v"])
