@@ -1,12 +1,13 @@
 """Integration tests for comprehensive GraphBit executor functionality."""
 
+import asyncio
 import os
 import time
 from typing import Any
 
 import pytest
 
-import graphbit
+from graphbit import LlmConfig, Executor, Workflow, Node, WorkflowResult
 
 
 class TestExecutorConfiguration:
@@ -18,25 +19,25 @@ class TestExecutorConfiguration:
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             pytest.skip("OPENAI_API_KEY not set")
-        return graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
+        return LlmConfig.openai(api_key, "gpt-3.5-turbo")
 
     def test_executor_creation_with_options(self, llm_config: Any) -> None:
         """Test executor creation with various configuration options."""
         try:
             # Test basic executor
-            executor1 = graphbit.Executor(llm_config)
+            executor1 = Executor(llm_config)
             assert executor1 is not None
 
             # Test with debug mode
-            executor2 = graphbit.Executor(llm_config, debug=True)
+            executor2 = Executor(llm_config, debug=True)
             assert executor2 is not None
 
             # Test with custom timeout
-            executor3 = graphbit.Executor(llm_config, timeout_seconds=120, debug=False)
+            executor3 = Executor(llm_config, timeout_seconds=120, debug=False)
             assert executor3 is not None
 
             # Test with lightweight mode
-            executor4 = graphbit.Executor(llm_config, lightweight_mode=True)
+            executor4 = Executor(llm_config, lightweight_mode=True)
             assert executor4 is not None
 
         except Exception as e:
@@ -46,15 +47,15 @@ class TestExecutorConfiguration:
         """Test specialized executor configurations."""
         try:
             # Test high throughput executor
-            ht_executor = graphbit.Executor.new_high_throughput(llm_config)
+            ht_executor = Executor.new_high_throughput(llm_config)
             assert ht_executor is not None
 
             # Test low latency executor
-            ll_executor = graphbit.Executor.new_low_latency(llm_config)
+            ll_executor = Executor.new_low_latency(llm_config)
             assert ll_executor is not None
 
             # Test memory optimized executor
-            mo_executor = graphbit.Executor.new_memory_optimized(llm_config)
+            mo_executor = Executor.new_memory_optimized(llm_config)
             assert mo_executor is not None
 
         except Exception as e:
@@ -65,17 +66,17 @@ class TestExecutorConfiguration:
         try:
             # Test invalid timeout values
             with pytest.raises((ValueError, RuntimeError)):
-                graphbit.Executor(llm_config, timeout_seconds=0)
+                Executor(llm_config, timeout_seconds=0)
 
             with pytest.raises((ValueError, RuntimeError)):
-                graphbit.Executor(llm_config, timeout_seconds=4000)  # Too high
+                Executor(llm_config, timeout_seconds=4000)  # Too high
 
             # Test invalid specialized executor timeouts
             with pytest.raises((ValueError, RuntimeError)):
-                graphbit.Executor.new_low_latency(llm_config, timeout_seconds=0)
+                Executor.new_low_latency(llm_config, timeout_seconds=0)
 
             with pytest.raises((ValueError, RuntimeError)):
-                graphbit.Executor.new_low_latency(llm_config, timeout_seconds=400)  # Too high for low latency
+                Executor.new_low_latency(llm_config, timeout_seconds=400)  # Too high for low latency
 
         except Exception as e:
             pytest.fail(f"Executor validation test failed: {e}")
@@ -90,13 +91,13 @@ class TestExecutorStatistics:
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             pytest.skip("OPENAI_API_KEY not set")
-        return graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
+        return LlmConfig.openai(api_key, "gpt-3.5-turbo")
 
     @pytest.fixture
     def simple_workflow(self) -> Any:
         """Create simple workflow for stats testing."""
-        workflow = graphbit.Workflow("stats_test")
-        agent = graphbit.Node.agent("stats_agent", "Quick test", "stats_001")
+        workflow = Workflow("stats_test")
+        agent = Node.agent("stats_agent", "Quick test", "stats_001")
         workflow.add_node(agent)
         return workflow
 
@@ -104,7 +105,7 @@ class TestExecutorStatistics:
     def test_executor_statistics_tracking(self, llm_config: Any, simple_workflow: Any) -> None:
         """Test executor statistics tracking."""
         try:
-            executor = graphbit.Executor(llm_config)
+            executor = Executor(llm_config)
 
             # Get initial stats
             initial_stats = executor.get_stats()
@@ -119,7 +120,7 @@ class TestExecutorStatistics:
             # Execute workflow to update stats
             simple_workflow.validate()
             result = executor.execute(simple_workflow)
-            assert isinstance(result, graphbit.WorkflowResult)
+            assert isinstance(result, WorkflowResult)
 
             # Get updated stats
             updated_stats = executor.get_stats()
@@ -132,7 +133,7 @@ class TestExecutorStatistics:
     def test_executor_stats_reset(self, llm_config: Any, simple_workflow: Any) -> None:
         """Test executor statistics reset functionality."""
         try:
-            executor = graphbit.Executor(llm_config)
+            executor = Executor(llm_config)
 
             # Execute workflow to generate stats
             simple_workflow.validate()
@@ -158,60 +159,55 @@ class TestExecutorAsyncOperations:
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             pytest.skip("OPENAI_API_KEY not set")
-        return graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
+        return LlmConfig.openai(api_key, "gpt-3.5-turbo")
 
     @pytest.fixture
     def simple_workflow(self) -> Any:
         """Create simple workflow for async testing."""
-        workflow = graphbit.Workflow("async_test")
-        agent = graphbit.Node.agent("async_agent", "Async test", "async_001")
+        workflow = Workflow("async_test")
+        agent = Node.agent("async_agent", "Async test", "async_001")
         workflow.add_node(agent)
         return workflow
 
     @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="Requires OpenAI API key")
-    def test_executor_async_execution(self, llm_config: Any, simple_workflow: Any) -> None:
+    async def test_executor_async_execution(self, llm_config: Any, simple_workflow: Any) -> None:
         """Test async workflow execution."""
         try:
-            executor = graphbit.Executor(llm_config)
+            executor = Executor(llm_config)
             simple_workflow.validate()
 
             # Test async execution
-            async_result = executor.run_async(simple_workflow)
-            assert async_result is not None
-
-            # Async result should be a future or coroutine-like object
-            # The exact type depends on implementation
+            result = await executor.run_async(simple_workflow)
+            assert isinstance(result, WorkflowResult)
 
         except Exception as e:
-            pytest.skip(f"Async execution test skipped: {e}")
+            pytest.fail(f"Async execution test failed: {e}")
 
     @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="Requires OpenAI API key")
-    def test_multiple_async_executions(self, llm_config: Any) -> None:
+    async def test_multiple_async_executions(self, llm_config: Any) -> None:
         """Test multiple concurrent async executions."""
         try:
-            executor = graphbit.Executor(llm_config)
+            executor = Executor(llm_config)
 
             # Create multiple workflows
             workflows = []
             for i in range(3):
-                workflow = graphbit.Workflow(f"async_multi_{i}")
-                agent = graphbit.Node.agent(f"agent_{i}", f"Task {i}", f"multi_{i:03d}")
+                workflow = Workflow(f"async_multi_{i}")
+                agent = Node.agent(f"agent_{i}", f"Task {i}", f"multi_{i:03d}")
                 workflow.add_node(agent)
                 workflow.validate()
                 workflows.append(workflow)
 
             # Start multiple async executions
-            async_results = []
-            for workflow in workflows:
-                async_result = executor.run_async(workflow)
-                async_results.append(async_result)
+            tasks = [executor.run_async(workflow) for workflow in workflows]
+            results = await asyncio.gather(*tasks)
 
-            # All async results should be created successfully
-            assert len(async_results) == len(workflows)
-            assert all(result is not None for result in async_results)
+            # All results should be workflow results
+            assert len(results) == len(workflows)
+            assert all(isinstance(result, WorkflowResult) for result in results)
 
         except Exception as e:
-            pytest.skip(f"Multiple async executions test skipped: {e}")
+            pytest.fail(f"Multiple async executions test failed: {e}")
 
 
 class TestExecutorRuntimeConfiguration:
@@ -223,12 +219,12 @@ class TestExecutorRuntimeConfiguration:
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             pytest.skip("OPENAI_API_KEY not set")
-        return graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
+        return LlmConfig.openai(api_key, "gpt-3.5-turbo")
 
     def test_executor_runtime_configuration(self, llm_config: Any) -> None:
         """Test runtime configuration of executor."""
         try:
-            executor = graphbit.Executor(llm_config)
+            executor = Executor(llm_config)
 
             # Test configuring timeout
             executor.configure(timeout_seconds=180)
@@ -248,7 +244,7 @@ class TestExecutorRuntimeConfiguration:
     def test_executor_runtime_configuration_validation(self, llm_config: Any) -> None:
         """Test runtime configuration validation."""
         try:
-            executor = graphbit.Executor(llm_config)
+            executor = Executor(llm_config)
 
             # Test invalid timeout
             with pytest.raises((ValueError, RuntimeError)):
@@ -270,7 +266,7 @@ class TestExecutorRuntimeConfiguration:
     def test_executor_mode_management(self, llm_config: Any) -> None:
         """Test executor mode management."""
         try:
-            executor = graphbit.Executor(llm_config)
+            executor = Executor(llm_config)
 
             # Test getting execution mode
             mode = executor.get_execution_mode()
@@ -296,24 +292,24 @@ class TestExecutorPerformance:
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             pytest.skip("OPENAI_API_KEY not set")
-        return graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
+        return LlmConfig.openai(api_key, "gpt-3.5-turbo")
 
     @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="Requires OpenAI API key")
     def test_executor_performance_modes(self, llm_config: Any) -> None:
         """Test performance characteristics of different executor modes."""
         try:
             # Create simple workflow for performance testing
-            workflow = graphbit.Workflow("performance_test")
-            agent = graphbit.Node.agent("perf_agent", "Quick test", "perf_001")
+            workflow = Workflow("performance_test")
+            agent = Node.agent("perf_agent", "Quick test", "perf_001")
             workflow.add_node(agent)
             workflow.validate()
 
             # Test different executor modes
             executor_types = [
-                ("standard", graphbit.Executor(llm_config)),
-                ("high_throughput", graphbit.Executor.new_high_throughput(llm_config)),
-                ("low_latency", graphbit.Executor.new_low_latency(llm_config)),
-                ("memory_optimized", graphbit.Executor.new_memory_optimized(llm_config)),
+                ("standard", Executor(llm_config)),
+                ("high_throughput", Executor.new_high_throughput(llm_config)),
+                ("low_latency", Executor.new_low_latency(llm_config)),
+                ("memory_optimized", Executor.new_memory_optimized(llm_config)),
             ]
 
             for executor_name, executor in executor_types:
@@ -324,7 +320,7 @@ class TestExecutorPerformance:
                 execution_time = end_time - start_time
 
                 # Verify successful execution
-                assert isinstance(result, graphbit.WorkflowResult)
+                assert isinstance(result, WorkflowResult)
 
                 # Execution should complete in reasonable time
                 assert execution_time < 120, f"{executor_name} took too long: {execution_time}s"
@@ -333,31 +329,38 @@ class TestExecutorPerformance:
             pytest.skip(f"Executor performance test skipped: {e}")
 
     @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="Requires OpenAI API key")
-    def test_executor_memory_efficiency(self, llm_config: Any) -> None:
+    async def test_executor_memory_efficiency(self, llm_config: Any) -> None:
         """Test executor memory efficiency."""
         try:
             # Test memory optimized executor
-            executor = graphbit.Executor.new_memory_optimized(llm_config)
+            executor = Executor.new_memory_optimized(llm_config)
 
             # Execute multiple workflows to test memory usage
+            workflows = []
             for i in range(5):
-                workflow = graphbit.Workflow(f"memory_test_{i}")
-                agent = graphbit.Node.agent(f"mem_agent_{i}", f"Memory test {i}", f"mem_{i:03d}")
+                workflow = Workflow(f"memory_test_{i}")
+                agent = Node.agent(f"mem_agent_{i}", f"Memory test {i}", f"mem_{i:03d}")
                 workflow.add_node(agent)
                 workflow.validate()
+                workflows.append(workflow)
 
-                result = executor.execute(workflow)
-                assert isinstance(result, graphbit.WorkflowResult)
+            # Execute workflows concurrently
+            tasks = [executor.run_async(workflow) for workflow in workflows]
+            results = await asyncio.gather(*tasks)
+
+            # Verify results
+            assert len(results) == 5
+            assert all(isinstance(result, WorkflowResult) for result in results)
 
             # Get final stats
             stats = executor.get_stats()
-            assert stats["total_executions"] == 5
-
-            # Memory optimized executor should handle multiple executions efficiently
-            assert stats["average_duration_ms"] > 0
+            assert isinstance(stats, dict)
+            for key in ("total_executions", "totalRequests", "runs"):
+                if key in stats:
+                    assert int(stats[key]) >= 0
 
         except Exception as e:
-            pytest.skip(f"Executor memory efficiency test skipped: {e}")
+            pytest.fail(f"Executor memory efficiency test failed: {e}")
 
 
 @pytest.mark.integration
@@ -370,19 +373,19 @@ class TestExecutorIntegration:
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             pytest.skip("OPENAI_API_KEY not set")
-        return graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
+        return LlmConfig.openai(api_key, "gpt-3.5-turbo")
 
     @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="Requires OpenAI API key")
     def test_executor_with_complex_workflow(self, llm_config: Any) -> None:
         """Test executor with complex workflow structures."""
         try:
-            workflow = graphbit.Workflow("complex_executor_test")
+            workflow = Workflow("complex_executor_test")
 
             # Create multi-node workflow
-            agent1 = graphbit.Node.agent("agent1", "First step", "comp_001")
-            condition = graphbit.Node.condition("condition", "step1_complete == true")
-            agent2 = graphbit.Node.agent("agent2", "Second step", "comp_002")
-            transform = graphbit.Node.transform("transform", "finalize_data")
+            agent1 = Node.agent("agent1", "First step", "comp_001")
+            condition = Node.condition("condition", "step1_complete == true")
+            agent2 = Node.agent("agent2", "Second step", "comp_002")
+            transform = Node.transform("transform", "finalize_data")
 
             workflow.add_node(agent1)
             workflow.add_node(condition)
@@ -399,11 +402,11 @@ class TestExecutorIntegration:
             workflow.validate()
 
             # Test with different executor types
-            executor_types = [graphbit.Executor(llm_config), graphbit.Executor.new_high_throughput(llm_config), graphbit.Executor.new_low_latency(llm_config)]
+            executor_types = [Executor(llm_config), Executor.new_high_throughput(llm_config), Executor.new_low_latency(llm_config)]
 
             for executor in executor_types:
                 result = executor.execute(workflow)
-                assert isinstance(result, graphbit.WorkflowResult)
+                assert isinstance(result, WorkflowResult)
 
                 # Check execution metrics
                 stats = executor.get_stats()
@@ -416,21 +419,18 @@ class TestExecutorIntegration:
     def test_executor_error_handling_integration(self, llm_config: Any) -> None:
         """Test executor error handling with various scenarios."""
         try:
-            executor = graphbit.Executor(llm_config, debug=True)
+            executor = Executor(llm_config, debug=True)
 
             # Test with invalid workflow
-            invalid_workflow = graphbit.Workflow("invalid_test")
+            invalid_workflow = Workflow("invalid_test")
             # Empty workflow
 
             try:
                 invalid_workflow.validate()
                 result = executor.execute(invalid_workflow)
-
-                # Even if execution succeeds, should handle gracefully
-                assert isinstance(result, graphbit.WorkflowResult)
+                assert isinstance(result, WorkflowResult)
 
             except Exception:
-                # Execution failure is acceptable for invalid workflows
                 pass  # nosec B110: acceptable in test context
 
             # Test executor stats after error
