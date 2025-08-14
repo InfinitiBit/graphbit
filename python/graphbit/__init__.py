@@ -8,8 +8,8 @@ tools for building AI workflows with tool calling capabilities.
 import logging
 from typing import Any, Callable, Dict, Optional
 
-__version__ = "0.1.0"
-__author__ = "GraphBit Team"
+__version__ = "0.3.0"
+__author__ = "Infinitibit Team"
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -17,13 +17,7 @@ logger = logging.getLogger(__name__)
 # Global tool storage for GraphBit
 _graphbit_tools: Dict[str, Dict[str, Any]] = {}
 
-# Import main GraphBit functionality (this will be available when the Rust bindings are built)
-try:
-    from ..graphbit import *  # Import from the compiled Rust module
-except ImportError:
-    # Fallback for development/testing when Rust bindings might not be available
-    pass
-
+from .graphbit import *
 
 def register_tool(
     name: str,
