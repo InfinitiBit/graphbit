@@ -1,10 +1,9 @@
 """Unit tests for document loading functionality."""
 
 import tempfile
-
 import pytest
 
-import graphbit
+from graphbit import DocumentLoaderConfig, DocumentLoader
 
 
 class TestDocumentLoaderConfig:
@@ -12,7 +11,7 @@ class TestDocumentLoaderConfig:
 
     def test_document_loader_config_creation(self):
         """Test creating document loader config with defaults."""
-        config = graphbit.DocumentLoaderConfig()
+        config = DocumentLoaderConfig()
         assert config is not None
         assert config.max_file_size > 0
         assert config.default_encoding != ""
@@ -20,7 +19,7 @@ class TestDocumentLoaderConfig:
 
     def test_document_loader_config_with_params(self):
         """Test creating document loader config with parameters."""
-        config = graphbit.DocumentLoaderConfig(max_file_size=1024 * 1024, default_encoding="utf-8", preserve_formatting=True)  # 1MB
+        config = DocumentLoaderConfig(max_file_size=1024 * 1024, default_encoding="utf-8", preserve_formatting=True)  # 1MB
         assert config.max_file_size == 1024 * 1024
         assert config.default_encoding == "utf-8"
         assert config.preserve_formatting is True
@@ -28,10 +27,10 @@ class TestDocumentLoaderConfig:
     def test_document_loader_config_validation(self):
         """Test document loader config validation."""
         with pytest.raises(ValueError):
-            graphbit.DocumentLoaderConfig(max_file_size=0)
+            DocumentLoaderConfig(max_file_size=0)
 
         with pytest.raises(ValueError):
-            graphbit.DocumentLoaderConfig(default_encoding="")
+            DocumentLoaderConfig(default_encoding="")
 
 
 class TestDocumentContent:
@@ -45,7 +44,7 @@ class TestDocumentContent:
             temp_file.flush()
 
             # Create loader and load document
-            loader = graphbit.DocumentLoader()
+            loader = DocumentLoader()
             content = loader.load_document(temp_file.name, "txt")
 
             # Test attributes
@@ -62,7 +61,7 @@ class TestDocumentContent:
             temp_file.write("")
             temp_file.flush()
 
-            loader = graphbit.DocumentLoader()
+            loader = DocumentLoader()
             content = loader.load_document(temp_file.name, "txt")
             assert content.is_empty()
             assert content.content_length() == 0
@@ -74,7 +73,7 @@ class TestDocumentContent:
             temp_file.write(long_text)
             temp_file.flush()
 
-            loader = graphbit.DocumentLoader()
+            loader = DocumentLoader()
             content = loader.load_document(temp_file.name, "txt")
             preview = content.preview(max_length=100)
             assert len(preview) <= 103  # 100 chars + "..."
@@ -86,27 +85,27 @@ class TestDocumentLoader:
 
     def test_document_loader_creation(self):
         """Test creating document loader with default config."""
-        loader = graphbit.DocumentLoader()
+        loader = DocumentLoader()
         assert loader is not None
 
     def test_document_loader_creation_with_config(self):
         """Test creating document loader with custom config."""
-        config = graphbit.DocumentLoaderConfig(max_file_size=2 * 1024 * 1024, default_encoding="utf-8", preserve_formatting=True)  # 2MB
-        loader = graphbit.DocumentLoader(config)
+        config = DocumentLoaderConfig(max_file_size=2 * 1024 * 1024, default_encoding="utf-8", preserve_formatting=True)  # 2MB
+        loader = DocumentLoader(config)
         assert loader is not None
 
     def test_supported_types(self):
         """Test getting supported document types."""
-        types = graphbit.DocumentLoader.supported_types()
+        types = DocumentLoader.supported_types()
         assert isinstance(types, list)
         assert len(types) > 0
         assert all(isinstance(t, str) for t in types)
 
     def test_detect_document_type(self):
         """Test document type detection."""
-        assert graphbit.DocumentLoader.detect_document_type("test.txt") == "txt"
-        assert graphbit.DocumentLoader.detect_document_type("test.pdf") == "pdf"
-        assert graphbit.DocumentLoader.detect_document_type("test.unknown") is None
+        assert DocumentLoader.detect_document_type("test.txt") == "txt"
+        assert DocumentLoader.detect_document_type("test.pdf") == "pdf"
+        assert DocumentLoader.detect_document_type("test.unknown") is None
 
     def test_load_text_file(self):
         """Test loading text file."""
@@ -114,7 +113,7 @@ class TestDocumentLoader:
             temp_file.write("Test content")
             temp_file.flush()
 
-            loader = graphbit.DocumentLoader()
+            loader = DocumentLoader()
             content = loader.load_document(temp_file.name, "txt")
             assert content.content == "Test content"
             assert content.document_type == "txt"
@@ -125,7 +124,7 @@ class TestDocumentLoader:
             temp_file.write("Test content")
             temp_file.flush()
 
-            loader = graphbit.DocumentLoader()
+            loader = DocumentLoader()
             content = loader.load_document(temp_file.name, "txt")
             assert isinstance(content.metadata, dict)
             assert "file_size" in content.metadata
@@ -136,7 +135,7 @@ class TestDocumentLoaderErrorHandling:
 
     def test_load_nonexistent_file(self):
         """Test loading nonexistent file."""
-        loader = graphbit.DocumentLoader()
+        loader = DocumentLoader()
         with pytest.raises(Exception, match="(?i)(no such file|not found|exist|open)"):
             loader.load_document("nonexistent.txt", "txt")
 
@@ -146,18 +145,18 @@ class TestDocumentLoaderErrorHandling:
             temp_file.write("Test content")
             temp_file.flush()
 
-            loader = graphbit.DocumentLoader()
+            loader = DocumentLoader()
             with pytest.raises(Exception, match="(?i)(invalid|type)"):
                 loader.load_document(temp_file.name, "invalid_type")
 
     def test_load_empty_path(self):
         """Test loading with empty path."""
-        loader = graphbit.DocumentLoader()
+        loader = DocumentLoader()
         with pytest.raises(ValueError):
             loader.load_document("", "txt")
 
     def test_load_empty_type(self):
         """Test loading with empty type."""
-        loader = graphbit.DocumentLoader()
+        loader = DocumentLoader()
         with pytest.raises(ValueError):
             loader.load_document("test.txt", "")
