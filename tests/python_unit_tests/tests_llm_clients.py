@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 
 import pytest
 
-import graphbit
+from graphbit import LlmConfig, LlmClient
 
 
 def get_api_key(provider: str) -> str:
@@ -37,7 +37,7 @@ class TestLlmConfig:
     def test_llm_config_creation_openai(self):
         """Test creating OpenAI LLM configuration."""
         api_key = get_api_key("openai")
-        config = graphbit.LlmConfig.openai(api_key=api_key, model="gpt-4-turbo")
+        config = LlmConfig.openai(api_key=api_key, model="gpt-4-turbo")
         assert config is not None
         assert config.provider() == "openai"
         assert config.model() == "gpt-4-turbo"
@@ -45,14 +45,14 @@ class TestLlmConfig:
     def test_llm_config_creation_anthropic(self):
         """Test creating Anthropic LLM configuration."""
         api_key = get_api_key("anthropic")
-        config = graphbit.LlmConfig.anthropic(api_key=api_key, model="claude-3-sonnet")
+        config = LlmConfig.anthropic(api_key=api_key, model="claude-3-sonnet")
         assert config is not None
         assert config.provider() == "anthropic"
         assert config.model() == "claude-3-sonnet"
 
     def test_llm_config_ollama(self):
         """Test creating Ollama LLM configuration."""
-        config = graphbit.LlmConfig.ollama(model="llama3.2")
+        config = LlmConfig.ollama(model="llama3.2")
         assert config is not None
         assert config.provider() == "ollama"
         assert config.model() == "llama3.2"
@@ -60,7 +60,7 @@ class TestLlmConfig:
     def test_llm_config_huggingface(self):
         """Test creating HuggingFace LLM configuration with base URL."""
         api_key = get_api_key("huggingface")
-        config = graphbit.LlmConfig.huggingface(api_key=api_key, model="gpt2", base_url="https://custom.api.com")
+        config = LlmConfig.huggingface(api_key=api_key, model="gpt2", base_url="https://custom.api.com")
         assert config is not None
         assert config.provider() == "huggingface"
         assert config.model() == "gpt2"
@@ -68,7 +68,7 @@ class TestLlmConfig:
     def test_llm_config_deepseek(self):
         """Test creating DeepSeek LLM configuration."""
         api_key = get_api_key("deepseek")
-        config = graphbit.LlmConfig.deepseek(api_key=api_key, model="deepseek-chat")
+        config = LlmConfig.deepseek(api_key=api_key, model="deepseek-chat")
         assert config is not None
         assert config.provider() == "deepseek"
         assert config.model() == "deepseek-chat"
@@ -76,7 +76,7 @@ class TestLlmConfig:
     def test_llm_config_perplexity(self):
         """Test creating Perplexity LLM configuration."""
         api_key = get_api_key("perplexity")
-        config = graphbit.LlmConfig.perplexity(api_key=api_key, model="sonar")
+        config = LlmConfig.perplexity(api_key=api_key, model="sonar")
         assert config is not None
         assert config.provider() == "perplexity"
         assert config.model() == "sonar"
@@ -87,20 +87,20 @@ class TestLlmClient:
 
     def test_llm_client_creation_with_config(self):
         """Test creating LLM client with configuration."""
-        config = graphbit.LlmConfig.ollama(model="llama3.2")
-        client = graphbit.LlmClient(config)
+        config = LlmConfig.ollama(model="llama3.2")
+        client = LlmClient(config)
         assert client is not None
 
     def test_llm_client_creation_invalid_config(self):
         """Test creating LLM client with invalid configuration."""
         with pytest.raises((ValueError, TypeError)):
-            graphbit.LlmClient("invalid_config")
+            LlmClient("invalid_config")
 
     @pytest.mark.asyncio
     async def test_llm_client_complete_ollama_no_server(self):
         """Assert correct behavior whether Ollama is up or down."""
-        config = graphbit.LlmConfig.ollama(model="llama3.2")
-        client = graphbit.LlmClient(config, debug=True)
+        config = LlmConfig.ollama(model="llama3.2")
+        client = LlmClient(config, debug=True)
 
         if check_ollama_available():
             response = await client.complete_async("Test prompt")
@@ -113,8 +113,8 @@ class TestLlmClient:
     async def test_llm_client_complete_openai(self):
         """Test OpenAI completion."""
         api_key = get_api_key("openai")
-        config = graphbit.LlmConfig.openai(api_key=api_key, model="gpt-4-turbo")
-        client = graphbit.LlmClient(config)
+        config = LlmConfig.openai(api_key=api_key, model="gpt-4-turbo")
+        client = LlmClient(config)
         response = await client.complete_async("Say hello!")
         assert isinstance(response, str) and len(response) > 0
 
@@ -122,8 +122,8 @@ class TestLlmClient:
     async def test_llm_client_openai_stream_batch_chat(self):
         """Ensure stream, batch, and chat work for OpenAI (skips if key missing)."""
         api_key = get_api_key("openai")
-        config = graphbit.LlmConfig.openai(api_key=api_key, model="gpt-4-turbo")
-        client = graphbit.LlmClient(config)
+        config = LlmConfig.openai(api_key=api_key, model="gpt-4-turbo")
+        client = LlmClient(config)
 
         s = await client.complete_stream("stream hello")
         assert isinstance(s, str) and len(s) > 0
@@ -139,8 +139,8 @@ class TestLlmClient:
     async def test_llm_client_complete_anthropic(self):
         """Test Anthropic completion."""
         api_key = get_api_key("anthropic")
-        config = graphbit.LlmConfig.anthropic(api_key=api_key, model="claude-3-sonnet")
-        client = graphbit.LlmClient(config)
+        config = LlmConfig.anthropic(api_key=api_key, model="claude-3-sonnet")
+        client = LlmClient(config)
         response = await client.complete_async("Say hello!")
         assert isinstance(response, str) and len(response) > 0
 
@@ -148,8 +148,8 @@ class TestLlmClient:
     async def test_llm_client_anthropic_batch_chat(self):
         """Ensure batch and chat work for Anthropic (skips if key missing)."""
         api_key = get_api_key("anthropic")
-        config = graphbit.LlmConfig.anthropic(api_key=api_key, model="claude-3-sonnet")
-        client = graphbit.LlmClient(config)
+        config = LlmConfig.anthropic(api_key=api_key, model="claude-3-sonnet")
+        client = LlmClient(config)
         results = await client.complete_batch(["Hi", "There"], max_tokens=8, max_concurrency=2)
         assert isinstance(results, list) and len(results) == 2
         assert all(isinstance(r, str) and r for r in results)
@@ -158,8 +158,8 @@ class TestLlmClient:
 
     def test_llm_client_complete_sync_ollama(self):
         """Synchronous complete should succeed if server up, else raise."""
-        config = graphbit.LlmConfig.ollama(model="llama3.2")
-        client = graphbit.LlmClient(config, debug=True)
+        config = LlmConfig.ollama(model="llama3.2")
+        client = LlmClient(config, debug=True)
         if check_ollama_available():
             resp = client.complete("Hello")
             assert isinstance(resp, str) and len(resp) > 0
@@ -170,8 +170,8 @@ class TestLlmClient:
     @pytest.mark.asyncio
     async def test_llm_client_complete_batch(self):
         """Batch completion should return results or error strings per item."""
-        config = graphbit.LlmConfig.ollama(model="llama3.2")
-        client = graphbit.LlmClient(config, debug=True)
+        config = LlmConfig.ollama(model="llama3.2")
+        client = LlmClient(config, debug=True)
         prompts = ["Hi", "", "Another message"]
         results = await client.complete_batch(prompts)
         assert isinstance(results, list) and len(results) == 2
@@ -185,8 +185,8 @@ class TestLlmClient:
     @pytest.mark.asyncio
     async def test_llm_client_chat_optimized(self):
         """Chat API should behave similarly to completion."""
-        config = graphbit.LlmConfig.ollama(model="llama3.2")
-        client = graphbit.LlmClient(config, debug=True)
+        config = LlmConfig.ollama(model="llama3.2")
+        client = LlmClient(config, debug=True)
         messages = [("system", "You are helpful."), ("user", "Say hi")]
         if check_ollama_available():
             resp = await client.chat_optimized(messages)
@@ -198,8 +198,8 @@ class TestLlmClient:
     @pytest.mark.asyncio
     async def test_llm_client_complete_stream_alias(self):
         """Stream alias should behave like async complete."""
-        config = graphbit.LlmConfig.ollama(model="llama3.2")
-        client = graphbit.LlmClient(config)
+        config = LlmConfig.ollama(model="llama3.2")
+        client = LlmClient(config)
         if check_ollama_available():
             resp = await client.complete_stream("Hello stream")
             assert isinstance(resp, str) and len(resp) > 0
@@ -210,8 +210,8 @@ class TestLlmClient:
     @pytest.mark.asyncio
     async def test_llm_client_warmup_and_stats(self):
         """Warmup should return a message; stats API should expose metrics."""
-        config = graphbit.LlmConfig.ollama(model="llama3.2")
-        client = graphbit.LlmClient(config, debug=True)
+        config = LlmConfig.ollama(model="llama3.2")
+        client = LlmClient(config, debug=True)
         msg = await client.warmup()
         assert isinstance(msg, str) and len(msg) > 0
         stats = client.get_stats()
@@ -237,8 +237,8 @@ class TestLlmClient:
         """Two successful calls should update average response time."""
         if not check_ollama_available():
             pytest.skip("Ollama not reachable for success-path stats test")
-        config = graphbit.LlmConfig.ollama(model="llama3.2")
-        client = graphbit.LlmClient(config)
+        config = LlmConfig.ollama(model="llama3.2")
+        client = LlmClient(config)
         _ = await client.complete_async("Ping 1")
         _ = await client.complete_async("Ping 2")
         stats = client.get_stats()
@@ -249,8 +249,8 @@ class TestLlmClient:
     @pytest.mark.asyncio
     async def test_llm_client_invalid_params(self):
         """Validation errors for invalid inputs."""
-        config = graphbit.LlmConfig.ollama(model="llama3.2")
-        client = graphbit.LlmClient(config)
+        config = LlmConfig.ollama(model="llama3.2")
+        client = LlmClient(config)
         with pytest.raises((ValueError, TypeError)):
             await client.complete_async("")
         with pytest.raises((ValueError, TypeError)):
@@ -265,8 +265,8 @@ class TestLlmClient:
     @pytest.mark.asyncio
     async def test_llm_client_additional_validations(self):
         """Edge validations: temperature bounds, invalid concurrency, role defaulting."""
-        config = graphbit.LlmConfig.ollama(model="llama3.2")
-        client = graphbit.LlmClient(config)
+        config = LlmConfig.ollama(model="llama3.2")
+        client = LlmClient(config)
         if check_ollama_available():
             r1 = await client.complete_async("edge temp low", temperature=0.0)
             r2 = await client.complete_async("edge temp high", temperature=2.0)
@@ -288,8 +288,8 @@ class TestLlmClient:
     async def test_llm_client_complete_deepseek(self):
         """Test DeepSeek completion (skips if DEEPSEEK_API_KEY not set)."""
         api_key = get_api_key("deepseek")
-        config = graphbit.LlmConfig.deepseek(api_key=api_key, model="deepseek-chat")
-        client = graphbit.LlmClient(config)
+        config = LlmConfig.deepseek(api_key=api_key, model="deepseek-chat")
+        client = LlmClient(config)
         response = await client.complete_async("Say hello!")
         assert isinstance(response, str) and len(response) > 0
 
@@ -297,8 +297,8 @@ class TestLlmClient:
     async def test_llm_client_batch_deepseek(self):
         """Ensure DeepSeek batch works (skips if key missing)."""
         api_key = get_api_key("deepseek")
-        config = graphbit.LlmConfig.deepseek(api_key=api_key, model="deepseek-chat")
-        client = graphbit.LlmClient(config)
+        config = LlmConfig.deepseek(api_key=api_key, model="deepseek-chat")
+        client = LlmClient(config)
         results = await client.complete_batch(["x", "y"], max_tokens=8, max_concurrency=2)
         assert isinstance(results, list) and len(results) == 2
         assert all(isinstance(r, str) and r for r in results)
@@ -307,8 +307,8 @@ class TestLlmClient:
     async def test_llm_client_complete_perplexity(self):
         """Test Perplexity completion (skips if PERPLEXITY_API_KEY not set)."""
         api_key = get_api_key("perplexity")
-        config = graphbit.LlmConfig.perplexity(api_key=api_key, model="sonar")
-        client = graphbit.LlmClient(config)
+        config = LlmConfig.perplexity(api_key=api_key, model="sonar")
+        client = LlmClient(config)
         response = await client.complete_async("Say hello!")
         assert isinstance(response, str) and len(response) > 0
 
@@ -316,8 +316,8 @@ class TestLlmClient:
     async def test_llm_client_batch_perplexity(self):
         """Perplexity batch coverage (skips if key missing)."""
         api_key = get_api_key("perplexity")
-        config = graphbit.LlmConfig.perplexity(api_key=api_key, model="sonar")
-        client = graphbit.LlmClient(config)
+        config = LlmConfig.perplexity(api_key=api_key, model="sonar")
+        client = LlmClient(config)
         results = await client.complete_batch(["x", "y"], max_tokens=8, max_concurrency=2)
         assert isinstance(results, list) and len(results) == 2
         assert all(isinstance(r, str) and r for r in results)
@@ -326,8 +326,8 @@ class TestLlmClient:
     async def test_llm_client_complete_huggingface(self):
         """Minimal completion for HuggingFace (skips if key missing)."""
         api_key = get_api_key("huggingface")
-        config = graphbit.LlmConfig.huggingface(api_key=api_key, model="gpt2")
-        client = graphbit.LlmClient(config)
+        config = LlmConfig.huggingface(api_key=api_key, model="gpt2")
+        client = LlmClient(config)
         try:
             resp = await client.complete_async("Hello")
             assert isinstance(resp, str) and len(resp) > 0
@@ -341,26 +341,25 @@ class TestLlmClientErrorHandling:
     def test_empty_api_key_openai(self):
         """Test creating OpenAI client with empty API key."""
         with pytest.raises((ValueError, TypeError)):
-            graphbit.LlmConfig.openai(api_key="")
+            LlmConfig.openai(api_key="")
 
     def test_empty_api_key_anthropic(self):
         """Test creating Anthropic client with empty API key."""
         with pytest.raises((ValueError, TypeError)):
-            graphbit.LlmConfig.anthropic(api_key="")
+            LlmConfig.anthropic(api_key="")
 
     @pytest.mark.asyncio
     async def test_empty_prompt(self):
         """Test completion with empty prompt."""
-        config = graphbit.LlmConfig.ollama(model="llama3.2")
-        client = graphbit.LlmClient(config)
+        config = LlmConfig.ollama(model="llama3.2")
+        client = LlmClient(config)
         with pytest.raises((ValueError, TypeError)):
             await client.complete_async("")
 
     @pytest.mark.asyncio
     async def test_none_prompt(self):
         """Test completion with None prompt."""
-        config = graphbit.LlmConfig.ollama(model="llama3.2")
-        client = graphbit.LlmClient(config)
+        config = LlmConfig.ollama(model="llama3.2")
+        client = LlmClient(config)
         with pytest.raises((ValueError, TypeError)):
             await client.complete_async(None)
-
