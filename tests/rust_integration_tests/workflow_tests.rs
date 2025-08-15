@@ -172,14 +172,17 @@ async fn test_workflow_with_connections() -> GraphBitResult<()> {
 async fn test_workflow_complex_graph() {
     graphbit_core::init().expect("Failed to initialize GraphBit");
 
-    let agent_id = AgentId::new();
+    let agent_id_start = AgentId::new();
+    let agent_id_left = AgentId::new();
+    let agent_id_right = AgentId::new();
+    let agent_id_end = AgentId::new();
 
     // Create start node
     let start_node = WorkflowNode::new(
         "Start",
         "Starting node",
         NodeType::Agent {
-            agent_id: agent_id.clone(),
+            agent_id: agent_id_start,
             prompt_template: "Start processing".to_string(),
         },
     );
@@ -189,7 +192,7 @@ async fn test_workflow_complex_graph() {
         "Left",
         "Left branch",
         NodeType::Agent {
-            agent_id: agent_id.clone(),
+            agent_id: agent_id_left,
             prompt_template: "Process left branch".to_string(),
         },
     );
@@ -199,7 +202,7 @@ async fn test_workflow_complex_graph() {
         "Right",
         "Right branch",
         NodeType::Agent {
-            agent_id: agent_id.clone(),
+            agent_id: agent_id_right,
             prompt_template: "Process right branch".to_string(),
         },
     );
@@ -209,7 +212,7 @@ async fn test_workflow_complex_graph() {
         "End",
         "Merging node",
         NodeType::Agent {
-            agent_id: agent_id.clone(),
+            agent_id: agent_id_end,
             prompt_template: "Merge results".to_string(),
         },
     );
