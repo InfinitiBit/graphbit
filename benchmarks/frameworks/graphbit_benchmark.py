@@ -11,10 +11,11 @@ import sys
 from typing import Dict, Optional
 
 try:
-    import graphbit
+    from graphbit import LlmClient, LlmConfig, configure_runtime, init
 except ImportError:
     print("GraphBit Python bindings not installed. " "Run 'maturin develop' in graphbit/")
     sys.exit(1)
+
 
 from .common import (
     COMPLEX_WORKFLOW_STEPS,
@@ -57,11 +58,11 @@ class GraphBitBenchmark(BaseBenchmark):
         """Set up GraphBit with minimal overhead configuration - DIRECT API ONLY."""
         # Align runtime worker threads with the current CPU affinity so the runtime
         # uses only the pinned CPU cores
-        graphbit.configure_runtime(worker_threads=get_cpu_affinity_or_count_fallback())
+        configure_runtime(worker_threads=get_cpu_affinity_or_count_fallback())
 
         # Initialize GraphBit core only (skip workflow system)
         # Use debug=False for benchmarks to minimize overhead
-        graphbit.init(debug=False)
+        init(debug=False)
 
         # Get LLM configuration from config
         llm_config_obj: LLMConfig | None = self.config.get("llm_config")
@@ -73,7 +74,7 @@ class GraphBitBenchmark(BaseBenchmark):
                 raise ValueError("API key not found in environment or config")
 
             # Default to OpenAI for backward compatibility
-            self.llm_config = graphbit.LlmConfig.openai(api_key, llm_config_dict["model"])
+            self.llm_config = LlmConfig.openai(api_key, llm_config_dict["model"])
         else:
             # Use new LLMConfig structure
             api_key = llm_config_obj.api_key or os.getenv("OPENAI_API_KEY")
@@ -81,24 +82,24 @@ class GraphBitBenchmark(BaseBenchmark):
             if llm_config_obj.provider == LLMProvider.OPENAI:
                 if not api_key:
                     raise ValueError("OpenAI API key not found in environment or config")
-                self.llm_config = graphbit.LlmConfig.openai(api_key, llm_config_obj.model)
+                self.llm_config = LlmConfig.openai(api_key, llm_config_obj.model)
 
             elif llm_config_obj.provider == LLMProvider.ANTHROPIC:
                 anthropic_key = llm_config_obj.api_key or os.getenv("ANTHROPIC_API_KEY")
                 if not anthropic_key:
                     raise ValueError("Anthropic API key not found in environment or config")
-                self.llm_config = graphbit.LlmConfig.anthropic(anthropic_key, llm_config_obj.model)
+                self.llm_config = LlmConfig.anthropic(anthropic_key, llm_config_obj.model)
 
             elif llm_config_obj.provider == LLMProvider.OLLAMA:
                 # GraphBit LlmConfig.ollama() only takes model parameter
-                self.llm_config = graphbit.LlmConfig.ollama(llm_config_obj.model)
+                self.llm_config = LlmConfig.ollama(llm_config_obj.model)
 
             else:
                 raise ValueError(f"Unsupported provider for GraphBit: {llm_config_obj.provider}")
 
         # Create LLM client using the direct API (bypass workflow system entirely)
         # Use debug=False for benchmarks to avoid debug output overhead
-        self.llm_client = graphbit.LlmClient(self.llm_config, debug=False)
+        self.llm_client = LlmClient(self.llm_config, debug=False)
 
         # Pre-warm the client to avoid initialization overhead in benchmarks
         with contextlib.suppress(Exception):
