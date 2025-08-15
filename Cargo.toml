@@ -10,6 +10,10 @@ serde_json = "1.0"
 tempfile = "3.10.0"
 tokio = {version = "1.38", features = ["full"]}
 
+[dev-dependencies]
+async-trait = "0.1.88"
+pyo3 = {version = "0.24", features = ["auto-initialize"]}
+
 [features]
 default = []
 
