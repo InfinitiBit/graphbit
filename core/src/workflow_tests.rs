@@ -1,6 +1,9 @@
 #[cfg(test)]
 mod tests {
+    use crate::graph::{EdgeType, NodeType, WorkflowEdge, WorkflowGraph, WorkflowNode};
+    use crate::types::AgentId;
     use crate::types::{NodeId, WorkflowContext, WorkflowId};
+    use crate::workflow::Workflow;
     use crate::workflow::WorkflowExecutor;
     use serde_json::json;
     use std::sync::Arc;
@@ -208,5 +211,160 @@ mod tests {
         let result = read_task.await.unwrap();
 
         assert_eq!(result, Some(output));
+    }
+
+    // --- New tests for graph/workflow validation rules ---
+
+    #[tokio::test]
+    async fn test_validate_duplicate_agent_ids_fails() {
+        // Build a workflow with two agent nodes sharing the same agent_id
+        let mut workflow = Workflow::new("dup_agent_ids", "");
+
+        let shared_agent = AgentId::from_string("SAME_AGENT").unwrap();
+        let node_a = WorkflowNode::new(
+            "A",
+            "first agent",
+            NodeType::Agent {
+                agent_id: shared_agent.clone(),
+                prompt_template: "p1".to_string(),
+            },
+        );
+        let node_b = WorkflowNode::new(
+            "B",
+            "second agent",
+            NodeType::Agent {
+                agent_id: shared_agent.clone(),
+                prompt_template: "p2".to_string(),
+            },
+        );
+
+        // Add nodes
+        let _ = workflow.add_node(node_a).unwrap();
+        let _ = workflow.add_node(node_b).unwrap();
+
+        // Validate should fail due to duplicate agent_id
+        let err = workflow
+            .validate()
+            .expect_err("validation should fail for duplicate agent_id");
+        let msg = format!("{}", err);
+        assert!(
+            msg.contains("Duplicate agent_id detected"),
+            "unexpected error: {}",
+            msg
+        );
+        assert!(
+            msg.contains("SAME_AGENT"),
+            "error should mention the conflicting agent_id; got: {}",
+            msg
+        );
+    }
+
+    #[tokio::test]
+    async fn test_validate_unique_agent_ids_passes() {
+        let mut workflow = Workflow::new("unique_agent_ids", "");
+        let agent1 = AgentId::from_string("AGENT_1").unwrap();
+        let agent2 = AgentId::from_string("AGENT_2").unwrap();
+
+        let node_a = WorkflowNode::new(
+            "A",
+            "first agent",
+            NodeType::Agent {
+                agent_id: agent1,
+                prompt_template: "p1".to_string(),
+            },
+        );
+        let node_b = WorkflowNode::new(
+            "B",
+            "second agent",
+            NodeType::Agent {
+                agent_id: agent2,
+                prompt_template: "p2".to_string(),
+            },
+        );
+
+        let _ = workflow.add_node(node_a).unwrap();
+        let _ = workflow.add_node(node_b).unwrap();
+
+        // Should pass
+        workflow.validate().unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_enforce_unique_node_names_flag() {
+        let mut workflow = Workflow::new("dup_names", "");
+
+        // Two nodes with the same name "Same"
+        let n1 = WorkflowNode::new(
+            "Same",
+            "desc1",
+            NodeType::Transform {
+                transformation: "t1".to_string(),
+            },
+        );
+        let n2 = WorkflowNode::new(
+            "Same",
+            "desc2",
+            NodeType::Transform {
+                transformation: "t2".to_string(),
+            },
+        );
+
+        let _ = workflow.add_node(n1).unwrap();
+        let _ = workflow.add_node(n2).unwrap();
+
+        // By default, duplicates are allowed; validation should pass
+        workflow.validate().unwrap();
+
+        // Now enable enforcement at the graph-level metadata and expect failure
+        workflow
+            .graph
+            .set_metadata("enforce_unique_node_names".to_string(), json!(true));
+
+        let err = workflow
+            .validate()
+            .expect_err("validation should fail with name enforcement");
+        let msg = format!("{}", err);
+        assert!(
+            msg.contains("Duplicate node names not allowed"),
+            "unexpected error: {}",
+            msg
+        );
+        assert!(
+            msg.contains("name='Same'"),
+            "error should mention duplicated name; got: {}",
+            msg
+        );
+    }
+
+    #[tokio::test]
+    async fn test_add_duplicate_node_error_message() {
+        // Create one node and attempt to add twice (via clone keeps same ID)
+        let mut workflow = Workflow::new("dup_node_add", "");
+        let node = WorkflowNode::new(
+            "X",
+            "desc",
+            NodeType::Transform {
+                transformation: "noop".to_string(),
+            },
+        );
+        let node_clone = node.clone();
+
+        // First add succeeds
+        workflow.add_node(node).unwrap();
+        // Second add (with same ID) should fail with improved message
+        let err = workflow
+            .add_node(node_clone)
+            .expect_err("second add should fail");
+        let msg = format!("{}", err);
+        assert!(
+            msg.contains("Node already exists: id="),
+            "unexpected msg: {}",
+            msg
+        );
+        assert!(
+            msg.contains("Hint: create a fresh Node instance"),
+            "should include hint; got: {}",
+            msg
+        );
     }
 }
