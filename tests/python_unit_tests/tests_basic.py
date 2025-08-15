@@ -12,9 +12,9 @@ def test_graphbit_import():
 
 def test_graphbit_version():
     """Test that graphbit version is available."""
-    import graphbit
+    from graphbit import version
 
-    version = graphbit.version()
+    version = version()
     assert isinstance(version, str)
     assert len(version) > 0
 
