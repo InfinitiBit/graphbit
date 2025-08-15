@@ -34,7 +34,7 @@ Configure the runtime before initialization for advanced control:
 from graphbit import configure_runtime, init
 
 # Configure runtime (call before init)
-runtime_config = configure_runtime(
+configure_runtime(
     worker_threads=8,          # Number of worker threads
     max_blocking_threads=16,   # Maximum blocking threads
     thread_stack_size_mb=8     # Thread stack size in MB
@@ -460,7 +460,7 @@ def create_high_volume_config():
     """Configuration for high-volume processing."""
     
     # Configure runtime for high throughput
-    runtime_config = configure_runtime(
+    configure_runtime(
         worker_threads=16,
         max_blocking_threads=32
     )
