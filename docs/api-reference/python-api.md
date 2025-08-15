@@ -439,7 +439,7 @@ Get or set the default text encoding.
 ```python
 encoding = config.default_encoding
 
-config.set_default_encoding = "utf-8"
+config.set_default_encoding("utf-8")
 ```
 
 ##### `preserve_formatting`
@@ -448,7 +448,7 @@ Get or set the formatting preservation flag.
 ```python
 preserve = config.preserve_formatting
 
-config.set_preserve_formatting = True
+config.set_preserve_formatting(True)
 ```
 
 ##### `extraction_settings`
@@ -457,7 +457,8 @@ Get or set extraction settings as a dictionary.
 ```python
 settings = config.extraction_settings
 
-config.set_extraction_settings = {"pdf_parser": "advanced", "ocr_enabled": True}
+settings = {"pdf_parser": "advanced", "ocr_enabled": True}
+config.set_extraction_settings(settings)
 ```
 
 ### `DocumentContent`
