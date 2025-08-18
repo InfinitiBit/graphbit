@@ -3,18 +3,18 @@
 ## [0.4.0] – Draft
 
 - Rust core and Python binding: agentic workflow with dep-batching and parent preamble
-- LLM-GraphBit-Playwright browser automation agent implemented
-- DeepSeek & Perplexity provider support
-- Google Search API integration
+- SECURITY.md added
 - Document loader support in Python binding
-- Cross-platform CPU affinity logic with macOS fallback
+- LLM-GraphBit-Playwright browser automation agent implemented
+- Google Search API integration
+- DeepSeek & Perplexity provider support
+- Vector DB docs: FAISS, Milvus, Pinecone, Qdrant, ChromaDB, Weaviate, MongoDB, PGVector, MariaDB, IBM Db2, Elasticsearch, AWS boto3
+- Embeddings docs updated; async-vs-sync guide
 - Chatbot development example added
 - Text splitter utility added
 - Complete MkDocs site (Material theme)
-- Vector DB docs: FAISS, Milvus, Pinecone, Qdrant, ChromaDB, Weaviate, MongoDB, PGVector, MariaDB, IBM Db2, Elasticsearch, AWS boto3
-- Embeddings docs updated; async-vs-sync guide
 - AI LLM multi-agent benchmark report summary
-- SECURITY.md added
+- Cross-platform CPU affinity logic with macOS fallback
 - Resolved pre-commit hook failures; improved security compliance
 - Updated black and dependency checks; codebase reformatted
 
