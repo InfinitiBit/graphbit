@@ -2,40 +2,40 @@
 
 ## [0.4.0] – Draft
 
-- Google Search API integration
-- Chatbot development example added
-- Text splitter utility added
+- Rust core and Python binding: agentic workflow with dep-batching and parent preamble
 - LLM-GraphBit-Playwright browser automation agent implemented
 - DeepSeek & Perplexity provider support
-- Complete MkDocs site (Material theme)
-- Rust core and Python binding: agentic workflow with dep-batching and parent preamble
+- Google Search API integration
 - Document loader support in Python binding
 - Cross-platform CPU affinity logic with macOS fallback
-- Resolved pre-commit hook failures; improved security compliance
-- Updated black and dependency checks; codebase reformatted
+- Chatbot development example added
+- Text splitter utility added
+- Complete MkDocs site (Material theme)
 - Vector DB docs: FAISS, Milvus, Pinecone, Qdrant, ChromaDB, Weaviate, MongoDB, PGVector, MariaDB, IBM Db2, Elasticsearch, AWS boto3
 - Embeddings docs updated; async-vs-sync guide
 - AI LLM multi-agent benchmark report summary
 - SECURITY.md added
+- Resolved pre-commit hook failures; improved security compliance
+- Updated black and dependency checks; codebase reformatted
 
 
 ## [0.3.0-alpha] – 2025-07-16
 
-- Improved benchmark runner
-- Benchmark documentation updated
-- Dockerization support for benchmark
-- Production volume mount paths refined
-- Centralized control of benchmark run counts
-- Explicit flags/config for run counts
-- Tarpaulin coverage added for Rust
-- Tarpaulin configuration integrated
 - Comprehensive Python tests added
 - Rust integration test coverage improved
+- Improved benchmark runner
+- Benchmark run consistency improved
+- Centralized control of benchmark run counts
+- Centralized run configuration committed
+- Explicit flags/config for run counts
+- Explicit run control documented
+- Dockerization support for benchmark
+- Production volume mount paths refined
+- Tarpaulin coverage added for Rust
+- Tarpaulin configuration integrated
+- Benchmark documentation updated
 - Root README updated
 - Contributing guidelines updated
-- Benchmark run consistency improved
-- Centralized run configuration committed
-- Explicit run control documented
 
 
 ## [0.2.0-alpha] – 2025-06-28
@@ -43,20 +43,20 @@
 - Ollama Python support added
 - Hugging Face Python binding added
 - LangGraph integrated into benchmark framework
-- New integration tests added
-- Python examples for GraphBit added
-- Python integration tests expanded
-- Fixed Python integration tests for GitHub Actions
-- Pre-test commit fixed for all files
-- Pre-commit issues resolved
-- Makefile fixes
-- Benchmark evaluation updated
-- Example code updated
+- CrewAI benchmark scenarios optimized for performance and reliability
 - Performance optimizations
 - Benchmark and Python binding refactors
-- CrewAI benchmark scenarios optimized for performance and reliability
-- Root README updated
+- New integration tests added
+- Python integration tests expanded
+- Fixed Python integration tests for GitHub Actions
+- Python examples for GraphBit added
+- Benchmark evaluation updated
+- Example code updated
 - Python documentation updated
+- Pre-commit issues resolved
+- Pre-test commit fixed for all files
+- Makefile fixes
+- Root README updated
 - GitHub Actions workflow removed
 
 
