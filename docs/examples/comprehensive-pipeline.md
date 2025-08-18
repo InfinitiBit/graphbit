@@ -269,12 +269,6 @@ Provide overall quality score and detailed feedback.
             agent_id="assessor"
         )
         
-        # Quality Gate
-        quality_gate = Node.condition(
-            name="Quality Gate",
-            expression="overall_quality >= 7"
-        )
-        
         # Improvement Recommender
         improver = Node.agent(
             name="Improvement Recommender",
@@ -295,11 +289,9 @@ Focus on actionable, specific recommendations.
         
         # Connect pipeline
         assess_id = workflow.add_node(assessor)
-        gate_id = workflow.add_node(quality_gate)
         improve_id = workflow.add_node(improver)
         
-        workflow.connect(assess_id, gate_id)
-        workflow.connect(gate_id, improve_id)
+        workflow.connect(assess_id, improve_id)
         
         workflow.validate()
         return workflow
@@ -700,7 +692,6 @@ async def main():
 if __name__ == "__main__":
     asyncio.run(main())
 ```
-
 ## Key System Features
 
 ### Comprehensive Integration
@@ -712,7 +703,6 @@ if __name__ == "__main__":
 ### Advanced Capabilities
 - **Batch Processing**: Efficient handling of multiple documents
 - **Async Operations**: Non-blocking operations for better performance
-- **Quality Gates**: Conditional workflow execution based on quality scores
 - **Intelligent Recommendations**: Context-aware recommendation generation
 
 ### Production Features

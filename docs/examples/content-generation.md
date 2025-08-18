@@ -117,13 +117,7 @@ If quality is 7 or above, mark as APPROVED, otherwise mark as NEEDS_REVISION.
             agent_id="reviewer"
         )
         
-        # Stage 5: Quality Gate (Condition Node)
-        quality_gate = Node.condition(
-            name="Quality Gate",
-            expression="quality_rating >= 7"
-        )
-        
-        # Stage 6: Final Formatter
+        # Stage 5: Final Formatter
         formatter = Node.agent(
             name="Content Formatter",
             prompt="""Format this content for publication:
@@ -147,15 +141,13 @@ Output clean, publication-ready content.
         writer_id = workflow.add_node(writer)
         editor_id = workflow.add_node(editor)
         reviewer_id = workflow.add_node(reviewer)
-        quality_id = workflow.add_node(quality_gate)
         formatter_id = workflow.add_node(formatter)
         
-        # Connect the workflow: Research → Write → Edit → Review → Quality Check → Format
+        # Connect the workflow: Research → Write → Edit → Review → Format
         workflow.connect(research_id, writer_id)
         workflow.connect(writer_id, editor_id)
         workflow.connect(editor_id, reviewer_id)
-        workflow.connect(reviewer_id, quality_id)
-        workflow.connect(quality_id, formatter_id)
+        workflow.connect(reviewer_id, formatter_id)
         
         # Validate workflow
         workflow.validate()
@@ -186,7 +178,7 @@ Output clean, publication-ready content.
             
             return {
                 "status": "success",
-                "content": result.get_output(),
+                "content": result.get_all_node_outputs(),
                 "execution_time_ms": execution_time,
                 "workflow_stats": self.executor.get_stats()
             }
