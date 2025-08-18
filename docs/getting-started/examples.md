@@ -73,104 +73,7 @@ result = create_content_pipeline()
 print(f"Final content: {result.get_variable('Writer')}")
 ```
 
-## Example 3: Conditional Workflow
-
-Use condition nodes for branching logic:
-
-```python
-import os
-
-from graphbit import LlmConfig, Workflow, Node, Executor
-
-def create_quality_check_workflow():
-    config = LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4o-mini")
-    
-    workflow = Workflow("Quality Check")
-    
-    # Analyzer
-    analyzer = Node.agent(
-        name="Quality Checker",
-        prompt=f"Rate this content quality from 1-10: {input}",
-        agent_id="checker"
-    )
-    
-    # Condition
-    quality_gate = Node.condition(
-        name="Quality Gate",
-        expression="quality_score > 7"
-    )
-    
-    # Approver
-    approver = Node.agent(
-        name="Content Approver",
-        prompt=f"Approve this high-quality content from the Quality Gate.",
-        agent_id="approver"
-    )
-    
-    # Connect with conditional flow
-    check_id = workflow.add_node(analyzer)
-    gate_id = workflow.add_node(quality_gate)
-    approve_id = workflow.add_node(approver)
-    
-    workflow.connect(check_id, gate_id)
-    workflow.connect(gate_id, approve_id)
-    
-    executor = Executor(config)
-    
-    return executor.execute(workflow)
-
-result = create_quality_check_workflow()
-print(result.get_variable('Content Approver'))
-```
-
-## Example 4: Data Transformation (Transform does not work)
-
-Transform data between workflow steps:
-
-```python
-import os
-
-from graphbit import LlmConfig, Workflow, Node, Executor
-
-def create_transform_workflow():
-    config = LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4o-mini")
-    
-    workflow = Workflow("Data Transform")
-    
-    # Generator
-    generator = Node.agent(
-        name="Data Generator",
-        prompt="Generate a JSON object with name, age, and city for a person",
-        agent_id="generator"
-    )
-    
-    # Transformer
-    transformer = Node.transform(
-        name="JSON Extractor",
-        transformation="json_extract"
-    )
-    
-    # Processor
-    processor = Node.agent(
-        name="Data Processor",
-        prompt="Summarize this person's data: {extracted_data}",
-        agent_id="processor"
-    )
-    
-    # Connect
-    gen_id = workflow.add_node(generator)
-    trans_id = workflow.add_node(transformer)
-    proc_id = workflow.add_node(processor)
-    
-    workflow.connect(gen_id, trans_id)
-    workflow.connect(trans_id, proc_id)
-    
-    executor = Executor(config)
-    
-    return executor.execute(workflow)
-```
-
-## Example 5: Multiple LLM Providers
+## Example 3: Multiple LLM Providers
 
 Use different LLM providers in the same workflow:
 
@@ -224,13 +127,13 @@ def multi_provider_example():
     creative_result = creative_executor.execute(creative_workflow)
     analytical_result = analytical_executor.execute(analytical_workflow)
     
-    print(f"Creative (OpenAI): {creative_result.get_variable('output')}")
-    print(f"Analytical (Anthropic): {analytical_result.get_variable('output')}")
+    print(f"Creative (OpenAI): {creative_result.get_variable('Creative Writer')}")
+    print(f"Analytical (Anthropic): {analytical_result.get_variable('Data Analyzer')}")
     
     return creative_result, analytical_result
 ```
 
-## Example 6: Error Handling and Performance Optimization
+## Example 4: Error Handling and Performance Optimization
 
 Build robust workflows with error handling and optimized performance:
 
@@ -243,13 +146,10 @@ def robust_workflow_example():
     config = LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4o-mini")
     
     # Create high-throughput executor with timeout
-    executor = Executor.new_high_throughput(config, timeout_seconds=120)
+    executor = Executor(config, timeout_seconds=120)
     
     # Alternative: Create low-latency executor for real-time
-    # executor = Executor.new_low_latency(config, timeout_seconds=30)
-    
-    # Alternative: Create memory-optimized executor
-    # executor = Executor.new_memory_optimized(config)
+    # executor = Executor(config, lightweight_mode=True, timeout_seconds=60)
     
     workflow = Workflow("Robust Workflow")
     
@@ -277,14 +177,14 @@ def robust_workflow_example():
 robust_workflow_example()
 ```
 
-## Example 7: Embeddings and Similarity
+## Example 5: Embeddings and Similarity
 
 Use embeddings for semantic search and similarity:
 
 ```python
 import os
 
-from graphbit import LlmConfig, Node, Workflow, Executor
+from graphbit import EmbeddingConfig, EmbeddingClient
 
 def embeddings_example():    
     # Create embedding service
@@ -303,11 +203,11 @@ def embeddings_example():
     ]
     
     print("Generating embeddings...")
+
+    embeddings = service.embed_many(texts)
     
-    # Note: Actual embedding implementation depends on the binding
-    # This is a conceptual example
-    for i, text in enumerate(texts):
-        print(f"Text {i+1}: {text}")
+    for i, embedding in enumerate(embeddings):
+        print(f"Text {i+1}: {embedding}")
     
     print("Embeddings generated successfully")
 
@@ -315,14 +215,14 @@ def embeddings_example():
 embeddings_example()
 ```
 
-## Example 8: System Monitoring and Diagnostics
+## Example 6: System Monitoring and Diagnostics
 
 Monitor GraphBit performance and health:
 
 ```python
 import os
 
-from graphbit import LlmConfig, Node, Workflow, Executor
+from graphbit import LlmConfig, Node, Workflow, Executor, get_system_info, health_check
 
 def system_monitoring_example():    
     # Get system information
@@ -374,7 +274,7 @@ if __name__ == "__main__":
     system_monitoring_example()
 ```
 
-## Example 9: Workflow Validation
+## Example 7: Workflow Validation
 
 Validate workflow structure before execution:
 
@@ -392,13 +292,13 @@ def workflow_validation_example():
     # Add nodes
     node1 = Node.agent(
         name="First Agent",
-        prompt="Process input: {input}",
+        prompt=f"Process input: {input}",
         agent_id="agent1"
     )
     
     node2 = Node.agent(
         name="Second Agent", 
-        prompt="Continue processing: {previous_output}",
+        prompt=f"Continue processing the input.",
         agent_id="agent2"
     )
     
@@ -414,7 +314,7 @@ def workflow_validation_example():
         # Execute the validated workflow
         executor = Executor(config)
         result = executor.execute(workflow)
-        print(f"Execution completed: {result.get_variable('output')}")
+        print(f"Execution completed: {result.get_variable('Second Agent')}")
         
     except Exception as e:
         print(f"Workflow validation failed: {e}")
@@ -431,8 +331,7 @@ workflow_validation_example()
 4. **Monitor Performance**: Use `result.execution_time_ms()` to track execution times
 5. **Validate Workflows**: Call `workflow.validate()` before execution
 6. **Use Templates**: Create reusable workflow patterns
-7. **Choose Appropriate Executors**: Use `new_high_throughput()`, `new_low_latency()`, or `new_memory_optimized()` based on your needs
-8. **Check System Health**: Use `health_check()` for diagnostics
+7. **Check System Health**: Use `health_check()` for diagnostics
 
 ## Next Steps
 
