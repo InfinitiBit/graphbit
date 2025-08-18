@@ -468,7 +468,7 @@ def create_semantic_analysis_workflow():
     # Document Preprocessor
     preprocessor = Node.agent(
         name="Document Preprocessor",
-        prompt="""Preprocess this document for semantic analysis:
+        prompt=f"""Preprocess this document for semantic analysis:
 
 {document}
 
@@ -488,8 +488,6 @@ Provide structured output for further analysis.
         name="Semantic Analyzer",
         prompt="""Perform semantic analysis on this preprocessed document:
 
-{preprocessed_document}
-
 Analyze:
 - Semantic relationships between concepts
 - Document sentiment and tone
@@ -506,8 +504,6 @@ Provide detailed semantic breakdown.
     insight_generator = Node.agent(
         name="Insight Generator",
         prompt="""Generate actionable insights from this semantic analysis:
-
-{semantic_analysis}
 
 Create:
 - Summary of key findings

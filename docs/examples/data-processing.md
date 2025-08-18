@@ -38,7 +38,7 @@ def create_data_processing_pipeline():
     # 1. Data Validator
     validator = Node.agent(
         name="Data Validator",
-        prompt="""Validate this dataset and check for:
+        prompt=f"""Validate this dataset and check for:
 - Data completeness
 - Format consistency  
 - Obvious errors or outliers
@@ -62,8 +62,6 @@ Format response as JSON with validation_status, issues, and cleaned_data fields.
         name="Statistical Analyzer",
         prompt="""Perform comprehensive statistical analysis on this dataset:
 
-{validated_data}
-
 Calculate and provide:
 - Descriptive statistics (mean, median, mode, std dev)
 - Distribution analysis
@@ -80,9 +78,6 @@ Format as JSON with clear structure including summary_stats, correlations, and t
     pattern_detector = Node.agent(
         name="Pattern Detector",
         prompt="""Analyze this data for patterns and anomalies:
-
-Statistical Analysis: {stats_results}
-Original Data: {validated_data}
 
 Identify:
 - Recurring patterns
@@ -102,10 +97,6 @@ Format as JSON with patterns, anomalies, and insights fields.
         name="Insight Generator",
         prompt="""Generate actionable insights based on this analysis:
 
-Statistical Analysis: {stats_results}
-Pattern Analysis: {pattern_results}
-Original Data: {validated_data}
-
 Create:
 - Key business insights
 - Actionable recommendations
@@ -122,11 +113,6 @@ Focus on practical, implementable insights.
     report_generator = Node.agent(
         name="Report Generator",
         prompt="""Create a comprehensive data analysis report:
-
-Data Validation: {validation_results}
-Statistical Analysis: {stats_results}
-Pattern Analysis: {pattern_results}
-Insights: {insights}
 
 Format as a professional report with:
 - Executive summary
@@ -151,8 +137,14 @@ Use clear, business-friendly language.
     # Connect processing pipeline
     workflow.connect(validator_id, stats_id)
     workflow.connect(stats_id, pattern_id)
+    workflow.connect(validator_id, pattern_id)
     workflow.connect(pattern_id, insight_id)
+    workflow.connect(stats_id, insight_id)
+    workflow.connect(validator_id, insight_id)
     workflow.connect(insight_id, report_id)
+    workflow.connect(pattern_id, report_id)
+    workflow.connect(stats_id, report_id)
+    workflow.connect(validator_id, report_id)
     
     # Validate workflow
     workflow.validate()
@@ -255,18 +247,14 @@ async def process_multiple_datasets_async():
     )
     
     # Use high-throughput executor for batch processing
-    executor = Executor.new_high_throughput(
-        config,
-        timeout_seconds=120,
-        debug=False
-    )
+    Executor(config, timeout_seconds=120, debug=False)
     
     # Create simple analysis workflow
     workflow = Workflow("Batch Data Analyzer")
     
     analyzer = Node.agent(
         name="Batch Analyzer",
-        prompt="""Analyze this dataset quickly:
+        prompt=f"""Analyze this dataset quickly:
 
 Data: {dataset}
 
@@ -315,7 +303,7 @@ def create_time_series_pipeline():
     # Trend Analyzer
     trend_analyzer = Node.agent(
         name="Trend Analyzer",
-        prompt="""Analyze trends in this time series data:
+        prompt=f"""Analyze trends in this time series data:
 
 {time_series_data}
 
@@ -334,9 +322,7 @@ Provide quantitative analysis where possible.
     # Forecast Generator
     forecaster = Node.agent(
         name="Forecaster",
-        prompt="""Based on this trend analysis, generate forecasts:
-
-Trend Analysis: {trend_analysis}
+        prompt=f"""Based on this trend analysis, generate forecasts:
 Historical Data: {time_series_data}
 
 Create:
@@ -383,7 +369,7 @@ def create_data_quality_pipeline():
     # Completeness Checker
     completeness_checker = Node.agent(
         name="Completeness Checker",
-        prompt="""Assess data completeness:
+        prompt=f"""Assess data completeness:
 
 Dataset: {input_data}
 
@@ -401,7 +387,7 @@ Rate completeness (1-10) and provide recommendations.
     # Consistency Checker
     consistency_checker = Node.agent(
         name="Consistency Checker",
-        prompt="""Check data consistency:
+        prompt=f"""Check data consistency:
 
 Dataset: {input_data}
 
@@ -420,11 +406,9 @@ Rate consistency (1-10) and identify issues.
     # Accuracy Assessor
     accuracy_assessor = Node.agent(
         name="Accuracy Assessor",
-        prompt="""Assess data accuracy:
+        prompt=f"""Assess data accuracy:
 
 Dataset: {input_data}
-Completeness Report: {completeness_report}
-Consistency Report: {consistency_report}
 
 Evaluate:
 - Logical value ranges
@@ -441,10 +425,6 @@ Provide accuracy score and recommendations.
     quality_calculator = Node.agent(
         name="Quality Calculator",
         prompt="""Calculate overall data quality score:
-
-Completeness: {completeness_report}
-Consistency: {consistency_report}
-Accuracy: {accuracy_report}
 
 Provide:
 - Overall quality score (1-10)
@@ -465,6 +445,8 @@ Create executive summary of data quality.
     # Run completeness and consistency in parallel, then accuracy, then quality
     workflow.connect(complete_id, accurate_id)
     workflow.connect(consistent_id, accurate_id)
+    workflow.connect(complete_id, quality_id)
+    workflow.connect(consistent_id, quality_id)
     workflow.connect(accurate_id, quality_id)
     
     workflow.validate()
@@ -496,7 +478,7 @@ def create_anthropic_data_pipeline():
     
     analyzer = Node.agent(
         name="Claude Analyzer",
-        prompt="""Analyze this dataset with Claude's analytical capabilities:
+        prompt=f"""Analyze this dataset with Claude's analytical capabilities:
 
 {dataset}
 
@@ -542,7 +524,7 @@ def create_ollama_data_pipeline():
     
     analyzer = Node.agent(
         name="Local Analyzer",
-        prompt="""Analyze this sensitive dataset locally:
+        prompt=f"""Analyze this sensitive dataset locally:
 
 {dataset}
 

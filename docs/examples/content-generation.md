@@ -42,7 +42,7 @@ class ContentGenerationPipeline:
         # Stage 1: Research Agent
         researcher = Node.agent(
             name="Research Specialist",
-            prompt="""Research the topic: {topic}
+            prompt=f"""Research the topic: {topic}
 
 Please provide:
 1. Key facts and statistics
@@ -60,9 +60,7 @@ Format as structured research notes.
         # Stage 2: Content Writer
         writer = Node.agent(
             name="Content Writer",
-            prompt="""Write a comprehensive {content_type} about: {topic}
-
-Based on this research: {research_data}
+            prompt=f"""Write a comprehensive {content_type} about: {topic}
 
 Requirements:
 - Target length: {target_length} words
@@ -80,9 +78,7 @@ Create compelling, informative content that captures reader attention.
         # Stage 3: Editor
         editor = Node.agent(
             name="Content Editor",
-            prompt="""Edit and improve the following {content_type}:
-
-{draft_content}
+            prompt=f"""Edit and improve the following {content_type}:
 
 Focus on:
 - Clarity and readability
@@ -100,9 +96,7 @@ Maintain the core message while making it more engaging and polished.
         # Stage 4: Quality Reviewer
         reviewer = Node.agent(
             name="Quality Reviewer",
-            prompt="""Review this {content_type} for quality and accuracy:
-
-{edited_content}
+            prompt=f"""Review this {content_type} for quality and accuracy:
 
 Provide feedback on:
 1. Factual accuracy
@@ -121,8 +115,6 @@ If quality is 7 or above, mark as APPROVED, otherwise mark as NEEDS_REVISION.
         formatter = Node.agent(
             name="Content Formatter",
             prompt="""Format this content for publication:
-
-{approved_content}
 
 Apply:
 - Professional formatting
@@ -254,7 +246,7 @@ def create_anthropic_pipeline():
     
     writer = Node.agent(
         name="Claude Writer",
-        prompt="""Write a comprehensive article about: {topic}
+        prompt=f"""Write a comprehensive article about: {topic}
 
 Requirements:
 - Length: {word_count} words
@@ -299,7 +291,7 @@ def create_ollama_pipeline():
     
     writer = Node.agent(
         name="Llama Writer",
-        prompt="""Write about: {topic}
+        prompt=f"""Write about: {topic}
 
 Keep it concise but informative.
 Focus on practical insights.
@@ -335,11 +327,7 @@ def create_high_performance_pipeline():
     )
     
     # Use high-throughput executor
-    executor = Executor.new_high_throughput(
-        config,
-        timeout_seconds=60,  # Shorter timeout
-        debug=False  # Disable debug for performance
-    )
+    executor = Executor(config, timeout_seconds=60, debug=False)
     
     return executor
 
@@ -353,11 +341,7 @@ def create_low_latency_pipeline():
     )
     
     # Use low-latency executor
-    executor = Executor.new_low_latency(
-        config,
-        timeout_seconds=30,  # Very short timeout
-        debug=False
-    )
+    executor = Executor(config, lightweight_mode = True, timeout_seconds=30, debug=False)
     
     return executor
 
@@ -371,7 +355,7 @@ def create_memory_optimized_pipeline():
     )
     
     # Use memory-optimized executor
-    executor = Executor.new_memory_optimized(
+    executor = Executor(
         config,
         timeout_seconds=120,
         debug=False
@@ -403,7 +387,7 @@ async def generate_content_async():
     
     writer = Node.agent(
         name="Async Writer",
-        prompt="Write a brief article about: {topic}",
+        prompt=f"Write a brief article about: {topic}",
         agent_id="async_writer"
     )
     

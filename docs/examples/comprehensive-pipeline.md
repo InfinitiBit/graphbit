@@ -76,16 +76,8 @@ class IntelligentDocumentPipeline:
                 timeout_seconds=180,
                 debug=True
             ),
-            'batch': Executor.new_high_throughput(
-                self.llm_configs['openai_fast'],
-                timeout_seconds=120,
-                debug=False
-            ),
-            'fast': Executor.new_low_latency(
-                self.llm_configs['openai_fast'],
-                timeout_seconds=60,
-                debug=False
-            )
+            'batch': Executor(self.llm_configs['openai_fast'], timeout_seconds=120, debug=False),
+            'fast': Executor(self.llm_configs['openai_fast'], lightweight_mode = True, timeout_seconds=60, debug=False)
         }
         
         # Document storage
@@ -122,7 +114,7 @@ class IntelligentDocumentPipeline:
         # Content Preprocessor
         preprocessor = Node.agent(
             name="Content Preprocessor",
-            prompt="""Preprocess this document for analysis:
+            prompt=f"""Preprocess this document for analysis:
 
 Title: {title}
 Content: {content}
@@ -145,8 +137,6 @@ Provide structured preprocessing results.
             name="Content Analyzer",
             prompt="""Analyze this preprocessed document content:
 
-{preprocessed_content}
-
 Perform comprehensive analysis:
 
 1. **Topic Analysis**: Identify and rank key topics (max 5)
@@ -164,9 +154,6 @@ Format response as JSON with clear sections for each analysis type.
         summarizer = Node.agent(
             name="Summary Generator",
             prompt="""Generate a comprehensive summary based on this analysis:
-
-Content Analysis: {analysis_results}
-Original Content: {preprocessed_content}
 
 Create:
 1. **Executive Summary**: 2-3 sentence overview
@@ -186,6 +173,7 @@ Keep summary informative yet concise.
         summary_id = workflow.add_node(summarizer)
         
         workflow.connect(prep_id, analyze_id)
+        workflow.connect(prep_id, summary_id)
         workflow.connect(analyze_id, summary_id)
         
         workflow.validate()
@@ -199,7 +187,7 @@ Keep summary informative yet concise.
         # Content Reviewer
         reviewer = Node.agent(
             name="Content Reviewer",
-            prompt="""Review this content for enhancement opportunities:
+            prompt=f"""Review this content for enhancement opportunities:
 
 {content}
 
@@ -218,9 +206,8 @@ Provide specific, actionable recommendations.
         # Enhancement Suggester
         enhancer = Node.agent(
             name="Enhancement Suggester",
-            prompt="""Based on this review, suggest specific enhancements:
+            prompt=f"""Based on this review, suggest specific enhancements:
 
-Review Results: {review_results}
 Original Content: {content}
 
 Suggest improvements for:
@@ -252,7 +239,7 @@ Prioritize suggestions by impact and feasibility.
         # Quality Assessor
         assessor = Node.agent(
             name="Quality Assessor",
-            prompt="""Assess the quality of this content comprehensively:
+            prompt=f"""Assess the quality of this content comprehensively:
 
 {content}
 
@@ -273,8 +260,6 @@ Provide overall quality score and detailed feedback.
         improver = Node.agent(
             name="Improvement Recommender",
             prompt="""Based on this quality assessment, recommend improvements:
-
-Quality Assessment: {quality_results}
 
 For content that scored below 7, provide:
 1. **Priority Issues**: Most critical problems to address
@@ -304,7 +289,7 @@ Focus on actionable, specific recommendations.
         # Context Analyzer
         context_analyzer = Node.agent(
             name="Context Analyzer",
-            prompt="""Analyze the context for generating recommendations:
+            prompt=f"""Analyze the context for generating recommendations:
 
 Current Document: {current_document}
 Similar Documents: {similar_documents}
@@ -326,9 +311,7 @@ Provide context analysis for recommendation generation.
         # Recommendation Generator
         recommender = Node.agent(
             name="Recommendation Generator",
-            prompt="""Generate intelligent recommendations based on this context:
-
-Context Analysis: {context_analysis}
+            prompt=f"""Generate intelligent recommendations based on this context:
 
 Generate recommendations for:
 1. **Related Content**: Documents or topics to explore next
