@@ -63,22 +63,22 @@
 ## [0.1.0] - 2025-06-11
 
 - Initial GraphBit release: declarative agentic workflow framework
+- Modular architecture with core modules (agents, llm, graph, validation, workflow, types, errors)
 - Multi-LLM support: OpenAI GPT, Anthropic Claude, Ollama, extensible providers
 - Graph-based workflows (DAG), dependency management, topological execution
 - Node types: agent, transform, conditional
 - Parallel execution with configurable concurrency
 - Async/await support throughout
-- Intelligent dependency resolution
-- Strong typing and validation
-- UUID identifiers for all components
-- JSON schema validation for LLM outputs
 - Full Python API via PyO3 with async support
-- Integration examples: FastAPI, Django, Jupyter
-- CLI (graphbit): init, validate, run, config, debug/verbose
-- JSON workflow configs with env var support and custom files
+- Strong typing and validation
+- JSON schema validation for LLM outputs
+- UUID identifiers for all components
+- Intelligent dependency resolution
 - Error handling: retries with backoff, comprehensive errors, failure recovery
 - Usage tracking: tokens, cost estimation, performance metrics
+- CLI (graphbit): init, validate, run, config, debug/verbose
+- JSON workflow configs with env var support and custom files
+- Integration examples: FastAPI, Django, Jupyter
 - Documentation and examples: README, Ollama guide, testing/benchmarking, Python and Rust API docs
 - Testing: unit/integration, benchmarking suite, mock LLM providers, CI/CD
-- Modular architecture with core modules (agents, llm, graph, validation, workflow, types, errors)
 - Dependencies and MSRV: tokio, serde, anyhow/thiserror, uuid, petgraph, reqwest, clap, pyo3, chrono; Rust 1.70+
