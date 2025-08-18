@@ -14,17 +14,16 @@ We'll explore:
 ## Complete LLM Client Example
 
 ```python
-import graphbit
+from graphbit import init, LlmConfig, LlmClient, health_check, get_system_info
 import os
 import asyncio
 import time
-from typing import List, Dict, Optional
 
 class AdvancedLLMSystem:
     def __init__(self):
         """Initialize the advanced LLM system."""
         # Initialize GraphBit
-        graphbit.init(enable_tracing=True)
+        init(enable_tracing=True)
         
         # Store multiple provider clients
         self.clients = {}
@@ -36,44 +35,44 @@ class AdvancedLLMSystem:
         
         # OpenAI client
         if os.getenv("OPENAI_API_KEY"):
-            openai_config = graphbit.LlmConfig.openai(
+            openai_config = LlmConfig.openai(
                 api_key=os.getenv("OPENAI_API_KEY"),
                 model="gpt-4o-mini"
             )
-            self.clients['openai'] = graphbit.LlmClient(openai_config, debug=True)
+            self.clients['openai'] = LlmClient(openai_config, debug=True)
             print("OpenAI client initialized")
         
         # Anthropic client
         if os.getenv("ANTHROPIC_API_KEY"):
-            anthropic_config = graphbit.LlmConfig.anthropic(
+            anthropic_config = LlmConfig.anthropic(
                 api_key=os.getenv("ANTHROPIC_API_KEY"),
-                model="claude-3-5-sonnet-20241022"
+                model="claude-3-5-haiku-20241022"
             )
-            self.clients['anthropic'] = graphbit.LlmClient(anthropic_config, debug=True)
+            self.clients['anthropic'] = LlmClient(anthropic_config, debug=True)
             print("Anthropic client initialized")
         
         # DeepSeek client
         if os.getenv("DEEPSEEK_API_KEY"):
-            deepseek_config = graphbit.LlmConfig.deepseek(
+            deepseek_config = LlmConfig.deepseek(
                 api_key=os.getenv("DEEPSEEK_API_KEY"),
                 model="deepseek-chat"
             )
-            self.clients['deepseek'] = graphbit.LlmClient(deepseek_config, debug=True)
+            self.clients['deepseek'] = LlmClient(deepseek_config, debug=True)
             print("DeepSeek client initialized")
         
         # HuggingFace client
         if os.getenv("HUGGINGFACE_API_KEY"):
-            huggingface_config = graphbit.LlmConfig.huggingface(
+            huggingface_config = LlmConfig.huggingface(
                 api_key=os.getenv("HUGGINGFACE_API_KEY"),
                 model="microsoft/DialoGPT-medium"
             )
-            self.clients['huggingface'] = graphbit.LlmClient(huggingface_config, debug=True)
+            self.clients['huggingface'] = LlmClient(huggingface_config, debug=True)
             print("HuggingFace client initialized")
         
         # Ollama client (no API key required)
         try:
-            ollama_config = graphbit.LlmConfig.ollama("llama3.2")
-            self.clients['ollama'] = graphbit.LlmClient(ollama_config, debug=True)
+            ollama_config = LlmConfig.ollama("llama3.2")
+            self.clients['ollama'] = LlmClient(ollama_config, debug=True)
             print("Ollama client initialized")
         except Exception as e:
             print(f"Ollama client failed: {e}")
@@ -318,7 +317,7 @@ class AdvancedLLMSystem:
     
     def compare_providers(self, prompt: str = "Explain the concept of recursion in programming."):
         """Compare responses from all available providers."""
-        print(f"\nComparing providers...")
+        print("\nComparing providers...")
         print(f"Prompt: {prompt}")
         
         results = {}
@@ -356,7 +355,7 @@ class AdvancedLLMSystem:
 def create_performance_optimized_clients():
     """Create clients optimized for different performance characteristics."""
     
-    graphbit.init()
+    init()
     
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
@@ -364,12 +363,12 @@ def create_performance_optimized_clients():
         return None
     
     # High-throughput client
-    high_throughput_config = graphbit.LlmConfig.openai(api_key, "gpt-4o-mini")
-    high_throughput_client = graphbit.LlmClient(high_throughput_config, debug=False)
+    high_throughput_config = LlmConfig.openai(api_key, "gpt-4o-mini")
+    high_throughput_client = LlmClient(high_throughput_config, debug=False)
     
     # Low-latency client  
-    low_latency_config = graphbit.LlmConfig.openai(api_key, "gpt-4o-mini")
-    low_latency_client = graphbit.LlmClient(low_latency_config, debug=False)
+    low_latency_config = LlmConfig.openai(api_key, "gpt-4o-mini")
+    low_latency_client = LlmClient(low_latency_config, debug=False)
     
     return {
         'high_throughput': high_throughput_client,
@@ -428,15 +427,15 @@ async def performance_benchmark():
 async def test_error_handling():
     """Test error handling and resilience features."""
     
-    graphbit.init()
+    init()
     
     # Test with invalid API key
     print("\nTesting Error Handling")
     print("=" * 40)
     
     try:
-        invalid_config = graphbit.LlmConfig.openai("invalid-key", "gpt-4o-mini")
-        invalid_client = graphbit.LlmClient(invalid_config)
+        invalid_config = LlmConfig.openai("invalid-key", "gpt-4o-mini")
+        invalid_client = LlmClient(invalid_config)
         
         print("Testing with invalid API key...")
         response = invalid_client.complete("Test prompt", max_tokens=50)
@@ -447,8 +446,8 @@ async def test_error_handling():
     # Test timeout handling
     if os.getenv("OPENAI_API_KEY"):
         try:
-            config = graphbit.LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4o-mini")
-            client = graphbit.LlmClient(config)
+            config = LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4o-mini")
+            client = LlmClient(config)
             
             print("\nTesting very long prompt (potential timeout)...")
             very_long_prompt = "Write a comprehensive essay about " + "technology " * 1000
@@ -462,38 +461,38 @@ async def test_error_handling():
 def monitor_llm_system_health():
     """Monitor LLM system health and performance."""
     
-    graphbit.init()
+    init()
     
     print("\nSystem Health Check")
     print("=" * 40)
     
     # Check GraphBit health
-    health = graphbit.health_check()
+    health = health_check()
     print("GraphBit Health:")
     for key, value in health.items():
         status = "Ok!" if value else "Not Ok!"
         print(f"  {status} {key}: {value}")
     
     # Get system information
-    info = graphbit.get_system_info()
-    print(f"\nSystem Information:")
+    info = get_system_info()
+    print("\nSystem Information:")
     print(f"  Version: {info.get('version', 'unknown')}")
     print(f"  Runtime threads: {info.get('runtime_worker_threads', 'unknown')}")
     print(f"  Memory allocator: {info.get('memory_allocator', 'unknown')}")
     
     # Test provider connectivity
-    print(f"\nProvider Connectivity:")
+    print("\nProvider Connectivity:")
     
     providers_to_test = [
-        ('OpenAI', lambda: graphbit.LlmConfig.openai(os.getenv("OPENAI_API_KEY", "test"), "gpt-4o-mini")),
-        ('Anthropic', lambda: graphbit.LlmConfig.anthropic(os.getenv("ANTHROPIC_API_KEY", "test"), "claude-3-5-sonnet-20241022")),
-        ('Ollama', lambda: graphbit.LlmConfig.ollama("llama3.2"))
+        ('OpenAI', lambda: LlmConfig.openai(os.getenv("OPENAI_API_KEY", "test"), "gpt-4o-mini")),
+        ('Anthropic', lambda: LlmConfig.anthropic(os.getenv("ANTHROPIC_API_KEY", "test"), "claude-3-5-haiku-20241022")),
+        ('Ollama', lambda: LlmConfig.ollama("llama3.2"))
     ]
     
     for provider_name, config_func in providers_to_test:
         try:
             config = config_func()
-            client = graphbit.LlmClient(config)
+            client = LlmClient(config)
             print(f"  {provider_name}: Configuration valid")
         except Exception as e:
             print(f"  {provider_name}: {str(e)[:50]}...")
@@ -552,21 +551,21 @@ if __name__ == "__main__":
 ### Quick OpenAI Integration
 
 ```python
-import graphbit
+from graphbit import init, LlmConfig, LlmClient
 import os
 
 def quick_openai_example():
     """Simple OpenAI integration example."""
     
     # Initialize
-    graphbit.init()
+    init()
     
     # Configure and create client
-    config = graphbit.LlmConfig.openai(
+    config = LlmConfig.openai(
         api_key=os.getenv("OPENAI_API_KEY"),
         model="gpt-4o-mini"
     )
-    client = graphbit.LlmClient(config)
+    client = LlmClient(config)
     
     # Simple completion
     response = client.complete(
@@ -588,17 +587,17 @@ quick_openai_example()
 ### Local Ollama Integration
 
 ```python
-import graphbit
+from graphbit import init, LlmConfig, LlmClient
 
 def quick_ollama_example():
     """Simple Ollama integration example."""
     
     # Initialize
-    graphbit.init()
+    init()
     
     # Configure Ollama (no API key needed)
-    config = graphbit.LlmConfig.ollama("llama3.2")
-    client = graphbit.LlmClient(config, debug=True)
+    config = LlmConfig.ollama("llama3.2")
+    client = LlmClient(config, debug=True)
     
     # Test completion
     try:
@@ -618,21 +617,21 @@ quick_ollama_example()
 ### Anthropic Claude Integration
 
 ```python
-import graphbit
+from graphbit import init, LlmConfig, LlmClient
 import os
 
 def quick_anthropic_example():
     """Simple Anthropic Claude integration example."""
     
     # Initialize
-    graphbit.init()
+    init()
     
     # Configure Anthropic
-    config = graphbit.LlmConfig.anthropic(
+    config = LlmConfig.anthropic(
         api_key=os.getenv("ANTHROPIC_API_KEY"),
-        model="claude-3-5-sonnet-20241022"
+        model="claude-3-5-haiku-20241022"
     )
-    client = graphbit.LlmClient(config)
+    client = LlmClient(config)
     
     # Complex reasoning task
     response = client.complete(
@@ -645,7 +644,7 @@ def quick_anthropic_example():
     print(f"Claude's analysis: {response}")
 
 # Usage (requires ANTHROPIC_API_KEY)
-# quick_anthropic_example()
+quick_anthropic_example()
 ```
 
 ## Best Practices
@@ -653,29 +652,33 @@ def quick_anthropic_example():
 ### Configuration Management
 
 ```python
+from graphbit import init, LlmConfig, LlmClient
+import time
+import os
+
 def setup_production_llm_config():
     """Set up production-ready LLM configuration."""
     
-    graphbit.init(log_level="warn", enable_tracing=False)
+    init(log_level="warn", enable_tracing=False)
     
     # Primary provider with fallback
     providers = []
     
     if os.getenv("OPENAI_API_KEY"):
-        providers.append(('openai', graphbit.LlmConfig.openai(
+        providers.append(('openai', LlmConfig.openai(
             os.getenv("OPENAI_API_KEY"),
             "gpt-4o-mini"
         )))
     
     if os.getenv("ANTHROPIC_API_KEY"):
-        providers.append(('anthropic', graphbit.LlmConfig.anthropic(
+        providers.append(('anthropic', LlmConfig.anthropic(
             os.getenv("ANTHROPIC_API_KEY"),
-            "claude-3-5-sonnet-20241022"
+            "claude-3-5-haiku-20241022"
         )))
     
     # Add local fallback
     try:
-        providers.append(('ollama', graphbit.LlmConfig.ollama("llama3.2")))
+        providers.append(('ollama', LlmConfig.ollama("llama3.2")))
     except:
         pass
     
@@ -692,7 +695,7 @@ def robust_completion(prompt: str, max_retries: int = 3):
     for provider_name, config in providers:
         for attempt in range(max_retries):
             try:
-                client = graphbit.LlmClient(config, debug=False)
+                client = LlmClient(config, debug=False)
                 return client.complete(prompt, max_tokens=200)
             except Exception as e:
                 print(f"Attempt {attempt + 1} with {provider_name} failed: {e}")
@@ -722,4 +725,4 @@ def robust_completion(prompt: str, max_retries: int = 3):
 - **Error Handling**: Comprehensive error management
 - **Resilience Patterns**: Circuit breakers and retry logic
 
-This example demonstrates GraphBit's comprehensive LLM integration capabilities for building production-ready AI applications. 
+This example demonstrates GraphBit's comprehensive LLM integration capabilities for building production-ready AI applications.

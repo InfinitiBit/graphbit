@@ -14,30 +14,29 @@ We'll create a workflow that:
 ## Complete Example
 
 ```python
-import graphbit
-import json
+from graphbit import init, LlmConfig, Executor, Workflow, Node
 import os
 
 def create_data_processing_pipeline():
     """Creates a comprehensive data processing workflow."""
     
     # Initialize GraphBit
-    graphbit.init(enable_tracing=True)
+    init(enable_tracing=True)
     
     # Configure LLM
-    config = graphbit.LlmConfig.openai(
+    config = LlmConfig.openai(
         api_key=os.getenv("OPENAI_API_KEY"),
         model="gpt-4o-mini"
     )
     
     # Create executor
-    executor = graphbit.Executor(config, timeout_seconds=180, debug=True)
+    executor = Executor(config, timeout_seconds=180, debug=True)
     
     # Create workflow
-    workflow = graphbit.Workflow("Data Processing Pipeline")
+    workflow = Workflow("Data Processing Pipeline")
     
     # 1. Data Validator
-    validator = graphbit.Node.agent(
+    validator = Node.agent(
         name="Data Validator",
         prompt="""Validate this dataset and check for:
 - Data completeness
@@ -59,7 +58,7 @@ Format response as JSON with validation_status, issues, and cleaned_data fields.
     )
     
     # 2. Statistical Analyzer
-    stats_analyzer = graphbit.Node.agent(
+    stats_analyzer = Node.agent(
         name="Statistical Analyzer",
         prompt="""Perform comprehensive statistical analysis on this dataset:
 
@@ -78,7 +77,7 @@ Format as JSON with clear structure including summary_stats, correlations, and t
     )
     
     # 3. Pattern Detector  
-    pattern_detector = graphbit.Node.agent(
+    pattern_detector = Node.agent(
         name="Pattern Detector",
         prompt="""Analyze this data for patterns and anomalies:
 
@@ -99,7 +98,7 @@ Format as JSON with patterns, anomalies, and insights fields.
     )
     
     # 4. Insight Generator
-    insight_generator = graphbit.Node.agent(
+    insight_generator = Node.agent(
         name="Insight Generator",
         prompt="""Generate actionable insights based on this analysis:
 
@@ -120,7 +119,7 @@ Focus on practical, implementable insights.
     )
     
     # 5. Report Generator
-    report_generator = graphbit.Node.agent(
+    report_generator = Node.agent(
         name="Report Generator",
         prompt="""Create a comprehensive data analysis report:
 
@@ -198,7 +197,7 @@ def main():
         print("✅ Data processing completed successfully!")
         print("📊 Analysis Report:")
         print("=" * 60)
-        print(result.get_output())
+        print(result.get_all_node_outputs())
         
         # Get execution statistics
         stats = executor.get_stats()
@@ -241,31 +240,31 @@ This example shows how GraphBit can handle complex data processing tasks with re
 ### Batch Data Processing
 
 ```python
-import graphbit
+from graphbit import init, LlmConfig, Executor, Workflow, Node
 import os
 import asyncio
 
 async def process_multiple_datasets_async():
     """Process multiple datasets asynchronously."""
     
-    graphbit.init()
+    init()
     
-    config = graphbit.LlmConfig.openai(
+    config = LlmConfig.openai(
         api_key=os.getenv("OPENAI_API_KEY"),
         model="gpt-4o-mini"
     )
     
     # Use high-throughput executor for batch processing
-    executor = graphbit.Executor.new_high_throughput(
+    executor = Executor.new_high_throughput(
         config,
         timeout_seconds=120,
         debug=False
     )
     
     # Create simple analysis workflow
-    workflow = graphbit.Workflow("Batch Data Analyzer")
+    workflow = Workflow("Batch Data Analyzer")
     
-    analyzer = graphbit.Node.agent(
+    analyzer = Node.agent(
         name="Batch Analyzer",
         prompt="""Analyze this dataset quickly:
 
@@ -289,7 +288,7 @@ Keep analysis concise but actionable.
     result = await executor.run_async(workflow)
     
     if result.is_success():
-        return result.get_output()
+        return result.get_all_node_outputs()
     else:
         return f"Error: {result.get_error()}"
 
@@ -303,18 +302,18 @@ Keep analysis concise but actionable.
 def create_time_series_pipeline():
     """Create specialized pipeline for time series data."""
     
-    graphbit.init()
+    init()
     
-    config = graphbit.LlmConfig.openai(
+    config = LlmConfig.openai(
         api_key=os.getenv("OPENAI_API_KEY"),
         model="gpt-4o-mini"
     )
     
-    executor = graphbit.Executor(config, debug=True)
-    workflow = graphbit.Workflow("Time Series Analysis")
+    executor = Executor(config, debug=True)
+    workflow = Workflow("Time Series Analysis")
     
     # Trend Analyzer
-    trend_analyzer = graphbit.Node.agent(
+    trend_analyzer = Node.agent(
         name="Trend Analyzer",
         prompt="""Analyze trends in this time series data:
 
@@ -333,7 +332,7 @@ Provide quantitative analysis where possible.
     )
     
     # Forecast Generator
-    forecaster = graphbit.Node.agent(
+    forecaster = Node.agent(
         name="Forecaster",
         prompt="""Based on this trend analysis, generate forecasts:
 
@@ -371,18 +370,18 @@ result = executor.execute(workflow)
 def create_data_quality_pipeline():
     """Create pipeline focused on data quality assessment."""
     
-    graphbit.init()
+    init()
     
-    config = graphbit.LlmConfig.openai(
+    config = LlmConfig.openai(
         api_key=os.getenv("OPENAI_API_KEY"),
         model="gpt-4o-mini"
     )
     
-    executor = graphbit.Executor(config)
-    workflow = graphbit.Workflow("Data Quality Assessment")
+    executor = Executor(config)
+    workflow = Workflow("Data Quality Assessment")
     
     # Completeness Checker
-    completeness_checker = graphbit.Node.agent(
+    completeness_checker = Node.agent(
         name="Completeness Checker",
         prompt="""Assess data completeness:
 
@@ -400,7 +399,7 @@ Rate completeness (1-10) and provide recommendations.
     )
     
     # Consistency Checker
-    consistency_checker = graphbit.Node.agent(
+    consistency_checker = Node.agent(
         name="Consistency Checker",
         prompt="""Check data consistency:
 
@@ -419,7 +418,7 @@ Rate consistency (1-10) and identify issues.
     )
     
     # Accuracy Assessor
-    accuracy_assessor = graphbit.Node.agent(
+    accuracy_assessor = Node.agent(
         name="Accuracy Assessor",
         prompt="""Assess data accuracy:
 
@@ -439,7 +438,7 @@ Provide accuracy score and recommendations.
     )
     
     # Quality Score Calculator
-    quality_calculator = graphbit.Node.agent(
+    quality_calculator = Node.agent(
         name="Quality Calculator",
         prompt="""Calculate overall data quality score:
 
@@ -485,17 +484,17 @@ result = executor.execute(workflow)
 def create_anthropic_data_pipeline():
     """Create data pipeline using Anthropic Claude."""
     
-    graphbit.init()
+    init()
     
-    config = graphbit.LlmConfig.anthropic(
+    config = LlmConfig.anthropic(
         api_key=os.getenv("ANTHROPIC_API_KEY"),
-        model="claude-3-5-sonnet-20241022"
+        model="claude-sonnet-4-20250514"
     )
     
-    executor = graphbit.Executor(config, debug=True)
-    workflow = graphbit.Workflow("Claude Data Analyzer")
+    executor = Executor(config, debug=True)
+    workflow = Workflow("Claude Data Analyzer")
     
-    analyzer = graphbit.Node.agent(
+    analyzer = Node.agent(
         name="Claude Analyzer",
         prompt="""Analyze this dataset with Claude's analytical capabilities:
 
@@ -528,20 +527,20 @@ result = executor.execute(workflow)
 def create_ollama_data_pipeline():
     """Create data pipeline using local Ollama for sensitive data."""
     
-    graphbit.init()
+    init()
     
     # No API key needed for local Ollama
-    config = graphbit.LlmConfig.ollama("llama3.2")
+    config = LlmConfig.ollama("llama3.2")
     
-    executor = graphbit.Executor(
+    executor = Executor(
         config,
         timeout_seconds=240,  # Longer timeout for local processing
         debug=True
     )
     
-    workflow = graphbit.Workflow("Private Data Analyzer")
+    workflow = Workflow("Private Data Analyzer")
     
-    analyzer = graphbit.Node.agent(
+    analyzer = Node.agent(
         name="Local Analyzer",
         prompt="""Analyze this sensitive dataset locally:
 
@@ -574,15 +573,15 @@ result = executor.execute(workflow)
 def create_embedding_analysis_pipeline():
     """Create pipeline using embeddings for similarity analysis."""
     
-    graphbit.init()
+    init()
     
     # Configure embeddings
-    embedding_config = graphbit.EmbeddingConfig.openai(
+    embedding_config = EmbeddingConfig.openai(
         api_key=os.getenv("OPENAI_API_KEY"),
         model="text-embedding-3-small"
     )
     
-    embedding_client = graphbit.EmbeddingClient(embedding_config)
+    embedding_client = EmbeddingClient(embedding_config)
     
     # Sample text data
     texts = [
@@ -600,7 +599,7 @@ def create_embedding_analysis_pipeline():
     similarities = []
     for i in range(len(embeddings)):
         for j in range(i + 1, len(embeddings)):
-            similarity = graphbit.EmbeddingClient.similarity(
+            similarity = EmbeddingClient.similarity(
                 embeddings[i], 
                 embeddings[j]
             )
@@ -630,23 +629,23 @@ create_embedding_analysis_pipeline()
 def monitor_data_processing_health():
     """Monitor GraphBit health during data processing."""
     
-    graphbit.init()
+    init()
     
     # Check system health
-    health = graphbit.health_check()
+    health = health_check()
     print("Health Check:")
     for key, value in health.items():
         print(f"  {key}: {value}")
     
     # Get system info
-    info = graphbit.get_system_info()
+    info = get_system_info()
     print("\nSystem Information:")
     for key, value in info.items():
         print(f"  {key}: {value}")
     
     # Check version
-    version = graphbit.version()
-    print(f"\nVersion: {version}")
+    version_info = version()
+    print(f"\nVersion: {version_info}")
     
     return health["overall_healthy"]
 
@@ -674,4 +673,4 @@ else:
 - **Privacy-Preserving**: Keep data processing local when needed
 - **Embedding Analysis**: Semantic similarity without exposing content
 
-This example demonstrates GraphBit's capabilities for building robust, flexible data processing workflows that can handle various analysis tasks with reliability and performance optimization. 
+This example demonstrates GraphBit's capabilities for building robust, flexible data processing workflows that can handle various analysis tasks with reliability and performance optimization.

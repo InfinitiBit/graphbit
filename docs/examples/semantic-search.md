@@ -14,30 +14,29 @@ We'll create a system that:
 ## Complete Example
 
 ```python
-import graphbit
+from graphbit import init, EmbeddingConfig, EmbeddingClient, LlmConfig, LlmClient
 import os
-import json
-from typing import List, Dict, Tuple
+from typing import List, Dict
 
 class SemanticSearchSystem:
     def __init__(self, openai_api_key: str):
         """Initialize the semantic search system."""
         # Initialize GraphBit
-        graphbit.init(enable_tracing=True)
+        init(enable_tracing=True)
         
         # Configure embeddings
-        self.embedding_config = graphbit.EmbeddingConfig.openai(
+        self.embedding_config = EmbeddingConfig.openai(
             api_key=openai_api_key,
             model="text-embedding-3-small"
         )
-        self.embedding_client = graphbit.EmbeddingClient(self.embedding_config)
+        self.embedding_client = EmbeddingClient(self.embedding_config)
         
         # Configure LLM for analysis
-        self.llm_config = graphbit.LlmConfig.openai(
+        self.llm_config = LlmConfig.openai(
             api_key=openai_api_key,
             model="gpt-4o-mini"
         )
-        self.llm_client = graphbit.LlmClient(self.llm_config)
+        self.llm_client = LlmClient(self.llm_config)
         
         # Document storage
         self.documents = []
@@ -82,7 +81,7 @@ class SemanticSearchSystem:
         # Calculate similarities
         similarities = []
         for i, doc_embedding in enumerate(self.embeddings):
-            similarity = graphbit.EmbeddingClient.similarity(
+            similarity = EmbeddingClient.similarity(
                 query_embedding, 
                 doc_embedding
             )
@@ -149,7 +148,7 @@ Be insightful and practical in your analysis.
         comparisons = []
         for i in range(len(doc_ids)):
             for j in range(i + 1, len(doc_ids)):
-                similarity = graphbit.EmbeddingClient.similarity(
+                similarity = EmbeddingClient.similarity(
                     selected_embeddings[i],
                     selected_embeddings[j]
                 )
@@ -208,7 +207,7 @@ Keep the summary informative but concise (2-3 paragraphs).
         all_similarities = []
         for i in range(len(self.embeddings)):
             for j in range(i + 1, len(self.embeddings)):
-                similarity = graphbit.EmbeddingClient.similarity(
+                similarity = EmbeddingClient.similarity(
                     self.embeddings[i],
                     self.embeddings[j]
                 )
@@ -336,21 +335,21 @@ if __name__ == "__main__":
 
 ```python
 import asyncio
-import graphbit
+from graphbit import init, LlmConfig, LlmClient
 import os
 
 async def process_large_document_collection():
     """Process large document collections asynchronously."""
     
-    graphbit.init()
+    init()
     
     # Configure for high-throughput processing
-    llm_config = graphbit.LlmConfig.openai(
+    llm_config = LlmConfig.openai(
         api_key=os.getenv("OPENAI_API_KEY"),
         model="gpt-4o-mini"
     )
     
-    llm_client = graphbit.LlmClient(llm_config, debug=False)
+    llm_client = LlmClient(llm_config, debug=False)
     
     # Large collection of documents (simulated)
     documents = [f"Document {i} content about various topics..." for i in range(100)]
@@ -381,40 +380,44 @@ async def process_large_document_collection():
     return results
 
 # Usage
-# results = asyncio.run(process_large_document_collection())
+results = asyncio.run(process_large_document_collection())
 ```
 
 ### Multi-Provider Search System
 
 ```python
+from graphbit import init, EmbeddingConfig, EmbeddingClient, LlmConfig, LlmClient
+import os
+from typing import List, Dict
+
 def create_multi_provider_system():
     """Create search system with multiple LLM providers."""
     
-    graphbit.init()
+    init()
     
     # OpenAI for embeddings
-    embedding_config = graphbit.EmbeddingConfig.openai(
+    embedding_config = EmbeddingConfig.openai(
         api_key=os.getenv("OPENAI_API_KEY"),
         model="text-embedding-3-small"
     )
-    embedding_client = graphbit.EmbeddingClient(embedding_config)
+    embedding_client = EmbeddingClient(embedding_config)
     
     # Multiple LLM providers for analysis
     providers = {
-        'openai': graphbit.LlmClient(
-            graphbit.LlmConfig.openai(
+        'openai': LlmClient(
+            LlmConfig.openai(
                 api_key=os.getenv("OPENAI_API_KEY"),
                 model="gpt-4o-mini"
             )
         ),
-        'anthropic': graphbit.LlmClient(
-            graphbit.LlmConfig.anthropic(
+        'anthropic': LlmClient(
+            LlmConfig.anthropic(
                 api_key=os.getenv("ANTHROPIC_API_KEY"),
-                model="claude-3-5-sonnet-20241022"
+                model="claude-3-5-haiku-20241022"
             )
         ) if os.getenv("ANTHROPIC_API_KEY") else None,
-        'ollama': graphbit.LlmClient(
-            graphbit.LlmConfig.ollama("llama3.2")
+        'ollama': LlmClient(
+            LlmConfig.ollama("llama3.2")
         )
     }
     
@@ -446,21 +449,24 @@ embedding_client, analyzer = create_multi_provider_system()
 ### Workflow-Based Semantic Analysis
 
 ```python
+from graphbit import init, LlmConfig, Executor, Workflow, Node
+import os
+
 def create_semantic_analysis_workflow():
     """Create comprehensive semantic analysis workflow."""
     
-    graphbit.init()
+    init()
     
-    config = graphbit.LlmConfig.openai(
+    config = LlmConfig.openai(
         api_key=os.getenv("OPENAI_API_KEY"),
         model="gpt-4o-mini"
     )
     
-    executor = graphbit.Executor(config, debug=True)
-    workflow = graphbit.Workflow("Semantic Analysis Pipeline")
+    executor = Executor(config, debug=True)
+    workflow = Workflow("Semantic Analysis Pipeline")
     
     # Document Preprocessor
-    preprocessor = graphbit.Node.agent(
+    preprocessor = Node.agent(
         name="Document Preprocessor",
         prompt="""Preprocess this document for semantic analysis:
 
@@ -478,7 +484,7 @@ Provide structured output for further analysis.
     )
     
     # Semantic Analyzer
-    analyzer = graphbit.Node.agent(
+    analyzer = Node.agent(
         name="Semantic Analyzer",
         prompt="""Perform semantic analysis on this preprocessed document:
 
@@ -497,7 +503,7 @@ Provide detailed semantic breakdown.
     )
     
     # Insight Generator
-    insight_generator = graphbit.Node.agent(
+    insight_generator = Node.agent(
         name="Insight Generator",
         prompt="""Generate actionable insights from this semantic analysis:
 
@@ -535,18 +541,21 @@ result = executor.execute(workflow)
 ### HuggingFace Integration
 
 ```python
+from graphbit import init, EmbeddingConfig, EmbeddingClient
+import os
+
 def create_huggingface_search_system():
     """Create search system using HuggingFace embeddings."""
     
-    graphbit.init()
+    init()
     
     # Configure HuggingFace embeddings
-    embedding_config = graphbit.EmbeddingConfig.huggingface(
+    embedding_config = EmbeddingConfig.huggingface(
         api_key=os.getenv("HUGGINGFACE_API_KEY"),
-        model="sentence-transformers/all-MiniLM-L6-v2"
+        model="intfloat/multilingual-e5-large"
     )
     
-    embedding_client = graphbit.EmbeddingClient(embedding_config)
+    embedding_client = EmbeddingClient(embedding_config)
     
     # Test embedding generation
     test_texts = [
@@ -562,7 +571,7 @@ def create_huggingface_search_system():
         # Calculate similarities
         for i in range(len(embeddings)):
             for j in range(i + 1, len(embeddings)):
-                similarity = graphbit.EmbeddingClient.similarity(
+                similarity = EmbeddingClient.similarity(
                     embeddings[i], 
                     embeddings[j]
                 )
@@ -580,32 +589,35 @@ def create_huggingface_search_system():
 ## System Monitoring and Health
 
 ```python
+from graphbit import init, EmbeddingConfig, EmbeddingClient, health_check, get_system_info
+import os
+
 def monitor_semantic_search_system():
     """Monitor system health and performance."""
     
-    graphbit.init()
+    init()
     
     # Check system health
-    health = graphbit.health_check()
+    health = health_check()
     print("System Health:")
     for key, value in health.items():
         status = "Ok!" if value else "Not Ok!"
         print(f"  {status} {key}: {value}")
     
     # Get system information
-    info = graphbit.get_system_info()
+    info = get_system_info()
     print("\nSystem Information:")
     for key, value in info.items():
         print(f"  {key}: {value}")
     
     # Test embedding client performance
-    embedding_config = graphbit.EmbeddingConfig.openai(
+    embedding_config = EmbeddingConfig.openai(
         api_key=os.getenv("OPENAI_API_KEY"),
         model="text-embedding-3-small"
     )
     
     try:
-        client = graphbit.EmbeddingClient(embedding_config)
+        client = EmbeddingClient(embedding_config)
         
         # Performance test
         import time
