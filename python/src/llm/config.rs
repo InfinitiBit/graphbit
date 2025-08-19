@@ -39,19 +39,6 @@ impl LlmConfig {
     }
 
     #[staticmethod]
-    #[pyo3(signature = (api_key, model=None))]
-    fn deepseek(api_key: String, model: Option<String>) -> PyResult<Self> {
-        validate_api_key(&api_key, "DeepSeek")?;
-
-        Ok(Self {
-            inner: CoreLlmConfig::deepseek(
-                api_key,
-                model.unwrap_or_else(|| "deepseek-chat".to_string()),
-            ),
-        })
-    }
-
-    #[staticmethod]
     #[pyo3(signature = (api_key, model=None, base_url=None))]
     fn huggingface(
         api_key: String,
@@ -81,16 +68,6 @@ impl LlmConfig {
         Self {
             inner: CoreLlmConfig::ollama(model.unwrap_or_else(|| "llama3.2".to_string())),
         }
-    }
-
-    #[staticmethod]
-    #[pyo3(signature = (api_key, model=None))]
-    fn perplexity(api_key: String, model: Option<String>) -> PyResult<Self> {
-        validate_api_key(&api_key, "Perplexity")?;
-
-        Ok(Self {
-            inner: CoreLlmConfig::perplexity(api_key, model.unwrap_or_else(|| "sonar".to_string())),
-        })
     }
 
     fn provider(&self) -> String {

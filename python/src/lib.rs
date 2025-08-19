@@ -52,24 +52,17 @@ use std::sync::Once;
 use tracing::{error, info, warn};
 
 // Module declarations
-mod document_loader;
 mod embeddings;
 mod errors;
 mod llm;
 mod runtime;
-mod text_splitter;
 mod validation;
 mod workflow;
 
 // Re-export all public types and functions
-pub use document_loader::{PyDocumentContent, PyDocumentLoader, PyDocumentLoaderConfig};
 pub use embeddings::{EmbeddingClient, EmbeddingConfig};
 pub use llm::{LlmClient, LlmConfig};
-pub use text_splitter::{
-    CharacterSplitter, RecursiveSplitter, SentenceSplitter, TextChunk, TextSplitterConfig,
-    TokenSplitter,
-};
-pub use workflow::{Executor, Node, Workflow, WorkflowContext, WorkflowResult};
+pub use workflow::{Executor, Node, Workflow, WorkflowResult};
 
 /// Global initialization flag to ensure init is called only once
 static INIT: Once = Once::new();
@@ -352,11 +345,6 @@ fn graphbit(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(configure_runtime, m)?)?;
     m.add_function(wrap_pyfunction!(shutdown, m)?)?;
 
-    // Document loader classes
-    m.add_class::<PyDocumentLoaderConfig>()?;
-    m.add_class::<PyDocumentContent>()?;
-    m.add_class::<PyDocumentLoader>()?;
-
     // LLM classes
     m.add_class::<LlmConfig>()?;
     m.add_class::<LlmClient>()?;
@@ -364,22 +352,12 @@ fn graphbit(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // Workflow classes
     m.add_class::<Node>()?;
     m.add_class::<Workflow>()?;
-    m.add_class::<WorkflowContext>()?;
     m.add_class::<WorkflowResult>()?;
     m.add_class::<Executor>()?;
 
     // Embedding classes
     m.add_class::<EmbeddingConfig>()?;
     m.add_class::<EmbeddingClient>()?;
-
-    // Text splitter classes
-    m.add_class::<TextSplitterConfig>()?;
-    m.add_class::<TextChunk>()?;
-    m.add_class::<CharacterSplitter>()?;
-    m.add_class::<TokenSplitter>()?;
-    m.add_class::<SentenceSplitter>()?;
-    m.add_class::<RecursiveSplitter>()?;
-    m.add_class::<text_splitter::splitter::TextSplitter>()?;
 
     // Module metadata
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;

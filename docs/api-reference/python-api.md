@@ -10,16 +10,16 @@ Complete reference for GraphBit's Python API. This document covers all classes, 
 Initialize the GraphBit library with optional configuration.
 
 ```python
-from graphbit import init
+import graphbit
 
 # Basic initialization
-init()
+graphbit.init()
 
 # With debugging enabled
-init(debug=True)
+graphbit.init(debug=True)
 
 # With custom log level and tracing
-init(log_level="info", enable_tracing=True)
+graphbit.init(log_level="info", enable_tracing=True)
 ```
 
 **Parameters**:
@@ -34,10 +34,7 @@ init(log_level="info", enable_tracing=True)
 Get the current GraphBit version.
 
 ```python
-from graphbit import version
-
-# Get version
-version = version()
+version = graphbit.version()
 print(f"GraphBit version: {version}")
 ```
 
@@ -47,10 +44,7 @@ print(f"GraphBit version: {version}")
 Get comprehensive system information and health status.
 
 ```python
-from graphbit import get_system_info
-
-# Get system info
-info = get_system_info()
+info = graphbit.get_system_info()
 print(f"CPU count: {info['cpu_count']}")
 print(f"Runtime initialized: {info['runtime_initialized']}")
 ```
@@ -70,9 +64,7 @@ print(f"Runtime initialized: {info['runtime_initialized']}")
 Perform comprehensive health checks.
 
 ```python
-from graphbit import health_check
-
-health = health_check()
+health = graphbit.health_check()
 if health['overall_healthy']:
     print("System is healthy")
 else:
@@ -86,10 +78,8 @@ Configure the global runtime with custom settings (advanced).
 
 ```python
 # Configure runtime before init()
-from graphbit import configure_runtime, init
-
-configure_runtime(worker_threads=8, max_blocking_threads=16)
-init()
+graphbit.configure_runtime(worker_threads=8, max_blocking_threads=16)
+graphbit.init()
 ```
 
 **Parameters**:
@@ -101,10 +91,7 @@ init()
 Gracefully shutdown the library (for testing and cleanup).
 
 ```python
-from graphbit import shutdown
-
-# Shutdown the library
-shutdown()
+graphbit.shutdown()
 ```
 
 ---
@@ -121,13 +108,9 @@ Configuration class for Large Language Model providers.
 Create OpenAI provider configuration.
 
 ```python
-from graphbit import LlmConfig
-
-# Basic configuration
-config = LlmConfig.openai("your-openai-api-key", "gpt-4o-mini")
-
+config = graphbit.LlmConfig.openai("sk-...", "gpt-4o-mini")
 # With default model
-config = LlmConfig.openai("your-openai-api-key")  # Uses default model "gpt-4o-mini"
+config = graphbit.LlmConfig.openai("sk-...")  # Uses gpt-4o-mini
 ```
 
 **Parameters**:
@@ -140,10 +123,9 @@ config = LlmConfig.openai("your-openai-api-key")  # Uses default model "gpt-4o-m
 Create Anthropic provider configuration.
 
 ```python
-config = LlmConfig.anthropic("your-anthropic-api-key", "claude-3-5-sonnet-20241022")
-
+config = graphbit.LlmConfig.anthropic("sk-ant-...", "claude-3-5-sonnet-20241022")
 # With default model
-config = LlmConfig.anthropic("your-anthropic-api-key")  # Uses default model "claude-3-5-sonnet-20241022"
+config = graphbit.LlmConfig.anthropic("sk-ant-...")  # Uses claude-3-5-sonnet-20241022
 ```
 
 **Parameters**:
@@ -152,38 +134,16 @@ config = LlmConfig.anthropic("your-anthropic-api-key")  # Uses default model "cl
 
 **Returns**: `LlmConfig` instance
 
-##### `LlmConfig.deepseek(api_key, model=None)`
-Create DeepSeek provider configuration.
-
-```python
-config = LlmConfig.deepseek("your-deepseek-api-key", "deepseek-chat")
-
-# With default model
-config = LlmConfig.deepseek("your-deepseek-api-key")  # Uses default model "deepseek-chat"
-```
-
-**Parameters**:
-- `api_key` (str): DeepSeek API key
-- `model` (str, optional): Model name. Default: "deepseek-chat"
-
-**Available Models**:
-- `deepseek-chat`: General conversation and instruction following
-- `deepseek-coder`: Specialized for code generation and programming tasks
-- `deepseek-reasoner`: Advanced reasoning and mathematical problem solving
-
-**Returns**: `LlmConfig` instance
-
 ##### `LlmConfig.huggingface(api_key, model=None, base_url=None)`
 Create HuggingFace provider configuration.
 
 ```python
-config = LlmConfig.huggingface("your-huggingface-api-key", "microsoft/DialoGPT-medium")
-
+config = graphbit.LlmConfig.huggingface("hf_...", "microsoft/DialoGPT-medium")
 # With default model
-config = LlmConfig.huggingface("your-huggingface-api-key")  # Uses default model "microsoft/DialoGPT-medium"
-
+config = graphbit.LlmConfig.huggingface("hf_...")  # Uses microsoft/DialoGPT-medium
 # With custom endpoint
-config = LlmConfig.huggingface("your-huggingface-api-key", "mistralai/Mistral-7B-Instruct-v0.1", "https://my-endpoint.huggingface.co")
+config = graphbit.LlmConfig.huggingface("hf_...", "mistralai/Mistral-7B-Instruct-v0.1", 
+                                        base_url="https://my-endpoint.huggingface.co")
 ```
 
 **Parameters**:
@@ -197,10 +157,9 @@ config = LlmConfig.huggingface("your-huggingface-api-key", "mistralai/Mistral-7B
 Create Ollama provider configuration.
 
 ```python
-config = LlmConfig.ollama("llama3.2")
-
+config = graphbit.LlmConfig.ollama("llama3.2")
 # With default model
-config = LlmConfig.ollama()  # Uses default model "llama3.2"
+config = graphbit.LlmConfig.ollama()  # Uses llama3.2
 ```
 
 **Parameters**:
@@ -238,12 +197,9 @@ Production-grade LLM client with resilience patterns.
 Create a new LLM client.
 
 ```python
-from graphbit import LlmClient
-
-# Basic configuration
-client = LlmClient(config)
+client = graphbit.LlmClient(config)
 # With debugging
-client = LlmClient(config, debug=True)
+client = graphbit.LlmClient(config, debug=True)
 ```
 
 **Parameters**:
@@ -392,561 +348,6 @@ client.reset_stats()
 
 ---
 
-## Document Processing
-
-### `DocumentLoaderConfig`
-
-Configuration class for document loading operations.
-
-#### Constructor
-
-##### `DocumentLoaderConfig(max_file_size=None, default_encoding=None, preserve_formatting=None)`
-Create a new document loader configuration.
-
-```python
-from graphbit import DocumentLoaderConfig
-
-# Default configuration
-config = DocumentLoaderConfig()
-
-# Custom configuration
-config = DocumentLoaderConfig(
-    max_file_size=50_000_000,      # 50MB limit
-    default_encoding="utf-8",       # Text encoding
-    preserve_formatting=True        # Keep document formatting
-)
-```
-
-**Parameters**:
-- `max_file_size` (int, optional): Maximum file size in bytes. Must be greater than 0
-- `default_encoding` (str, optional): Default text encoding for text files. Cannot be empty
-- `preserve_formatting` (bool, optional): Whether to preserve document formatting. Default: False
-
-#### Properties
-
-##### `max_file_size`
-Get or set the maximum file size limit.
-
-```python
-size = config.max_file_size
-
-config.set_max_file_size = 100_000_000  # 100MB
-```
-
-##### `default_encoding`
-Get or set the default text encoding.
-
-```python
-encoding = config.default_encoding
-
-config.set_default_encoding("utf-8")
-```
-
-##### `preserve_formatting`
-Get or set the formatting preservation flag.
-
-```python
-preserve = config.preserve_formatting
-
-config.set_preserve_formatting(True)
-```
-
-##### `extraction_settings`
-Get or set extraction settings as a dictionary.
-
-```python
-settings = config.extraction_settings
-
-settings = {"pdf_parser": "advanced", "ocr_enabled": True}
-config.set_extraction_settings(settings)
-```
-
-### `DocumentContent`
-
-Contains the extracted content and metadata from a loaded document.
-
-#### Properties
-
-##### `source`
-Get the source path or URL of the document.
-
-```python
-source_path = content.source
-```
-
-##### `document_type`
-Get the detected document type.
-
-```python
-doc_type = content.document_type  # "pdf", "txt", "docx", etc.
-```
-
-##### `content`
-Get the extracted text content.
-
-```python
-text = content.content
-```
-
-##### `file_size`
-Get the file size in bytes.
-
-```python
-size = content.file_size
-```
-
-##### `extracted_at`
-Get the extraction timestamp as a UTC timestamp.
-
-```python
-timestamp = content.extracted_at
-```
-
-##### `metadata`
-Get document metadata as a dictionary.
-
-```python
-metadata = content.metadata
-print(f"Author: {metadata.get('author', 'Unknown')}")
-print(f"Pages: {metadata.get('pages', 'N/A')}")
-```
-
-#### Methods
-
-##### `content_length()`
-Get the length of extracted content.
-
-```python
-length = content.content_length()
-```
-
-##### `is_empty()`
-Check if the extracted content is empty.
-
-```python
-if content.is_empty():
-    print("No content extracted")
-```
-
-##### `preview(max_length=500)`
-Get a preview of the content.
-
-```python
-preview = content.preview(200)  # First 200 characters
-full_preview = content.preview()  # First 500 characters (default)
-```
-
-### `DocumentLoader`
-
-Main class for loading and processing documents from various sources.
-
-#### Constructor
-
-##### `DocumentLoader(config=None)`
-Create a new document loader.
-
-```python
-from graphbit import DocumentLoader, DocumentLoaderConfig
-
-# With default configuration
-loader = DocumentLoader()
-
-# With custom configuration
-config = DocumentLoaderConfig(max_file_size=10_000_000)
-loader = DocumentLoader(config)
-```
-
-#### Methods
-
-##### `load_document(source_path, document_type)`
-Load and extract content from a document.
-
-```python
-# Load a PDF document
-content = loader.load_document("/path/to/document.pdf", "pdf")
-print(f"Extracted {content.content_length()} characters")
-
-# Load a text file
-content = loader.load_document("data/report.txt", "txt")
-print(content.content)
-
-# Load a Word document
-content = loader.load_document("docs/manual.docx", "docx")
-print(f"Document metadata: {content.metadata}")
-```
-
-**Parameters**:
-- `source_path` (str): Path to the document file. Cannot be empty
-- `document_type` (str): Type of document. Cannot be empty
-
-**Returns**: `DocumentContent` - The extracted content and metadata
-**Raises**: `ValueError` for invalid parameters, `RuntimeError` for loading errors
-
-#### Static Methods
-
-##### `DocumentLoader.supported_types()`
-Get list of supported document types.
-
-```python
-types = DocumentLoader.supported_types()
-print(f"Supported formats: {types}")
-# Output: ['txt', 'pdf', 'docx', 'json', 'csv', 'xml', 'html']
-```
-
-##### `DocumentLoader.detect_document_type(file_path)`
-Detect document type from file extension.
-
-```python
-doc_type = DocumentLoader.detect_document_type("report.pdf")
-print(f"Detected type: {doc_type}")  # "pdf"
-
-# Returns None if type cannot be detected
-unknown_type = DocumentLoader.detect_document_type("file.unknown")
-print(unknown_type)  # None
-```
-
-##### `DocumentLoader.validate_document_source(source_path, document_type)`
-Validate document source and type combination.
-
-```python
-try:
-    DocumentLoader.validate_document_source("report.pdf", "pdf")
-    print("Valid document source")
-except Exception as e:
-    print(f"Invalid: {e}")
-```
-
----
-
-
-## Text Splitting
-
-### `TextSplitterConfig`
-
-Configuration class for text chunking/splitting strategies.
-
-#### Static Methods
-
-##### `TextSplitterConfig.character(chunk_size, chunk_overlap=0)`
-Create a character-based splitter.
-
-```python
-from graphbit import TextSplitterConfig
-
-config = TextSplitterConfig.character(1000, 100)
-```
-
-**Parameters**:
-- `chunk_size` (int): Target max characters per chunk. Must be > 0
-- `chunk_overlap` (int, optional): Character overlap between chunks. Must be < `chunk_size`. Default: 0
-
-
-##### `TextSplitterConfig.token(chunk_size, chunk_overlap=0, token_pattern=None)`
-Create a token-based splitter.
-
-```python
-config = TextSplitterConfig.token(256, 32, r"\w+|[^\w\s]")
-```
-
-**Parameters**:
-- `chunk_size` (int): Target max tokens per chunk. Must be > 0
-- `chunk_overlap` (int, optional): Token overlap. Must be < `chunk_size`. Default: 0
-- `token_pattern` (str, optional): Regex for token boundaries. Default: `None`
-
-
-##### `TextSplitterConfig.sentence(chunk_size, chunk_overlap=0, sentence_endings=None)`
-Create a sentence-based splitter.
-
-```python
-config = TextSplitterConfig.sentence(20, 2, [".", "!", "?"])
-```
-
-**Parameters**:
-- `chunk_size` (int): Approx. sentences per chunk. Must be > 0
-- `chunk_overlap` (int, optional): Overlap in sentences. Default: 0
-- `sentence_endings` (List[str], optional): Custom sentence terminators. Default: built-in
-
-
-##### `TextSplitterConfig.recursive(chunk_size, chunk_overlap=0, separators=None)`
-Create a recursive splitter (tries larger separators, then smaller).
-
-```python
-config = TextSplitterConfig.recursive(1000, 100, ["\n\n", "\n", ". ", " "])
-```
-
-**Parameters**:
-- `chunk_size` (int): Target max characters per chunk. Must be > 0
-- `chunk_overlap` (int, optional): Character overlap. Default: 0
-- `separators` (List[str], optional): Ordered fallback boundaries. Default: built-in
-
-
-##### `TextSplitterConfig.paragraph(chunk_size, chunk_overlap=0, min_paragraph_length=None)`
-Create a paragraph-based splitter.
-
-```python
-config = TextSplitterConfig.paragraph(6, 1, 40)
-```
-
-**Parameters**:
-- `chunk_size` (int): Paragraphs per chunk. Must be > 0
-- `chunk_overlap` (int, optional): Paragraph overlap. Default: 0
-- `min_paragraph_length` (int, optional): Minimum chars for a standalone paragraph. Default: `None`
-
-
-##### `TextSplitterConfig.markdown(chunk_size, chunk_overlap=0, split_by_headers=True)`
-Create a Markdown-aware splitter.
-
-```python
-config = TextSplitterConfig.markdown(800, 80, True)
-```
-
-**Parameters**:
-- `chunk_size` (int): Target max characters per chunk. Must be > 0
-- `chunk_overlap` (int, optional): Character overlap. Default: 0
-- `split_by_headers` (bool, optional): Prefer header boundaries. Default: True
-
-
-##### `TextSplitterConfig.code(chunk_size, chunk_overlap=0, language=None)`
-Create a code-aware splitter.
-
-```python
-config = TextSplitterConfig.code(600, 60, "python")
-```
-
-**Parameters**:
-- `chunk_size` (int): Target max characters per chunk. Must be > 0
-- `chunk_overlap` (int, optional): Character overlap. Default: 0
-- `language` (str, optional): Language hint (e.g., `"python"`, `"js"`). Default: `None`
-
-> For code, whitespace trimming is disabled by default.
-
-
-##### `TextSplitterConfig.regex(pattern, chunk_size, chunk_overlap=0)`
-Create a regex-anchored splitter.
-
-```python
-config = TextSplitterConfig.regex(r"\n#{1,6}\s", 1200, 120)
-```
-
-**Parameters**:
-- `pattern` (str): Non-empty regex used as a primary boundary
-- `chunk_size` (int): Target max characters per chunk. Must be > 0
-- `chunk_overlap` (int, optional): Character overlap. Default: 0
-
-
-#### Instance Methods
-
-```python
-config.set_preserve_word_boundaries(True)
-config.set_trim_whitespace(True)
-config.set_include_metadata(True)
-```
-
-- `set_preserve_word_boundaries(preserve: bool)`  
-- `set_trim_whitespace(trim: bool)`  
-- `set_include_metadata(include: bool)`
-
-
-Concrete splitter classes and chunk representation used by GraphBit’s Python bindings. These work seamlessly with `TextSplitterConfig` or can be used directly.
-
-### `TextChunk`
-
-Representation of a single chunk produced by any splitter.
-
-#### Properties
-
-```python
-chunk.content        # str  — the chunk text
-chunk.start_index    # int  — start offset in original text
-chunk.end_index      # int  — end offset (exclusive) in original text
-chunk.chunk_index    # int  — position of the chunk in sequence (0-based)
-chunk.metadata       # Dict[str, str] — splitter-added metadata (if any)
-```
-
-```python
-# String forms (helpful in logs/debugging)
-str(chunk)    # -> "TextChunk(index=..., start=..., end=..., length=...)"
-repr(chunk)   # -> "TextChunk(content='...', index=..., start=..., end=...)"
-```
-
-### `CharacterSplitter`
-
-Character-count–based chunker.
-
-#### Constructor
-
-```python
-from graphbit import CharacterSplitter
-
-splitter = CharacterSplitter(chunk_size, chunk_overlap=0)
-```
-
-**Parameters**:
-- `chunk_size` (int): Max characters per chunk. Must be > 0.
-- `chunk_overlap` (int, optional): Overlap (chars) between consecutive chunks. Must be < `chunk_size`. Default: `0`.
-
-#### Methods
-
-```python
-chunks = splitter.split_text(text)          # -> List[TextChunk]
-all_chunks = splitter.split_texts(texts)    # -> List[List[TextChunk]]
-size = splitter.chunk_size                  # -> int
-overlap = splitter.chunk_overlap            # -> int
-```
-
-**Example**
-```python
-splitter = CharacterSplitter(1000, 100)
-chunks = splitter.split_text("Large string ...")
-print(chunks[0].content, chunks[0].start_index, chunks[0].end_index)
-```
-
-
-### `TokenSplitter`
-
-Token-count–based chunker with optional custom tokenization pattern.
-
-#### Constructor
-
-```python
-from graphbit import TokenSplitter
-
-splitter = TokenSplitter(chunk_size, chunk_overlap=0, token_pattern=None)
-```
-
-**Parameters**:
-- `chunk_size` (int): Max tokens per chunk. Must be > 0.
-- `chunk_overlap` (int, optional): Overlap (tokens). Must be < `chunk_size`. Default: `0`.
-- `token_pattern` (str, optional): Regex pattern to define token boundaries (e.g., `r"\w+|[^\w\s]"`). Default: `None`.
-
-#### Methods
-
-```python
-chunks = splitter.split_text(text)          # -> List[TextChunk]
-all_chunks = splitter.split_texts(texts)    # -> List[List[TextChunk]]
-size = splitter.chunk_size                  # -> int
-overlap = splitter.chunk_overlap            # -> int
-```
-
-**Example**
-```python
-splitter = TokenSplitter(256, 32, r"\w+|[^\w\s]")
-chunks = splitter.split_text("Tokenize me, please!")
-```
-
-
-### `SentenceSplitter`
-
-Splits by sentences; chunk sizes/counts are in sentences.
-
-#### Constructor
-
-```python
-from graphbit import SentenceSplitter
-
-splitter = SentenceSplitter(chunk_size, chunk_overlap=0, sentence_endings=None)
-```
-
-**Parameters**:
-- `chunk_size` (int): Approx. sentences per chunk. Must be > 0.
-- `chunk_overlap` (int, optional): Sentence overlap. Must be < `chunk_size`. Default: `0`.
-- `sentence_endings` (List[str], optional): Custom sentence terminators (e.g., `[".", "!", "?"]`). Default: built-in.
-
-#### Methods
-
-```python
-chunks = splitter.split_text(text)          # -> List[TextChunk]
-all_chunks = splitter.split_texts(texts)    # -> List[List[TextChunk]]
-size = splitter.chunk_size                  # -> int
-overlap = splitter.chunk_overlap            # -> int
-```
-
-
-**Example**
-```python
-splitter = SentenceSplitter(5, 1, [".", "!", "?"])
-chunks = splitter.split_text(long_article_text)
-```
-
-
-### `RecursiveSplitter`
-
-Hierarchical splitter that prefers large separators first, then backs off to smaller ones.
-
-#### Constructor
-
-```python
-from graphbit import RecursiveSplitter
-
-splitter = RecursiveSplitter(chunk_size, chunk_overlap=0, separators=None)
-```
-
-**Parameters**:
-- `chunk_size` (int): Target max characters per chunk. Must be > 0.
-- `chunk_overlap` (int, optional): Character overlap. Must be < `chunk_size`. Default: `0`.
-- `separators` (List[str], optional): Ordered boundaries to try (e.g., `["\n\n", "\n", ". ", " "]`). Default: built-in.
-
-#### Methods
-
-```python
-chunks = splitter.split_text(text)          # -> List[TextChunk]
-all_chunks = splitter.split_texts(texts)    # -> List[List[TextChunk]]
-size = splitter.chunk_size                  # -> int
-overlap = splitter.chunk_overlap            # -> int
-seps = splitter.separators                  # -> List[str]
-```
-
-
-**Example**
-```python
-splitter = RecursiveSplitter(1000, 100, ["\n\n", "\n", ". ", " "])
-chunks = splitter.split_text(readme_text)
-```
-
-
-### `TextSplitter` (Generic, Config-Driven)
-
-Creates a splitter from a `TextSplitterConfig` instance and exposes a common API.
-
-#### Constructor
-
-```python
-from graphbit import TextSplitter, TextSplitterConfig
-
-# Example: markdown-aware recursive strategy via config
-config = TextSplitterConfig.recursive(1000, 100, ["\n\n", "\n", ". ", " "])
-config.set_trim_whitespace(True)
-config.set_preserve_word_boundaries(True)
-config.set_include_metadata(True)
-
-splitter = TextSplitter(config)
-```
-
-#### Methods
-
-```python
-chunks = splitter.split_text(text)              # -> List[TextChunk]
-all_chunks = splitter.split_texts(texts)        # -> List[List[TextChunk]]
-
-# Convenience: produce plain dicts instead of TextChunk objects
-docs = splitter.create_documents(text)          # -> List[Dict[str, str]]
-# each dict: {"content", "start_index", "end_index", "chunk_index"}
-```
-
-**Example**
-```python
-from graphbit import TextSplitter, TextSplitterConfig
-
-config = TextSplitterConfig.token(256, 32, r"\w+|[^\w\s]")
-splitter = TextSplitter(config)
-
-docs = splitter.create_documents("Split me into token-based chunks.")
-print(docs[0]["content"], docs[0]["start_index"], docs[0]["end_index"])
-```
-
----
-
-
 ## Embeddings
 
 ### `EmbeddingConfig`
@@ -959,13 +360,9 @@ Configuration for embedding providers.
 Create OpenAI embeddings configuration.
 
 ```python
-from graphbit import EmbeddingConfig
-
-# Basic configuration
-config = EmbeddingConfig.openai("your-openai-api-key", "text-embedding-3-small")
-
+config = graphbit.EmbeddingConfig.openai("sk-...", "text-embedding-3-small")
 # With default model
-config = EmbeddingConfig.openai("your-openai-api-key")  # Uses default model "text-embedding-3-small"
+config = graphbit.EmbeddingConfig.openai("sk-...")  # Uses text-embedding-3-small
 ```
 
 **Parameters**:
@@ -976,7 +373,7 @@ config = EmbeddingConfig.openai("your-openai-api-key")  # Uses default model "te
 Create HuggingFace embeddings configuration.
 
 ```python
-config = EmbeddingConfig.huggingface("your-huggingface-api-key", "sentence-transformers/all-MiniLM-L6-v2")
+config = graphbit.EmbeddingConfig.huggingface("hf_...", "sentence-transformers/all-MiniLM-L6-v2")
 ```
 
 **Parameters**:
@@ -993,9 +390,7 @@ Client for generating text embeddings.
 Create embedding client.
 
 ```python
-from graphbit import EmbeddingClient
-
-client = EmbeddingClient(config)
+client = graphbit.EmbeddingClient(config)
 ```
 
 #### Methods
@@ -1031,7 +426,7 @@ print(f"Generated {len(embeddings)} embeddings")
 Calculate cosine similarity between two embeddings.
 
 ```python
-similarity = EmbeddingClient.similarity(embed1, embed2)
+similarity = graphbit.EmbeddingClient.similarity(embed1, embed2)
 print(f"Similarity: {similarity}")
 ```
 
@@ -1055,11 +450,9 @@ Factory class for creating different types of workflow nodes.
 Create an AI agent node.
 
 ```python
-from graphbit import Node
-
-agent = Node.agent(
+agent = graphbit.Node.agent(
     name="Content Analyzer",
-    prompt=f"Analyze the sentiment of: {input}",
+    prompt="Analyze the sentiment of: {input}",
     agent_id="analyzer"  # Optional, auto-generated if not provided
 )
 ```
@@ -1075,7 +468,7 @@ agent = Node.agent(
 Create a data transformation node.
 
 ```python
-transformer = Node.transform(
+transformer = graphbit.Node.transform(
     name="Uppercase",
     transformation="uppercase"
 )
@@ -1091,7 +484,7 @@ transformer = Node.transform(
 Create a condition node for branching logic.
 
 ```python
-condition = Node.condition(
+condition = graphbit.Node.condition(
     name="Quality Check",
     expression="quality_score > 0.8"
 )
@@ -1121,9 +514,7 @@ Represents a complete workflow.
 Create a new workflow.
 
 ```python
-from graphbit import Workflow
-
-workflow = Workflow("My Workflow")
+workflow = graphbit.Workflow("My Workflow")
 ```
 
 #### Methods
@@ -1242,13 +633,9 @@ Production-grade workflow executor with comprehensive features.
 Create a basic executor.
 
 ```python
-from graphbit import Executor
-
-# Basic executor
-executor = Executor(llm_config)
-
+executor = graphbit.Executor(llm_config)
 # With configuration
-executor = Executor(
+executor = graphbit.Executor(
     llm_config, 
     lightweight_mode=False,
     timeout_seconds=300,
@@ -1266,21 +653,21 @@ executor = Executor(
 Create executor optimized for high throughput.
 
 ```python
-executor = Executor.new_high_throughput(llm_config)
+executor = graphbit.Executor.new_high_throughput(llm_config)
 ```
 
 ##### `Executor.new_low_latency(llm_config, timeout_seconds=None, debug=None)` (static)
 Create executor optimized for low latency.
 
 ```python
-executor = Executor.new_low_latency(llm_config, timeout_seconds=30)
+executor = graphbit.Executor.new_low_latency(llm_config, timeout_seconds=30)
 ```
 
 ##### `Executor.new_memory_optimized(llm_config, timeout_seconds=None, debug=None)` (static)
 Create executor optimized for memory usage.
 
 ```python
-executor = Executor.new_memory_optimized(llm_config)
+executor = graphbit.Executor.new_memory_optimized(llm_config)
 ```
 
 #### Configuration Methods
@@ -1394,23 +781,26 @@ except Exception as e:
 
 ### Basic Workflow
 ```python
+import graphbit
 import os
-from graphbit import LlmConfig, Workflow, Node, Executor
+
+# Initialize
+graphbit.init()
 
 # Configure LLM
-config = LlmConfig.openai(os.getenv("OPENAI_API_KEY"))
+config = graphbit.LlmConfig.openai(os.getenv("OPENAI_API_KEY"))
 
 # Create workflow
-workflow = Workflow("Analysis Workflow")
-agent = Node.agent(
+workflow = graphbit.Workflow("Analysis Workflow")
+agent = graphbit.Node.agent(
     "Analyzer", 
-    f"Analyze the following text: {input}"
+    "Analyze the following text: {input}"
 )
 node_id = workflow.add_node(agent)
 workflow.validate()
 
 # Execute
-executor = Executor(config)
+executor = graphbit.Executor(config)
 result = executor.execute(workflow)
 
 if result.is_success():
@@ -1420,10 +810,8 @@ if result.is_success():
 
 ### Advanced LLM Usage
 ```python
-from graphbit import LlmClient
-
 # Create client with debugging
-client = LlmClient(config, debug=True)
+client = graphbit.LlmClient(config, debug=True)
 
 # Batch processing
 prompts = [
@@ -1456,10 +844,8 @@ chat_result = asyncio.run(chat())
 
 ### High-Performance Execution
 ```python
-from graphbit import Executor
-
 # Create high-throughput executor
-executor = Executor.new_high_throughput(
+executor = graphbit.Executor.new_high_throughput(
     llm_config, 
     timeout_seconds=600,
     debug=False
@@ -1482,17 +868,15 @@ print(f"Execution stats: {stats}")
 
 ### Embeddings Usage
 ```python
-from graphbit import EmbeddingConfig, EmbeddingClient
-
 # Configure embeddings
-embed_config = EmbeddingConfig.openai(os.getenv("OPENAI_API_KEY"))
-embed_client = EmbeddingClient(embed_config)
+embed_config = graphbit.EmbeddingConfig.openai(os.getenv("OPENAI_API_KEY"))
+embed_client = graphbit.EmbeddingClient(embed_config)
 
 # Generate embeddings
 texts = ["Hello world", "Goodbye world", "Machine learning"]
 embeddings = embed_client.embed_many(texts)
 
 # Calculate similarity
-similarity = EmbeddingClient.similarity(embeddings[0], embeddings[1])
+similarity = graphbit.EmbeddingClient.similarity(embeddings[0], embeddings[1])
 print(f"Similarity between texts: {similarity}")
 ``` 

@@ -14,7 +14,7 @@ We'll create a multi-agent pipeline that:
 ## Complete Example
 
 ```python
-from graphbit import init, LlmConfig, Executor, Workflow, Node, version, get_system_info, health_check
+import graphbit
 import os
 from typing import Optional
 
@@ -22,27 +22,27 @@ class ContentGenerationPipeline:
     def __init__(self, api_key: str, model: str = "gpt-4o-mini"):
         """Initialize the content generation pipeline."""
         # Initialize GraphBit
-        init(log_level="info", enable_tracing=True)
+        graphbit.init(log_level="info", enable_tracing=True)
         
         # Create LLM configuration
-        self.llm_config = LlmConfig.openai(api_key, model)
+        self.llm_config = graphbit.LlmConfig.openai(api_key, model)
         
         # Create executor with custom settings
-        self.executor = Executor(
+        self.executor = graphbit.Executor(
             self.llm_config,
             timeout_seconds=300,  # 5 minutes
             debug=True
         )
     
-    def create_workflow(self, content_type: str = "article") -> Workflow:
+    def create_workflow(self, content_type: str = "article") -> graphbit.Workflow:
         """Create the content generation workflow."""
         # Create workflow
-        workflow = Workflow("Content Generation Pipeline")
+        workflow = graphbit.Workflow("Content Generation Pipeline")
         
         # Stage 1: Research Agent
-        researcher = Node.agent(
+        researcher = graphbit.Node.agent(
             name="Research Specialist",
-            prompt=f"""Research the topic: {topic}
+            prompt="""Research the topic: {topic}
 
 Please provide:
 1. Key facts and statistics
@@ -58,9 +58,11 @@ Format as structured research notes.
         )
         
         # Stage 2: Content Writer
-        writer = Node.agent(
+        writer = graphbit.Node.agent(
             name="Content Writer",
-            prompt=f"""Write a comprehensive {content_type} about: {topic}
+            prompt="""Write a comprehensive {content_type} about: {topic}
+
+Based on this research: {research_data}
 
 Requirements:
 - Target length: {target_length} words
@@ -76,9 +78,11 @@ Create compelling, informative content that captures reader attention.
         )
         
         # Stage 3: Editor
-        editor = Node.agent(
+        editor = graphbit.Node.agent(
             name="Content Editor",
-            prompt=f"""Edit and improve the following {content_type}:
+            prompt="""Edit and improve the following {content_type}:
+
+{draft_content}
 
 Focus on:
 - Clarity and readability
@@ -94,9 +98,11 @@ Maintain the core message while making it more engaging and polished.
         )
         
         # Stage 4: Quality Reviewer
-        reviewer = Node.agent(
+        reviewer = graphbit.Node.agent(
             name="Quality Reviewer",
-            prompt=f"""Review this {content_type} for quality and accuracy:
+            prompt="""Review this {content_type} for quality and accuracy:
+
+{edited_content}
 
 Provide feedback on:
 1. Factual accuracy
@@ -111,10 +117,18 @@ If quality is 7 or above, mark as APPROVED, otherwise mark as NEEDS_REVISION.
             agent_id="reviewer"
         )
         
-        # Stage 5: Final Formatter
-        formatter = Node.agent(
+        # Stage 5: Quality Gate (Condition Node)
+        quality_gate = graphbit.Node.condition(
+            name="Quality Gate",
+            expression="quality_rating >= 7"
+        )
+        
+        # Stage 6: Final Formatter
+        formatter = graphbit.Node.agent(
             name="Content Formatter",
             prompt="""Format this content for publication:
+
+{approved_content}
 
 Apply:
 - Professional formatting
@@ -133,13 +147,15 @@ Output clean, publication-ready content.
         writer_id = workflow.add_node(writer)
         editor_id = workflow.add_node(editor)
         reviewer_id = workflow.add_node(reviewer)
+        quality_id = workflow.add_node(quality_gate)
         formatter_id = workflow.add_node(formatter)
         
-        # Connect the workflow: Research → Write → Edit → Review → Format
+        # Connect the workflow: Research → Write → Edit → Review → Quality Check → Format
         workflow.connect(research_id, writer_id)
         workflow.connect(writer_id, editor_id)
         workflow.connect(editor_id, reviewer_id)
-        workflow.connect(reviewer_id, formatter_id)
+        workflow.connect(reviewer_id, quality_id)
+        workflow.connect(quality_id, formatter_id)
         
         # Validate workflow
         workflow.validate()
@@ -170,7 +186,7 @@ Output clean, publication-ready content.
             
             return {
                 "status": "success",
-                "content": result.get_all_node_outputs(),
+                "content": result.get_output(),
                 "execution_time_ms": execution_time,
                 "workflow_stats": self.executor.get_stats()
             }
@@ -225,28 +241,27 @@ if __name__ == "__main__":
 ### Using Anthropic Claude
 
 ```python
-from graphbit import init, LlmConfig, Executor, Workflow, Node
+import graphbit
 import os
 
 def create_anthropic_pipeline():
     """Create pipeline using Anthropic Claude."""
-    init()
-    print("ANTHOPIC_API_KEY",os.getenv("ANTHROPIC_API_KEY"))
+    graphbit.init()
     
     # Configure for Anthropic
-    config = LlmConfig.anthropic(
+    config = graphbit.LlmConfig.anthropic(
         api_key=os.getenv("ANTHROPIC_API_KEY"),
-        model="claude-sonnet-4-20250514"
+        model="claude-3-5-sonnet-20241022"
     )
     
-    executor = Executor(config, debug=True)
+    executor = graphbit.Executor(config, debug=True)
     
     # Create simple workflow
-    workflow = Workflow("Anthropic Content Generator")
+    workflow = graphbit.Workflow("Anthropic Content Generator")
     
-    writer = Node.agent(
+    writer = graphbit.Node.agent(
         name="Claude Writer",
-        prompt=f"""Write a comprehensive article about: {topic}
+        prompt="""Write a comprehensive article about: {topic}
 
 Requirements:
 - Length: {word_count} words
@@ -272,26 +287,26 @@ result = executor.execute(workflow)
 ### Using Local Ollama Models
 
 ```python
-from graphbit import init, LlmConfig, Executor, Workflow, Node
+import graphbit
 
 def create_ollama_pipeline():
     """Create pipeline using local Ollama models."""
-    init()
+    graphbit.init()
     
     # Configure for Ollama (no API key needed)
-    config = LlmConfig.ollama("llama3.2")
+    config = graphbit.LlmConfig.ollama("llama3.2")
     
-    executor = Executor(
+    executor = graphbit.Executor(
         config,
         timeout_seconds=180,  # Longer timeout for local inference
         debug=True
     )
     
-    workflow = Workflow("Local Content Generator")
+    workflow = graphbit.Workflow("Local Content Generator")
     
-    writer = Node.agent(
+    writer = graphbit.Node.agent(
         name="Llama Writer",
-        prompt=f"""Write about: {topic}
+        prompt="""Write about: {topic}
 
 Keep it concise but informative.
 Focus on practical insights.
@@ -314,48 +329,56 @@ result = executor.execute(workflow)
 ### High-Performance Content Generation
 
 ```python
-from graphbit import init, LlmConfig, Executor
+import graphbit
 import os
 
 def create_high_performance_pipeline():
     """Create optimized pipeline for high-throughput content generation."""
-    init()
+    graphbit.init()
     
-    config = LlmConfig.openai(
+    config = graphbit.LlmConfig.openai(
         api_key=os.getenv("OPENAI_API_KEY"),
         model="gpt-4o-mini"  # Faster model for high throughput
     )
     
     # Use high-throughput executor
-    executor = Executor(config, timeout_seconds=60, debug=False)
+    executor = graphbit.Executor.new_high_throughput(
+        config,
+        timeout_seconds=60,  # Shorter timeout
+        debug=False  # Disable debug for performance
+    )
     
     return executor
 
 def create_low_latency_pipeline():
     """Create pipeline optimized for low latency."""
-    init()
+    graphbit.init()
     
-    config = LlmConfig.openai(
+    config = graphbit.LlmConfig.openai(
         api_key=os.getenv("OPENAI_API_KEY"),
         model="gpt-4o-mini"
     )
     
     # Use low-latency executor
-    executor = Executor(config, lightweight_mode = True, timeout_seconds=30, debug=False)
+    executor = graphbit.Executor.new_low_latency(
+        config,
+        timeout_seconds=30,  # Very short timeout
+        debug=False
+    )
     
     return executor
 
 def create_memory_optimized_pipeline():
     """Create pipeline optimized for memory usage."""
-    init()
+    graphbit.init()
     
-    config = LlmConfig.openai(
+    config = graphbit.LlmConfig.openai(
         api_key=os.getenv("OPENAI_API_KEY"),
         model="gpt-4o-mini"
     )
     
     # Use memory-optimized executor
-    executor = Executor(
+    executor = graphbit.Executor.new_memory_optimized(
         config,
         timeout_seconds=120,
         debug=False
@@ -367,27 +390,27 @@ def create_memory_optimized_pipeline():
 ### Async Content Generation
 
 ```python
-from graphbit import init, LlmConfig, Executor, Workflow, Node
+import graphbit
 import asyncio
 import os
 
 async def generate_content_async():
     """Generate content asynchronously."""
-    init()
+    graphbit.init()
     
-    config = LlmConfig.openai(
+    config = graphbit.LlmConfig.openai(
         api_key=os.getenv("OPENAI_API_KEY"),
         model="gpt-4o-mini"
     )
     
-    executor = Executor(config)
+    executor = graphbit.Executor(config)
     
     # Create workflow
-    workflow = Workflow("Async Content Generator")
+    workflow = graphbit.Workflow("Async Content Generator")
     
-    writer = Node.agent(
+    writer = graphbit.Node.agent(
         name="Async Writer",
-        prompt=f"Write a brief article about: {topic}",
+        prompt="Write a brief article about: {topic}",
         agent_id="async_writer"
     )
     
@@ -399,7 +422,7 @@ async def generate_content_async():
     
     if result.is_success():
         print("Async generation completed")
-        return result.get_all_node_outputs()
+        return result.get_output()
     else:
         print(f"Async generation failed: {result.get_error()}")
         return None
@@ -411,33 +434,33 @@ async def main_async():
         print(f"Generated: {content}")
 
 # Run async
-asyncio.run(main_async())
+# asyncio.run(main_async())
 ```
 
 ## System Information and Health Checks
 
 ```python
-from graphbit import init, get_system_info, health_check, version
+import graphbit
 
 def check_system_health():
     """Check GraphBit system health and capabilities."""
-    init()
+    graphbit.init()
     
     # Get system information
-    system_info = get_system_info()
+    system_info = graphbit.get_system_info()
     print("System Information:")
     for key, value in system_info.items():
         print(f"  {key}: {value}")
     
     # Perform health check
-    health_status = health_check()
+    health_status = graphbit.health_check()
     print(f"\nHealth Status:")
     for key, value in health_status.items():
         print(f"  {key}: {value}")
     
     # Check version
-    version_info = version()
-    print(f"\nGraphBit Version: {version_info}")
+    version = graphbit.version()
+    print(f"\nGraphBit Version: {version}")
 
 # Usage
 check_system_health()
@@ -459,4 +482,4 @@ check_system_health()
 - **Performance Monitoring**: Built-in execution statistics
 - **Health Checks**: System health and capability monitoring
 
-This example demonstrates GraphBit's capabilities for building production-ready content generation workflows with reliability, performance, and flexibility.
+This example demonstrates GraphBit's capabilities for building production-ready content generation workflows with reliability, performance, and flexibility. 

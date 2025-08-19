@@ -7,6 +7,8 @@ GraphBit workflows are built using different types of nodes, each serving a spec
 1. **Agent Nodes** - AI-powered processing nodes
 2. **Condition Nodes** - Decision and branching logic
 3. **Transform Nodes** - Data transformation and processing
+4. **Delay Nodes** - Timing and rate limiting
+5. **Document Loader Nodes** - Document processing
 
 ## Agent Nodes
 
@@ -15,11 +17,9 @@ Agent nodes are the core AI-powered components that interact with LLM providers.
 ### Basic Agent Node
 
 ```python
-from graphbit import Node
-
-agent = Node.agent(
+agent = graphbit.Node.agent(
     name="Content Analyzer",
-    prompt=f"Analyze the following content: {input}",
+    prompt="Analyze the following content: {input}",
     agent_id="analyzer"  # Optional, auto-generated if not provided
 )
 ```
@@ -29,27 +29,30 @@ agent = Node.agent(
 - `prompt` (str): LLM prompt template with variable placeholders
 - `agent_id` (str, optional): Unique identifier for the agent. Auto-generated if not provided
 
-### Agent Node with Tool calling
+### Advanced Agent Node
 
 ```python
-from graphbit import Node
-
-agent = Node.agent(
-    name="Weather Agent",
-    prompt=f"Using the tool, get the weather forecast for: {input}",
-    agent_id="weather_agent",  # Optional, auto-generated if not provided
-    tools=[get_weather]         
+agent = graphbit.PyWorkflowNode.agent_node_with_config(
+    name="Creative Writer", 
+    description="Writes creative content",
+    agent_id="writer",
+    prompt="Write a story about: {topic}",
+    max_tokens=2000,
+    temperature=0.8
 )
 ```
 
+**Additional Parameters:**
+- `max_tokens` (int): Maximum tokens to generate
+- `temperature` (float): Creativity/randomness level (0.0-1.0)
 
 ### Agent Node Examples
 
 #### Text Analysis Agent
 ```python
-sentiment_analyzer = Node.agent(
+sentiment_analyzer = graphbit.Node.agent(
     name="Sentiment Analyzer",
-    prompt=f"""
+    prompt="""
     Analyze the sentiment of this text: "{text}"
     
     Provide:
@@ -63,9 +66,9 @@ sentiment_analyzer = Node.agent(
 
 #### Code Review Agent
 ```python
-code_reviewer = Node.agent(
+code_reviewer = graphbit.Node.agent(
     name="Code Reviewer",
-    prompt=f"""
+    prompt="""
     Review this code for quality and security issues:
     
     {code}
@@ -82,9 +85,9 @@ code_reviewer = Node.agent(
 
 #### Data Processing Agent
 ```python
-data_processor = Node.agent(
+data_processor = graphbit.Node.agent(
     name="Data Processor",
-    prompt=f"""
+    prompt="""
     Process this dataset and provide insights:
     
     Data: {dataset}
@@ -101,9 +104,9 @@ data_processor = Node.agent(
 
 #### Content Generation Agent
 ```python
-content_writer = Node.agent(
+content_writer = graphbit.Node.agent(
     name="Content Writer",
-    prompt=f"""
+    prompt="""
     Write engaging content about: {topic}
     
     Requirements:
@@ -118,9 +121,9 @@ content_writer = Node.agent(
 
 #### Research Assistant Agent
 ```python
-research_assistant = Node.agent(
+research_assistant = graphbit.Node.agent(
     name="Research Assistant",
-    prompt=f"""
+    prompt="""
     Research the following topic: {research_topic}
     
     Provide:
@@ -142,9 +145,7 @@ Condition nodes enable branching logic and decision-making in workflows.
 ### Basic Condition Node
 
 ```python
-from graphbit import Node
-
-condition = Node.condition(
+condition = graphbit.Node.condition(
     name="Quality Gate",
     expression="quality_score > 0.8"
 )
@@ -161,19 +162,19 @@ Condition nodes support various comparison operators:
 #### Numeric Comparisons
 ```python
 # Greater than
-high_score = Node.condition(
+high_score = graphbit.Node.condition(
     name="High Score Check", 
     expression="score > 80"
 )
 
 # Range checks
-valid_range = Node.condition(
+valid_range = graphbit.Node.condition(
     name="Range Validator", 
     expression="value >= 10 && value <= 100"
 )
 
 # Multiple conditions
-complex_check = Node.condition(
+complex_check = graphbit.Node.condition(
     name="Complex Check", 
     expression="(score > 75 && confidence > 0.8) || priority == 'high'"
 )
@@ -182,13 +183,13 @@ complex_check = Node.condition(
 #### String Comparisons
 ```python
 # Equality
-status_check = Node.condition(
+status_check = graphbit.Node.condition(
     name="Status Check", 
     expression="status == 'approved'"
 )
 
 # Contains check
-content_check = Node.condition(
+content_check = graphbit.Node.condition(
     name="Content Check", 
     expression="content.contains('urgent')"
 )
@@ -197,13 +198,13 @@ content_check = Node.condition(
 #### Boolean Logic
 ```python
 # AND conditions
-approval_gate = Node.condition(
+approval_gate = graphbit.Node.condition(
     name="Approval Gate", 
     expression="technical_approved == true && business_approved == true"
 )
 
 # OR conditions  
-priority_check = Node.condition(
+priority_check = graphbit.Node.condition(
     name="Priority Check", 
     expression="priority == 'high' || severity == 'critical'"
 )
@@ -213,7 +214,7 @@ priority_check = Node.condition(
 
 #### Quality Assurance
 ```python
-qa_gate = Node.condition(
+qa_gate = graphbit.Node.condition(
     name="QA Gate",
     expression="quality_rating >= 8 && error_count == 0"
 )
@@ -221,7 +222,7 @@ qa_gate = Node.condition(
 
 #### Content Moderation
 ```python
-content_filter = Node.condition(
+content_filter = graphbit.Node.condition(
     name="Content Filter", 
     expression="toxicity_score < 0.1 && sentiment != 'very_negative'"
 )
@@ -229,7 +230,7 @@ content_filter = Node.condition(
 
 #### Business Rules
 ```python
-business_rule = Node.condition(
+business_rule = graphbit.Node.condition(
     name="Business Rule",
     expression="budget_remaining > cost && approval_level >= required_level"
 )
@@ -237,7 +238,7 @@ business_rule = Node.condition(
 
 #### Threshold Checking
 ```python
-performance_threshold = Node.condition(
+performance_threshold = graphbit.Node.condition(
     name="Performance Threshold",
     expression="response_time < 1000 && error_rate < 0.01"
 )
@@ -245,7 +246,7 @@ performance_threshold = Node.condition(
 
 #### Data Validation
 ```python
-data_validator = Node.condition(
+data_validator = graphbit.Node.condition(
     name="Data Validator",
     expression="data_completeness > 0.95 && data_accuracy > 0.9"
 )
@@ -258,9 +259,7 @@ Transform nodes perform data processing and format conversions.
 ### Basic Transform Node
 
 ```python
-from graphbit import Node
-
-transformer = Node.transform(
+transformer = graphbit.Node.transform(
     name="Text Transformer",
     transformation="uppercase"
 )
@@ -275,13 +274,13 @@ transformer = Node.transform(
 #### Text Transformations
 ```python
 # Convert to uppercase
-upper = Node.transform(
+upper = graphbit.Node.transform(
     name="Uppercase Converter", 
     transformation="uppercase"
 )
 
 # Convert to lowercase  
-lower = Node.transform(
+lower = graphbit.Node.transform(
     name="Lowercase Converter", 
     transformation="lowercase"
 )
@@ -290,7 +289,7 @@ lower = Node.transform(
 #### Data Extraction
 ```python
 # Extract JSON from text
-json_extractor = Node.transform(
+json_extractor = graphbit.Node.transform(
     name="JSON Extractor", 
     transformation="json_extract"
 )
@@ -299,13 +298,13 @@ json_extractor = Node.transform(
 #### Text Processing
 ```python
 # Split text
-text_splitter = Node.transform(
+text_splitter = graphbit.Node.transform(
     name="Text Splitter", 
     transformation="split"
 )
 
 # Join text
-text_joiner = Node.transform(
+text_joiner = graphbit.Node.transform(
     name="Text Joiner", 
     transformation="join"
 )
@@ -316,13 +315,13 @@ text_joiner = Node.transform(
 #### Data Cleaning Pipeline
 ```python
 # Clean and format text
-text_cleaner = Node.transform(
+text_cleaner = graphbit.Node.transform(
     name="Text Cleaner", 
     transformation="lowercase"
 )
 
 # Normalize data format
-data_normalizer = Node.transform(
+data_normalizer = graphbit.Node.transform(
     name="Data Normalizer",
     transformation="uppercase"
 )
@@ -331,9 +330,120 @@ data_normalizer = Node.transform(
 #### Format Conversion
 ```python
 # Convert response to structured format
-formatter = Node.transform(
+formatter = graphbit.Node.transform(
     name="Response Formatter",
     transformation="lowercase"
+)
+```
+
+## Delay Nodes
+
+Delay nodes add timing controls and rate limiting to workflows.
+
+### Basic Delay Node
+
+```python
+delay = graphbit.PyWorkflowNode.delay_node(
+    name="Rate Limiter",
+    description="Prevents API rate limiting", 
+    duration_seconds=5
+)
+```
+
+**Parameters:**
+- `name` (str): Node name
+- `description` (str): Node description
+- `duration_seconds` (int): Delay duration in seconds
+
+### Delay Node Examples
+
+#### Rate Limiting
+```python
+# API rate limiting
+api_delay = graphbit.PyWorkflowNode.delay_node(
+    name="API Rate Limit",
+    description="Waits to respect API limits",
+    duration_seconds=2
+)
+
+# Batch processing delay
+batch_delay = graphbit.PyWorkflowNode.delay_node(
+    name="Batch Delay", 
+    description="Delays between batch items",
+    duration_seconds=1
+)
+```
+
+#### System Cooldown
+```python
+# Cool-down period
+cooldown = graphbit.PyWorkflowNode.delay_node(
+    name="System Cooldown",
+    description="Allows system recovery time",
+    duration_seconds=30
+)
+```
+
+#### Scheduled Processing
+```python
+# Wait for scheduled time
+scheduler_delay = graphbit.PyWorkflowNode.delay_node(
+    name="Schedule Delay",
+    description="Waits for next processing window", 
+    duration_seconds=300  # 5 minutes
+)
+```
+
+## Document Loader Nodes
+
+Document loader nodes process and load various document types.
+
+### Basic Document Loader
+
+```python
+loader = graphbit.PyWorkflowNode.document_loader_node(
+    name="PDF Loader",
+    description="Loads PDF documents",
+    document_type="pdf",
+    source_path="/path/to/document.pdf"
+)
+```
+
+**Parameters:**
+- `name` (str): Node name
+- `description` (str): Node description
+- `document_type` (str): Document type ("pdf", "txt", "docx", etc.)
+- `source_path` (str): Path to the document
+
+### Supported Document Types
+
+#### PDF Documents
+```python
+pdf_loader = graphbit.PyWorkflowNode.document_loader_node(
+    name="PDF Document Loader",
+    description="Loads and processes PDF files",
+    document_type="pdf",
+    source_path="documents/report.pdf"
+)
+```
+
+#### Text Files
+```python
+text_loader = graphbit.PyWorkflowNode.document_loader_node(
+    name="Text File Loader", 
+    description="Loads plain text files",
+    document_type="txt",
+    source_path="data/content.txt"
+)
+```
+
+#### Word Documents
+```python
+docx_loader = graphbit.PyWorkflowNode.document_loader_node(
+    name="Word Document Loader",
+    description="Loads Microsoft Word documents",
+    document_type="docx", 
+    source_path="documents/specification.docx"
 )
 ```
 
@@ -343,9 +453,7 @@ formatter = Node.transform(
 Connect nodes for sequential processing:
 
 ```python
-from graphbit import Workflow
-
-workflow = Workflow("Sequential Pipeline")
+workflow = graphbit.Workflow("Sequential Pipeline")
 
 # Add nodes
 node1_id = workflow.add_node(input_processor)
@@ -361,7 +469,7 @@ workflow.connect(node2_id, node3_id)
 Use condition nodes for branching:
 
 ```python
-workflow = Workflow("Conditional Pipeline")
+workflow = graphbit.Workflow("Conditional Pipeline")
 
 # Add nodes
 analyzer_id = workflow.add_node(analyzer)
@@ -379,7 +487,7 @@ workflow.connect(condition_id, failure_path_id)  # Connect to failure path
 Process multiple branches simultaneously:
 
 ```python
-workflow = Workflow("Parallel Processing")
+workflow = graphbit.Workflow("Parallel Processing")
 
 # Add input and processors
 input_id = workflow.add_node(input_processor)
@@ -403,26 +511,24 @@ workflow.connect(processor3_id, aggregator_id)
 
 ### Validation Chain
 ```python
-from graphbit import Node, Workflow
-
 def create_validation_chain():
-    workflow = Workflow("Validation Chain")
+    workflow = graphbit.Workflow("Validation Chain")
     
     # Input validator
-    input_validator = Node.condition(
+    input_validator = graphbit.Node.condition(
         name="Input Validator", 
         expression="input_valid == true"
     )
     
     # Content processor
-    processor = Node.agent(
+    processor = graphbit.Node.agent(
         name="Content Processor",
-        prompt=f"Process this validated content: {input}",
+        prompt="Process this validated content: {input}",
         agent_id="processor"
     )
     
     # Output validator
-    output_validator = Node.condition(
+    output_validator = graphbit.Node.condition(
         name="Output Validator", 
         expression="output_quality > 0.7"
     )
@@ -440,35 +546,33 @@ def create_validation_chain():
 
 ### Error Handling Pattern
 ```python
-from graphbit import Node, Workflow
-
 def create_error_handling_workflow():
-    workflow = Workflow("Error Handling")
+    workflow = graphbit.Workflow("Error Handling")
     
     # Main processor
-    main_processor = Node.agent(
+    main_processor = graphbit.Node.agent(
         name="Main Processor",
-        prompt=f"Process: {input}",
+        prompt="Process: {input}",
         agent_id="main"
     )
     
     # Error detector
-    error_detector = Node.condition(
+    error_detector = graphbit.Node.condition(
         name="Error Detector", 
         expression="error_occurred == false"
     )
     
     # Error handler
-    error_handler = Node.agent(
+    error_handler = graphbit.Node.agent(
         name="Error Handler",
-        prompt=f"Handle this error: {error_message}",
+        prompt="Handle this error: {error_message}",
         agent_id="error_handler"
     )
     
     # Success handler
-    success_handler = Node.agent(
+    success_handler = graphbit.Node.agent(
         name="Success Handler",
-        prompt=f"Finalize successful result: {result}",
+        prompt="Finalize successful result: {result}",
         agent_id="success_handler"
     )
     
@@ -487,33 +591,31 @@ def create_error_handling_workflow():
 
 ### Multi-Step Analysis Pipeline
 ```python
-from graphbit import Node, Workflow
-
 def create_analysis_pipeline():
-    workflow = Workflow("Multi-Step Analysis")
+    workflow = graphbit.Workflow("Multi-Step Analysis")
     
     # Step 1: Initial analysis
-    initial_analyzer = Node.agent(
+    initial_analyzer = graphbit.Node.agent(
         name="Initial Analyzer",
-        prompt=f"Perform initial analysis of: {input}",
+        prompt="Perform initial analysis of: {input}",
         agent_id="initial_analyzer"
     )
     
     # Step 2: Quality check
-    quality_check = Node.condition(
+    quality_check = graphbit.Node.condition(
         name="Quality Check",
         expression="initial_quality > 0.6"
     )
     
     # Step 3: Deep analysis (if quality is good)
-    deep_analyzer = Node.agent(
+    deep_analyzer = graphbit.Node.agent(
         name="Deep Analyzer",
-        prompt=f"Perform deep analysis of: {analyzed_content}",
+        prompt="Perform deep analysis of: {analyzed_content}",
         agent_id="deep_analyzer"
     )
     
     # Step 4: Final formatter
-    formatter = Node.transform(
+    formatter = graphbit.Node.transform(
         name="Result Formatter",
         transformation="uppercase"
     )
@@ -537,7 +639,7 @@ All nodes share common properties:
 
 ```python
 # Access node properties
-node_id = node.id()     # Unique identifier
+node_id = node.id()    # Unique identifier
 node_name = node.name() # Human-readable name
 ```
 
@@ -548,16 +650,16 @@ Use clear, descriptive names for all nodes:
 
 ```python
 # Good
-email_sentiment_analyzer = Node.agent(
+email_sentiment_analyzer = graphbit.Node.agent(
     name="Email Sentiment Analyzer",
-    prompt=f"Analyze sentiment of customer emails: {email_content}",
+    prompt="Analyze sentiment of customer emails: {email_content}",
     agent_id="email_sentiment"
 )
 
 # Avoid
-node1 = Node.agent(
+node1 = graphbit.Node.agent(
     name="Node1", 
-    prompt=f"Do: {input}",
+    prompt="Do: {input}",
     agent_id="n1"
 )
 ```
@@ -567,16 +669,16 @@ Each node should have one clear purpose:
 
 ```python
 # Good - focused on one task
-spam_detector = Node.agent(
+spam_detector = graphbit.Node.agent(
     name="Spam Detector",
-    prompt=f"Is this email spam? {email}",
+    prompt="Is this email spam? {email}",
     agent_id="spam_detector"
 )
 
 # Avoid - too many responsibilities  
-everything_processor = Node.agent(
+everything_processor = graphbit.Node.agent(
     name="Everything Processor",
-    prompt=f"Do everything with: {input}",
+    prompt="Do everything with: {input}",
     agent_id="everything"
 )
 ```
@@ -587,21 +689,23 @@ Choose the right node type for each task:
 - **Agent Nodes**: AI/LLM processing tasks
 - **Condition Nodes**: Decision making and branching
 - **Transform Nodes**: Data format conversion
+- **Delay Nodes**: Timing and rate control
+- **Document Loaders**: File processing
 
 ### 4. Error Handling
 Include appropriate error handling and validation:
 
 ```python
 # Validation before processing
-validator = Node.condition(
+validator = graphbit.Node.condition(
     name="Input Validator", 
     expression="data_valid == true"
 )
 
 # Error recovery
-error_handler = Node.agent(
+error_handler = graphbit.Node.agent(
     name="Error Handler",
-    prompt=f"Safely handle this error: {error}",
+    prompt="Safely handle this error: {error}",
     agent_id="error_handler"
 )
 ```
@@ -611,9 +715,9 @@ Write clear, specific prompts for agent nodes:
 
 ```python
 # Good - specific and clear
-summarizer = Node.agent(
+summarizer = graphbit.Node.agent(
     name="Document Summarizer",
-    prompt=f"""
+    prompt="""
     Summarize this document in exactly 3 paragraphs:
     
     Document: {document_content}
@@ -627,9 +731,9 @@ summarizer = Node.agent(
 )
 
 # Avoid - vague and unclear
-bad_summarizer = Node.agent(
+bad_summarizer = graphbit.Node.agent(
     name="Summarizer",
-    prompt=f"Summarize: {input}",
+    prompt="Summarize: {input}",
     agent_id="summarizer"
 )
 ```

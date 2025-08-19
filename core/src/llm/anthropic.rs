@@ -65,24 +65,19 @@ impl AnthropicProvider {
 
     /// Parse Anthropic response to GraphBit response
     fn parse_response(&self, response: AnthropicResponse) -> GraphBitResult<LlmResponse> {
-        let content_text = response
-            .content
-            .iter()
-            .filter_map(|b| (b.r#type == "text").then(|| b.text.as_deref().unwrap_or("")))
-            .collect::<Vec<_>>()
-            .join("\n");
+        let content = response.content.join("\n");
 
         let finish_reason = match response.stop_reason.as_deref() {
-            Some("end_turn") | Some("stop_sequence") => FinishReason::Stop,
+            Some("end_turn") => FinishReason::Stop,
             Some("max_tokens") => FinishReason::Length,
-            Some("tool_use") => FinishReason::Other("tool_use".into()),
+            Some("stop_sequence") => FinishReason::Stop,
             Some(other) => FinishReason::Other(other.to_string()),
             None => FinishReason::Stop,
         };
 
         let usage = LlmUsage::new(response.usage.input_tokens, response.usage.output_tokens);
 
-        Ok(LlmResponse::new(content_text, &self.model)
+        Ok(LlmResponse::new(content, &self.model)
             .with_usage(usage)
             .with_finish_reason(finish_reason)
             .with_id(response.id))
@@ -180,20 +175,9 @@ struct AnthropicMessage {
 #[derive(Debug, Deserialize)]
 struct AnthropicResponse {
     id: String,
-    model: String,
-    role: String,
-    content: Vec<ContentBlock>,
+    content: Vec<String>,
     stop_reason: Option<String>,
-    stop_sequence: Option<String>,
     usage: AnthropicUsage,
-}
-
-#[derive(Debug, Deserialize)]
-struct ContentBlock {
-    #[serde(rename = "type")]
-    r#type: String, // "text", "tool_use", "tool_result", "thinking", etc.
-    text: Option<String>, // present when type == "text"
-                          // add optional fields for other types as needed
 }
 
 #[derive(Debug, Deserialize)]

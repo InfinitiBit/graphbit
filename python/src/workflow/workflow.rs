@@ -29,28 +29,12 @@ impl Workflow {
     }
 
     fn connect(&mut self, from_id: String, to_id: String) -> PyResult<()> {
-        // First try to look up by name, if that fails try to parse as UUID
-        let from_node_id = if let Some(id) = self.inner.graph.get_node_id_by_name(&from_id) {
-            id
-        } else if let Ok(id) = NodeId::from_string(&from_id) {
-            id
-        } else {
-            return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
-                "Source node {} not found",
-                from_id
-            )));
-        };
-
-        let to_node_id = if let Some(id) = self.inner.graph.get_node_id_by_name(&to_id) {
-            id
-        } else if let Ok(id) = NodeId::from_string(&to_id) {
-            id
-        } else {
-            return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
-                "Target node {} not found",
-                to_id
-            )));
-        };
+        let from_node_id = NodeId::from_string(&from_id).map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Invalid from_id: {}", e))
+        })?;
+        let to_node_id = NodeId::from_string(&to_id).map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Invalid to_id: {}", e))
+        })?;
 
         self.inner
             .connect_nodes(from_node_id, to_node_id, WorkflowEdge::data_flow())
@@ -72,14 +56,5 @@ impl Workflow {
 
     fn name(&self) -> String {
         self.inner.name.clone()
-    }
-
-    /// Set graph-level metadata key to a boolean value
-    /// Exposes core graph.set_metadata for Python tests and configuration
-    fn set_graph_metadata(&mut self, key: String, value: bool) -> PyResult<()> {
-        self.inner
-            .graph
-            .set_metadata(key, serde_json::Value::Bool(value));
-        Ok(())
     }
 }

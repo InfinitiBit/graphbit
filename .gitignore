@@ -173,8 +173,6 @@ yarn-error.log
 .yarn/build-state.yml
 .yarn/install-state.gz
 
-*.node
-
 # OS generated files
 .DS_Store*
 .AppleDouble
