@@ -9,6 +9,8 @@ Before starting, ensure you have:
 - An OpenAI API key set in your environment
 - Python 3.10+ available
 
+---
+
 ## Your First Workflow
 
 Let's create a simple content analysis workflow that analyzes text and provides insights.
@@ -135,6 +137,8 @@ Based on the analysis, here are 3 key insights:
 3. [Additional analysis point]
 ```
 
+---
+
 ## Multi-Step Workflows
 
 Let's create a more complex workflow with multiple connected nodes:
@@ -193,6 +197,8 @@ if __name__ == "__main__":
     create_content_pipeline()
 ```
 
+---
+
 ## Adding Reliability Features
 
 Enhance your workflow with error handling and retries:
@@ -232,6 +238,8 @@ def reliable_workflow():
 if __name__ == "__main__":
     reliable_workflow()
 ```
+
+---
 
 ## Working with Different LLM Providers
 
@@ -291,6 +299,8 @@ if __name__ == "__main__":
     run_with_provider(ollama_config)
 ```
 
+---
+
 ## Performance Optimization
 
 Create optimized executors for different use cases:
@@ -330,6 +340,8 @@ if __name__ == "__main__":
     performance_examples()
 ```
 
+---
+
 ## Next Steps
 
 Congratulations! You've created your first GraphBit workflows. Here's what to explore next:
@@ -340,18 +352,20 @@ Congratulations! You've created your first GraphBit workflows. Here's what to ex
 - [LLM Providers](../user-guide/llm-providers.md) - Configure different AI providers
 
 ### Advanced Features
-- [Dynamic Graph Generation](../advanced/dynamic-graphs.md) - Auto-generate workflow nodes
+- [Dynamic Graph Generation](../user-guide/dynamics-graph.md) - Auto-generate workflow nodes
 - [Embeddings & Vector Search](../user-guide/embeddings.md) - Add semantic search
-- [Performance Optimization](../advanced/performance.md) - Tune for production
+- [Performance Optimization](../user-guide/performance.md) - Tune for production
 
 ### Examples
 - [Content Generation Pipeline](../examples/content-generation.md) - Complete content creation workflow
 - [Data Processing Workflow](../examples/data-processing.md) - ETL with AI agents
-- [Code Review Automation](../examples/code-review.md) - Automated code analysis
+- [Code Review Automation](../examples/semantic-search.md) - Semantic search workflow
 
 ### Production Ready
 - [Error Handling & Reliability](../user-guide/reliability.md) - Production-grade error handling
-- [Monitoring & Observability](../advanced/monitoring.md) - Track workflow performance
+- [Monitoring & Observability](../user-guide/monitoring.md) - Track workflow performance
 - [Configuration Options](../api-reference/configuration.md) - Fine-tune your setup
 
 Ready to build more complex workflows? Continue with our [User Guide](../user-guide/concepts.md)! 
+
+---

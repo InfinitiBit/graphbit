@@ -107,7 +107,7 @@ def multi_provider_example():
     creative_workflow = Workflow("Creative Writing")
     writer = Node.agent(
         name="Creative Writer",
-        prompt="Write a creative story about: {topic}",
+        prompt=f"Write a creative story about: {topic}",
         agent_id="creative_writer"
     )
     
@@ -117,7 +117,7 @@ def multi_provider_example():
     analytical_workflow = Workflow("Analysis")
     analyzer = Node.agent(
         name="Data Analyzer",
-        prompt="Analyze this data and provide insights: {data}",
+        prompt=f"Analyze this data and provide insights: {data}",
         agent_id="analyzer"
     )
     
@@ -155,7 +155,7 @@ def robust_workflow_example():
     
     agent = Node.agent(
         name="Reliable Agent",
-        prompt="Process this data reliably: {input}",
+        prompt=f"Process this data reliably: {input}",
         agent_id="reliable"
     )
     
@@ -256,7 +256,7 @@ def system_monitoring_example():
     workflow = Workflow("Monitoring Test")
     agent = Node.agent(
         name="Monitor Agent",
-        prompt="Say hello: {input}",
+        prompt=f"Say hello: {input}",
         agent_id="monitor"
     )
     workflow.add_node(agent)

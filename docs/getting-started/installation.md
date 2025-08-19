@@ -9,6 +9,8 @@ This guide will help you install GraphBit on your system and set up your develop
 - **Memory**: 4GB RAM minimum, 8GB recommended for high-throughput workloads
 - **Storage**: 1GB free space
 
+---
+
 ## Installation Methods
 
 ### Method 1: Install from PyPI (Recommended)
@@ -39,6 +41,8 @@ unset ARGV0
 cd python
 maturin develop
 ```
+
+---
 
 ## Verify Installation
 
@@ -94,6 +98,8 @@ Model: gpt-4o-mini
 Installation successful!
 ```
 
+---
+
 ## Development Installation
 
 For contributors and advanced users:
@@ -112,11 +118,9 @@ make pre-commit-install
 # Build Python bindings in development mode
 cd python
 maturin develop
-
-# Run tests to verify setup
-cd ..
-make test
 ```
+
+---
 
 ## Docker Installation (Alternative)
 
@@ -131,6 +135,8 @@ docker run -e OPENAI_API_KEY=$OPENAI_API_KEY \
            -v $(pwd):/workspace \
            graphbit/graphbit:latest
 ```
+
+---
 
 ## Troubleshooting
 
@@ -198,9 +204,7 @@ If you encounter issues:
    - Steps to reproduce
    - Output of `get_system_info()` and `health_check()`
 
-## Next Steps
-
-Once installed, proceed to the [Quick Start Tutorial](quickstart.md) to build your first AI workflow!
+---
 
 ## Update GraphBit
 
@@ -216,3 +220,11 @@ git pull origin main
 cd python
 maturin develop
 ``` 
+
+---
+
+## Next Steps
+
+Once installed, proceed to the [Quick Start Tutorial](quickstart.md) to build your first AI workflow!
+
+---
