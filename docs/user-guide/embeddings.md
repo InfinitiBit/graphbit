@@ -17,14 +17,12 @@ GraphBit's embedding system supports:
 Configure OpenAI embedding provider:
 
 ```python
-import graphbit
 import os
 
-# Initialize GraphBit
-graphbit.init()
+from graphbit import EmbeddingConfig
 
 # Basic OpenAI configuration
-embedding_config = graphbit.EmbeddingConfig.openai(
+embedding_config = EmbeddingConfig.openai(
     api_key=os.getenv("OPENAI_API_KEY"),
     model="text-embedding-3-small"  # Optional - defaults to text-embedding-3-small
 )
@@ -39,7 +37,7 @@ Configure HuggingFace embedding provider:
 
 ```python
 # HuggingFace configuration
-embedding_config = graphbit.EmbeddingConfig.huggingface(
+embedding_config = EmbeddingConfig.huggingface(
     api_key=os.getenv("HUGGINGFACE_API_KEY"),
     model="sentence-transformers/all-MiniLM-L6-v2"
 )
@@ -53,8 +51,10 @@ print(f"Model: {embedding_config.model}")
 ### Creating Embedding Client
 
 ```python
+from graphbit import EmbeddingClient
+
 # Create embedding client
-embedding_client = graphbit.EmbeddingClient(embedding_config)
+embedding_client = EmbeddingClient(embedding_config)
 ```
 
 ### Single Text Embedding
@@ -100,6 +100,8 @@ for i, (text, vector) in enumerate(zip(texts, vectors)):
 Calculate similarity between vectors:
 
 ```python
+from graphbit import EmbeddingClient
+
 # Generate embeddings for comparison
 text1 = "Artificial intelligence and machine learning"
 text2 = "AI and ML technologies"
@@ -108,7 +110,7 @@ vector1 = embedding_client.embed(text1)
 vector2 = embedding_client.embed(text2)
 
 # Calculate similarities
-similarity_1_2 = graphbit.EmbeddingClient.similarity(vector1, vector2)
+similarity_1_2 = EmbeddingClient.similarity(vector1, vector2)
 
 print(f"Similarity between text1 and text2: {similarity_1_2:.3f}")
 ```
@@ -116,6 +118,8 @@ print(f"Similarity between text1 and text2: {similarity_1_2:.3f}")
 ### Finding Most Similar Texts
 
 ```python
+from graphbit import EmbeddingClient
+
 def find_most_similar(query_text, candidate_texts, embedding_client, threshold=0.7):
     """Find most similar texts to a query"""
     query_vector = embedding_client.embed(query_text)
@@ -123,7 +127,7 @@ def find_most_similar(query_text, candidate_texts, embedding_client, threshold=0
     
     similarities = []
     for i, candidate_vector in enumerate(candidate_vectors):
-        similarity = graphbit.EmbeddingClient.similarity(query_vector, candidate_vector)
+        similarity = EmbeddingClient.similarity(query_vector, candidate_vector)
         similarities.append((i, candidate_texts[i], similarity))
     
     # Sort by similarity (highest first)
