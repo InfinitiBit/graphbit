@@ -1,22 +1,27 @@
 # About GraphBit
 
-GraphBit is a proprietary, production‑first LLM framework engineered for real‑world, agentic AI orchestration. It is designed to outperform and outlast prototypes, delivering measurable gains under enterprise workloads.
+GraphBit is a **proprietary, production-grade LLM framework** engineered for real-world, agentic AI orchestration. Designed to outperform and outlast prototypes, and is built to excel under the unforgiving demands of enterprise deployment.
 
-GraphBit delivers exceptional efficiency at scale, with up to 10× improvements in CPU usage, latency, and reliability compared to conventional frameworks. Its production-grade execution capabilities include robust concurrency handling, comprehensive observability, and built-in fault tolerance designed for 24/7 operational systems.
-
-Many AI frameworks falter in production—agents crash under load, silent failures go undetected, and debugging becomes guesswork. GraphBit bridges the gap from proof‑of‑concept to production with a resilient execution layer that remains stable under pressure.
+Many frameworks in this space target research or prototyping and can struggle under real-world complexity — agents may freeze under load, silent failures can go undetected, and debugging becomes difficult. GraphBit was created to bridge this **proof-of-concept to production gap**, providing a resilient execution layer designed for concurrency, observability, and enterprise-grade reliability so systems remain stable under pressure and operate continuously.
 
 ## Built by InfinitiBit GmbH
 
-Developed by InfinitiBit GmbH, a Munich‑based technology company founded in 2023, GraphBit rests on a foundation of 15+ years of expertise in PLM, ALM, process mining, and enterprise transformation (infinitibit.com, Clutch). The team combines experience from advanced AI research and engineering environments with the rigor required for high‑stakes deployments.
+GraphBit is developed by **InfinitiBit GmbH**, a Munich-based technology company founded in **2023**. With over 15 years of expertise in PLM, ALM, process mining, and enterprise transformation, InfinitiBit combines deep enterprise experience with cutting-edge AI innovation.  
+The team combines experience from advanced AI research and engineering environments, combining academic rigor with practical, high-stakes deployment. InfinitiBit’s mission is to provide resilient infrastructure for the age of agentic AI, helping enterprises move beyond fragile demos and into reliable, production-grade systems.
 
-## Who it’s for
+## Why GraphBit Stands Out
 
-GraphBit serves organizations and teams at the forefront of AI innovation. Enterprise organizations leverage GraphBit to build and deploy sophisticated multi-agent systems with confidence, while research institutions benefit from its robust architecture for complex AI workflows. The framework is particularly valuable for AI teams requiring production-ready, scalable pipelines that can handle real-world demands. Whether scaling up AI operations or moving from prototypes to production, GraphBit provides the foundation for reliable, enterprise-grade AI systems.
+Independent benchmarks show GraphBit achieving the **lowest CPU usage (0.000–0.352%) and near-zero memory consumption (<0.15 MB)** across all evaluated frameworks, while maintaining **100% stability** under load. It excels in resource-constrained environments such as **edge computing, embedded systems, and serverless deployments**.  
+Though trade-offs exist in extremely complex workflows, GraphBit’s efficiency and stability make it a natural choice for organizations where reliability and cost-efficiency matter most.
+GraphBit is in active enterprise use across Germany with limited opportunities for co-innovation and strategic partnerships.
+
+## Who It’s For
+
+GraphBit is designed for **enterprises, research institutions, and AI teams** that are pushing beyond prototypes into production. It supports organizations building sophisticated multi-agent systems, research groups running complex workflows, and platform teams in need of reliable, scalable pipelines. Wherever AI systems must operate reliably under real-world pressure with consistency and resilience, GraphBit aims to provide a stable foundation.
 
 ## Contact Us
 
-- Website: [infinitibit.com](https://infinitibit.com)
-- Headquarters: Munich, Germany — Heiglhofstraße 90, München, 81377 (Clutch)
-- Email: [contact@infinitibit.com](mailto:contact@infinitibit.com)
-- Inquiries & Partnerships: Reach out via the InfinitiBit contact portal or visit the website for details.
+- **Website:** [infinitibit.com](https://www.infinitibit.com)  
+- **Headquarters:** Heiglhofstraße 90, 81377 München, Germany ([Clutch](https://clutch.co/profile/infinitibit-gmbh))  
+- **Email:** [info@infinitibit.com](mailto:info@infinitibit.com)  
+- **Inquiries & Partnerships:** Reach out via the InfinitiBit contact portal or visit the website for details.
