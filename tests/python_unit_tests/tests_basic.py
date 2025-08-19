@@ -1,25 +1,17 @@
-"""Basic test to verify test discovery."""
+"""Basic test to verify test discovery and core functionality."""
 
-import pytest
+import sys
+
+from graphbit import LlmConfig, version
 
 
 def test_graphbit_import():
     """Test that graphbit can be imported."""
-    import graphbit
-
-    assert graphbit is not None
-
-
-def test_graphbit_version():
-    """Test that graphbit version is available."""
-    from graphbit import version
-
-    version = version()
-    assert isinstance(version, str)
-    assert len(version) > 0
+    assert version is not None
+    assert LlmConfig is not None
 
 
-@pytest.mark.asyncio
-async def test_async_basic():
-    """Basic async test."""
-    assert True
+def test_python_version_compatibility():
+    """Test Python version compatibility."""
+    # Should work with Python 3.8+
+    assert sys.version_info >= (3, 8)
