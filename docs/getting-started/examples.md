@@ -92,7 +92,7 @@ def multi_provider_example():
     # Anthropic for analytical tasks
     anthropic_config = LlmConfig.anthropic(
         os.getenv("ANTHROPIC_API_KEY"),
-        "claude-4-sonnet-20240513"
+        "claude-sonnet-4-20250514"
     )
     
     # Ollama for local execution
