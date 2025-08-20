@@ -79,7 +79,7 @@ workflow.validate()
 
 # Execute with LLM configuration
 llm_config = LlmConfig.openai(
-    api_key="your-openai-key",
+    api_key=os.getenv("OPENAI_API_KEY"),
     model="gpt-4o-mini"
 )
 
@@ -117,12 +117,10 @@ summary_agent = Node.agent(
 # Aggregation agent
 aggregator = Node.agent(
     name="Analysis Aggregator",
-    prompt=f"""
+    prompt="""
     Combine the following analysis results into a comprehensive report:
     
-    Sentiment Analysis: sentiment_output
-    Topic Analysis: topic_output  
-    Summary: summary_output
+    Sentiment Analysis, Topic Analysis and Summary.
     
     Provide an integrated analysis with key insights.
     """,
@@ -292,14 +290,14 @@ prep_agent = Node.agent(
 # Stage 2: Content analysis
 analysis_agent = Node.agent(
     name="Content Analysis Agent", 
-    prompt=f"Analyze the prepared content for key insights using prepared content.",
+    prompt="Analyze the prepared content for key insights using prepared content.",
     agent_id="content_analysis"
 )
 
 # Stage 3: Content enhancement
 enhancement_agent = Node.agent(
     name="Content Enhancement Agent",
-    prompt=f"Enhance the analyzed content with additional details.",
+    prompt="Enhance the analyzed content with additional details.",
     agent_id="content_enhancement"
 )
 
@@ -329,26 +327,26 @@ input_agent = Node.agent(
 # Parallel specialists
 seo_agent = Node.agent(
     name="SEO Specialist",
-    prompt=f"Analyze SEO aspects of the processed content.",
+    prompt="Analyze SEO aspects of the processed content.",
     agent_id="seo_specialist"
 )
 
 readability_agent = Node.agent(
     name="Readability Specialist",
-    prompt=f"Analyze readability and clarity of the processed content.",
+    prompt="Analyze readability and clarity of the processed content.",
     agent_id="readability_specialist"
 )
 
 compliance_agent = Node.agent(
     name="Compliance Specialist", 
-    prompt=f"Check compliance and accuracy of the processed content.",
+    prompt="Check compliance and accuracy of the processed content.",
     agent_id="compliance_specialist"
 )
 
 # Results integrator
 integrator = Node.agent(
     name="Results Integrator",
-    prompt=f"""
+    prompt="""
     Integrate the following specialized analysis results:
     
     SEO Analysis, Readability Analysis and Compliance Analysis.
@@ -454,7 +452,7 @@ def execute_with_different_providers(agents, workflow_factory):
     # Anthropic execution
     anthropic_config = LlmConfig.anthropic(
         api_key=os.getenv("ANTHROPIC_API_KEY"),
-        model="claude-3-5-sonnet-20241022"
+        model="claude-sonnet-4-20250514"
     )
     anthropic_executor = Executor(anthropic_config, timeout_seconds=120)
     
@@ -569,7 +567,6 @@ improver_agent = Node.agent(
     Improve the following content based on quality feedback:
     
     Original content: {original_content}
-    Quality feedback: {quality_feedback}
     
     Provide improved version addressing the specific feedback points.
     Maintain the core message while enhancing quality.
