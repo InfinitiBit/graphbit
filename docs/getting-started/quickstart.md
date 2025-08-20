@@ -74,7 +74,7 @@ result = executor.execute(workflow)
 
 # Display results
 print(f"✅ Workflow completed in {result.execution_time_ms()}ms")
-print(f"📊 Result: {result.get_variable('output')}")
+print(f"📊 Result: {result.get_node_output('output')}")
 ```
 
 ### Complete Example
@@ -113,7 +113,7 @@ def main():
     result = executor.execute(workflow)
     
     print(f"Analysis completed in {result.execution_time_ms()}ms")
-    print(f"Insights:\n{result.get_variable('Content Analyzer')}")
+    print(f"Insights:\n{result.get_node_output('Content Analyzer')}")
 
 if __name__ == "__main__":
     main()
@@ -191,7 +191,7 @@ def create_content_pipeline():
     result = executor.execute(workflow)
     
     print(f"Pipeline completed in {result.execution_time_ms()}ms")
-    print(f"Final article:\n{result.get_variable('Editor')}")
+    print(f"Final article:\n{result.get_node_output('Editor')}")
 
 if __name__ == "__main__":
     create_content_pipeline()
@@ -230,7 +230,7 @@ def reliable_workflow():
         print("🛡️ Executing reliable workflow...")
         result = executor.execute(workflow)
         print(f"Success! Completed in {result.execution_time_ms()}ms")
-        print(f"Result: {result.get_variable('Robust Analyzer')}")
+        print(f"Result: {result.get_node_output('Robust Analyzer')}")
         
     except Exception as e:
         print(f"Workflow failed: {e}")
@@ -282,7 +282,7 @@ def run_with_provider(config):
     
     print(f"Provider: {config.provider()}")
     print(f"Model: {config.model()}")
-    print(f"Response: {result.get_variable('output')}")
+    print(f"Response: {result.get_node_output('output')}")
     print("---")
 
 # Test different providers

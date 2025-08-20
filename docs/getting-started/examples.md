@@ -28,7 +28,7 @@ workflow.add_node(analyzer)
 executor = Executor(config)
 result = executor.execute(workflow)
 
-print(f"Analysis: {result.get_variable('Text Analyzer')}")
+print(f"Analysis: {result.get_node_output('Text Analyzer')}")
 ```
 
 ## Example 2: Sequential Pipeline  
@@ -70,7 +70,7 @@ def create_content_pipeline():
 
 # Usage
 result = create_content_pipeline()
-print(f"Final content: {result.get_variable('Writer')}")
+print(f"Final content: {result.get_node_output('Writer')}")
 ```
 
 ## Example 3: Multiple LLM Providers
@@ -92,7 +92,7 @@ def multi_provider_example():
     # Anthropic for analytical tasks
     anthropic_config = LlmConfig.anthropic(
         os.getenv("ANTHROPIC_API_KEY"),
-        "claude-3-5-sonnet-20241022"
+        "claude-4-sonnet-20240513"
     )
     
     # Ollama for local execution
@@ -127,8 +127,8 @@ def multi_provider_example():
     creative_result = creative_executor.execute(creative_workflow)
     analytical_result = analytical_executor.execute(analytical_workflow)
     
-    print(f"Creative (OpenAI): {creative_result.get_variable('Creative Writer')}")
-    print(f"Analytical (Anthropic): {analytical_result.get_variable('Data Analyzer')}")
+    print(f"Creative (OpenAI): {creative_result.get_node_output('Creative Writer')}")
+    print(f"Analytical (Anthropic): {analytical_result.get_node_output('Data Analyzer')}")
     
     return creative_result, analytical_result
 ```
@@ -164,7 +164,7 @@ def robust_workflow_example():
     try:
         result = executor.execute(workflow)
         if result.is_success():
-            print(f"Success: {result.get_variable('output')}")
+            print(f"Success: {result.get_node_output('output')}")
             print(f"Execution time: {result.execution_time_ms()}ms")
             print(f"Execution mode: {executor.get_execution_mode()}")
         else:
@@ -314,7 +314,7 @@ def workflow_validation_example():
         # Execute the validated workflow
         executor = Executor(config)
         result = executor.execute(workflow)
-        print(f"Execution completed: {result.get_variable('Second Agent')}")
+        print(f"Execution completed: {result.get_node_output('Second Agent')}")
         
     except Exception as e:
         print(f"Workflow validation failed: {e}")
