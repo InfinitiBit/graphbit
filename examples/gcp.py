@@ -15,8 +15,7 @@ import os
 import psycopg2
 from dotenv import load_dotenv
 
-from graphbit import EmbeddingClient 
-from graphbit import EmbeddingConfig 
+from graphbit import EmbeddingClient, EmbeddingConfig
 
 # from google.cloud import aiplatform
 # from vertexai.language_models import TextGenerationModel
