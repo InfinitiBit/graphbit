@@ -15,8 +15,8 @@ import os
 import psycopg2
 from dotenv import load_dotenv
 
-from graphbit import EmbeddingClient as gb_etc
-from graphbit import EmbeddingConfig as gb_ecg
+from graphbit import EmbeddingClient 
+from graphbit import EmbeddingConfig 
 
 # from google.cloud import aiplatform
 # from vertexai.language_models import TextGenerationModel
@@ -36,11 +36,11 @@ load_dotenv()
 # print(response.text)
 
 # Define the connection details
-dbname = os.getenv("DB_NAME")  # Replace with your actual database name
-user = os.getenv("DB_USER")  # Your PostgreSQL username
-password = os.getenv("DB_PASSWORD")  # Your PostgreSQL password
-host = os.getenv("DB_HOST")  # Public IP address (or use private IP if applicable)
-port = "5432"  # Default PostgreSQL port
+dbname = os.getenv("ALLOYDB_DATABASE")  # Replace with your actual database name
+user = os.getenv("ALLOYDB_USER")  # Your PostgreSQL username
+password = os.getenv("ALLOYDB_PASSWORD")  # Your PostgreSQL password
+host = os.getenv("ALLOYDB_HOST")  # Public IP address (or use private IP if applicable)
+port = os.getenv("ALLOYDB_PORT")  # Default PostgreSQL port
 
 # Establish connection with AlloyDB
 
@@ -78,8 +78,8 @@ print("Connection successful!")
 # Initialize Graphbit and embedding client
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-embedding_config = gb_ecg.openai(OPENAI_API_KEY, "text-embedding-3-small")
-embedding_client = gb_etc(embedding_config)
+embedding_config = EmbeddingConfig.openai(OPENAI_API_KEY, "text-embedding-3-small")
+embedding_client = EmbeddingClient(embedding_config)
 
 # Insert a single embedding
 doc_text = "This is a sample document for vector search."
@@ -115,7 +115,7 @@ print(f"Inserted {len(batch_texts)} documents with embeddings.")
 
 # Vector search using Graphbit
 
-query_text = "Find documents related to vector search."
+query_text = "Find documents related to graph databases."
 query_embedding = embedding_client.embed(query_text)
 cur.execute("SELECT item_id, embedding, metadata FROM alloydb_vectors;")
 all_rows = cur.fetchall()
