@@ -35,14 +35,14 @@ from graphbit import Node
 # Basic agent node
 analyzer = Node.agent(
     name="Data Analyzer",
-    prompt="Analyze this data for patterns: {input}",
+    prompt=f"Analyze this data for patterns: {input}",
     agent_id="analyzer_001"  # Optional - auto-generated if not provided
 )
 
 # Agent with explicit ID
 summarizer = Node.agent(
     name="Content Summarizer", 
-    prompt="Summarize the following content: {analysis}",
+    prompt="Summarize the following analyzed content",
     agent_id="summarizer"
 )
 
@@ -91,7 +91,7 @@ workflow = Workflow("Sequential Pipeline")
 # Create processing steps
 step1 = Node.agent(
     name="Input Processor",
-    prompt="Process the initial input: {input}",
+    prompt=f"Process the initial input: {input}",
     agent_id="step1"
 )
 
@@ -129,7 +129,7 @@ workflow = Workflow("Parallel Analysis")
 # Input node
 input_processor = Node.agent(
     name="Input Processor",
-    prompt="Prepare data for analysis: {input}",
+    prompt=f"Prepare data for analysis: {input}",
     agent_id="input_proc"
 )
 
@@ -187,7 +187,7 @@ workflow.validate()
 # Create a node
 analyzer = Node.agent(
     name="Data Analyzer",
-    prompt="Analyze: {input}",
+    prompt=f"Analyze: {input}",
     agent_id="analyzer"
 )
 
@@ -209,14 +209,14 @@ Use descriptive, clear names for nodes:
 # Good - descriptive and clear
 email_analyzer = Node.agent(
     name="Email Content Analyzer",
-    prompt="Analyze email for spam indicators: {email_content}",
+    prompt=f"Analyze email for spam indicators: {email_content}",
     agent_id="email_spam_detector"
 )
 
 # Avoid - vague names
 node1 = Node.agent(
     name="Node1", 
-    prompt="Do something: {input}",
+    prompt=f"Do something: {input}",
     agent_id="n1"
 )
 ```
@@ -278,14 +278,14 @@ def create_multi_stage_workflow():
     # Stage 1: Data Preparation
     cleaner = Node.agent(
         name="Data Cleaner",
-        prompt="Normalize and clean input text: {input}",
+        prompt=f"Normalize and clean input text: {input}",
         agent_id="cleaner"
     )
     
     # Stage 2: Analysis
     analyzer = Node.agent(
         name="Content Analyzer",
-        prompt="Analyze cleaned content: {cleaned_data}",
+        prompt="Analyze cleaned content",
         agent_id="analyzer"
     )
     
@@ -327,7 +327,7 @@ def create_robust_workflow():
         # Add nodes
         processor = Node.agent(
             name="Data Processor",
-            prompt="Process: {input}",
+            prompt=f"Process: {input}",
             agent_id="processor"
         )
         
@@ -373,7 +373,7 @@ def create_analysis_workflow():
 def create_input_processor():
     return Node.agent(
         name="Input Processor",
-        prompt="Prepare input for analysis: {input}",
+        prompt=f"Prepare input for analysis: {input}",
         agent_id="input_processor"
     )
 
