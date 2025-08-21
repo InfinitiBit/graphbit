@@ -17,7 +17,7 @@ Reliability in GraphBit encompasses:
 ### Basic Error Handling
 
 ```python
-from graphbit import init, Workflow, Node
+from graphbit import Workflow, Node
 import time
 
 
@@ -337,7 +337,7 @@ class RetryableExecutor:
 
 ```python
 from typing import Callable
-from graphbit import init, get_system_info, health_check, LlmConfig, LlmClient
+from graphbit import get_system_info, health_check, LlmConfig, LlmClient
 from datetime import datetime
 import time
 import os
@@ -419,7 +419,6 @@ def create_health_checks():
     def check_graphbit_system():
         """Check GraphBit system health."""
         try:
-            init()
             system_info = get_system_info()
             health_check_info = health_check()
             
@@ -748,8 +747,6 @@ def classify_error_type(error):
 ### Production Reliability Example
 
 ```python
-from graphbit import init
-
 def example_production_usage():
     """Example of production reliability patterns."""
     
