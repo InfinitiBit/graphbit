@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from graphbit import EmbeddingClient, EmbeddingConfig, Executor, LlmClient, LlmConfig, Node, Workflow, WorkflowResult, configure_runtime, get_system_info, health_check, init, version
+import graphbit
 
 
 class TestNetworkErrorHandling:
@@ -15,8 +15,8 @@ class TestNetworkErrorHandling:
     def test_invalid_api_key_errors(self) -> None:
         """Test proper error handling for invalid API keys."""
         # Test OpenAI invalid key
-        invalid_config = LlmConfig.openai("sk-invalid1234567890123456789012345678901234567890123", "gpt-3.5-turbo")
-        client = LlmClient(invalid_config)
+        invalid_config = graphbit.LlmConfig.openai("sk-invalid1234567890123456789012345678901234567890123", "gpt-3.5-turbo")
+        client = graphbit.LlmClient(invalid_config)
 
         with pytest.raises(Exception) as exc_info:
             client.complete("Test", max_tokens=10)
@@ -32,8 +32,8 @@ class TestNetworkErrorHandling:
 
         # Test invalid model name
         try:
-            invalid_config = LlmConfig.openai(api_key, "invalid-model-name-12345")
-            client = LlmClient(invalid_config)
+            invalid_config = graphbit.LlmConfig.openai(api_key, "invalid-model-name-12345")
+            client = graphbit.LlmClient(invalid_config)
 
             with pytest.raises(Exception) as exc_info:
                 client.complete("Test", max_tokens=10)
@@ -55,10 +55,10 @@ class TestNetworkErrorHandling:
         if not api_key:
             pytest.skip("OPENAI_API_KEY not set")
 
-        config = LlmConfig.openai(api_key, "gpt-3.5-turbo")
+        config = graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
 
         # Create client with very short timeout (this tests timeout handling)
-        client = LlmClient(config, debug=True)
+        client = graphbit.LlmClient(config, debug=True)
 
         # Test with a very complex prompt that might timeout
         complex_prompt = "Explain quantum mechanics in extreme detail. " * 100
@@ -79,8 +79,8 @@ class TestNetworkErrorHandling:
         if not api_key:
             pytest.skip("OPENAI_API_KEY not set")
 
-        config = LlmConfig.openai(api_key, "gpt-3.5-turbo")
-        client = LlmClient(config)
+        config = graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
+        client = graphbit.LlmClient(config)
 
         # Send many rapid requests to potentially trigger rate limiting
         requests = []
@@ -109,8 +109,8 @@ class TestResourceExhaustionHandling:
         if not api_key:
             pytest.skip("OPENAI_API_KEY not set")
 
-        config = LlmConfig.openai(api_key, "gpt-3.5-turbo")
-        client = LlmClient(config)
+        config = graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
+        client = graphbit.LlmClient(config)
 
         # Create a large batch to test memory handling
         large_batch = [f"Process item {i}" for i in range(20)]  # Reasonable size for testing
@@ -130,10 +130,10 @@ class TestResourceExhaustionHandling:
         if not api_key:
             pytest.skip("OPENAI_API_KEY not set")
 
-        config = LlmConfig.openai(api_key, "gpt-3.5-turbo")
+        config = graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
 
         # Create multiple clients to test concurrency limits
-        clients = [LlmClient(config) for _ in range(3)]
+        clients = [graphbit.LlmClient(config) for _ in range(3)]
 
         # Test concurrent requests
         try:
@@ -156,8 +156,8 @@ class TestResourceExhaustionHandling:
         if not api_key:
             pytest.skip("OPENAI_API_KEY not set")
 
-        config = LlmConfig.openai(api_key, "gpt-3.5-turbo")
-        client = LlmClient(config)
+        config = graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
+        client = graphbit.LlmClient(config)
 
         # Create a very large input
         large_input = "This is a test sentence. " * 500  # Large but not excessive
@@ -180,17 +180,17 @@ class TestWorkflowErrorRecovery:
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             pytest.skip("OPENAI_API_KEY not set")
-        return LlmConfig.openai(api_key, "gpt-3.5-turbo")
+        return graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
 
     def test_workflow_execution_error_recovery(self, llm_config: Any) -> None:
         """Test recovery from workflow execution errors."""
-        executor = Executor(llm_config)
+        executor = graphbit.Executor(llm_config)
 
         # Create a problematic workflow
-        workflow = Workflow("error_recovery_test")
+        workflow = graphbit.Workflow("error_recovery_test")
 
         # Add a node with potentially problematic prompt
-        agent = Node.agent("error_agent", "This is a test prompt that should work", "error_001")
+        agent = graphbit.Node.agent("error_agent", "This is a test prompt that should work", "error_001")
         workflow.add_node(agent)
 
         try:
@@ -198,7 +198,7 @@ class TestWorkflowErrorRecovery:
             result = executor.execute(workflow)
 
             # If execution succeeds, verify result
-            assert isinstance(result, WorkflowResult)
+            assert isinstance(result, graphbit.WorkflowResult)
             assert isinstance(result.is_success(), bool)
             assert isinstance(result.is_failed(), bool)
 
@@ -209,13 +209,13 @@ class TestWorkflowErrorRecovery:
 
     def test_invalid_workflow_error_handling(self, llm_config: Any) -> None:
         """Test handling of invalid workflow structures."""
-        executor = Executor(llm_config)
+        executor = graphbit.Executor(llm_config)
 
         # Create invalid workflow with circular dependency
-        workflow = Workflow("invalid_workflow")
+        workflow = graphbit.Workflow("invalid_workflow")
 
-        agent1 = Node.agent("agent1", "First agent", "agent_001")
-        agent2 = Node.agent("agent2", "Second agent", "agent_002")
+        agent1 = graphbit.Node.agent("agent1", "First agent", "agent_001")
+        agent2 = graphbit.Node.agent("agent2", "Second agent", "agent_002")
 
         id1 = workflow.add_node(agent1)
         id2 = workflow.add_node(agent2)
@@ -232,8 +232,8 @@ class TestWorkflowErrorRecovery:
 
     def test_empty_workflow_execution_error(self, llm_config: Any) -> None:
         """Test execution of empty workflows."""
-        executor = Executor(llm_config)
-        empty_workflow = Workflow("empty")
+        executor = graphbit.Executor(llm_config)
+        empty_workflow = graphbit.Workflow("empty")
 
         with pytest.raises((ValueError, RuntimeError)) as exc_info:
             executor.execute(empty_workflow)
@@ -257,8 +257,8 @@ class TestAsyncErrorHandling:
     @pytest.mark.asyncio
     async def test_async_completion_error_handling(self, api_key: str) -> None:
         """Test error handling in async completion operations."""
-        config = LlmConfig.openai(api_key, "gpt-3.5-turbo")
-        client = LlmClient(config)
+        config = graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
+        client = graphbit.LlmClient(config)
 
         # Test async completion with invalid parameters
         with pytest.raises((ValueError, RuntimeError)):
@@ -267,8 +267,8 @@ class TestAsyncErrorHandling:
     @pytest.mark.asyncio
     async def test_async_batch_error_handling(self, api_key: str) -> None:
         """Test error handling in async batch operations."""
-        config = LlmConfig.openai(api_key, "gpt-3.5-turbo")
-        client = LlmClient(config)
+        config = graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
+        client = graphbit.LlmClient(config)
 
         # Test async batch with empty list
         with pytest.raises((ValueError, RuntimeError)):
@@ -277,11 +277,11 @@ class TestAsyncErrorHandling:
     @pytest.mark.asyncio
     async def test_async_workflow_error_handling(self, api_key: str) -> None:
         """Test error handling in async workflow execution."""
-        config = LlmConfig.openai(api_key, "gpt-3.5-turbo")
-        executor = Executor(config)
+        config = graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
+        executor = graphbit.Executor(config)
 
         # Create invalid workflow
-        workflow = Workflow("async_error_test")
+        workflow = graphbit.Workflow("async_error_test")
 
         # Test async execution of empty workflow
         with pytest.raises((ValueError, RuntimeError)):
@@ -297,8 +297,8 @@ class TestEmbeddingErrorHandling:
         if not api_key:
             pytest.skip("OPENAI_API_KEY not set")
 
-        config = EmbeddingConfig.openai(api_key, "text-embedding-3-small")
-        client = EmbeddingClient(config)
+        config = graphbit.EmbeddingConfig.openai(api_key, "text-embedding-3-small")
+        client = graphbit.EmbeddingClient(config)
 
         # Test empty text
         with pytest.raises((ValueError, RuntimeError)):
@@ -311,8 +311,8 @@ class TestEmbeddingErrorHandling:
     def test_embedding_network_errors(self) -> None:
         """Test embedding error handling for network issues."""
         # Test with invalid API key
-        invalid_config = EmbeddingConfig.openai("sk-invalid1234567890123456789012345678901234567890123", "text-embedding-3-small")
-        client = EmbeddingClient(invalid_config)
+        invalid_config = graphbit.EmbeddingConfig.openai("sk-invalid1234567890123456789012345678901234567890123", "text-embedding-3-small")
+        client = graphbit.EmbeddingClient(invalid_config)
 
         with pytest.raises((ValueError, RuntimeError)) as exc_info:
             client.embed("Test text")
@@ -324,11 +324,11 @@ class TestEmbeddingErrorHandling:
         """Test error handling in similarity computations."""
         # Test mismatched dimensions
         with pytest.raises((ValueError, RuntimeError)):
-            EmbeddingClient.similarity([1.0, 2.0], [1.0, 2.0, 3.0])
+            graphbit.EmbeddingClient.similarity([1.0, 2.0], [1.0, 2.0, 3.0])
 
         # Test empty vectors
         with pytest.raises((ValueError, RuntimeError)):
-            EmbeddingClient.similarity([], [1.0, 2.0])
+            graphbit.EmbeddingClient.similarity([], [1.0, 2.0])
 
 
 class TestSystemErrorRecovery:
@@ -338,9 +338,9 @@ class TestSystemErrorRecovery:
         """Test recovery from runtime errors."""
         # Test multiple initializations
         try:
-            init()
-            init()  # Should not fail
-            init(log_level="debug")  # Should not fail
+            graphbit.init()
+            graphbit.init()  # Should not fail
+            graphbit.init(log_level="debug")  # Should not fail
         except Exception as e:
             pytest.fail(f"Multiple initialization failed: {e}")
 
@@ -348,20 +348,20 @@ class TestSystemErrorRecovery:
         """Test recovery from configuration errors."""
         # Test invalid runtime configuration
         with contextlib.suppress(ValueError, RuntimeError):
-            configure_runtime(worker_threads=0)
+            graphbit.configure_runtime(worker_threads=0)
 
         # Test that system still works after invalid config
         try:
-            _version = version()
-            assert isinstance(_version, str)
-            assert len(_version) > 0
+            version = graphbit.version()
+            assert isinstance(version, str)
+            assert len(version) > 0
         except Exception as e:
             pytest.fail(f"System not functional after config error: {e}")
 
     def test_health_check_error_conditions(self) -> None:
         """Test health check behavior under error conditions."""
         try:
-            health = health_check()
+            health = graphbit.health_check()
             assert isinstance(health, dict)
 
             # Health check should always return some information
@@ -373,15 +373,15 @@ class TestSystemErrorRecovery:
     def test_graceful_degradation(self) -> None:
         """Test graceful degradation under error conditions."""
         # Test system info under various conditions
-        system_info = get_system_info()
+        system_info = graphbit.get_system_info()
         assert isinstance(system_info, dict)
         assert "version" in system_info
         assert isinstance(system_info["version"], str)
 
         # Test that basic functionality still works
-        _version = version()
-        assert isinstance(_version, str)
-        assert len(_version) > 0
+        version = graphbit.version()
+        assert isinstance(version, str)
+        assert len(version) > 0
 
 
 @pytest.mark.integration
@@ -391,12 +391,12 @@ class TestErrorPropagation:
     def test_llm_to_workflow_error_propagation(self) -> None:
         """Test error propagation from LLM to workflow execution."""
         # Use invalid API key
-        invalid_config = LlmConfig.openai("sk-invalid1234567890123456789012345678901234567890123", "gpt-3.5-turbo")
-        executor = Executor(invalid_config)
+        invalid_config = graphbit.LlmConfig.openai("sk-invalid1234567890123456789012345678901234567890123", "gpt-3.5-turbo")
+        executor = graphbit.Executor(invalid_config)
 
         # Create valid workflow
-        workflow = Workflow("error_propagation_test")
-        agent = Node.agent("test_agent", "Test prompt", "agent_001")
+        workflow = graphbit.Workflow("error_propagation_test")
+        agent = graphbit.Node.agent("test_agent", "Test prompt", "agent_001")
         workflow.add_node(agent)
         workflow.validate()
 
@@ -413,13 +413,13 @@ class TestErrorPropagation:
         if not api_key:
             pytest.skip("OPENAI_API_KEY not set")
 
-        config = LlmConfig.openai(api_key, "gpt-3.5-turbo")
-        executor = Executor(config)
+        config = graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
+        executor = graphbit.Executor(config)
 
         # Create invalid workflow that should fail validation
-        workflow = Workflow("validation_error_test")
-        agent1 = Node.agent("agent1", "First agent", "agent_001")
-        agent2 = Node.agent("agent2", "Second agent", "agent_002")
+        workflow = graphbit.Workflow("validation_error_test")
+        agent1 = graphbit.Node.agent("agent1", "First agent", "agent_001")
+        agent2 = graphbit.Node.agent("agent2", "Second agent", "agent_002")
 
         id1 = workflow.add_node(agent1)
         id2 = workflow.add_node(agent2)
@@ -438,7 +438,7 @@ class TestErrorPropagation:
         """Test that embedding errors provide proper context."""
         # Test with invalid configuration
         try:
-            EmbeddingConfig.openai("", "text-embedding-3-small")
+            graphbit.EmbeddingConfig.openai("", "text-embedding-3-small")
             pytest.fail("Should have failed validation")
         except (ValueError, RuntimeError) as e:
             error_msg = str(e).lower()

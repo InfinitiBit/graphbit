@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from graphbit import EmbeddingClient, EmbeddingConfig, init, version
+import graphbit
 
 
 class TestOpenAIEmbeddings:
@@ -24,12 +24,12 @@ class TestOpenAIEmbeddings:
     @pytest.fixture
     def openai_config(self, api_key: str) -> Any:
         """Create OpenAI embedding configuration."""
-        return EmbeddingConfig.openai(api_key=api_key, model="text-embedding-3-small")
+        return graphbit.EmbeddingConfig.openai(api_key=api_key, model="text-embedding-3-small")
 
     @pytest.fixture
     def openai_client(self, openai_config: Any) -> Any:
         """Create OpenAI embedding client."""
-        return EmbeddingClient(openai_config)
+        return graphbit.EmbeddingClient(openai_config)
 
     def test_openai_config_creation(self, openai_config: Any) -> None:
         """Test OpenAI config creation."""
@@ -69,7 +69,7 @@ class TestOpenAIEmbeddings:
             embedding2 = openai_client.embed(text)
 
             # Calculate similarity between embeddings
-            similarity = EmbeddingClient.similarity(embedding1, embedding2)
+            similarity = graphbit.EmbeddingClient.similarity(embedding1, embedding2)
             assert similarity > 0.99  # Should be very similar for same text
         except Exception as e:
             pytest.fail(f"Embedding consistency test failed: {e}")
@@ -90,12 +90,12 @@ class TestHuggingFaceEmbeddings:
     @pytest.fixture
     def hf_config(self, hf_api_key: str) -> Any:
         """Create HuggingFace embedding configuration."""
-        return EmbeddingConfig.huggingface(api_key=hf_api_key, model="facebook/bart-base")
+        return graphbit.EmbeddingConfig.huggingface(api_key=hf_api_key, model="facebook/bart-base")
 
     @pytest.fixture
     def hf_client(self, hf_config: Any) -> Any:
         """Create HuggingFace embedding client."""
-        return EmbeddingClient(hf_config)
+        return graphbit.EmbeddingClient(hf_config)
 
     def test_hf_config_creation(self, hf_config: Any) -> None:
         """Test HuggingFace config creation."""
@@ -135,21 +135,21 @@ class TestEmbeddingUtilities:
         """Test cosine similarity with identical vectors."""
         vec1 = [1.0, 2.0, 3.0]
         vec2 = [1.0, 2.0, 3.0]
-        similarity = EmbeddingClient.similarity(vec1, vec2)
+        similarity = graphbit.EmbeddingClient.similarity(vec1, vec2)
         assert abs(similarity - 1.0) < 1e-6
 
     def test_cosine_similarity_orthogonal(self) -> None:
         """Test cosine similarity with orthogonal vectors."""
         vec1 = [1.0, 0.0, 0.0]
         vec2 = [0.0, 1.0, 0.0]
-        similarity = EmbeddingClient.similarity(vec1, vec2)
+        similarity = graphbit.EmbeddingClient.similarity(vec1, vec2)
         assert abs(similarity - 0.0) < 1e-6
 
     def test_cosine_similarity_opposite(self) -> None:
         """Test cosine similarity with opposite vectors."""
         vec1 = [1.0, 0.0, 0.0]
         vec2 = [-1.0, 0.0, 0.0]
-        similarity = EmbeddingClient.similarity(vec1, vec2)
+        similarity = graphbit.EmbeddingClient.similarity(vec1, vec2)
         assert abs(similarity - (-1.0)) < 1e-6
 
     def test_cosine_similarity_zero_vector(self) -> None:
@@ -159,7 +159,7 @@ class TestEmbeddingUtilities:
 
         # Should handle zero vector gracefully (may return error or special value)
         try:
-            similarity = EmbeddingClient.similarity(vec1, vec2)
+            similarity = graphbit.EmbeddingClient.similarity(vec1, vec2)
             # If it doesn't raise an error, verify it's a valid value
             assert isinstance(similarity, float)
         except Exception as e:  # noqa: B110
@@ -177,10 +177,10 @@ class TestCrossProviderEmbeddings:
         configs = {}
 
         if os.getenv("OPENAI_API_KEY"):
-            configs["openai"] = EmbeddingConfig.openai(api_key=os.getenv("OPENAI_API_KEY"), model="text-embedding-3-small")
+            configs["openai"] = graphbit.EmbeddingConfig.openai(api_key=os.getenv("OPENAI_API_KEY"), model="text-embedding-3-small")
 
         if os.getenv("HUGGINGFACE_API_KEY"):
-            configs["huggingface"] = EmbeddingConfig.huggingface(api_key=os.getenv("HUGGINGFACE_API_KEY"), model="facebook/bart-base")
+            configs["huggingface"] = graphbit.EmbeddingConfig.huggingface(api_key=os.getenv("HUGGINGFACE_API_KEY"), model="facebook/bart-base")
 
         return configs
 
@@ -195,7 +195,7 @@ class TestCrossProviderEmbeddings:
         # Generate embeddings from all providers
         for provider_name, config in providers.items():
             try:
-                client = EmbeddingClient(config)
+                client = graphbit.EmbeddingClient(config)
                 embedding = client.embed(text)
                 embeddings[provider_name] = embedding
             except Exception as e:
@@ -211,7 +211,7 @@ class TestCrossProviderEmbeddings:
                 try:
                     # Only compare if dimensions match
                     if len(embeddings[provider1]) == len(embeddings[provider2]):
-                        similarity = EmbeddingClient.similarity(embeddings[provider1], embeddings[provider2])
+                        similarity = graphbit.EmbeddingClient.similarity(embeddings[provider1], embeddings[provider2])
                         # Different providers may have different embedding spaces
                         # but similarity should be a valid float
                         assert isinstance(similarity, float)
@@ -235,7 +235,7 @@ class TestCrossProviderEmbeddings:
 
         for provider_name, config in providers.items():
             try:
-                client = EmbeddingClient(config)
+                client = graphbit.EmbeddingClient(config)
                 embeddings = client.embed_many(texts)
 
                 assert len(embeddings) == len(texts)
@@ -258,8 +258,8 @@ class TestCrossProviderEmbeddings:
 
 if __name__ == "__main__":
     # Initialize GraphBit
-    init()
-    print(f"GraphBit version: {version()}")
+    graphbit.init()
+    print(f"GraphBit version: {graphbit.version()}")
 
     # Run specific test cases
     pytest.main([__file__, "-v"])
@@ -280,8 +280,8 @@ class TestAdvancedEmbeddingOperations:
     @pytest.fixture
     def openai_client(self, api_key: str) -> Any:
         """Create OpenAI embedding client."""
-        config = EmbeddingConfig.openai(api_key=api_key, model="text-embedding-3-small")
-        return EmbeddingClient(config)
+        config = graphbit.EmbeddingConfig.openai(api_key=api_key, model="text-embedding-3-small")
+        return graphbit.EmbeddingClient(config)
 
     @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="Requires OpenAI API key")
     def test_large_batch_processing(self, openai_client: Any) -> None:
@@ -324,10 +324,10 @@ class TestAdvancedEmbeddingOperations:
             unrelated_embeddings = openai_client.embed_many(unrelated_texts)
 
             # Calculate similarity between related texts
-            related_similarity = EmbeddingClient.similarity(related_embeddings[0], related_embeddings[1])
+            related_similarity = graphbit.EmbeddingClient.similarity(related_embeddings[0], related_embeddings[1])
 
             # Calculate similarity between unrelated texts
-            cross_similarity = EmbeddingClient.similarity(related_embeddings[0], unrelated_embeddings[0])
+            cross_similarity = graphbit.EmbeddingClient.similarity(related_embeddings[0], unrelated_embeddings[0])
 
             # Related texts should be more similar
             assert related_similarity > cross_similarity, f"Related similarity ({related_similarity}) should be higher than cross similarity ({cross_similarity})"
@@ -342,8 +342,8 @@ class TestEmbeddingErrorHandling:
     def test_invalid_api_key_handling(self) -> None:
         """Test handling of invalid API keys."""
         try:
-            invalid_config = EmbeddingConfig.openai(api_key="invalid-key", model="text-embedding-3-small")
-            client = EmbeddingClient(invalid_config)
+            invalid_config = graphbit.EmbeddingConfig.openai(api_key="invalid-key", model="text-embedding-3-small")
+            client = graphbit.EmbeddingClient(invalid_config)
 
             with pytest.raises((ValueError, RuntimeError)):
                 client.embed("Test text")
@@ -355,8 +355,8 @@ class TestEmbeddingErrorHandling:
     def test_empty_text_handling(self) -> None:
         """Test handling of empty texts."""
         api_key = os.getenv("OPENAI_API_KEY")
-        config = EmbeddingConfig.openai(api_key=api_key, model="text-embedding-3-small")
-        client = EmbeddingClient(config)
+        config = graphbit.EmbeddingConfig.openai(api_key=api_key, model="text-embedding-3-small")
+        client = graphbit.EmbeddingClient(config)
 
         try:
             # Test empty string
@@ -379,19 +379,19 @@ class TestEmbeddingUtilitiesAdvanced:
             # Test with identical vectors
             vec1 = [1.0, 2.0, 3.0, 4.0]
             vec2 = [1.0, 2.0, 3.0, 4.0]
-            similarity = EmbeddingClient.similarity(vec1, vec2)
+            similarity = graphbit.EmbeddingClient.similarity(vec1, vec2)
             assert abs(similarity - 1.0) < 1e-6, f"Identical vectors should have similarity 1.0, got {similarity}"
 
             # Test with opposite vectors
             vec3 = [1.0, 2.0, 3.0]
             vec4 = [-1.0, -2.0, -3.0]
-            similarity = EmbeddingClient.similarity(vec3, vec4)
+            similarity = graphbit.EmbeddingClient.similarity(vec3, vec4)
             assert abs(similarity - (-1.0)) < 1e-6, f"Opposite vectors should have similarity -1.0, got {similarity}"
 
             # Test with orthogonal vectors
             vec5 = [1.0, 0.0, 0.0]
             vec6 = [0.0, 1.0, 0.0]
-            similarity = EmbeddingClient.similarity(vec5, vec6)
+            similarity = graphbit.EmbeddingClient.similarity(vec5, vec6)
             assert abs(similarity - 0.0) < 1e-6, f"Orthogonal vectors should have similarity 0.0, got {similarity}"
 
         except Exception as e:
@@ -404,7 +404,7 @@ class TestEmbeddingUtilitiesAdvanced:
             normal_vec = [1.0, 2.0, 3.0]
 
             try:
-                similarity = EmbeddingClient.similarity(zero_vec, normal_vec)
+                similarity = graphbit.EmbeddingClient.similarity(zero_vec, normal_vec)
                 assert isinstance(similarity, float)
             except Exception as e:
                 # Zero vector errors are acceptable
@@ -422,8 +422,8 @@ class TestEmbeddingPerformance:
     def test_single_vs_batch_performance(self) -> None:
         """Test performance comparison between single and batch processing."""
         api_key = os.getenv("OPENAI_API_KEY")
-        config = EmbeddingConfig.openai(api_key=api_key, model="text-embedding-3-small")
-        client = EmbeddingClient(config)
+        config = graphbit.EmbeddingConfig.openai(api_key=api_key, model="text-embedding-3-small")
+        client = graphbit.EmbeddingClient(config)
 
         texts = [f"Performance test text {i}" for i in range(3)]
 

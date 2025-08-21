@@ -8,7 +8,7 @@ from typing import Any
 
 import pytest
 
-from graphbit import EmbeddingClient, EmbeddingConfig, Executor, LlmClient, LlmConfig, Node, Workflow, WorkflowResult
+import graphbit
 
 
 @pytest.mark.asyncio
@@ -26,8 +26,8 @@ class TestActualAsyncLLMExecution:
     @pytest.fixture
     def openai_client(self, api_key: str) -> Any:
         """Create OpenAI LLM client."""
-        config = LlmConfig.openai(api_key, "gpt-3.5-turbo")
-        return LlmClient(config, debug=True)
+        config = graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
+        return graphbit.LlmClient(config, debug=True)
 
     @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="Requires OpenAI API key")
     async def test_async_complete_execution(self, openai_client: Any) -> None:
@@ -131,8 +131,8 @@ class TestActualAsyncErrorHandling:
         """Test async execution with invalid API key."""
         try:
             # Use properly formatted but invalid API key
-            invalid_config = LlmConfig.openai("sk-invalid1234567890123456789012345678901234567890123", "gpt-3.5-turbo")
-            client = LlmClient(invalid_config)
+            invalid_config = graphbit.LlmConfig.openai("sk-invalid1234567890123456789012345678901234567890123", "gpt-3.5-turbo")
+            client = graphbit.LlmClient(invalid_config)
 
             # This should raise an error when awaited
             with pytest.raises(Exception) as exc_info:
@@ -158,8 +158,8 @@ class TestActualAsyncErrorHandling:
             pytest.skip("OPENAI_API_KEY not set")
 
         try:
-            config = LlmConfig.openai(api_key, "gpt-3.5-turbo")
-            client = LlmClient(config)
+            config = graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
+            client = graphbit.LlmClient(config)
 
             # Test invalid max_tokens
             with pytest.raises((ValueError, RuntimeError)):
@@ -188,8 +188,8 @@ class TestActualAsyncPerformance:
     @pytest.fixture
     def openai_client(self, api_key: str) -> Any:
         """Create OpenAI LLM client."""
-        config = LlmConfig.openai(api_key, "gpt-3.5-turbo")
-        return LlmClient(config)
+        config = graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
+        return graphbit.LlmClient(config)
 
     @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="Requires OpenAI API key")
     async def test_async_vs_sync_performance(self, openai_client: Any) -> None:
@@ -258,8 +258,8 @@ class TestComplexAsyncScenarios:
     async def test_async_execution_with_parameters(self, api_key: str) -> None:
         """Test async execution with various parameters."""
         try:
-            config = LlmConfig.openai(api_key, "gpt-3.5-turbo")
-            client = LlmClient(config)
+            config = graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
+            client = graphbit.LlmClient(config)
 
             # Test with different temperatures
             low_temp_task = client.complete_async("Say hello", max_tokens=10, temperature=0.1)
@@ -279,8 +279,8 @@ class TestComplexAsyncScenarios:
     async def test_async_timeout_scenarios(self, api_key: str) -> None:
         """Test async operations with timeout scenarios."""
         try:
-            config = LlmConfig.openai(api_key, "gpt-3.5-turbo")
-            client = LlmClient(config)
+            config = graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
+            client = graphbit.LlmClient(config)
 
             # Test with reasonable timeout
             try:
@@ -309,8 +309,8 @@ class TestActualAsyncErrorHandlingExtended:
         """Test async execution with invalid API key."""
         try:
             # Use properly formatted but invalid API key
-            invalid_config = LlmConfig.openai("sk-invalid1234567890123456789012345678901234567890123", "gpt-3.5-turbo")
-            client = LlmClient(invalid_config)
+            invalid_config = graphbit.LlmConfig.openai("sk-invalid1234567890123456789012345678901234567890123", "gpt-3.5-turbo")
+            client = graphbit.LlmClient(invalid_config)
 
             # This should raise an error when awaited
             with pytest.raises(Exception) as exc_info:
@@ -332,8 +332,8 @@ class TestActualAsyncErrorHandlingExtended:
     async def test_async_invalid_parameters_error(self, api_key: str) -> None:
         """Test async execution with invalid parameters."""
         try:
-            config = LlmConfig.openai(api_key, "gpt-3.5-turbo")
-            client = LlmClient(config)
+            config = graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
+            client = graphbit.LlmClient(config)
 
             # Test invalid max_tokens
             with pytest.raises((ValueError, RuntimeError)):
@@ -350,8 +350,8 @@ class TestActualAsyncErrorHandlingExtended:
     async def test_async_empty_batch_error(self, api_key: str) -> None:
         """Test async batch execution with empty batch."""
         try:
-            config = LlmConfig.openai(api_key, "gpt-3.5-turbo")
-            client = LlmClient(config)
+            config = graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
+            client = graphbit.LlmClient(config)
 
             # Empty batch should raise error
             with pytest.raises((ValueError, RuntimeError)):
@@ -376,13 +376,13 @@ class TestActualAsyncWorkflowExecution:
     @pytest.fixture
     def llm_config(self, api_key: str) -> Any:
         """Create LLM configuration."""
-        return LlmConfig.openai(api_key, "gpt-3.5-turbo")
+        return graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
 
     @pytest.fixture
     def simple_workflow(self) -> Any:
         """Create simple workflow for async testing."""
-        workflow = Workflow("async_workflow_test")
-        agent = Node.agent("async_agent", "Generate a random number between 1 and 10", "async_001")
+        workflow = graphbit.Workflow("async_workflow_test")
+        agent = graphbit.Node.agent("async_agent", "Generate a random number between 1 and 10", "async_001")
         workflow.add_node(agent)
         return workflow
 
@@ -390,7 +390,7 @@ class TestActualAsyncWorkflowExecution:
     async def test_async_workflow_execution(self, llm_config: Any, simple_workflow: Any) -> None:
         """Test actual async workflow execution."""
         try:
-            executor = Executor(llm_config, debug=True)
+            executor = graphbit.Executor(llm_config, debug=True)
             simple_workflow.validate()
 
             # Execute workflow asynchronously (Note: this may not be directly available)
@@ -398,7 +398,7 @@ class TestActualAsyncWorkflowExecution:
             result = executor.execute(simple_workflow)
 
             # Verify result
-            assert isinstance(result, WorkflowResult)
+            assert isinstance(result, graphbit.WorkflowResult)
             assert result.execution_time_ms() >= 0
 
         except Exception as e:
@@ -408,13 +408,13 @@ class TestActualAsyncWorkflowExecution:
     async def test_multiple_async_workflow_executions(self, llm_config: Any) -> None:
         """Test multiple concurrent workflow executions."""
         try:
-            executor = Executor(llm_config)
+            executor = graphbit.Executor(llm_config)
 
             # Create multiple workflows
             workflows = []
             for i in range(3):
-                workflow = Workflow(f"async_multi_workflow_{i}")
-                agent = Node.agent(f"agent_{i}", f"What is {i} + {i}? Answer with just the number.", f"multi_async_{i:03d}")
+                workflow = graphbit.Workflow(f"async_multi_workflow_{i}")
+                agent = graphbit.Node.agent(f"agent_{i}", f"What is {i} + {i}? Answer with just the number.", f"multi_async_{i:03d}")
                 workflow.add_node(agent)
                 workflow.validate()
                 workflows.append(workflow)
@@ -427,7 +427,7 @@ class TestActualAsyncWorkflowExecution:
 
             # Verify all results
             assert len(results) == len(workflows)
-            assert all(isinstance(result, WorkflowResult) for result in results)
+            assert all(isinstance(result, graphbit.WorkflowResult) for result in results)
 
         except Exception as e:
             pytest.skip(f"Multiple async workflow executions test skipped: {e}")
@@ -448,8 +448,8 @@ class TestActualAsyncPerformanceMetrics:
     @pytest.fixture
     def openai_client(self, api_key: str) -> Any:
         """Create OpenAI LLM client."""
-        config = LlmConfig.openai(api_key, "gpt-3.5-turbo")
-        return LlmClient(config)
+        config = graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
+        return graphbit.LlmClient(config)
 
     @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="Requires OpenAI API key")
     async def test_async_vs_sync_performance(self, openai_client: Any) -> None:
@@ -568,11 +568,11 @@ class TestComplexAsyncScenariosAdvanced:
         """Test mixed async operations (LLM + embeddings)."""
         try:
             # Create clients
-            llm_config = LlmConfig.openai(api_key, "gpt-3.5-turbo")
-            llm_client = LlmClient(llm_config)
+            llm_config = graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
+            llm_client = graphbit.LlmClient(llm_config)
 
-            embed_config = EmbeddingConfig.openai(api_key=api_key, model="text-embedding-3-small")
-            embed_client = EmbeddingClient(embed_config)
+            embed_config = graphbit.EmbeddingConfig.openai(api_key=api_key, model="text-embedding-3-small")
+            embed_client = graphbit.EmbeddingClient(embed_config)
 
             # Execute mixed async operations
             text_prompt = "What is machine learning?"
@@ -595,8 +595,8 @@ class TestComplexAsyncScenariosAdvanced:
     async def test_async_error_recovery(self, api_key: str) -> None:
         """Test async error recovery scenarios."""
         try:
-            config = LlmConfig.openai(api_key, "gpt-3.5-turbo")
-            client = LlmClient(config)
+            config = graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
+            client = graphbit.LlmClient(config)
 
             # Mix valid and invalid operations
             valid_task = client.complete_async("Say hello", max_tokens=10)
@@ -616,8 +616,8 @@ class TestComplexAsyncScenariosAdvanced:
     async def test_async_timeout_scenarios(self, api_key: str) -> None:
         """Test async operations with timeout scenarios."""
         try:
-            config = LlmConfig.openai(api_key, "gpt-3.5-turbo")
-            client = LlmClient(config)
+            config = graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
+            client = graphbit.LlmClient(config)
 
             # Test with reasonable timeout
             try:

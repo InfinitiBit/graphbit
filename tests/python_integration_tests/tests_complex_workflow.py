@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from graphbit import Executor, LlmConfig, Node, Workflow, WorkflowResult
+import graphbit
 
 
 class TestMultiBranchWorkflows:
@@ -18,25 +18,25 @@ class TestMultiBranchWorkflows:
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             pytest.skip("OPENAI_API_KEY not set")
-        return LlmConfig.openai(api_key, "gpt-3.5-turbo")
+        return graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
 
     def test_parallel_branch_workflow(self) -> None:
         """Test workflow with parallel processing branches."""
-        workflow = Workflow("parallel_branches")
+        workflow = graphbit.Workflow("parallel_branches")
 
         # Create entry point
-        entry_agent = Node.agent("entry_point", "Initialize processing", "entry_001")
+        entry_agent = graphbit.Node.agent("entry_point", "Initialize processing", "entry_001")
         entry_id = workflow.add_node(entry_agent)
 
         # Create parallel processing branches
         branch_nodes = []
         for i in range(3):
-            branch_agent = Node.agent(f"branch_{i}", f"Process branch {i} data", f"branch_{i:03d}")
+            branch_agent = graphbit.Node.agent(f"branch_{i}", f"Process branch {i} data", f"branch_{i:03d}")
             branch_id = workflow.add_node(branch_agent)
             branch_nodes.append((branch_agent, branch_id))
 
         # Create convergence point
-        merge_agent = Node.agent("merge_point", "Merge all results", "merge_001")
+        merge_agent = graphbit.Node.agent("merge_point", "Merge all results", "merge_001")
         merge_id = workflow.add_node(merge_agent)
 
         # Connect entry to all branches
@@ -59,24 +59,24 @@ class TestMultiBranchWorkflows:
 
     def test_conditional_branch_workflow(self) -> None:
         """Test workflow with conditional branching logic."""
-        workflow = Workflow("conditional_branches")
+        workflow = graphbit.Workflow("conditional_branches")
 
         # Create decision tree structure
-        entry_agent = Node.agent("entry", "Start decision process", "entry_001")
+        entry_agent = graphbit.Node.agent("entry", "Start decision process", "entry_001")
         entry_id = workflow.add_node(entry_agent)
 
         # Create primary condition
-        primary_condition = Node.condition("primary_check", "priority == 'high'")
+        primary_condition = graphbit.Node.condition("primary_check", "priority == 'high'")
         primary_id = workflow.add_node(primary_condition)
 
         # Create secondary condition
-        secondary_condition = Node.condition("secondary_check", "type == 'urgent'")
+        secondary_condition = graphbit.Node.condition("secondary_check", "type == 'urgent'")
         secondary_id = workflow.add_node(secondary_condition)
 
         # Create processing branches for different paths
-        high_priority_agent = Node.agent("high_priority", "Handle high priority", "high_001")
-        urgent_agent = Node.agent("urgent_processing", "Handle urgent items", "urgent_001")
-        normal_agent = Node.agent("normal_processing", "Handle normal items", "normal_001")
+        high_priority_agent = graphbit.Node.agent("high_priority", "Handle high priority", "high_001")
+        urgent_agent = graphbit.Node.agent("urgent_processing", "Handle urgent items", "urgent_001")
+        normal_agent = graphbit.Node.agent("normal_processing", "Handle normal items", "normal_001")
 
         high_id = workflow.add_node(high_priority_agent)
         urgent_id = workflow.add_node(urgent_agent)
@@ -97,19 +97,19 @@ class TestMultiBranchWorkflows:
 
     def test_nested_conditional_workflow(self) -> None:
         """Test workflow with nested conditional structures."""
-        workflow = Workflow("nested_conditionals")
+        workflow = graphbit.Workflow("nested_conditionals")
 
         # Create multi-level decision structure
-        root_agent = Node.agent("root", "Root decision point", "root_001")
+        root_agent = graphbit.Node.agent("root", "Root decision point", "root_001")
         root_id = workflow.add_node(root_agent)
 
         # Level 1 conditions
-        level1_condition = Node.condition("level1", "category == 'A'")
+        level1_condition = graphbit.Node.condition("level1", "category == 'A'")
         level1_id = workflow.add_node(level1_condition)
 
         # Level 2 conditions (nested under level 1)
-        level2a_condition = Node.condition("level2a", "subcategory == 'X'")
-        level2b_condition = Node.condition("level2b", "subcategory == 'Y'")
+        level2a_condition = graphbit.Node.condition("level2a", "subcategory == 'X'")
+        level2b_condition = graphbit.Node.condition("level2b", "subcategory == 'Y'")
 
         level2a_id = workflow.add_node(level2a_condition)
         level2b_id = workflow.add_node(level2b_condition)
@@ -117,7 +117,7 @@ class TestMultiBranchWorkflows:
         # Terminal processing nodes
         terminal_nodes = []
         for i in range(4):
-            terminal_agent = Node.agent(f"terminal_{i}", f"Process type {i}", f"term_{i:03d}")
+            terminal_agent = graphbit.Node.agent(f"terminal_{i}", f"Process type {i}", f"term_{i:03d}")
             terminal_id = workflow.add_node(terminal_agent)
             terminal_nodes.append(terminal_id)
 
@@ -142,15 +142,15 @@ class TestMultiBranchWorkflows:
     @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="Requires OpenAI API key")
     def test_complex_workflow_execution(self, llm_config: Any) -> None:
         """Test execution of complex multi-branch workflow."""
-        workflow = Workflow("complex_execution")
+        workflow = graphbit.Workflow("complex_execution")
 
         # Create a moderately complex but executable workflow
-        start_agent = Node.agent("start", "Begin complex processing", "start_001")
-        analysis_agent = Node.agent("analysis", "Analyze input data", "analysis_001")
-        decision_condition = Node.condition("decision", "confidence > 0.8")
-        high_conf_agent = Node.agent("high_confidence", "Process high confidence result", "high_001")
-        low_conf_agent = Node.agent("low_confidence", "Process low confidence result", "low_001")
-        final_agent = Node.agent("final", "Finalize processing", "final_001")
+        start_agent = graphbit.Node.agent("start", "Begin complex processing", "start_001")
+        analysis_agent = graphbit.Node.agent("analysis", "Analyze input data", "analysis_001")
+        decision_condition = graphbit.Node.condition("decision", "confidence > 0.8")
+        high_conf_agent = graphbit.Node.agent("high_confidence", "Process high confidence result", "high_001")
+        low_conf_agent = graphbit.Node.agent("low_confidence", "Process low confidence result", "low_001")
+        final_agent = graphbit.Node.agent("final", "Finalize processing", "final_001")
 
         # Add nodes to workflow
         start_id = workflow.add_node(start_agent)
@@ -172,10 +172,10 @@ class TestMultiBranchWorkflows:
             # Validate and execute
             workflow.validate()
 
-            executor = Executor(llm_config)
+            executor = graphbit.Executor(llm_config)
             result = executor.execute(workflow)
 
-            assert isinstance(result, WorkflowResult)
+            assert isinstance(result, graphbit.WorkflowResult)
             assert isinstance(result.is_success(), bool)
             assert isinstance(result.is_failed(), bool)
 
@@ -188,10 +188,10 @@ class TestTransformationChains:
 
     def test_sequential_transformation_chain(self) -> None:
         """Test workflow with sequential data transformations."""
-        workflow = Workflow("transformation_chain")
+        workflow = graphbit.Workflow("transformation_chain")
 
         # Create input agent
-        input_agent = Node.agent("input", "Generate initial data", "input_001")
+        input_agent = graphbit.Node.agent("input", "Generate initial data", "input_001")
         input_id = workflow.add_node(input_agent)
 
         # Create transformation chain
@@ -199,12 +199,12 @@ class TestTransformationChains:
 
         transform_ids = []
         for name, operation in transformations:
-            transform_node = Node.transform(name, operation)
+            transform_node = graphbit.Node.transform(name, operation)
             transform_id = workflow.add_node(transform_node)
             transform_ids.append(transform_id)
 
         # Create output agent
-        output_agent = Node.agent("output", "Process final result", "output_001")
+        output_agent = graphbit.Node.agent("output", "Process final result", "output_001")
         output_id = workflow.add_node(output_agent)
 
         # Connect transformation chain
@@ -227,10 +227,10 @@ class TestTransformationChains:
 
     def test_parallel_transformation_workflow(self) -> None:
         """Test workflow with parallel data transformations."""
-        workflow = Workflow("parallel_transforms")
+        workflow = graphbit.Workflow("parallel_transforms")
 
         # Create data source
-        source_agent = Node.agent("source", "Generate source data", "source_001")
+        source_agent = graphbit.Node.agent("source", "Generate source data", "source_001")
         source_id = workflow.add_node(source_agent)
 
         # Create parallel transformation branches
@@ -238,12 +238,12 @@ class TestTransformationChains:
 
         branch_ids = []
         for name, operation in transform_branches:
-            transform_node = Node.transform(name, operation)
+            transform_node = graphbit.Node.transform(name, operation)
             transform_id = workflow.add_node(transform_node)
             branch_ids.append(transform_id)
 
         # Create aggregation point
-        aggregator_agent = Node.agent("aggregator", "Combine all transformations", "agg_001")
+        aggregator_agent = graphbit.Node.agent("aggregator", "Combine all transformations", "agg_001")
         agg_id = workflow.add_node(aggregator_agent)
 
         try:
@@ -263,25 +263,25 @@ class TestTransformationChains:
 
     def test_conditional_transformation_workflow(self) -> None:
         """Test workflow with conditional transformation paths."""
-        workflow = Workflow("conditional_transforms")
+        workflow = graphbit.Workflow("conditional_transforms")
 
         # Create input processor
-        input_agent = Node.agent("input", "Process input", "input_001")
+        input_agent = graphbit.Node.agent("input", "Process input", "input_001")
         input_id = workflow.add_node(input_agent)
 
         # Create type detection condition
-        type_condition = Node.condition("type_check", "data_type == 'structured'")
+        type_condition = graphbit.Node.condition("type_check", "data_type == 'structured'")
         type_id = workflow.add_node(type_condition)
 
         # Create format detection condition
-        format_condition = Node.condition("format_check", "format == 'json'")
+        format_condition = graphbit.Node.condition("format_check", "format == 'json'")
         format_id = workflow.add_node(format_condition)
 
         # Create transformation nodes for different paths
-        structured_transform = Node.transform("structured", "process_structured")
-        unstructured_transform = Node.transform("unstructured", "process_unstructured")
-        json_transform = Node.transform("json", "parse_json")
-        xml_transform = Node.transform("xml", "parse_xml")
+        structured_transform = graphbit.Node.transform("structured", "process_structured")
+        unstructured_transform = graphbit.Node.transform("unstructured", "process_unstructured")
+        json_transform = graphbit.Node.transform("json", "parse_json")
+        xml_transform = graphbit.Node.transform("xml", "parse_xml")
 
         struct_id = workflow.add_node(structured_transform)
         unstruct_id = workflow.add_node(unstructured_transform)
@@ -289,7 +289,7 @@ class TestTransformationChains:
         xml_id = workflow.add_node(xml_transform)
 
         # Create final processor
-        final_agent = Node.agent("final", "Finalize processing", "final_001")
+        final_agent = graphbit.Node.agent("final", "Finalize processing", "final_001")
         final_id = workflow.add_node(final_agent)
 
         try:
@@ -318,27 +318,27 @@ class TestErrorHandlingWorkflows:
 
     def test_try_catch_workflow_pattern(self) -> None:
         """Test workflow implementing try-catch error handling pattern."""
-        workflow = Workflow("try_catch_pattern")
+        workflow = graphbit.Workflow("try_catch_pattern")
 
         # Create main processing path
-        try_agent = Node.agent("try_operation", "Attempt main operation", "try_001")
+        try_agent = graphbit.Node.agent("try_operation", "Attempt main operation", "try_001")
         try_id = workflow.add_node(try_agent)
 
         # Create error detection condition
-        error_condition = Node.condition("error_check", "operation_success == false")
+        error_condition = graphbit.Node.condition("error_check", "operation_success == false")
         error_id = workflow.add_node(error_condition)
 
         # Create success and error handling paths
-        success_agent = Node.agent("success_handler", "Handle successful operation", "success_001")
-        error_agent = Node.agent("error_handler", "Handle operation error", "error_001")
-        retry_agent = Node.agent("retry_handler", "Retry failed operation", "retry_001")
+        success_agent = graphbit.Node.agent("success_handler", "Handle successful operation", "success_001")
+        error_agent = graphbit.Node.agent("error_handler", "Handle operation error", "error_001")
+        retry_agent = graphbit.Node.agent("retry_handler", "Retry failed operation", "retry_001")
 
         success_id = workflow.add_node(success_agent)
         error_id_node = workflow.add_node(error_agent)
         retry_id = workflow.add_node(retry_agent)
 
         # Create final cleanup
-        cleanup_agent = Node.agent("cleanup", "Perform cleanup operations", "cleanup_001")
+        cleanup_agent = graphbit.Node.agent("cleanup", "Perform cleanup operations", "cleanup_001")
         cleanup_id = workflow.add_node(cleanup_agent)
 
         try:
@@ -361,27 +361,27 @@ class TestErrorHandlingWorkflows:
 
     def test_circuit_breaker_workflow_pattern(self) -> None:
         """Test workflow implementing circuit breaker pattern."""
-        workflow = Workflow("circuit_breaker")
+        workflow = graphbit.Workflow("circuit_breaker")
 
         # Create service call attempt
-        service_agent = Node.agent("service_call", "Call external service", "service_001")
+        service_agent = graphbit.Node.agent("service_call", "Call external service", "service_001")
         service_id = workflow.add_node(service_agent)
 
         # Create circuit breaker logic
-        circuit_condition = Node.condition("circuit_state", "circuit_open == false")
+        circuit_condition = graphbit.Node.condition("circuit_state", "circuit_open == false")
         circuit_id = workflow.add_node(circuit_condition)
 
         # Create fallback mechanisms
-        primary_agent = Node.agent("primary_service", "Use primary service", "primary_001")
-        fallback_agent = Node.agent("fallback_service", "Use fallback service", "fallback_001")
-        cache_agent = Node.agent("cache_service", "Use cached response", "cache_001")
+        primary_agent = graphbit.Node.agent("primary_service", "Use primary service", "primary_001")
+        fallback_agent = graphbit.Node.agent("fallback_service", "Use fallback service", "fallback_001")
+        cache_agent = graphbit.Node.agent("cache_service", "Use cached response", "cache_001")
 
         primary_id = workflow.add_node(primary_agent)
         fallback_id = workflow.add_node(fallback_agent)
         cache_id = workflow.add_node(cache_agent)
 
         # Create response handler
-        response_agent = Node.agent("response_handler", "Handle service response", "response_001")
+        response_agent = graphbit.Node.agent("response_handler", "Handle service response", "response_001")
         response_id = workflow.add_node(response_agent)
 
         try:
@@ -403,25 +403,25 @@ class TestErrorHandlingWorkflows:
 
     def test_retry_with_backoff_workflow(self) -> None:
         """Test workflow implementing retry with exponential backoff."""
-        workflow = Workflow("retry_backoff")
+        workflow = graphbit.Workflow("retry_backoff")
 
         # Create operation attempt
-        operation_agent = Node.agent("operation", "Perform operation", "op_001")
+        operation_agent = graphbit.Node.agent("operation", "Perform operation", "op_001")
         op_id = workflow.add_node(operation_agent)
 
         # Create retry counter check
-        retry_condition = Node.condition("retry_check", "retry_count < max_retries")
+        retry_condition = graphbit.Node.condition("retry_check", "retry_count < max_retries")
         retry_id = workflow.add_node(retry_condition)
 
         # Create backoff calculation
-        backoff_transform = Node.transform("backoff", "calculate_backoff_delay")
+        backoff_transform = graphbit.Node.transform("backoff", "calculate_backoff_delay")
         backoff_id = workflow.add_node(backoff_transform)
 
         # Create delay and retry logic
-        delay_agent = Node.agent("delay", "Apply backoff delay", "delay_001")
-        retry_agent = Node.agent("retry", "Retry operation", "retry_001")
-        failure_agent = Node.agent("failure", "Handle final failure", "failure_001")
-        success_agent = Node.agent("success", "Handle success", "success_001")
+        delay_agent = graphbit.Node.agent("delay", "Apply backoff delay", "delay_001")
+        retry_agent = graphbit.Node.agent("retry", "Retry operation", "retry_001")
+        failure_agent = graphbit.Node.agent("failure", "Handle final failure", "failure_001")
+        success_agent = graphbit.Node.agent("success", "Handle success", "success_001")
 
         delay_id = workflow.add_node(delay_agent)
         retry_op_id = workflow.add_node(retry_agent)
@@ -450,10 +450,10 @@ class TestDataPipelineWorkflows:
 
     def test_etl_pipeline_workflow(self) -> None:
         """Test workflow implementing ETL (Extract, Transform, Load) pattern."""
-        workflow = Workflow("etl_pipeline")
+        workflow = graphbit.Workflow("etl_pipeline")
 
         # Extract phase
-        extract_agent = Node.agent("extractor", "Extract data from sources", "extract_001")
+        extract_agent = graphbit.Node.agent("extractor", "Extract data from sources", "extract_001")
         extract_id = workflow.add_node(extract_agent)
 
         # Transform phase - multiple transformation steps
@@ -463,20 +463,20 @@ class TestDataPipelineWorkflows:
         for name, operation in transform_steps:
             if name == "validate":
                 # Use condition node for validation
-                node = Node.condition(name, "data_valid == true")
+                node = graphbit.Node.condition(name, "data_valid == true")
             else:
                 # Use transform node for data operations
-                node = Node.transform(name, operation)
+                node = graphbit.Node.transform(name, operation)
 
             node_id = workflow.add_node(node)
             transform_ids.append(node_id)
 
         # Load phase
-        load_agent = Node.agent("loader", "Load data to destination", "load_001")
+        load_agent = graphbit.Node.agent("loader", "Load data to destination", "load_001")
         load_id = workflow.add_node(load_agent)
 
         # Quality assurance
-        qa_agent = Node.agent("quality_check", "Perform quality assurance", "qa_001")
+        qa_agent = graphbit.Node.agent("quality_check", "Perform quality assurance", "qa_001")
         qa_id = workflow.add_node(qa_agent)
 
         try:
@@ -501,29 +501,29 @@ class TestDataPipelineWorkflows:
 
     def test_stream_processing_workflow(self) -> None:
         """Test workflow for stream processing pattern."""
-        workflow = Workflow("stream_processing")
+        workflow = graphbit.Workflow("stream_processing")
 
         # Stream input
-        stream_agent = Node.agent("stream_input", "Receive stream data", "stream_001")
+        stream_agent = graphbit.Node.agent("stream_input", "Receive stream data", "stream_001")
         stream_id = workflow.add_node(stream_agent)
 
         # Partitioning logic
-        partition_condition = Node.condition("partition", "hash(key) % partition_count")
+        partition_condition = graphbit.Node.condition("partition", "hash(key) % partition_count")
         partition_id = workflow.add_node(partition_condition)
 
         # Parallel processing partitions
         partition_processors = []
         for i in range(3):
-            processor = Node.agent(f"partition_{i}", f"Process partition {i}", f"part_{i:03d}")
+            processor = graphbit.Node.agent(f"partition_{i}", f"Process partition {i}", f"part_{i:03d}")
             proc_id = workflow.add_node(processor)
             partition_processors.append(proc_id)
 
         # Aggregation
-        aggregator = Node.agent("aggregator", "Aggregate partition results", "agg_001")
+        aggregator = graphbit.Node.agent("aggregator", "Aggregate partition results", "agg_001")
         agg_id = workflow.add_node(aggregator)
 
         # Output
-        output_agent = Node.agent("output", "Output processed stream", "output_001")
+        output_agent = graphbit.Node.agent("output", "Output processed stream", "output_001")
         output_id = workflow.add_node(output_agent)
 
         try:
@@ -554,14 +554,14 @@ class TestDataPipelineWorkflows:
         if not api_key:
             pytest.skip("OPENAI_API_KEY not set")
 
-        config = LlmConfig.openai(api_key, "gpt-3.5-turbo")
-        workflow = Workflow("complex_pipeline_exec")
+        config = graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
+        workflow = graphbit.Workflow("complex_pipeline_exec")
 
         # Create simplified but executable pipeline
-        input_agent = Node.agent("input", "Process pipeline input", "input_001")
-        transform_node = Node.transform("transform", "process_data")
-        validation_condition = Node.condition("validate", "quality_score > 0.7")
-        output_agent = Node.agent("output", "Generate pipeline output", "output_001")
+        input_agent = graphbit.Node.agent("input", "Process pipeline input", "input_001")
+        transform_node = graphbit.Node.transform("transform", "process_data")
+        validation_condition = graphbit.Node.condition("validate", "quality_score > 0.7")
+        output_agent = graphbit.Node.agent("output", "Generate pipeline output", "output_001")
 
         # Add nodes and connect
         input_id = workflow.add_node(input_agent)
@@ -577,10 +577,10 @@ class TestDataPipelineWorkflows:
             # Validate and execute
             workflow.validate()
 
-            executor = Executor(config)
+            executor = graphbit.Executor(config)
             result = executor.execute(workflow)
 
-            assert isinstance(result, WorkflowResult)
+            assert isinstance(result, graphbit.WorkflowResult)
 
         except Exception as e:
             pytest.skip(f"Complex pipeline execution test skipped: {e}")
@@ -592,32 +592,32 @@ class TestWorkflowComposition:
 
     def test_nested_workflow_patterns(self) -> None:
         """Test composition of multiple workflow patterns."""
-        workflow = Workflow("nested_patterns")
+        workflow = graphbit.Workflow("nested_patterns")
 
         # Combine parallel processing with conditional logic
-        entry_agent = Node.agent("entry", "Start nested processing", "entry_001")
+        entry_agent = graphbit.Node.agent("entry", "Start nested processing", "entry_001")
         entry_id = workflow.add_node(entry_agent)
 
         # Primary condition
-        primary_condition = Node.condition("primary", "processing_mode == 'parallel'")
+        primary_condition = graphbit.Node.condition("primary", "processing_mode == 'parallel'")
         primary_id = workflow.add_node(primary_condition)
 
         # Parallel branch
         parallel_nodes = []
         for i in range(2):
-            node = Node.agent(f"parallel_{i}", f"Parallel process {i}", f"par_{i:03d}")
+            node = graphbit.Node.agent(f"parallel_{i}", f"Parallel process {i}", f"par_{i:03d}")
             node_id = workflow.add_node(node)
             parallel_nodes.append(node_id)
 
         # Sequential branch
         sequential_nodes = []
         for i in range(2):
-            node = Node.agent(f"sequential_{i}", f"Sequential process {i}", f"seq_{i:03d}")
+            node = graphbit.Node.agent(f"sequential_{i}", f"Sequential process {i}", f"seq_{i:03d}")
             node_id = workflow.add_node(node)
             sequential_nodes.append(node_id)
 
         # Convergence
-        converge_agent = Node.agent("converge", "Converge results", "converge_001")
+        converge_agent = graphbit.Node.agent("converge", "Converge results", "converge_001")
         converge_id = workflow.add_node(converge_agent)
 
         try:
@@ -642,16 +642,16 @@ class TestWorkflowComposition:
 
     def test_hierarchical_workflow_structure(self) -> None:
         """Test hierarchical workflow with multiple levels."""
-        workflow = Workflow("hierarchical")
+        workflow = graphbit.Workflow("hierarchical")
 
         # Level 0: Root
-        root_agent = Node.agent("root", "Root processor", "root_001")
+        root_agent = graphbit.Node.agent("root", "Root processor", "root_001")
         root_id = workflow.add_node(root_agent)
 
         # Level 1: Department processing
         dept_nodes = []
         for dept in ["sales", "marketing", "support"]:
-            node = Node.agent(f"dept_{dept}", f"Process {dept} data", f"{dept}_001")
+            node = graphbit.Node.agent(f"dept_{dept}", f"Process {dept} data", f"{dept}_001")
             node_id = workflow.add_node(node)
             dept_nodes.append((dept, node_id))
 
@@ -659,7 +659,7 @@ class TestWorkflowComposition:
         team_nodes = []
         for dept, dept_id in dept_nodes:
             for team in ["team_a", "team_b"]:
-                node = Node.agent(f"{dept}_{team}", f"Process {dept} {team}", f"{dept}_{team}_001")
+                node = graphbit.Node.agent(f"{dept}_{team}", f"Process {dept} {team}", f"{dept}_{team}_001")
                 node_id = workflow.add_node(node)
                 team_nodes.append((dept_id, node_id))
 
@@ -667,12 +667,12 @@ class TestWorkflowComposition:
         individual_nodes = []
         for _team_dept_id, team_id in team_nodes[:4]:  # Limit to avoid too complex
             for individual in ["person_1", "person_2"]:
-                node = Node.agent(f"individual_{individual}", f"Process {individual}", f"ind_{individual}_001")
+                node = graphbit.Node.agent(f"individual_{individual}", f"Process {individual}", f"ind_{individual}_001")
                 node_id = workflow.add_node(node)
                 individual_nodes.append((team_id, node_id))
 
         # Aggregation
-        agg_agent = Node.agent("aggregator", "Final aggregation", "agg_001")
+        agg_agent = graphbit.Node.agent("aggregator", "Final aggregation", "agg_001")
         agg_id = workflow.add_node(agg_agent)
 
         try:
@@ -700,7 +700,7 @@ class TestWorkflowComposition:
         if not api_key:
             pytest.skip("OPENAI_API_KEY not set")
 
-        config = LlmConfig.openai(api_key, "gpt-3.5-turbo")
+        config = graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
 
         # Test different workflow patterns
         patterns = {"linear": self._create_linear_workflow(), "parallel": self._create_simple_parallel_workflow(), "conditional": self._create_simple_conditional_workflow()}
@@ -709,7 +709,7 @@ class TestWorkflowComposition:
             try:
                 workflow.validate()
 
-                executor = Executor(config)
+                executor = graphbit.Executor(config)
 
                 import time
 
@@ -717,7 +717,7 @@ class TestWorkflowComposition:
                 result = executor.execute(workflow)
                 end_time = time.time()
 
-                assert isinstance(result, WorkflowResult)
+                assert isinstance(result, graphbit.WorkflowResult)
 
                 # Check execution time is reasonable
                 duration = end_time - start_time
@@ -729,11 +729,11 @@ class TestWorkflowComposition:
 
     def _create_linear_workflow(self) -> Any:
         """Create a simple linear workflow for testing."""
-        workflow = Workflow("linear_test")
+        workflow = graphbit.Workflow("linear_test")
 
-        agent1 = Node.agent("step1", "First step", "step1_001")
-        agent2 = Node.agent("step2", "Second step", "step2_001")
-        agent3 = Node.agent("step3", "Third step", "step3_001")
+        agent1 = graphbit.Node.agent("step1", "First step", "step1_001")
+        agent2 = graphbit.Node.agent("step2", "Second step", "step2_001")
+        agent3 = graphbit.Node.agent("step3", "Third step", "step3_001")
 
         id1 = workflow.add_node(agent1)
         id2 = workflow.add_node(agent2)
@@ -746,12 +746,12 @@ class TestWorkflowComposition:
 
     def _create_simple_parallel_workflow(self) -> Any:
         """Create a simple parallel workflow for testing."""
-        workflow = Workflow("parallel_test")
+        workflow = graphbit.Workflow("parallel_test")
 
-        start = Node.agent("start", "Start parallel", "start_001")
-        branch1 = Node.agent("branch1", "Parallel branch 1", "branch1_001")
-        branch2 = Node.agent("branch2", "Parallel branch 2", "branch2_001")
-        merge = Node.agent("merge", "Merge branches", "merge_001")
+        start = graphbit.Node.agent("start", "Start parallel", "start_001")
+        branch1 = graphbit.Node.agent("branch1", "Parallel branch 1", "branch1_001")
+        branch2 = graphbit.Node.agent("branch2", "Parallel branch 2", "branch2_001")
+        merge = graphbit.Node.agent("merge", "Merge branches", "merge_001")
 
         start_id = workflow.add_node(start)
         b1_id = workflow.add_node(branch1)
@@ -767,12 +767,12 @@ class TestWorkflowComposition:
 
     def _create_simple_conditional_workflow(self) -> Any:
         """Create a simple conditional workflow for testing."""
-        workflow = Workflow("conditional_test")
+        workflow = graphbit.Workflow("conditional_test")
 
-        start = Node.agent("start", "Start conditional", "start_001")
-        condition = Node.condition("check", "value > 0")
-        true_branch = Node.agent("true_branch", "Handle true case", "true_001")
-        false_branch = Node.agent("false_branch", "Handle false case", "false_001")
+        start = graphbit.Node.agent("start", "Start conditional", "start_001")
+        condition = graphbit.Node.condition("check", "value > 0")
+        true_branch = graphbit.Node.agent("true_branch", "Handle true case", "true_001")
+        false_branch = graphbit.Node.agent("false_branch", "Handle false case", "false_001")
 
         start_id = workflow.add_node(start)
         cond_id = workflow.add_node(condition)

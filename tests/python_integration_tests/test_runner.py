@@ -42,10 +42,10 @@ class IntegrationTestRunner:
 
         # Initialize GraphBit
         try:
-            from graphbit import init, version
+            import graphbit
 
-            init()
-            print(f"✓ GraphBit initialized (version: {version()})")
+            graphbit.init()
+            print(f"✓ GraphBit initialized (version: {graphbit.version()})")
         except Exception as e:
             print(f"✗ Failed to initialize GraphBit: {e}")
             return False

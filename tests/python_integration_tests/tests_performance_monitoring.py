@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from graphbit import Executor, LlmClient, LlmConfig, Node, Workflow, WorkflowResult, configure_runtime, get_system_info, health_check
+import graphbit
 
 
 class TestClientStatistics:
@@ -25,8 +25,8 @@ class TestClientStatistics:
     @pytest.fixture
     def client(self, api_key: str) -> Any:
         """Create LLM client for statistics testing."""
-        config = LlmConfig.openai(api_key, "gpt-3.5-turbo")
-        return LlmClient(config, debug=True)
+        config = graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
+        return graphbit.LlmClient(config, debug=True)
 
     @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="Requires OpenAI API key")
     def test_initial_client_statistics(self, client: Any) -> None:
@@ -165,20 +165,20 @@ class TestExecutorStatistics:
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             pytest.skip("OPENAI_API_KEY not set")
-        return LlmConfig.openai(api_key, "gpt-3.5-turbo")
+        return graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
 
     @pytest.fixture
     def simple_workflow(self) -> Any:
         """Create simple workflow for statistics testing."""
-        workflow = Workflow("stats_test")
-        agent = Node.agent("stats_agent", "Quick response", "stats_001")
+        workflow = graphbit.Workflow("stats_test")
+        agent = graphbit.Node.agent("stats_agent", "Quick response", "stats_001")
         workflow.add_node(agent)
         return workflow
 
     @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="Requires OpenAI API key")
     def test_executor_initial_statistics(self, llm_config: Any) -> None:
         """Test initial state of executor statistics."""
-        executor = Executor(llm_config)
+        executor = graphbit.Executor(llm_config)
         stats = executor.get_stats()
 
         assert isinstance(stats, dict)
@@ -194,7 +194,7 @@ class TestExecutorStatistics:
     @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="Requires OpenAI API key")
     def test_executor_execution_statistics(self, llm_config: Any, simple_workflow: Any) -> None:
         """Test executor statistics during workflow execution."""
-        executor = Executor(llm_config)
+        executor = graphbit.Executor(llm_config)
 
         # Get initial stats
         initial_stats = executor.get_stats()
@@ -206,7 +206,7 @@ class TestExecutorStatistics:
             simple_workflow.validate()
             result = executor.execute(simple_workflow)
 
-            assert isinstance(result, WorkflowResult)
+            assert isinstance(result, graphbit.WorkflowResult)
 
             # Get updated stats
             updated_stats = executor.get_stats()
@@ -235,7 +235,7 @@ class TestExecutorStatistics:
     @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="Requires OpenAI API key")
     def test_executor_statistics_reset(self, llm_config: Any, simple_workflow: Any) -> None:
         """Test executor statistics reset functionality."""
-        executor = Executor(llm_config)
+        executor = graphbit.Executor(llm_config)
 
         # Perform execution to generate stats
         try:
@@ -263,10 +263,10 @@ class TestExecutorStatistics:
         """Test statistics across different executor performance modes."""
         # Test different executor types
         executors = [
-            ("standard", Executor(llm_config)),
-            ("high_throughput", Executor.new_high_throughput(llm_config)),
-            ("low_latency", Executor.new_low_latency(llm_config)),
-            ("memory_optimized", Executor.new_memory_optimized(llm_config)),
+            ("standard", graphbit.Executor(llm_config)),
+            ("high_throughput", graphbit.Executor.new_high_throughput(llm_config)),
+            ("low_latency", graphbit.Executor.new_low_latency(llm_config)),
+            ("memory_optimized", graphbit.Executor.new_memory_optimized(llm_config)),
         ]
 
         for _mode_name, executor in executors:
@@ -294,7 +294,7 @@ class TestSystemPerformanceMonitoring:
 
     def test_system_info_performance_metrics(self) -> None:
         """Test system information performance metrics."""
-        system_info = get_system_info()
+        system_info = graphbit.get_system_info()
 
         assert isinstance(system_info, dict)
 
@@ -317,7 +317,7 @@ class TestSystemPerformanceMonitoring:
 
     def test_health_check_performance_monitoring(self) -> None:
         """Test health check performance monitoring."""
-        health = health_check()
+        health = graphbit.health_check()
 
         assert isinstance(health, dict)
 
@@ -336,9 +336,9 @@ class TestSystemPerformanceMonitoring:
         """Test monitoring of runtime configuration."""
         # Configure runtime and verify it's reflected in monitoring
         try:
-            configure_runtime(worker_threads=4, max_blocking_threads=8)
+            graphbit.configure_runtime(worker_threads=4, max_blocking_threads=8)
 
-            system_info = get_system_info()
+            system_info = graphbit.get_system_info()
 
             # Check if configuration changes are reflected
             if "runtime_worker_threads" in system_info:
@@ -367,8 +367,8 @@ class TestPerformanceBenchmarking:
     @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="Requires OpenAI API key")
     def test_completion_performance_measurement(self, api_key: str) -> None:
         """Test performance measurement of completion operations."""
-        config = LlmConfig.openai(api_key, "gpt-3.5-turbo")
-        client = LlmClient(config)
+        config = graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
+        client = graphbit.LlmClient(config)
 
         # Measure completion performance
         start_time = time.time()
@@ -396,8 +396,8 @@ class TestPerformanceBenchmarking:
     @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="Requires OpenAI API key")
     def test_batch_performance_comparison(self, api_key: str) -> None:
         """Test performance comparison between single and batch operations."""
-        config = LlmConfig.openai(api_key, "gpt-3.5-turbo")
-        client = LlmClient(config)
+        config = graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
+        client = graphbit.LlmClient(config)
 
         prompts = ["Test 1", "Test 2", "Test 3"]
 
@@ -431,12 +431,12 @@ class TestPerformanceBenchmarking:
     @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="Requires OpenAI API key")
     def test_workflow_execution_performance(self, api_key: str) -> None:
         """Test workflow execution performance monitoring."""
-        config = LlmConfig.openai(api_key, "gpt-3.5-turbo")
-        executor = Executor(config)
+        config = graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
+        executor = graphbit.Executor(config)
 
         # Create simple workflow
-        workflow = Workflow("performance_test")
-        agent = Node.agent("perf_agent", "Quick response", "perf_001")
+        workflow = graphbit.Workflow("performance_test")
+        agent = graphbit.Node.agent("perf_agent", "Quick response", "perf_001")
         workflow.add_node(agent)
 
         try:
@@ -447,7 +447,7 @@ class TestPerformanceBenchmarking:
             result = executor.execute(workflow)
             end_time = time.time()
 
-            assert isinstance(result, WorkflowResult)
+            assert isinstance(result, graphbit.WorkflowResult)
 
             # Check execution time
             execution_duration = end_time - start_time
@@ -480,13 +480,13 @@ class TestCrossComponentPerformanceMonitoring:
             pytest.skip("OPENAI_API_KEY not set")
 
         # Initialize components
-        config = LlmConfig.openai(api_key, "gpt-3.5-turbo")
-        client = LlmClient(config)
-        executor = Executor(config)
+        config = graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
+        client = graphbit.LlmClient(config)
+        executor = graphbit.Executor(config)
 
         # Create workflow
-        workflow = Workflow("e2e_perf_test")
-        agent = Node.agent("e2e_agent", "End to end test", "e2e_001")
+        workflow = graphbit.Workflow("e2e_perf_test")
+        agent = graphbit.Node.agent("e2e_agent", "End to end test", "e2e_001")
         workflow.add_node(agent)
 
         try:
@@ -504,7 +504,7 @@ class TestCrossComponentPerformanceMonitoring:
 
             # Verify results
             assert isinstance(client_result, str)
-            assert isinstance(workflow_result, WorkflowResult)
+            assert isinstance(workflow_result, graphbit.WorkflowResult)
 
             # Check overall performance
             total_duration = overall_end - overall_start
@@ -524,7 +524,7 @@ class TestCrossComponentPerformanceMonitoring:
     def test_resource_utilization_monitoring(self) -> None:
         """Test monitoring of resource utilization."""
         # Get system information
-        system_info = get_system_info()
+        system_info = graphbit.get_system_info()
 
         # Check resource-related metrics
         resource_fields = ["cpu_count", "memory_allocator", "runtime_worker_threads"]
@@ -546,10 +546,10 @@ class TestCrossComponentPerformanceMonitoring:
         if not api_key:
             pytest.skip("OPENAI_API_KEY not set")
 
-        config = LlmConfig.openai(api_key, "gpt-3.5-turbo")
+        config = graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
 
         # Create multiple clients for concurrent testing
-        clients = [LlmClient(config) for _ in range(3)]
+        clients = [graphbit.LlmClient(config) for _ in range(3)]
 
         try:
             # Perform concurrent operations

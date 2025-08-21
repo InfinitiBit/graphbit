@@ -2,7 +2,7 @@
 
 import pytest
 
-from graphbit import Node, Workflow
+import graphbit
 
 
 class TestValidationResult:
@@ -10,11 +10,11 @@ class TestValidationResult:
 
     def test_validation_result_with_errors(self):
         """Should raise an exception on cyclic workflow graph structure."""
-        workflow = Workflow("invalid")
+        workflow = graphbit.Workflow("invalid")
 
         # Create two agent nodes
-        agent1 = Node.agent("a1", "First agent description", "agent_001")
-        agent2 = Node.agent("a2", "Second agent description", "agent_002")
+        agent1 = graphbit.Node.agent("a1", "First agent description", "agent_001")
+        agent2 = graphbit.Node.agent("a2", "Second agent description", "agent_002")
 
         id1 = workflow.add_node(agent1)
         id2 = workflow.add_node(agent2)

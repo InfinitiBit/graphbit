@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from graphbit import Executor, LlmConfig, Node, Workflow, WorkflowResult
+import graphbit
 
 
 class TestWorkflowBuilder:
@@ -14,12 +14,12 @@ class TestWorkflowBuilder:
 
     def test_sequential_workflow_building(self) -> None:
         """Test building sequential workflows."""
-        workflow = Workflow("sequential_test")
+        workflow = graphbit.Workflow("sequential_test")
 
         # Build a sequential processing workflow
         nodes = []
         for i in range(3):
-            agent = Node.agent(f"step_{i}", f"Process step {i}", f"seq_{i:03d}")
+            agent = graphbit.Node.agent(f"step_{i}", f"Process step {i}", f"seq_{i:03d}")
             node_id = workflow.add_node(agent)
             nodes.append((agent, node_id))
 
@@ -32,21 +32,21 @@ class TestWorkflowBuilder:
 
     def test_parallel_workflow_building(self) -> None:
         """Test building parallel workflows."""
-        workflow = Workflow("parallel_test")
+        workflow = graphbit.Workflow("parallel_test")
 
         # Create entry point
-        entry = Node.agent("entry", "Start parallel processing", "entry_001")
+        entry = graphbit.Node.agent("entry", "Start parallel processing", "entry_001")
         workflow.add_node(entry)
 
         # Create parallel processing branches
         parallel_agents = []
         for i in range(3):
-            agent = Node.agent(f"parallel_{i}", f"Parallel task {i}", f"par_{i:03d}")
+            agent = graphbit.Node.agent(f"parallel_{i}", f"Parallel task {i}", f"par_{i:03d}")
             workflow.add_node(agent)
             parallel_agents.append(agent)
 
         # Create merge point
-        merge = Node.agent("merge", "Merge parallel results", "merge_001")
+        merge = graphbit.Node.agent("merge", "Merge parallel results", "merge_001")
         workflow.add_node(merge)
 
         # Connect parallel structure
@@ -59,19 +59,19 @@ class TestWorkflowBuilder:
 
     def test_conditional_workflow_building(self) -> None:
         """Test building conditional workflows."""
-        workflow = Workflow("conditional_test")
+        workflow = graphbit.Workflow("conditional_test")
 
-        entry = Node.agent("entry", "Start processing", "entry_001")
+        entry = graphbit.Node.agent("entry", "Start processing", "entry_001")
         workflow.add_node(entry)
 
-        condition1 = Node.condition("check_priority", "priority == 'high'")
-        condition2 = Node.condition("check_type", "type == 'urgent'")
+        condition1 = graphbit.Node.condition("check_priority", "priority == 'high'")
+        condition2 = graphbit.Node.condition("check_type", "type == 'urgent'")
         workflow.add_node(condition1)
         workflow.add_node(condition2)
 
-        high_priority = Node.agent("high_priority", "Handle high priority", "high_001")
-        urgent_processing = Node.agent("urgent", "Handle urgent items", "urgent_001")
-        normal_processing = Node.agent("normal", "Handle normal items", "normal_001")
+        high_priority = graphbit.Node.agent("high_priority", "Handle high priority", "high_001")
+        urgent_processing = graphbit.Node.agent("urgent", "Handle urgent items", "urgent_001")
+        normal_processing = graphbit.Node.agent("normal", "Handle normal items", "normal_001")
 
         workflow.add_node(high_priority)
         workflow.add_node(urgent_processing)
@@ -83,16 +83,16 @@ class TestWorkflowValidation:
 
     def test_empty_workflow_validation(self) -> None:
         """Test validation of empty workflows."""
-        workflow = Workflow("empty")
+        workflow = graphbit.Workflow("empty")
 
         with contextlib.suppress(ValueError, RuntimeError):
             workflow.validate()
 
     def test_single_node_workflow_validation(self) -> None:
         """Test validation of single node workflows."""
-        workflow = Workflow("single_node")
+        workflow = graphbit.Workflow("single_node")
 
-        agent = Node.agent("solo", "Solo processing", "solo_001")
+        agent = graphbit.Node.agent("solo", "Solo processing", "solo_001")
         workflow.add_node(agent)
 
         with contextlib.suppress(ValueError, RuntimeError):
@@ -100,11 +100,11 @@ class TestWorkflowValidation:
 
     def test_connected_workflow_validation(self) -> None:
         """Test validation of connected workflows."""
-        workflow = Workflow("connected")
+        workflow = graphbit.Workflow("connected")
 
         # Create connected workflow
-        agent1 = Node.agent("first", "First step", "first_001")
-        agent2 = Node.agent("second", "Second step", "second_001")
+        agent1 = graphbit.Node.agent("first", "First step", "first_001")
+        agent2 = graphbit.Node.agent("second", "Second step", "second_001")
 
         workflow.add_node(agent1)
         workflow.add_node(agent2)
@@ -125,24 +125,24 @@ class TestWorkflowExecution:
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             pytest.skip("OPENAI_API_KEY not set")
-        return LlmConfig.openai(api_key, "gpt-3.5-turbo")
+        return graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
 
     @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="Requires OpenAI API key")
     def test_simple_workflow_execution(self, llm_config: Any) -> None:
         """Test executing simple workflows."""
-        workflow = Workflow("simple_execution")
+        workflow = graphbit.Workflow("simple_execution")
 
-        agent = Node.agent("processor", "Process the input", "proc_001")
+        agent = graphbit.Node.agent("processor", "Process the input", "proc_001")
         workflow.add_node(agent)
 
         try:
             workflow.validate()
 
-            executor = Executor(llm_config)
+            executor = graphbit.Executor(llm_config)
             result = executor.execute(workflow)
 
             assert result is not None
-            assert isinstance(result, WorkflowResult)
+            assert isinstance(result, graphbit.WorkflowResult)
 
         except (ValueError, RuntimeError) as e:
             pytest.skip(f"Simple workflow execution skipped: {e}")
@@ -153,10 +153,10 @@ class TestWorkflowComponents:
 
     def test_agent_node_builder(self) -> None:
         """Test building agent nodes with different configurations."""
-        agent1 = Node.agent("basic", "Basic processing", "basic_001")
+        agent1 = graphbit.Node.agent("basic", "Basic processing", "basic_001")
         assert agent1.name() == "basic"
 
-        agent2 = Node.agent("auto", "Auto ID processing")
+        agent2 = graphbit.Node.agent("auto", "Auto ID processing")
         assert agent2.name() == "auto"
 
     def test_condition_node_builder(self) -> None:
@@ -168,7 +168,7 @@ class TestWorkflowComponents:
         ]
 
         for name, expression in conditions:
-            condition = Node.condition(name, expression)
+            condition = graphbit.Node.condition(name, expression)
             assert condition.name() == name
 
     def test_transform_node_builder(self) -> None:
@@ -180,5 +180,5 @@ class TestWorkflowComponents:
         ]
 
         for name, operation in transforms:
-            transform = Node.transform(name, operation)
+            transform = graphbit.Node.transform(name, operation)
             assert transform.name() == name
