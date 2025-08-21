@@ -24,6 +24,13 @@ async fn test_deepseek_provider_creation() {
 
 #[tokio::test]
 async fn test_deepseek_message_formatting() {
+    let _provider = LlmProviderFactory::create_provider(LlmConfig::DeepSeek {
+        api_key: "test-key".to_string(),
+        model: "deepseek-chat".to_string(),
+        base_url: None,
+    })
+    .unwrap();
+
     let request = LlmRequest::with_messages(vec![])
         .with_message(LlmMessage::system("system prompt"))
         .with_message(LlmMessage::user("user message"))
@@ -102,6 +109,13 @@ async fn test_perplexity_model_configs() {
 
 #[tokio::test]
 async fn test_perplexity_message_formatting() {
+    let _provider = LlmProviderFactory::create_provider(LlmConfig::Perplexity {
+        api_key: "test-key".to_string(),
+        model: "pplx-7b-online".to_string(),
+        base_url: None,
+    })
+    .unwrap();
+
     let request = LlmRequest::with_messages(vec![])
         .with_message(LlmMessage::system("system prompt"))
         .with_message(LlmMessage::user("user message"))
