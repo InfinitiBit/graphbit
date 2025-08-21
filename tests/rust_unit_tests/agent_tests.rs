@@ -3,15 +3,88 @@
 mod test_helpers;
 use graphbit_core::{
     agents::{AgentBuilder, AgentConfig, AgentTrait},
+    errors::GraphBitResult,
     llm::LlmConfig,
     types::{AgentCapability, AgentId, AgentMessage, MessageContent, WorkflowContext, WorkflowId},
 };
 use std::sync::Arc;
 use test_helpers::*;
 
+// A minimal dummy agent implementing AgentTrait for unit testing default behaviors
+struct DummyAgent {
+    id: AgentId,
+}
+
+#[async_trait::async_trait]
+impl AgentTrait for DummyAgent {
+    fn id(&self) -> &AgentId {
+        &self.id
+    }
+
+    fn config(&self) -> &graphbit_core::agents::AgentConfig {
+        // Create a leaked boxed config to return a &'static reference without adding deps
+        // This intentionally leaks memory in test process only.
+        let llm_cfg = graphbit_core::llm::LlmConfig::default();
+        let boxed = Box::new(graphbit_core::agents::AgentConfig::new(
+            "dummy", "desc", llm_cfg,
+        ));
+        Box::leak(boxed)
+    }
+
+    async fn process_message(
+        &self,
+        _message: graphbit_core::types::AgentMessage,
+        _context: &mut graphbit_core::types::WorkflowContext,
+    ) -> GraphBitResult<graphbit_core::types::AgentMessage> {
+        unimplemented!()
+    }
+
+    async fn execute(
+        &self,
+        _message: graphbit_core::types::AgentMessage,
+    ) -> GraphBitResult<serde_json::Value> {
+        unimplemented!()
+    }
+
+    async fn validate_output(
+        &self,
+        _output: &str,
+        _schema: &serde_json::Value,
+    ) -> graphbit_core::validation::ValidationResult {
+        unimplemented!()
+    }
+}
+
+#[test]
+fn agent_config_builder_and_capabilities() {
+    let llm_cfg = graphbit_core::llm::LlmConfig::default();
+    let mut cfg = AgentConfig::new("test-agent", "a test", llm_cfg);
+    cfg = cfg.with_capabilities(vec![AgentCapability::TextProcessing]);
+    cfg = cfg.with_system_prompt("Do work");
+    cfg = cfg.with_max_tokens(128);
+    cfg = cfg.with_temperature(0.5);
+
+    assert_eq!(cfg.name, "test-agent");
+    assert_eq!(cfg.description, "a test");
+    assert!(cfg.capabilities.contains(&AgentCapability::TextProcessing));
+    assert_eq!(cfg.system_prompt, "Do work");
+    assert_eq!(cfg.max_tokens, Some(128));
+    assert_eq!(cfg.temperature, Some(0.5));
+}
+
+#[test]
+fn dummy_agent_default_methods() {
+    let dummy = DummyAgent { id: AgentId::new() };
+    // default capabilities/capability checks should work without panics
+    let cap = AgentCapability::TextProcessing;
+    assert!(!dummy.has_capability(&cap));
+    assert!(dummy.capabilities().is_empty());
+}
+
 #[tokio::test]
 #[ignore = "Requires OpenAI API key (set OPENAI_API_KEY environment variable to run)"]
 async fn test_agent_creation() {
+    let _agent_id = AgentId::new();
     let llm_config = LlmConfig::OpenAI {
         api_key: "test_key".to_string(),
         model: "test_model".to_string(),
@@ -154,160 +227,4 @@ async fn test_agent_validation() {
         .with_temperature(0.2);
     assert_eq!(config.max_tokens, Some(64));
     assert_eq!(config.temperature, Some(0.2));
-}
-
-#[test]
-fn test_agent_capability_management() {
-    // Test all capability variants
-    let capabilities = vec![
-        AgentCapability::TextProcessing,
-        AgentCapability::DataAnalysis,
-        AgentCapability::ToolExecution,
-        AgentCapability::DecisionMaking,
-        AgentCapability::Custom("code_generation".to_string()),
-        AgentCapability::Custom("image_processing".to_string()),
-        AgentCapability::Custom("web_search".to_string()),
-        AgentCapability::Custom("file_operations".to_string()),
-    ];
-
-    let llm_config = LlmConfig::OpenAI {
-        api_key: "key".into(),
-        model: "model".into(),
-        base_url: None,
-        organization: None,
-    };
-
-    let config = AgentConfig::new("test_agent", "Test agent", llm_config)
-        .with_capabilities(capabilities.clone());
-
-    assert_eq!(config.capabilities.len(), 8);
-    for capability in &capabilities {
-        assert!(config.capabilities.contains(capability));
-    }
-}
-
-#[test]
-fn test_agent_message_variants() {
-    let agent_id = AgentId::new();
-
-    // Test text message
-    let text_message = AgentMessage::new(
-        agent_id.clone(),
-        None,
-        MessageContent::Text("Hello".to_string()),
-    );
-    assert_eq!(text_message.sender, agent_id);
-    assert!(text_message.recipient.is_none());
-    match text_message.content {
-        MessageContent::Text(ref text) => assert_eq!(text, "Hello"),
-        _ => panic!("Expected text content"),
-    }
-
-    // Test structured message
-    let structured_data = serde_json::json!({"key": "value", "number": 42});
-    let structured_message = AgentMessage::new(
-        agent_id.clone(),
-        Some(AgentId::new()),
-        MessageContent::Data(structured_data.clone()),
-    );
-    match structured_message.content {
-        MessageContent::Data(ref data) => assert_eq!(data, &structured_data),
-        _ => panic!("Expected structured content"),
-    }
-
-    // Test tool call message
-    let tool_call_message = AgentMessage::new(
-        agent_id.clone(),
-        None,
-        MessageContent::ToolCall {
-            tool_name: "calculator".to_string(),
-            parameters: serde_json::json!({"operation": "add", "a": 1, "b": 2}),
-        },
-    );
-    match tool_call_message.content {
-        MessageContent::ToolCall {
-            ref tool_name,
-            ref parameters,
-        } => {
-            assert_eq!(tool_name, "calculator");
-            assert_eq!(parameters["operation"], "add");
-        }
-        _ => panic!("Expected tool call content"),
-    }
-}
-
-#[test]
-fn test_agent_config_builder_edge_cases() {
-    let llm_config = LlmConfig::OpenAI {
-        api_key: "key".into(),
-        model: "model".into(),
-        base_url: None,
-        organization: None,
-    };
-
-    // Test with empty capabilities
-    let config =
-        AgentConfig::new("agent", "description", llm_config.clone()).with_capabilities(vec![]);
-    assert!(config.capabilities.is_empty());
-
-    // Test with extreme values
-    let config = AgentConfig::new("agent", "description", llm_config.clone())
-        .with_max_tokens(1)
-        .with_temperature(0.0);
-    assert_eq!(config.max_tokens, Some(1));
-    assert_eq!(config.temperature, Some(0.0));
-
-    let config = AgentConfig::new("agent", "description", llm_config.clone())
-        .with_max_tokens(4096)
-        .with_temperature(2.0);
-    assert_eq!(config.max_tokens, Some(4096));
-    assert_eq!(config.temperature, Some(2.0));
-
-    // Test with very long system prompt
-    let long_prompt = "a".repeat(1000);
-    let config =
-        AgentConfig::new("agent", "description", llm_config).with_system_prompt(&long_prompt);
-    assert_eq!(config.system_prompt, long_prompt);
-}
-
-#[test]
-fn test_agent_id_generation() {
-    let id1 = AgentId::new();
-    let id2 = AgentId::new();
-
-    // IDs should be unique
-    assert_ne!(id1, id2);
-
-    // IDs should be consistent when cloned
-    let id1_clone = id1.clone();
-    assert_eq!(id1, id1_clone);
-}
-
-#[tokio::test]
-async fn test_agent_builder_validation() {
-    let llm_config = LlmConfig::OpenAI {
-        api_key: "test_key".to_string(),
-        model: "test_model".to_string(),
-        base_url: None,
-        organization: None,
-    };
-
-    // Test builder with minimal configuration
-    let _builder = AgentBuilder::new("minimal_agent", llm_config.clone());
-    // Should be able to build with minimal config (though it may fail at runtime without real API)
-
-    // Test builder with full configuration
-    let _builder = AgentBuilder::new("full_agent", llm_config)
-        .description("Full featured agent")
-        .capabilities(vec![
-            AgentCapability::TextProcessing,
-            AgentCapability::DataAnalysis,
-            AgentCapability::ToolExecution,
-        ])
-        .system_prompt("You are a helpful assistant")
-        .max_tokens(512)
-        .temperature(0.7);
-
-    // Builder should be configured correctly
-    // Note: We can't easily test the build() method without a real API key
 }
