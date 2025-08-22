@@ -54,7 +54,7 @@ class WorkflowMonitor:
         
         # Count nodes in workflow
         try:
-            node_count = len(workflow.nodes()) if hasattr(workflow, 'nodes') else 1
+            node_count = len(workflow.nodes()) if hasattr(workflow, 'nodes') 
         except Exception:
             node_count = 1  # Default assumption
         
@@ -281,12 +281,11 @@ def monitor_workflow_execution(workflow, executor, monitor=None):
 ### Health Check Implementation
 
 ```python
-import datetime
 import time
 import threading
 from typing import List, Dict
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 from graphbit import health_check, get_system_info
 
 
@@ -312,7 +311,7 @@ class SystemHealthMonitor:
                 try:
                     health = self.check_system_health()
                     self.health_history.append({
-                        "timestamp": datetime.datetime.now(),
+                        "timestamp": datetime.now(),
                         "health": health
                     })
                     
@@ -346,7 +345,7 @@ class SystemHealthMonitor:
             # Add custom health metrics
             custom_health = {
                 **health,
-                "timestamp": datetime.datetime.now().isoformat(),
+                "timestamp": datetime.now().isoformat(),
                 "custom_checks": self._perform_custom_checks()
             }
             
@@ -356,7 +355,7 @@ class SystemHealthMonitor:
             return {
                 "overall_healthy": False,
                 "error": str(e),
-                "timestamp": datetime.datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat()
             }
     
     def _perform_custom_checks(self):
@@ -395,7 +394,7 @@ class SystemHealthMonitor:
             alerts.append({
                 "level": "critical",
                 "message": "System health check failed",
-                "timestamp": datetime.datetime.now()
+                "timestamp": datetime.now()
             })
         
         # Check memory usage
@@ -406,14 +405,14 @@ class SystemHealthMonitor:
             alerts.append({
                 "level": "warning",
                 "message": f"High memory usage: {memory_usage:.1f}%",
-                "timestamp": datetime.datetime.now()
+                "timestamp": datetime.now()
             })
         
         # Store alerts
         self.alerts.extend(alerts)
         
         # Keep only recent alerts (last 24 hours)
-        cutoff = datetime.datetime.now() - timedelta(hours=24)
+        cutoff = datetime.now() - timedelta(hours=24)
         self.alerts = [a for a in self.alerts if a["timestamp"] > cutoff]
     
     def get_health_summary(self):
