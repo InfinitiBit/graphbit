@@ -236,7 +236,7 @@ result = executor.execute(workflow)
 
 # Check execution results
 if result.is_completed():
-    print("Success:", result.get_all_variables())
+    print("Success:", result.get_all_node_outputs())
 elif result.is_failed():
     print("Failed:", result.error())
 

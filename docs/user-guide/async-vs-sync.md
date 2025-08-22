@@ -73,6 +73,8 @@ GraphBit's Python bindings provide both synchronous (blocking) and asynchronous 
 | [`get_variable`](../api-reference/python-api.md#get_variablekey)              | Sync         |
 | [`get_all_variables`](../api-reference/python-api.md#get_all_variables)              | Sync         |
 | [`variables`](../api-reference/python-api.md#variables)              | Sync         |
+| [`get_node_output`](../api-reference/python-api.md#get_node_output)              | Sync         |
+| [`get_all_node_outputs`](../api-reference/python-api.md#get_all_node_outputs)              | Sync         |
 
 ---
 
