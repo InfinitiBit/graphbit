@@ -60,7 +60,7 @@ class TestLlmConfig:
     def test_llm_config_huggingface(self):
         """Test creating HuggingFace LLM configuration with base URL."""
         api_key = get_api_key("huggingface")
-        config = LlmConfig.huggingface(api_key=api_key, model="gpt2", base_url="https://custom.api.com")
+        config = LlmConfig.huggingface(api_key=api_key, model="gpt2", base_url="https://api-inference.huggingface.co")
         assert config is not None
         assert config.provider() == "huggingface"
         assert config.model() == "gpt2"
