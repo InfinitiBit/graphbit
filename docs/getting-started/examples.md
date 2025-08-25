@@ -298,7 +298,7 @@ def workflow_validation_example():
     
     node2 = Node.agent(
         name="Second Agent", 
-        prompt=f"Continue processing the input.",
+        prompt="Continue processing the input.",
         agent_id="agent2"
     )
     
