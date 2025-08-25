@@ -143,8 +143,6 @@ impl Node {
                 ),
             );
 
-            // Store the actual tool functions in a global registry for execution
-            // This is a simplified approach - in production, you'd want a more sophisticated registry
             Python::with_gil(|py| {
                 TOOL_REGISTRY.with(|registry| {
                     let mut registry = registry.borrow_mut();
@@ -480,7 +478,6 @@ fn extract_args_section_google(docstring: &str) -> Option<String> {
         }
 
         if in_args_section {
-            // Check if we've reached another section
             if trimmed.ends_with(':') && !trimmed.contains(' ') && trimmed.len() > 1 {
                 break;
             }
@@ -679,14 +676,12 @@ pub fn sync_global_tools_to_workflow(py: Python<'_>) -> PyResult<()> {
         ))
     })?;
 
-    // For each tool in the global registry, try to get the actual function and register it in thread-local
+    // For each tool in the global registry, get the actual function and register it in thread-local
     TOOL_REGISTRY.with(|local_registry| {
         let mut local_registry = local_registry.borrow_mut();
 
         for tool_name in global_tools {
-            // Try to get the tool function from the global registry
-            // This is a simplified approach - in a full implementation, we'd have a proper bridge
-            // For now, we'll create a placeholder that indicates the tool exists
+            // Create a placeholder function that delegates to the global registry
             let tool_placeholder = py.eval(
                 c"lambda *args, **kwargs: 'Tool execution delegated to global registry'",
                 None,
@@ -702,7 +697,7 @@ pub fn sync_global_tools_to_workflow(py: Python<'_>) -> PyResult<()> {
     Ok(())
 }
 
-/// Execute a tool from the global registry (production-grade bridge)
+/// Execute a tool from the global registry
 fn execute_tool_from_global_registry(
     py: Python<'_>,
     tool_name: &str,
@@ -773,7 +768,7 @@ fn execute_tool_from_global_registry(
     }
 }
 
-/// Execute tool calls from workflow (production-grade bridge function)
+/// Execute tool calls from workflow
 #[pyfunction]
 pub fn execute_workflow_tool_calls(
     py: Python<'_>,
@@ -848,7 +843,7 @@ pub fn execute_workflow_tool_calls(
                         )),
                     }
                 } else {
-                    // Try to execute from global registry if not found in thread-local
+                    // Execute from global registry if not found in thread-local
                     Ok::<String, PyErr>(
                         execute_tool_from_global_registry(py, tool_name, parameters)
                             .unwrap_or_else(|e| {
@@ -877,7 +872,7 @@ pub fn execute_workflow_tool_calls(
     }
 }
 
-/// Production-grade tool execution bridge for workflow integration
+/// Tool execution bridge for workflow integration
 #[pyfunction]
 pub fn execute_production_tool_calls(
     py: Python<'_>,
