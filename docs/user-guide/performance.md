@@ -310,8 +310,9 @@ def create_optimized_executor(environment="production", workload_type="balanced"
             debug=False
         )
     elif workload_type == "low_latency":
-        executor = Executor.new_low_latency(
+        executor = Executor(
             config=llm_config,
+            lightweight_mode=True,
             timeout_seconds=config_params["timeout"],
             debug=False
         )
