@@ -109,23 +109,17 @@ def create_optimized_executors():
     )
     
     # High-throughput executor - maximize parallel processing
-    executors["high_throughput"] = Executor.new_high_throughput(
-        llm_config=llm_config,
+    executors["high_throughput"] = Executor(
+        config=llm_config,
         timeout_seconds=120,
         debug=False
     )
     
     # Low-latency executor - minimize response time
-    executors["low_latency"] = Executor.new_low_latency(
-        llm_config=llm_config,
+    executors["low_latency"] = Executor(
+        config=llm_config,
+        lightweight_mode=True,
         timeout_seconds=30,
-        debug=False
-    )
-    
-    # Memory-optimized executor - minimize memory usage
-    executors["memory_optimized"] = Executor.new_memory_optimized(
-        llm_config=llm_config,
-        timeout_seconds=90,
         debug=False
     )
     
@@ -310,20 +304,14 @@ def create_optimized_executor(environment="production", workload_type="balanced"
     
     # Create executor based on workload type
     if workload_type == "high_throughput":
-        executor = Executor.new_high_throughput(
-            llm_config=llm_config,
+        executor = Executor(
+            config=llm_config,
             timeout_seconds=config_params["timeout"],
             debug=False
         )
     elif workload_type == "low_latency":
         executor = Executor.new_low_latency(
-            llm_config=llm_config,
-            timeout_seconds=config_params["timeout"],
-            debug=False
-        )
-    elif workload_type == "memory_optimized":
-        executor = Executor.new_memory_optimized(
-            llm_config=llm_config,
+            config=llm_config,
             timeout_seconds=config_params["timeout"],
             debug=False
         )
