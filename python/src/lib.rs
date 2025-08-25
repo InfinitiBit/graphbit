@@ -406,6 +406,7 @@ fn graphbit(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(workflow::node::get_registered_tools, m)?)?;
     m.add_function(wrap_pyfunction!(workflow::node::execute_workflow_tool_calls, m)?)?;
     m.add_function(wrap_pyfunction!(workflow::node::execute_production_tool_calls, m)?)?;
+    m.add_function(wrap_pyfunction!(workflow::node::sync_global_tools_to_workflow, m)?)?;
 
     // Module metadata
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;

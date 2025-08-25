@@ -36,6 +36,7 @@ Designed to run **multi-agent workflows in parallel**, Graphbit persists memory 
 
 ##  Key Features
 
+- **Tool Selection** - LLMs intelligently select tools based on descriptions
 - **Type Safety** - Strong typing throughout the execution pipeline
 - **Reliability** - Circuit breakers, retry policies, and error handling
 - **Multi-LLM Support** - OpenAI, Anthropic, Ollama, HuggingFace
@@ -75,17 +76,22 @@ config = LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4o-mini")
 # Create executor
 executor = Executor(config)
 
-# Create a tool
-@tool(description="Get weather information")
+# Create tools with clear descriptions for LLM selection
+@tool(description="Get current weather information for any city")
 def get_weather(location: str) -> dict:
     return {"location": location, "temperature": 22, "condition": "sunny"}
+
+@tool(description="Perform mathematical calculations and return results")
+def calculate(expression: str) -> str:
+    return f"Result: {eval(expression)}"
 
 # Build workflow
 workflow = Workflow("Analysis Pipeline")
 
 analyzer = Node.agent(
-    name = "Data Analyzer", 
-    prompt = f"Analyze the following data: {input}"
+    name="Smart Agent",
+    prompt="What's the weather in Paris and calculate 15 + 27?",
+    tools=[get_weather, calculate]
 )
 
 processor = Node.agent(

@@ -82,6 +82,22 @@ impl ToolRegistry {
         }
     }
 
+    /// Create a proxy to the global tool registry
+    #[staticmethod]
+    pub fn new_global_proxy() -> Self {
+        // Get the global registry from the decorator module
+        use crate::tools::decorator::get_global_registry;
+        let global_registry = get_global_registry();
+        let registry_guard = global_registry.lock().unwrap();
+
+        // Return a clone that shares the same underlying data
+        Self {
+            tools: registry_guard.tools.clone(),
+            metadata: registry_guard.metadata.clone(),
+            execution_history: registry_guard.execution_history.clone(),
+        }
+    }
+
     /// Register a tool function with metadata
     pub fn register_tool(
         &self,

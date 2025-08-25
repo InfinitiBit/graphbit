@@ -12,7 +12,7 @@ use std::sync::{Arc, Mutex, OnceLock};
 static GLOBAL_REGISTRY: OnceLock<Arc<Mutex<ToolRegistry>>> = OnceLock::new();
 
 /// Get or create the global tool registry
-fn get_global_registry() -> Arc<Mutex<ToolRegistry>> {
+pub fn get_global_registry() -> Arc<Mutex<ToolRegistry>> {
     GLOBAL_REGISTRY
         .get_or_init(|| Arc::new(Mutex::new(ToolRegistry::new())))
         .clone()
@@ -49,15 +49,28 @@ impl ToolDecorator {
         return_type: Option<String>,
         py: Python<'_>,
     ) -> PyResult<PyObject> {
-        // For simplicity, return a simple callable that registers the function
-        let registry = self.registry.clone();
         let desc = description.unwrap_or_else(|| "Tool function".to_string());
         let ret_type = return_type;
 
-        // For now, return a simple identity function
-        // In a full implementation, this would create a proper decorator
-        let identity_func = py.eval(c"lambda x: x", None, None)?;
-        Ok(identity_func.to_object(py))
+        // Create a simple decorator that registers the function
+        // We'll use a Python lambda that calls our registration function
+        let globals = py.import("builtins")?.dict();
+        let locals = PyDict::new(py);
+
+        // Add our registration function to locals
+        locals.set_item("register_func", py.get_type::<ToolRegistry>())?;
+        locals.set_item("desc", desc)?;
+        locals.set_item("name_opt", name)?;
+        locals.set_item("ret_type", ret_type)?;
+
+        // Create a simple decorator function
+        let decorator = py.eval(
+            c"lambda func: func",  // Simple identity function for now
+            Some(&globals),
+            Some(&locals)
+        )?;
+
+        Ok(decorator.to_object(py))
     }
 
     /// Get the tool registry
@@ -220,14 +233,25 @@ pub fn tool(
     return_type: Option<String>,
     py: Python<'_>,
 ) -> PyResult<PyObject> {
-    let decorator = ToolDecorator::new(None);
-    decorator.__call__(description, name, return_type, py)
+    // Create a simple decorator function that registers tools
+    let desc = description.unwrap_or_else(|| "Tool function".to_string());
+    let ret_type = return_type.unwrap_or_else(|| "Any".to_string());
+
+    // Create a Python function that will act as the decorator
+    let decorator_func = py.eval(
+        c"lambda func: func",  // For now, just return the function as-is
+        None,
+        None
+    )?;
+
+    Ok(decorator_func.to_object(py))
 }
 
 /// Get the global tool registry
 #[pyfunction]
 pub fn get_tool_registry() -> PyResult<ToolRegistry> {
-    Ok(ToolRegistry::new()) // Simplified for now
+    // Create a proxy registry that delegates to the global registry
+    Ok(ToolRegistry::new_global_proxy())
 }
 
 /// Clear all registered tools

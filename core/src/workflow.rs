@@ -671,13 +671,29 @@ impl WorkflowExecutor {
                         let mut ctx = context.lock().await;
                         ctx.set_node_output(&node.id, output.clone());
                         ctx.set_node_output_by_name(&node.name, output.clone());
+
+                        // PRODUCTION FIX: Also populate variables for backward compatibility
+                        // This ensures extract_output() functions work correctly
+                        if let Ok(output_str) = serde_json::to_string(&output) {
+                            ctx.set_variable(
+                                node.name.clone(),
+                                serde_json::Value::String(output_str.clone()),
+                            );
+                            ctx.set_variable(
+                                node.id.to_string(),
+                                serde_json::Value::String(output_str),
+                            );
+                        }
+
                         // Debug: confirm storage keys available after this node completes
                         let keys: Vec<String> = ctx.node_outputs.keys().cloned().collect();
+                        let var_keys: Vec<String> = ctx.variables.keys().cloned().collect();
                         tracing::debug!(
                             node_id = %node.id,
                             node_name = %node.name,
                             available_output_keys = ?keys,
-                            "Stored node output"
+                            available_variable_keys = ?var_keys,
+                            "Stored node output and variables"
                         );
                     }
 
@@ -929,14 +945,24 @@ impl WorkflowExecutor {
         // Check if this node has tools configured
         let has_tools = node_config.contains_key("tool_schemas");
 
+        // DEBUG: Log tool detection
+        tracing::info!("Agent tool detection - has_tools: {}, config keys: {:?}",
+                      has_tools, node_config.keys().collect::<Vec<_>>());
+        if let Some(tool_schemas) = node_config.get("tool_schemas") {
+            tracing::info!("Tool schemas found: {}", tool_schemas);
+        }
+
         if has_tools {
             // Execute agent with tool calling orchestration
-            Self::execute_agent_with_tools(
+            tracing::info!("Executing agent with tools - prompt: '{}'", resolved_prompt);
+            let result = Self::execute_agent_with_tools(
                 agent_id,
                 &resolved_prompt,
                 node_config,
                 agent,
-            ).await
+            ).await;
+            tracing::info!("Agent with tools execution result: {:?}", result);
+            result
         } else {
             // Execute agent without tools (original behavior)
             let message = AgentMessage::new(
@@ -955,12 +981,15 @@ impl WorkflowExecutor {
         node_config: &std::collections::HashMap<String, serde_json::Value>,
         agent: Arc<dyn AgentTrait>,
     ) -> GraphBitResult<serde_json::Value> {
+        tracing::info!("Starting execute_agent_with_tools for agent: {}", _agent_id);
         use crate::llm::{LlmRequest, LlmTool};
 
         // Extract tool schemas from node config
         let tool_schemas = node_config.get("tool_schemas")
             .and_then(|v| v.as_array())
             .ok_or_else(|| GraphBitError::validation("node_config", "Missing tool_schemas"))?;
+
+        tracing::info!("Found {} tool schemas", tool_schemas.len());
 
         // Convert tool schemas to LlmTool objects
         let mut tools = Vec::new();
@@ -983,336 +1012,36 @@ impl WorkflowExecutor {
         // Execute LLM request directly to get tool calls
         let llm_response = agent.llm_provider().complete(request).await?;
 
+        // DEBUG: Log LLM response details
+        tracing::info!("LLM Response - Content: '{}'", llm_response.content);
+        tracing::info!("LLM Response - Tool calls count: {}", llm_response.tool_calls.len());
+        for (i, tool_call) in llm_response.tool_calls.iter().enumerate() {
+            tracing::info!("Tool call {}: {} with params: {:?}", i, tool_call.name, tool_call.parameters);
+        }
+
         // Check if the LLM made any tool calls
         if !llm_response.tool_calls.is_empty() {
-            // Execute tool calls and integrate results back into conversation
-            let tool_results = Self::execute_tool_calls_with_python_integration(
-                &llm_response.tool_calls,
-                node_config,
-            ).await?;
+            tracing::info!("LLM made {} tool calls - these should be executed by the Python layer", llm_response.tool_calls.len());
 
-            // Create a comprehensive prompt with tool results
-            let mut tool_results_summary = String::new();
-            let mut has_results = false;
+            // Instead of executing tools in Rust, return a structured response that indicates
+            // tool calls need to be executed by the Python layer
+            let tool_calls_json = serde_json::to_value(&llm_response.tool_calls)
+                .map_err(|e| GraphBitError::workflow_execution(format!("Failed to serialize tool calls: {}", e)))?;
 
-            for (i, result) in tool_results.iter().enumerate() {
-                if let (Some(tool_name), Some(output)) = (
-                    result.get("tool_name").and_then(|v| v.as_str()),
-                    result.get("output").and_then(|v| v.as_str())
-                ) {
-                    if i == 0 {
-                        tool_results_summary.push_str("Tool execution results:\n");
-                    }
-                    tool_results_summary.push_str(&format!("{}. {}: {}\n", i + 1, tool_name, output));
-                    has_results = true;
-                }
-            }
-
-            // If we have tool results, create a comprehensive response
-            if has_results {
-                // Create final prompt that includes original request and tool results
-                let final_prompt = format!(
-                    "User request: {}\n\n{}\n\nPlease provide a comprehensive and helpful response to the user's request. Integrate the tool results naturally into your response. Be specific and informative.",
-                    prompt,
-                    tool_results_summary
-                );
-
-                // Make final LLM call without tools to get synthesized response
-                let final_request = LlmRequest::new(final_prompt);
-                let final_response = agent.llm_provider().complete(final_request).await?;
-
-                // Ensure we return a meaningful response
-                let response_content = if final_response.content.trim().is_empty() {
-                    // Fallback: create a structured response from tool results
-                    let mut fallback_response = format!("I've executed the requested tools for you:\n\n{}", tool_results_summary);
-                    fallback_response.push_str("\nThe tools have been successfully executed and the results are shown above.");
-                    fallback_response
-                } else {
-                    final_response.content
-                };
-
-                Ok(serde_json::Value::String(response_content))
-            } else {
-                // No valid tool results, return a helpful message
-                let fallback_message = format!(
-                    "I attempted to execute tools for your request '{}', but encountered issues with the tool execution. Please try rephrasing your request or check if the required tools are available.",
-                    prompt
-                );
-                Ok(serde_json::Value::String(fallback_message))
-            }
+            // Return a structured response that the Python layer can interpret
+            Ok(serde_json::json!({
+                "type": "tool_calls_required",
+                "content": llm_response.content,
+                "tool_calls": tool_calls_json,
+                "original_prompt": prompt,
+                "message": "Tool execution should be handled by Python layer with proper tool registry"
+            }))
         } else {
             // No tool calls, return the original response
+            tracing::info!("No tool calls made by LLM, returning original response: {}", llm_response.content);
             Ok(serde_json::Value::String(llm_response.content))
         }
     }
-
-    /// Execute tool calls with Python integration (production-grade implementation)
-    async fn execute_tool_calls_with_python_integration(
-        tool_calls: &[crate::llm::LlmToolCall],
-        node_config: &std::collections::HashMap<String, serde_json::Value>,
-    ) -> GraphBitResult<Vec<serde_json::Value>> {
-        let mut results = Vec::new();
-
-        // Get the list of available tools for this node
-        let node_tools = node_config.get("tools")
-            .and_then(|v| v.as_array())
-            .map(|arr| arr.iter()
-                .filter_map(|v| v.as_str().map(|s| s.to_string()))
-                .collect::<Vec<String>>())
-            .unwrap_or_default();
-
-        // Serialize tool calls for Python execution
-        let tool_calls_json = serde_json::to_string(&tool_calls.iter().map(|tc| {
-            serde_json::json!({
-                "tool_name": tc.name,
-                "parameters": tc.parameters,
-                "id": tc.id
-            })
-        }).collect::<Vec<_>>()).map_err(|e| {
-            GraphBitError::workflow_execution(&format!("Failed to serialize tool calls: {}", e))
-        })?;
-
-        // Call Python bridge function to execute tools
-        // This is a bridge to the Python layer - in a full implementation,
-        // this would use a proper FFI or callback mechanism
-        let execution_result = Self::call_python_tool_executor(&tool_calls_json, &node_tools).await?;
-
-        // Parse execution results
-        for line in execution_result.lines() {
-            if let Some((tool_name, output)) = line.split_once(": ") {
-                results.push(serde_json::json!({
-                    "tool_name": tool_name,
-                    "output": output,
-                    "success": !output.starts_with("Error")
-                }));
-            }
-        }
-
-        Ok(results)
-    }
-
-    /// Production-grade Python tool executor bridge
-    async fn call_python_tool_executor(
-        tool_calls_json: &str,
-        node_tools: &[String],
-    ) -> GraphBitResult<String> {
-        // This is a bridge to the Python tool execution system
-        // Use the actual Python bridge function for real tool execution
-
-        // Try to call the Python bridge function for actual tool execution
-        // This will execute the real Python functions that were registered
-        match Self::call_python_bridge_function(tool_calls_json, node_tools).await {
-            Ok(result) => {
-                tracing::debug!("Python tool execution successful: {}", result);
-                Ok(result)
-            }
-            Err(e) => {
-                tracing::warn!("Python tool execution failed, falling back to simulation: {}", e);
-                // Fallback to simulation if Python bridge fails
-                Self::call_python_tool_executor_fallback(tool_calls_json, node_tools).await
-            }
-        }
-    }
-
-    /// Call the actual Python bridge function for tool execution
-    async fn call_python_bridge_function(
-        tool_calls_json: &str,
-        node_tools: &[String],
-    ) -> GraphBitResult<String> {
-        // This would normally use a proper FFI or callback mechanism
-        // For now, we'll use a placeholder that indicates the Python bridge should be called
-        // The actual implementation would call the Python function:
-        // execute_production_tool_calls(py, tool_calls_json, node_tools)
-
-        // Since we can't directly call Python from Rust without proper setup,
-        // we'll return an error to trigger the fallback for now
-        // In a complete implementation, this would use PyO3 to call the Python function
-        Err(GraphBitError::workflow_execution(
-            "Python bridge not available in this context - using fallback".to_string()
-        ))
-    }
-
-    /// Fallback tool executor when Python bridge is not available
-    async fn call_python_tool_executor_fallback(
-        tool_calls_json: &str,
-        node_tools: &[String],
-    ) -> GraphBitResult<String> {
-        // Parse tool calls to validate format
-        let tool_calls: Vec<serde_json::Value> = serde_json::from_str(tool_calls_json)
-            .map_err(|e| GraphBitError::workflow_execution(&format!("Failed to parse tool calls: {}", e)))?;
-
-        let mut results = Vec::new();
-
-        // Execute each tool call using production-grade simulation
-        // This provides realistic results that match actual tool execution patterns
-        for tool_call in tool_calls {
-            if let (Some(tool_name), Some(parameters)) = (
-                tool_call.get("tool_name").and_then(|v| v.as_str()),
-                tool_call.get("parameters").and_then(|v| v.as_object())
-            ) {
-                // Validate tool availability
-                if !node_tools.contains(&tool_name.to_string()) {
-                    results.push(format!("{}: Error - Tool '{}' not available for this node", tool_name, tool_name));
-                    continue;
-                }
-
-                // Execute tool with production-grade result generation
-                let execution_result = Self::execute_production_tool(tool_name, parameters);
-                results.push(format!("{}: {}", tool_name, execution_result));
-            } else {
-                results.push("Error: Invalid tool call format - missing tool_name or parameters".to_string());
-            }
-        }
-
-        if results.is_empty() {
-            Ok("No valid tool calls were executed".to_string())
-        } else {
-            Ok(results.join("\n"))
-        }
-    }
-
-    /// Production-grade tool execution with realistic, deterministic results
-    fn execute_production_tool(
-        tool_name: &str,
-        parameters: &serde_json::Map<String, serde_json::Value>,
-    ) -> String {
-        match tool_name {
-            // Weather tools
-            "get_weather" | "weather_tool" | "get_weather_info" => {
-                let city = parameters.get("city")
-                    .or_else(|| parameters.get("location"))
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("Unknown City");
-                let units = parameters.get("units")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("celsius");
-
-                // Generate realistic weather data based on city
-                let (temp, condition) = Self::get_realistic_weather_data(city, units);
-                let unit_symbol = if units == "fahrenheit" { "F" } else { "C" };
-
-                format!("Weather in {}: {}°{}, {}", city, temp, unit_symbol, condition)
-            },
-
-            // Math calculation tools
-            "calculate" | "math_tool" | "calculate_expression" | "calculate_math_expression" => {
-                let expression = parameters.get("expression")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("0");
-
-                // Perform actual safe calculation
-                match Self::safe_evaluate_expression(expression) {
-                    Ok(result) => format!("The result of {} is {}", expression, result),
-                    Err(error) => format!("Calculation error for '{}': {}", expression, error)
-                }
-            },
-
-            // Information search tools
-            "search_information" | "search_knowledge_base" | "search" => {
-                let query = parameters.get("query")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("unknown topic");
-                let max_results = parameters.get("max_results")
-                    .and_then(|v| v.as_i64())
-                    .unwrap_or(3);
-
-                format!("Search results for '{}': Found {} relevant articles with comprehensive information, recent developments, and practical applications", query, max_results)
-            },
-
-            // Time tools
-            "get_current_time" | "current_time" => {
-                let format_type = parameters.get("format_type")
-                    .or_else(|| parameters.get("format"))
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("iso");
-
-                Self::get_formatted_time(format_type)
-            },
-
-            // Test tools
-            "simple_test_tool" | "test_tool" => {
-                let message = parameters.get("message")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("test message");
-                format!("Tool executed successfully: {}", message)
-            },
-
-            // Generic tool execution
-            _ => {
-                let param_count = parameters.len();
-                if param_count == 0 {
-                    format!("Tool '{}' executed successfully with no parameters", tool_name)
-                } else {
-                    let param_names: Vec<String> = parameters.keys().cloned().collect();
-                    format!("Tool '{}' executed successfully with {} parameters: {}",
-                           tool_name, param_count, param_names.join(", "))
-                }
-            }
-        }
-    }
-
-    /// Safe expression evaluator for mathematical expressions
-    fn safe_evaluate_expression(expr: &str) -> Result<f64, &'static str> {
-        // Only allow safe characters
-        let allowed_chars: std::collections::HashSet<char> = "0123456789+-*/.() ".chars().collect();
-        if !expr.chars().all(|c| allowed_chars.contains(&c)) {
-            return Err("Invalid characters in expression");
-        }
-
-        // Evaluate common mathematical expressions
-        match expr.trim() {
-            "15 + 27" | "15+27" => Ok(42.0),
-            "100 / 4" | "100/4" => Ok(25.0),
-            "6 * 7" | "6*7" => Ok(42.0),
-            "(15 + 25) * 2.5" => Ok(100.0),
-            "50 / 2" | "50/2" => Ok(25.0),
-            "15 * 23" | "15*23" => Ok(345.0),
-            "25 * 4 + 100" => Ok(200.0),
-            "2 + 3 * 4" => Ok(14.0),
-            "10 - 5" | "10-5" => Ok(5.0),
-            "8 / 2" | "8/2" => Ok(4.0),
-            _ => {
-                // Try to parse simple single numbers
-                if let Ok(num) = expr.trim().parse::<f64>() {
-                    Ok(num)
-                } else {
-                    Err("Expression not supported")
-                }
-            }
-        }
-    }
-
-    /// Generate realistic weather data based on city
-    fn get_realistic_weather_data(city: &str, units: &str) -> (i32, &'static str) {
-        let base_temp = if units == "fahrenheit" { 70 } else { 20 };
-
-        // Generate realistic temperature and conditions based on city
-        match city.to_lowercase().as_str() {
-            "london" => (base_temp + 2, "cloudy with occasional rain"),
-            "tokyo" => (base_temp + 5, "partly cloudy and humid"),
-            "paris" => (base_temp + 3, "sunny with light breeze"),
-            "new york" | "newyork" => (base_temp + 1, "clear skies"),
-            "sydney" => (base_temp + 8, "sunny and warm"),
-            "moscow" => (base_temp - 5, "cold with snow"),
-            "dubai" => (base_temp + 15, "hot and sunny"),
-            "berlin" => (base_temp, "overcast with light wind"),
-            _ => (base_temp + 2, "pleasant and mild")
-        }
-    }
-
-    /// Get formatted current time
-    fn get_formatted_time(format_type: &str) -> String {
-        match format_type {
-            "human" | "readable" => "December 19, 2024 at 2:30 PM UTC".to_string(),
-            "timestamp" | "unix" => "1734616225".to_string(),
-            "iso" | "iso8601" => "2024-12-19T14:30:25Z".to_string(),
-            "date" => "2024-12-19".to_string(),
-            "time" => "14:30:25".to_string(),
-            _ => "2024-12-19T14:30:25Z".to_string() // Default to ISO format
-        }
-    }
-
-
 
     /// Execute a condition node (static version)
     async fn execute_condition_node_static(_expression: &str) -> GraphBitResult<serde_json::Value> {
