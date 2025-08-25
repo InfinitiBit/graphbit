@@ -12,31 +12,31 @@ pub struct ToolResult {
     /// Tool name that was executed
     #[pyo3(get)]
     pub tool_name: String,
-    
+
     /// Input parameters passed to the tool
     #[pyo3(get)]
     pub input_params: String,
-    
+
     /// Output result from the tool execution
     #[pyo3(get)]
     pub output: String,
-    
+
     /// Execution status
     #[pyo3(get)]
     pub success: bool,
-    
+
     /// Error message if execution failed
     #[pyo3(get)]
     pub error: Option<String>,
-    
+
     /// Execution duration in milliseconds
     #[pyo3(get)]
     pub duration_ms: u64,
-    
+
     /// Timestamp when the tool was executed
     #[pyo3(get)]
     pub timestamp: u64,
-    
+
     /// Additional metadata
     pub metadata: HashMap<String, serde_json::Value>,
 }
@@ -46,12 +46,7 @@ impl ToolResult {
     /// Create a new successful tool result
     #[new]
     #[pyo3(signature = (tool_name, input_params, output, duration_ms=0))]
-    pub fn new(
-        tool_name: String,
-        input_params: String,
-        output: String,
-        duration_ms: u64,
-    ) -> Self {
+    pub fn new(tool_name: String, input_params: String, output: String, duration_ms: u64) -> Self {
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
@@ -129,19 +124,23 @@ impl ToolResult {
 
     /// Convert to JSON string representation
     pub fn to_json(&self) -> PyResult<String> {
-        serde_json::to_string(self)
-            .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(
-                format!("Failed to serialize tool result: {}", e)
+        serde_json::to_string(self).map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                "Failed to serialize tool result: {}",
+                e
             ))
+        })
     }
 
     /// Create from JSON string
     #[staticmethod]
     pub fn from_json(json_str: &str) -> PyResult<Self> {
-        serde_json::from_str(json_str)
-            .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(
-                format!("Failed to deserialize tool result: {}", e)
+        serde_json::from_str(json_str).map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                "Failed to deserialize tool result: {}",
+                e
             ))
+        })
     }
 
     /// String representation for debugging
@@ -155,15 +154,21 @@ impl ToolResult {
     /// String representation for display
     pub fn __str__(&self) -> String {
         if self.success {
-            format!("✓ {} -> {}", self.tool_name, 
-                if self.output.len() > 50 { 
-                    format!("{}...", &self.output[..50]) 
-                } else { 
-                    self.output.clone() 
-                })
+            format!(
+                "✓ {} -> {}",
+                self.tool_name,
+                if self.output.len() > 50 {
+                    format!("{}...", &self.output[..50])
+                } else {
+                    self.output.clone()
+                }
+            )
         } else {
-            format!("✗ {} -> Error: {}", self.tool_name, 
-                self.error.as_ref().unwrap_or(&"Unknown error".to_string()))
+            format!(
+                "✗ {} -> Error: {}",
+                self.tool_name,
+                self.error.as_ref().unwrap_or(&"Unknown error".to_string())
+            )
         }
     }
 }
@@ -219,15 +224,13 @@ impl ToolResultCollection {
 
     /// Get successful results only
     pub fn get_successful(&self) -> Vec<ToolResult> {
-        self.results.iter()
-            .filter(|r| r.success)
-            .cloned()
-            .collect()
+        self.results.iter().filter(|r| r.success).cloned().collect()
     }
 
     /// Get failed results only
     pub fn get_failed(&self) -> Vec<ToolResult> {
-        self.results.iter()
+        self.results
+            .iter()
             .filter(|r| !r.success)
             .cloned()
             .collect()

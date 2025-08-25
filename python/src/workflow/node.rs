@@ -83,11 +83,13 @@ impl Node {
 
             for tool in tools_list.iter() {
                 // Extract tool metadata
-                let tool_name = tool.getattr("__name__")
+                let tool_name = tool
+                    .getattr("__name__")
                     .and_then(|name| name.extract::<String>())
                     .unwrap_or_else(|_| "unknown_tool".to_string());
 
-                let tool_doc = tool.getattr("__doc__")
+                let tool_doc = tool
+                    .getattr("__doc__")
                     .and_then(|doc| doc.extract::<Option<String>>())
                     .unwrap_or(None)
                     .unwrap_or_else(|| "Tool function".to_string());
@@ -96,7 +98,10 @@ impl Node {
                 let parameters_schema = match extract_comprehensive_function_schema(&tool, py) {
                     Ok(schema) => schema,
                     Err(e) => {
-                        eprintln!("Warning: Failed to extract schema for tool '{}': {}", tool_name, e);
+                        eprintln!(
+                            "Warning: Failed to extract schema for tool '{}': {}",
+                            tool_name, e
+                        );
                         // Fallback to empty schema
                         serde_json::json!({
                             "type": "object",
@@ -122,15 +127,19 @@ impl Node {
                 "tool_schemas".to_string(),
                 serde_json::Value::Array(tool_schemas.clone()),
             );
-            println!("🔧 Stored {} tool schemas in node config", tool_schemas.len());
+            println!(
+                "🔧 Stored {} tool schemas in node config",
+                tool_schemas.len()
+            );
 
             // Store tool names for reference
             node.config.insert(
                 "tools".to_string(),
                 serde_json::Value::Array(
-                    tool_names.into_iter()
+                    tool_names
+                        .into_iter()
                         .map(serde_json::Value::String)
-                        .collect()
+                        .collect(),
                 ),
             );
 
@@ -140,7 +149,8 @@ impl Node {
                 TOOL_REGISTRY.with(|registry| {
                     let mut registry = registry.borrow_mut();
                     for (i, tool) in tools_list.iter().enumerate() {
-                        let tool_name = tool.getattr("__name__")
+                        let tool_name = tool
+                            .getattr("__name__")
                             .and_then(|name| name.extract::<String>())
                             .unwrap_or_else(|_| format!("tool_{}", i));
                         registry.insert(tool_name, tool.to_object(py));
@@ -261,7 +271,7 @@ impl Node {
     fn execute_tools(&self, tool_calls: &Bound<'_, PyList>, py: Python<'_>) -> PyResult<String> {
         if !self.has_tools() {
             return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
-                "This node does not have tools configured"
+                "This node does not have tools configured",
             ));
         }
 
@@ -276,7 +286,13 @@ impl Node {
             let output_text = if result.success {
                 result.output.clone()
             } else {
-                format!("Error: {}", result.error.as_ref().unwrap_or(&"Unknown error".to_string()))
+                format!(
+                    "Error: {}",
+                    result
+                        .error
+                        .as_ref()
+                        .unwrap_or(&"Unknown error".to_string())
+                )
             };
 
             summary.push_str(&format!(
@@ -290,14 +306,13 @@ impl Node {
         Ok(summary)
     }
 
-
-
     /// Get node configuration as JSON string
     fn get_config(&self) -> PyResult<String> {
         serde_json::to_string_pretty(&self.inner.config).map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>(
-                format!("Failed to serialize node config: {}", e)
-            )
+            PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                "Failed to serialize node config: {}",
+                e
+            ))
         })
     }
 
@@ -323,13 +338,17 @@ impl Node {
 }
 
 /// Extract comprehensive function parameter schema using introspection and docstring parsing
-fn extract_comprehensive_function_schema(func: &Bound<'_, PyAny>, py: Python<'_>) -> PyResult<serde_json::Value> {
+fn extract_comprehensive_function_schema(
+    func: &Bound<'_, PyAny>,
+    py: Python<'_>,
+) -> PyResult<serde_json::Value> {
     let inspect = py.import("inspect")?;
     let signature = inspect.call_method1("signature", (func,))?;
     let parameters = signature.getattr("parameters")?;
 
     // Extract docstring for parameter descriptions
-    let docstring = func.getattr("__doc__")
+    let docstring = func
+        .getattr("__doc__")
         .and_then(|doc| doc.extract::<Option<String>>())
         .unwrap_or(None)
         .unwrap_or_else(|| String::new());
@@ -353,29 +372,43 @@ fn extract_comprehensive_function_schema(func: &Bound<'_, PyAny>, py: Python<'_>
 
         // Get parameter annotation for type information
         let annotation = param_obj.getattr("annotation")?;
-        let param_type = if annotation.is_none() || annotation.to_string() == "<class 'inspect._empty'>" {
-            "string" // Default type
-        } else {
-            map_python_type_to_json_schema(&annotation.to_string())
-        };
+        let param_type =
+            if annotation.is_none() || annotation.to_string() == "<class 'inspect._empty'>" {
+                "string" // Default type
+            } else {
+                map_python_type_to_json_schema(&annotation.to_string())
+            };
 
         let mut param_info = serde_json::Map::new();
-        param_info.insert("type".to_string(), serde_json::Value::String(param_type.to_string()));
+        param_info.insert(
+            "type".to_string(),
+            serde_json::Value::String(param_type.to_string()),
+        );
 
         // Add description from docstring if available, otherwise use a default
-        let description = param_descriptions.get(&param_name)
+        let description = param_descriptions
+            .get(&param_name)
             .cloned()
             .unwrap_or_else(|| format!("Parameter {}", param_name));
-        param_info.insert("description".to_string(), serde_json::Value::String(description));
+        param_info.insert(
+            "description".to_string(),
+            serde_json::Value::String(description),
+        );
 
         // Check if parameter has a default value
         let default = param_obj.getattr("default")?;
         if default.to_string() != "<class 'inspect._empty'>" {
             // Try to convert default value to JSON
             if let Ok(default_str) = default.extract::<String>() {
-                param_info.insert("default".to_string(), serde_json::Value::String(default_str));
+                param_info.insert(
+                    "default".to_string(),
+                    serde_json::Value::String(default_str),
+                );
             } else if let Ok(default_int) = default.extract::<i64>() {
-                param_info.insert("default".to_string(), serde_json::Value::Number(serde_json::Number::from(default_int)));
+                param_info.insert(
+                    "default".to_string(),
+                    serde_json::Value::Number(serde_json::Number::from(default_int)),
+                );
             } else if let Ok(default_float) = default.extract::<f64>() {
                 if let Some(num) = serde_json::Number::from_f64(default_float) {
                     param_info.insert("default".to_string(), serde_json::Value::Number(num));
@@ -495,17 +528,24 @@ fn extract_parameters_section_numpy(docstring: &str) -> Option<String> {
     for line in lines {
         let trimmed = line.trim();
 
-        if trimmed == "Parameters" || trimmed == "Parameters:" ||
-           trimmed.starts_with("Parameters\n") || trimmed.starts_with("Parameters\r\n") {
+        if trimmed == "Parameters"
+            || trimmed == "Parameters:"
+            || trimmed.starts_with("Parameters\n")
+            || trimmed.starts_with("Parameters\r\n")
+        {
             in_params_section = true;
             continue;
         }
 
         if in_params_section {
             // Check if we've reached another section
-            if (trimmed == "Returns" || trimmed == "Returns:" ||
-                trimmed == "Raises" || trimmed == "Raises:" ||
-                trimmed == "Examples" || trimmed == "Examples:") {
+            if (trimmed == "Returns"
+                || trimmed == "Returns:"
+                || trimmed == "Raises"
+                || trimmed == "Raises:"
+                || trimmed == "Examples"
+                || trimmed == "Examples:")
+            {
                 break;
             }
             params_lines.push(line);
@@ -600,9 +640,10 @@ pub fn execute_tool(py: Python<'_>, tool_name: String, args: Vec<PyObject>) -> P
             let args_tuple = PyTuple::new(py, args)?;
             tool_func.call1(py, args_tuple)
         } else {
-            Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
-                format!("Tool '{}' not found in registry", tool_name)
-            ))
+            Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                "Tool '{}' not found in registry",
+                tool_name
+            )))
         }
     })
 }
@@ -624,16 +665,18 @@ pub fn sync_global_tools_to_workflow(py: Python<'_>) -> PyResult<()> {
     // Get tools from the global registry
     let global_registry = get_global_registry();
     let global_guard = global_registry.lock().map_err(|e| {
-        PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-            format!("Failed to acquire global registry lock: {}", e)
-        )
+        PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+            "Failed to acquire global registry lock: {}",
+            e
+        ))
     })?;
 
     // Get the list of registered tools from the global registry
     let global_tools = global_guard.list_tools().map_err(|e| {
-        PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-            format!("Failed to list global tools: {}", e)
-        )
+        PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+            "Failed to list global tools: {}",
+            e
+        ))
     })?;
 
     // For each tool in the global registry, try to get the actual function and register it in thread-local
@@ -647,7 +690,7 @@ pub fn sync_global_tools_to_workflow(py: Python<'_>) -> PyResult<()> {
             let tool_placeholder = py.eval(
                 c"lambda *args, **kwargs: 'Tool execution delegated to global registry'",
                 None,
-                None
+                None,
             )?;
 
             local_registry.insert(tool_name.clone(), tool_placeholder.to_object(py));
@@ -670,22 +713,25 @@ fn execute_tool_from_global_registry(
     // Get the global registry
     let global_registry = get_global_registry();
     let global_guard = global_registry.lock().map_err(|e| {
-        PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-            format!("Failed to acquire global registry lock: {}", e)
-        )
+        PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+            "Failed to acquire global registry lock: {}",
+            e
+        ))
     })?;
 
     // Check if the tool exists in the global registry
     let has_tool = global_guard.has_tool(tool_name).map_err(|e| {
-        PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-            format!("Failed to check tool existence: {}", e)
-        )
+        PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+            "Failed to check tool existence: {}",
+            e
+        ))
     })?;
 
     if !has_tool {
-        return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
-            format!("Tool '{}' not found in global registry", tool_name)
-        ));
+        return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+            "Tool '{}' not found in global registry",
+            tool_name
+        )));
     }
 
     // Execute the tool using the global registry's execute method
@@ -697,9 +743,10 @@ fn execute_tool_from_global_registry(
                 params_dict.set_item(key, py_value)?;
             }
             Err(e) => {
-                return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
-                    format!("Failed to convert parameter '{}': {}", key, e)
-                ));
+                return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                    "Failed to convert parameter '{}': {}",
+                    key, e
+                )));
             }
         }
     }
@@ -710,12 +757,19 @@ fn execute_tool_from_global_registry(
             if tool_result.success {
                 Ok(format!("{}: {}", tool_name, tool_result.output))
             } else {
-                Ok(format!("{}: Error - {}", tool_name, tool_result.error.unwrap_or_else(|| "Unknown error".to_string())))
+                Ok(format!(
+                    "{}: Error - {}",
+                    tool_name,
+                    tool_result
+                        .error
+                        .unwrap_or_else(|| "Unknown error".to_string())
+                ))
             }
         }
-        Err(e) => {
-            Ok(format!("{}: Error - Tool execution failed: {}", tool_name, e))
-        }
+        Err(e) => Ok(format!(
+            "{}: Error - Tool execution failed: {}",
+            tool_name, e
+        )),
     }
 }
 
@@ -727,21 +781,27 @@ pub fn execute_workflow_tool_calls(
     node_tools: Vec<String>,
 ) -> PyResult<String> {
     // Parse the tool calls JSON
-    let tool_calls: Vec<serde_json::Value> = serde_json::from_str(&tool_calls_json)
-        .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(
-            format!("Failed to parse tool calls JSON: {}", e)
-        ))?;
+    let tool_calls: Vec<serde_json::Value> =
+        serde_json::from_str(&tool_calls_json).map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                "Failed to parse tool calls JSON: {}",
+                e
+            ))
+        })?;
 
     let mut results = Vec::new();
 
     for tool_call in tool_calls {
         if let (Some(tool_name), Some(parameters)) = (
             tool_call.get("tool_name").and_then(|v| v.as_str()),
-            tool_call.get("parameters").and_then(|v| v.as_object())
+            tool_call.get("parameters").and_then(|v| v.as_object()),
         ) {
             // Validate tool availability
             if !node_tools.contains(&tool_name.to_string()) {
-                results.push(format!("{}: Error - Tool '{}' not available for this node", tool_name, tool_name));
+                results.push(format!(
+                    "{}: Error - Tool '{}' not available for this node",
+                    tool_name, tool_name
+                ));
                 continue;
             }
 
@@ -757,11 +817,17 @@ pub fn execute_workflow_tool_calls(
                         match json_to_python_value(value, py) {
                             Ok(py_value) => {
                                 if let Err(e) = kwargs.set_item(key, py_value) {
-                                    return Ok::<String, PyErr>(format!("{}: Error - Failed to set parameter '{}': {}", tool_name, key, e));
+                                    return Ok::<String, PyErr>(format!(
+                                        "{}: Error - Failed to set parameter '{}': {}",
+                                        tool_name, key, e
+                                    ));
                                 }
                             }
                             Err(e) => {
-                                return Ok::<String, PyErr>(format!("{}: Error - Failed to convert parameter '{}': {}", tool_name, key, e));
+                                return Ok::<String, PyErr>(format!(
+                                    "{}: Error - Failed to convert parameter '{}': {}",
+                                    tool_name, key, e
+                                ));
                             }
                         }
                     }
@@ -772,24 +838,34 @@ pub fn execute_workflow_tool_calls(
                             // Convert result to string
                             let result_str = match result.extract::<String>(py) {
                                 Ok(s) => s,
-                                Err(_) => result.to_string() // Fallback to repr
+                                Err(_) => result.to_string(), // Fallback to repr
                             };
                             Ok::<String, PyErr>(format!("{}: {}", tool_name, result_str))
                         }
-                        Err(e) => {
-                            Ok::<String, PyErr>(format!("{}: Error - Tool execution failed: {}", tool_name, e))
-                        }
+                        Err(e) => Ok::<String, PyErr>(format!(
+                            "{}: Error - Tool execution failed: {}",
+                            tool_name, e
+                        )),
                     }
                 } else {
                     // Try to execute from global registry if not found in thread-local
-                    Ok::<String, PyErr>(execute_tool_from_global_registry(py, tool_name, parameters)
-                        .unwrap_or_else(|e| format!("{}: Error - Tool '{}' not found in any registry: {}", tool_name, tool_name, e)))
+                    Ok::<String, PyErr>(
+                        execute_tool_from_global_registry(py, tool_name, parameters)
+                            .unwrap_or_else(|e| {
+                                format!(
+                                    "{}: Error - Tool '{}' not found in any registry: {}",
+                                    tool_name, tool_name, e
+                                )
+                            }),
+                    )
                 }
             })?;
 
             results.push(tool_result);
         } else {
-            results.push("Error: Invalid tool call format - missing tool_name or parameters".to_string());
+            results.push(
+                "Error: Invalid tool call format - missing tool_name or parameters".to_string(),
+            );
         }
     }
 
@@ -808,14 +884,17 @@ pub fn execute_production_tool_calls(
     tool_calls_json: String,
     node_tools: Vec<String>,
 ) -> PyResult<String> {
-    use crate::tools::registry::ToolRegistry;
     use crate::tools::executor::ToolExecutor;
+    use crate::tools::registry::ToolRegistry;
 
     // Parse tool calls
-    let tool_calls: Vec<serde_json::Value> = serde_json::from_str(&tool_calls_json)
-        .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(
-            format!("Failed to parse tool calls JSON: {}", e)
-        ))?;
+    let tool_calls: Vec<serde_json::Value> =
+        serde_json::from_str(&tool_calls_json).map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                "Failed to parse tool calls JSON: {}",
+                e
+            ))
+        })?;
 
     // Create a tool registry with available tools
     let registry = ToolRegistry::new();
@@ -847,7 +926,7 @@ pub fn execute_production_tool_calls(
     for tool_call in tool_calls {
         if let (Some(tool_name), Some(parameters)) = (
             tool_call.get("tool_name").and_then(|v| v.as_str()),
-            tool_call.get("parameters").and_then(|v| v.as_object())
+            tool_call.get("parameters").and_then(|v| v.as_object()),
         ) {
             // Convert parameters to PyDict
             let params_dict = pyo3::types::PyDict::new(py);
@@ -857,7 +936,10 @@ pub fn execute_production_tool_calls(
                         params_dict.set_item(key, py_value)?;
                     }
                     Err(e) => {
-                        results.push(format!("{}: Error - Parameter conversion failed: {}", tool_name, e));
+                        results.push(format!(
+                            "{}: Error - Parameter conversion failed: {}",
+                            tool_name, e
+                        ));
                         continue;
                     }
                 }
@@ -869,7 +951,9 @@ pub fn execute_production_tool_calls(
                     if tool_result.success {
                         results.push(format!("{}: {}", tool_name, tool_result.output));
                     } else {
-                        let error_msg = tool_result.error.unwrap_or_else(|| "Unknown error".to_string());
+                        let error_msg = tool_result
+                            .error
+                            .unwrap_or_else(|| "Unknown error".to_string());
                         results.push(format!("{}: Error - {}", tool_name, error_msg));
                     }
                 }

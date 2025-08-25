@@ -77,13 +77,16 @@ impl WorkflowResult {
                     match serde_json::to_string(v) {
                         Ok(json_str) => {
                             // If it's a JSON string, try to extract the inner content
-                            if json_str.starts_with('"') && json_str.ends_with('"') && json_str.len() > 2 {
-                                Some(json_str[1..json_str.len()-1].to_string())
+                            if json_str.starts_with('"')
+                                && json_str.ends_with('"')
+                                && json_str.len() > 2
+                            {
+                                Some(json_str[1..json_str.len() - 1].to_string())
                             } else {
                                 Some(json_str)
                             }
                         }
-                        Err(_) => Some(format!("{:?}", v))
+                        Err(_) => Some(format!("{:?}", v)),
                     }
                 }
             }
@@ -104,13 +107,16 @@ impl WorkflowResult {
                         match serde_json::to_string(v) {
                             Ok(json_str) => {
                                 // If it's a JSON string, try to extract the inner content
-                                if json_str.starts_with('"') && json_str.ends_with('"') && json_str.len() > 2 {
-                                    json_str[1..json_str.len()-1].to_string()
+                                if json_str.starts_with('"')
+                                    && json_str.ends_with('"')
+                                    && json_str.len() > 2
+                                {
+                                    json_str[1..json_str.len() - 1].to_string()
                                 } else {
                                     json_str
                                 }
                             }
-                            Err(_) => format!("{:?}", v)
+                            Err(_) => format!("{:?}", v),
                         }
                     }
                 };

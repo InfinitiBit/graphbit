@@ -65,9 +65,9 @@ impl ToolDecorator {
 
         // Create a simple decorator function
         let decorator = py.eval(
-            c"lambda func: func",  // Simple identity function for now
+            c"lambda func: func", // Simple identity function for now
             Some(&globals),
-            Some(&locals)
+            Some(&locals),
         )?;
 
         Ok(decorator.to_object(py))
@@ -76,11 +76,12 @@ impl ToolDecorator {
     /// Get the tool registry
     pub fn get_registry(&self) -> PyResult<ToolRegistry> {
         let _registry_guard = self.registry.lock().map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-                format!("Failed to acquire registry lock: {}", e)
-            )
+            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+                "Failed to acquire registry lock: {}",
+                e
+            ))
         })?;
-        
+
         // Return a new instance (simplified for now)
         Ok(ToolRegistry::new())
     }
@@ -109,12 +110,19 @@ impl ToolDecorator {
         drop(func_bound); // Release the borrow
 
         let registry_guard = self.registry.lock().map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-                format!("Failed to acquire registry lock: {}", e)
-            )
+            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+                "Failed to acquire registry lock: {}",
+                e
+            ))
         })?;
 
-        registry_guard.register_tool(func_name, desc, func.clone_ref(py), &params_schema, return_type)?;
+        registry_guard.register_tool(
+            func_name,
+            desc,
+            func.clone_ref(py),
+            &params_schema,
+            return_type,
+        )?;
 
         Ok(())
     }
@@ -122,9 +130,10 @@ impl ToolDecorator {
     /// List all registered tools
     pub fn list_tools(&self) -> PyResult<Vec<String>> {
         let registry_guard = self.registry.lock().map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-                format!("Failed to acquire registry lock: {}", e)
-            )
+            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+                "Failed to acquire registry lock: {}",
+                e
+            ))
         })?;
 
         registry_guard.list_tools()
@@ -133,9 +142,10 @@ impl ToolDecorator {
     /// Get tool metadata
     pub fn get_tool_info(&self, name: &str) -> PyResult<Option<String>> {
         let registry_guard = self.registry.lock().map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-                format!("Failed to acquire registry lock: {}", e)
-            )
+            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+                "Failed to acquire registry lock: {}",
+                e
+            ))
         })?;
 
         registry_guard.get_tool_metadata(name)
@@ -154,40 +164,44 @@ impl Default for ToolDecorator {
 }
 
 /// Extract function parameter schema using introspection
-fn extract_function_schema<'a>(func: &'a Bound<'a, PyAny>, py: Python<'a>) -> PyResult<Bound<'a, PyDict>> {
+fn extract_function_schema<'a>(
+    func: &'a Bound<'a, PyAny>,
+    py: Python<'a>,
+) -> PyResult<Bound<'a, PyDict>> {
     let inspect = py.import("inspect")?;
     let signature = inspect.call_method1("signature", (func,))?;
     let parameters = signature.getattr("parameters")?;
-    
+
     let schema = PyDict::new(py);
     schema.set_item("type", "object")?;
 
     let properties = PyDict::new(py);
     let required = pyo3::types::PyList::empty(py);
-    
+
     // Iterate through function parameters
     for item in parameters.try_iter()? {
         let (param_name, param) = item?.extract::<(String, PyObject)>()?;
         let param_name_str = param_name;
-        
+
         // Skip 'self' and 'cls' parameters
         if param_name_str == "self" || param_name_str == "cls" {
             continue;
         }
-        
+
         let param_info = PyDict::new(py);
-        
+
         // Get parameter annotation for type information
         let param_bound = param.bind(py);
         let annotation = param_bound.getattr("annotation")?;
-        let param_type = if annotation.is_none() || annotation.to_string() == "<class 'inspect._empty'>" {
-            "string" // Default type
-        } else {
-            map_python_type_to_json_schema(&annotation.to_string())
-        };
-        
+        let param_type =
+            if annotation.is_none() || annotation.to_string() == "<class 'inspect._empty'>" {
+                "string" // Default type
+            } else {
+                map_python_type_to_json_schema(&annotation.to_string())
+            };
+
         param_info.set_item("type", param_type)?;
-        
+
         // Check if parameter has a default value
         let default = param_bound.getattr("default")?;
         if default.to_string() != "<class 'inspect._empty'>" {
@@ -196,16 +210,16 @@ fn extract_function_schema<'a>(func: &'a Bound<'a, PyAny>, py: Python<'a>) -> Py
             // Parameter is required
             required.append(param_name_str.clone())?;
         }
-        
+
         // Add description placeholder
         param_info.set_item("description", format!("Parameter {}", param_name_str))?;
-        
+
         properties.set_item(param_name_str, param_info)?;
     }
-    
+
     schema.set_item("properties", properties)?;
     schema.set_item("required", required)?;
-    
+
     Ok(schema)
 }
 
@@ -222,8 +236,6 @@ fn map_python_type_to_json_schema(type_str: &str) -> &'static str {
     }
 }
 
-
-
 /// Convenience function to create a tool decorator
 #[pyfunction]
 #[pyo3(signature = (description=None, name=None, return_type=None))]
@@ -239,9 +251,9 @@ pub fn tool(
 
     // Create a Python function that will act as the decorator
     let decorator_func = py.eval(
-        c"lambda func: func",  // For now, just return the function as-is
+        c"lambda func: func", // For now, just return the function as-is
         None,
-        None
+        None,
     )?;
 
     Ok(decorator_func.to_object(py))
@@ -259,11 +271,12 @@ pub fn get_tool_registry() -> PyResult<ToolRegistry> {
 pub fn clear_tools() -> PyResult<()> {
     let registry = get_global_registry();
     let _registry_guard = registry.lock().map_err(|e| {
-        PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-            format!("Failed to acquire registry lock: {}", e)
-        )
+        PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+            "Failed to acquire registry lock: {}",
+            e
+        ))
     })?;
-    
+
     // Clear would need to be implemented in ToolRegistry
     Ok(())
 }

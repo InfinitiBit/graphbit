@@ -8,7 +8,7 @@ from typing import Any
 import aiohttp
 import pytest
 
-from graphbit import LlmConfig, LlmClient, Executor, Workflow, Node
+from graphbit import Executor, LlmClient, LlmConfig, Node, Workflow
 
 
 class TestOpenAILLM:

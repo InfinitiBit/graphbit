@@ -562,47 +562,69 @@ impl Executor {
                         // Extract tool calls and execute them
                         if let (Some(tool_calls), Some(original_prompt)) = (
                             response_obj.get("tool_calls"),
-                            response_obj.get("original_prompt").and_then(|v| v.as_str())
+                            response_obj.get("original_prompt").and_then(|v| v.as_str()),
                         ) {
                             // Get the node configuration to find available tools
-                            if let Some(node) = workflow.graph.get_nodes().iter()
+                            if let Some(node) = workflow
+                                .graph
+                                .get_nodes()
+                                .iter()
                                 .find(|(id, _)| id.to_string() == node_id)
-                                .map(|(_, node)| node) {
-
-                                let node_tools = node.config.get("tools")
+                                .map(|(_, node)| node)
+                            {
+                                let node_tools = node
+                                    .config
+                                    .get("tools")
                                     .and_then(|v| v.as_array())
-                                    .map(|arr| arr.iter()
-                                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
-                                        .collect::<Vec<String>>())
+                                    .map(|arr| {
+                                        arr.iter()
+                                            .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                                            .collect::<Vec<String>>()
+                                    })
                                     .unwrap_or_default();
 
                                 // Convert tool calls to the format expected by Python layer
-                                let python_tool_calls: Vec<serde_json::Value> = if let Some(tool_calls_array) = tool_calls.as_array() {
-                                    tool_calls_array.iter().map(|tc| {
-                                        // Extract name and parameters from the tool call object
-                                        let name = tc.get("name").and_then(|v| v.as_str()).unwrap_or("unknown");
-                                        let parameters = tc.get("parameters").cloned().unwrap_or(serde_json::json!({}));
+                                let python_tool_calls: Vec<serde_json::Value> =
+                                    if let Some(tool_calls_array) = tool_calls.as_array() {
+                                        tool_calls_array
+                                            .iter()
+                                            .map(|tc| {
+                                                // Extract name and parameters from the tool call object
+                                                let name = tc
+                                                    .get("name")
+                                                    .and_then(|v| v.as_str())
+                                                    .unwrap_or("unknown");
+                                                let parameters = tc
+                                                    .get("parameters")
+                                                    .cloned()
+                                                    .unwrap_or(serde_json::json!({}));
 
-                                        serde_json::json!({
-                                            "tool_name": name,
-                                            "parameters": parameters
-                                        })
-                                    }).collect()
-                                } else {
-                                    Vec::new()
-                                };
+                                                serde_json::json!({
+                                                    "tool_name": name,
+                                                    "parameters": parameters
+                                                })
+                                            })
+                                            .collect()
+                                    } else {
+                                        Vec::new()
+                                    };
 
                                 let tool_calls_json = serde_json::to_string(&python_tool_calls)
-                                    .map_err(|e| graphbit_core::errors::GraphBitError::workflow_execution(
-                                        format!("Failed to serialize tool calls: {}", e)
-                                    ))?;
+                                    .map_err(|e| {
+                                        graphbit_core::errors::GraphBitError::workflow_execution(
+                                            format!("Failed to serialize tool calls: {}", e),
+                                        )
+                                    })?;
 
                                 // Execute tools in Python context
                                 let tool_results = Python::with_gil(|py| {
                                     execute_production_tool_calls(py, tool_calls_json, node_tools)
-                                }).map_err(|e| graphbit_core::errors::GraphBitError::workflow_execution(
-                                    format!("Failed to execute tools: {}", e)
-                                ))?;
+                                })
+                                .map_err(|e| {
+                                    graphbit_core::errors::GraphBitError::workflow_execution(
+                                        format!("Failed to execute tools: {}", e),
+                                    )
+                                })?;
 
                                 // Create final prompt with tool results
                                 let final_prompt = format!(
@@ -611,44 +633,92 @@ impl Executor {
                                 );
 
                                 // Get LLM provider from node configuration and make final call
-                                if let graphbit_core::graph::NodeType::Agent { agent_id, .. } = &node.node_type {
+                                if let graphbit_core::graph::NodeType::Agent { agent_id, .. } =
+                                    &node.node_type
+                                {
                                     // Create a simple LLM request for the final response
-                                    let llm_config = context.metadata.get("llm_config")
-                                        .and_then(|v| serde_json::from_value::<graphbit_core::llm::LlmConfig>(v.clone()).ok())
+                                    let llm_config = context
+                                        .metadata
+                                        .get("llm_config")
+                                        .and_then(|v| {
+                                            serde_json::from_value::<graphbit_core::llm::LlmConfig>(
+                                                v.clone(),
+                                            )
+                                            .ok()
+                                        })
                                         .unwrap_or_default();
 
                                     // Create the LLM provider using the factory
-                                    match graphbit_core::llm::LlmProviderFactory::create_provider(llm_config.clone()) {
+                                    match graphbit_core::llm::LlmProviderFactory::create_provider(
+                                        llm_config.clone(),
+                                    ) {
                                         Ok(provider_trait) => {
-                                            let llm_provider = LlmProvider::new(provider_trait, llm_config);
+                                            let llm_provider =
+                                                LlmProvider::new(provider_trait, llm_config);
                                             let final_request = LlmRequest::new(final_prompt);
 
                                             match llm_provider.complete(final_request).await {
                                                 Ok(final_response) => {
                                                     // Clone the content to avoid borrow checker issues
-                                                    let response_content = final_response.content.clone();
+                                                    let response_content =
+                                                        final_response.content.clone();
 
                                                     // Update the context with the final response
-                                                    context.set_node_output(&node.id, serde_json::Value::String(response_content.clone()));
-                                                    if let Some(node_name) = workflow.graph.get_nodes().iter()
+                                                    context.set_node_output(
+                                                        &node.id,
+                                                        serde_json::Value::String(
+                                                            response_content.clone(),
+                                                        ),
+                                                    );
+                                                    if let Some(node_name) = workflow
+                                                        .graph
+                                                        .get_nodes()
+                                                        .iter()
                                                         .find(|(id, _)| **id == node.id)
-                                                        .map(|(_, n)| &n.name) {
-                                                        context.set_node_output_by_name(node_name, serde_json::Value::String(response_content.clone()));
-                                                        context.set_variable(node_name.clone(), serde_json::Value::String(response_content.clone()));
-                                                        context.set_variable(node.id.to_string(), serde_json::Value::String(response_content));
+                                                        .map(|(_, n)| &n.name)
+                                                    {
+                                                        context.set_node_output_by_name(
+                                                            node_name,
+                                                            serde_json::Value::String(
+                                                                response_content.clone(),
+                                                            ),
+                                                        );
+                                                        context.set_variable(
+                                                            node_name.clone(),
+                                                            serde_json::Value::String(
+                                                                response_content.clone(),
+                                                            ),
+                                                        );
+                                                        context.set_variable(
+                                                            node.id.to_string(),
+                                                            serde_json::Value::String(
+                                                                response_content,
+                                                            ),
+                                                        );
                                                     }
                                                 }
                                                 Err(e) => {
-                                                    tracing::error!("Failed to get final LLM response: {}", e);
+                                                    tracing::error!(
+                                                        "Failed to get final LLM response: {}",
+                                                        e
+                                                    );
                                                     // Keep the tool results as the output
-                                                    context.set_node_output(&node.id, serde_json::Value::String(tool_results.clone()));
+                                                    context.set_node_output(
+                                                        &node.id,
+                                                        serde_json::Value::String(
+                                                            tool_results.clone(),
+                                                        ),
+                                                    );
                                                 }
                                             }
                                         }
                                         Err(e) => {
                                             tracing::error!("Failed to create LLM provider: {}", e);
                                             // Keep the tool results as the output
-                                            context.set_node_output(&node.id, serde_json::Value::String(tool_results.clone()));
+                                            context.set_node_output(
+                                                &node.id,
+                                                serde_json::Value::String(tool_results.clone()),
+                                            );
                                         }
                                     }
                                 }

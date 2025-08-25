@@ -58,7 +58,10 @@ pub fn validate_api_key(api_key: &str, provider: &str) -> Result<()> {
     if api_key.len() < min_length {
         return Err(Error::new(
             Status::InvalidArg,
-            format!("{} API key too short (minimum {} characters)", provider, min_length),
+            format!(
+                "{} API key too short (minimum {} characters)",
+                provider, min_length
+            ),
         ));
     }
 
@@ -116,20 +119,27 @@ pub fn validate_url(url: &str, field_name: &str) -> Result<()> {
 /// Validate model name format
 pub fn validate_model_name(model: &str, provider: &str) -> Result<()> {
     if model.is_empty() {
-        return Err(Error::new(
-            Status::InvalidArg,
-            "Model name cannot be empty",
-        ));
+        return Err(Error::new(Status::InvalidArg, "Model name cannot be empty"));
     }
 
     // Provider-specific model validation
     match provider.to_lowercase().as_str() {
         "openai" => {
-            let valid_models = ["gpt-4", "gpt-4-turbo", "gpt-3.5-turbo", "gpt-4o", "gpt-4o-mini"];
+            let valid_models = [
+                "gpt-4",
+                "gpt-4-turbo",
+                "gpt-3.5-turbo",
+                "gpt-4o",
+                "gpt-4o-mini",
+            ];
             if !valid_models.iter().any(|&m| model.starts_with(m)) {
                 return Err(Error::new(
                     Status::InvalidArg,
-                    format!("Invalid OpenAI model: {}. Must be one of: {}", model, valid_models.join(", ")),
+                    format!(
+                        "Invalid OpenAI model: {}. Must be one of: {}",
+                        model,
+                        valid_models.join(", ")
+                    ),
                 ));
             }
         }
@@ -137,7 +147,10 @@ pub fn validate_model_name(model: &str, provider: &str) -> Result<()> {
             if !model.starts_with("claude-") {
                 return Err(Error::new(
                     Status::InvalidArg,
-                    format!("Invalid Anthropic model: {}. Must start with 'claude-'", model),
+                    format!(
+                        "Invalid Anthropic model: {}. Must start with 'claude-'",
+                        model
+                    ),
                 ));
             }
         }

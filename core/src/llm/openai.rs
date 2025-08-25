@@ -129,7 +129,14 @@ impl OpenAiProvider {
 
         // Production-grade content handling - OpenAI returns empty content when making tool calls
         let mut content = choice.message.content;
-        if content.trim().is_empty() && !choice.message.tool_calls.as_ref().unwrap_or(&vec![]).is_empty() {
+        if content.trim().is_empty()
+            && !choice
+                .message
+                .tool_calls
+                .as_ref()
+                .unwrap_or(&vec![])
+                .is_empty()
+        {
             content = "I'll help you with that using the available tools.".to_string();
         }
         let tool_calls = choice
@@ -145,8 +152,12 @@ impl OpenAiProvider {
                     match serde_json::from_str(&tc.function.arguments) {
                         Ok(params) => params,
                         Err(e) => {
-                            tracing::warn!("Failed to parse tool call arguments for {}: {}. Arguments: '{}'",
-                                         tc.function.name, e, tc.function.arguments);
+                            tracing::warn!(
+                                "Failed to parse tool call arguments for {}: {}. Arguments: '{}'",
+                                tc.function.name,
+                                e,
+                                tc.function.arguments
+                            );
                             // Try to create a simple object with the raw arguments
                             serde_json::json!({ "raw_arguments": tc.function.arguments })
                         }

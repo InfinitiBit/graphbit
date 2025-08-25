@@ -56,7 +56,7 @@ formatter = Node.agent(
 # Other types of transformation
 lowercase_node = Node.agent(
         name="Output Formatter",
-        prompt="Transform the provided text to lowecase",
+        prompt="Transform the provided text to lowercase",
         agent_id="formatter"
     )
 ```

@@ -1,8 +1,8 @@
 //! LLM client for GraphBit Node.js bindings
 
 use super::config::LlmConfig;
-use crate::validation::validate_non_empty_string;
 use crate::errors::to_napi_error;
+use crate::validation::validate_non_empty_string;
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use std::collections::HashMap;
@@ -42,39 +42,45 @@ impl LlmClient {
     #[napi(constructor)]
     pub fn new(config: &LlmConfig) -> Result<Self> {
         config.validate()?;
-        Ok(Self { config: config.clone() })
+        Ok(Self {
+            config: config.clone(),
+        })
     }
 
     /// Generate text from a prompt
     #[napi]
-    pub async fn generate(&self, prompt: String, options: Option<GenerationOptions>) -> Result<LlmResponse> {
+    pub async fn generate(
+        &self,
+        prompt: String,
+        options: Option<GenerationOptions>,
+    ) -> Result<LlmResponse> {
         validate_non_empty_string(&prompt, "prompt")?;
 
         let options = options.unwrap_or_default();
 
         // Convert Node.js config to core config
         let core_config = self.convert_to_core_config()?;
-        
+
         // Create the provider
         let provider = graphbit_core::llm::LlmProviderFactory::create_provider(core_config)
             .map_err(to_napi_error)?;
 
         // Build the LLM request
         let mut llm_request = graphbit_core::llm::LlmRequest::new(prompt);
-        
+
         // Apply options
         if let Some(max_tokens) = options.max_tokens {
             if max_tokens > 0 {
                 llm_request = llm_request.with_max_tokens(max_tokens as u32);
             }
         }
-        
+
         if let Some(temperature) = options.temperature {
             if temperature >= 0.0 && temperature <= 2.0 {
                 llm_request = llm_request.with_temperature(temperature as f32);
             }
         }
-        
+
         if let Some(top_p) = options.top_p {
             if top_p >= 0.0 && top_p <= 1.0 {
                 llm_request = llm_request.with_top_p(top_p as f32);
@@ -82,7 +88,10 @@ impl LlmClient {
         }
 
         // Execute the request
-        let core_response = provider.complete(llm_request).await.map_err(to_napi_error)?;
+        let core_response = provider
+            .complete(llm_request)
+            .await
+            .map_err(to_napi_error)?;
 
         // Convert core response to Node.js response
         let mut metadata = HashMap::new();
@@ -105,14 +114,18 @@ impl LlmClient {
 
     /// Generate text with streaming (future enhancement)
     #[napi]
-    pub async fn generate_stream(&self, prompt: String, options: Option<GenerationOptions>) -> Result<LlmResponse> {
+    pub async fn generate_stream(
+        &self,
+        prompt: String,
+        options: Option<GenerationOptions>,
+    ) -> Result<LlmResponse> {
         validate_non_empty_string(&prompt, "prompt")?;
 
         let options = options.unwrap_or_default();
 
         // Convert Node.js config to core config
         let core_config = self.convert_to_core_config()?;
-        
+
         // Create the provider
         let provider = graphbit_core::llm::LlmProviderFactory::create_provider(core_config)
             .map_err(to_napi_error)?;
@@ -125,20 +138,20 @@ impl LlmClient {
 
         // Build the LLM request
         let mut llm_request = graphbit_core::llm::LlmRequest::new(prompt);
-        
+
         // Apply options
         if let Some(max_tokens) = options.max_tokens {
             if max_tokens > 0 {
                 llm_request = llm_request.with_max_tokens(max_tokens as u32);
             }
         }
-        
+
         if let Some(temperature) = options.temperature {
             if temperature >= 0.0 && temperature <= 2.0 {
                 llm_request = llm_request.with_temperature(temperature as f32);
             }
         }
-        
+
         if let Some(top_p) = options.top_p {
             if top_p >= 0.0 && top_p <= 1.0 {
                 llm_request = llm_request.with_top_p(top_p as f32);
@@ -147,7 +160,10 @@ impl LlmClient {
 
         // For now, use regular completion since streaming in Node.js bindings is complex
         // TODO: Implement actual streaming with JavaScript callbacks or async iterators
-        let core_response = provider.complete(llm_request).await.map_err(to_napi_error)?;
+        let core_response = provider
+            .complete(llm_request)
+            .await
+            .map_err(to_napi_error)?;
 
         // Convert core response to Node.js response
         let mut metadata = HashMap::new();
@@ -186,11 +202,12 @@ impl LlmClient {
     fn convert_to_core_config(&self) -> Result<graphbit_core::llm::LlmConfig> {
         match self.config.provider.as_str() {
             "openai" => {
-                let api_key = self.config.api_key.as_ref()
-                    .ok_or_else(|| Error::new(Status::InvalidArg, "OpenAI API key is required"))?;
-                let model = self.config.model.as_deref()
-                    .unwrap_or("gpt-3.5-turbo");
-                
+                let api_key =
+                    self.config.api_key.as_ref().ok_or_else(|| {
+                        Error::new(Status::InvalidArg, "OpenAI API key is required")
+                    })?;
+                let model = self.config.model.as_deref().unwrap_or("gpt-3.5-turbo");
+
                 Ok(graphbit_core::llm::LlmConfig::OpenAI {
                     api_key: api_key.clone(),
                     model: model.to_string(),
@@ -199,11 +216,15 @@ impl LlmClient {
                 })
             }
             "anthropic" => {
-                let api_key = self.config.api_key.as_ref()
-                    .ok_or_else(|| Error::new(Status::InvalidArg, "Anthropic API key is required"))?;
-                let model = self.config.model.as_deref()
+                let api_key = self.config.api_key.as_ref().ok_or_else(|| {
+                    Error::new(Status::InvalidArg, "Anthropic API key is required")
+                })?;
+                let model = self
+                    .config
+                    .model
+                    .as_deref()
                     .unwrap_or("claude-3-sonnet-20240229");
-                
+
                 Ok(graphbit_core::llm::LlmConfig::Anthropic {
                     api_key: api_key.clone(),
                     model: model.to_string(),
@@ -211,11 +232,11 @@ impl LlmClient {
                 })
             }
             "deepseek" => {
-                let api_key = self.config.api_key.as_ref()
-                    .ok_or_else(|| Error::new(Status::InvalidArg, "DeepSeek API key is required"))?;
-                let model = self.config.model.as_deref()
-                    .unwrap_or("deepseek-chat");
-                
+                let api_key = self.config.api_key.as_ref().ok_or_else(|| {
+                    Error::new(Status::InvalidArg, "DeepSeek API key is required")
+                })?;
+                let model = self.config.model.as_deref().unwrap_or("deepseek-chat");
+
                 Ok(graphbit_core::llm::LlmConfig::DeepSeek {
                     api_key: api_key.clone(),
                     model: model.to_string(),
@@ -223,11 +244,11 @@ impl LlmClient {
                 })
             }
             "huggingface" => {
-                let api_key = self.config.api_key.as_ref()
-                    .ok_or_else(|| Error::new(Status::InvalidArg, "HuggingFace API key is required"))?;
-                let model = self.config.model.as_deref()
-                    .unwrap_or("gpt2");
-                
+                let api_key = self.config.api_key.as_ref().ok_or_else(|| {
+                    Error::new(Status::InvalidArg, "HuggingFace API key is required")
+                })?;
+                let model = self.config.model.as_deref().unwrap_or("gpt2");
+
                 Ok(graphbit_core::llm::LlmConfig::HuggingFace {
                     api_key: api_key.clone(),
                     model: model.to_string(),
@@ -235,20 +256,19 @@ impl LlmClient {
                 })
             }
             "ollama" => {
-                let model = self.config.model.as_deref()
-                    .unwrap_or("llama3.2");
-                
+                let model = self.config.model.as_deref().unwrap_or("llama3.2");
+
                 Ok(graphbit_core::llm::LlmConfig::Ollama {
                     model: model.to_string(),
                     base_url: self.config.base_url.clone(),
                 })
             }
             "perplexity" => {
-                let api_key = self.config.api_key.as_ref()
-                    .ok_or_else(|| Error::new(Status::InvalidArg, "Perplexity API key is required"))?;
-                let model = self.config.model.as_deref()
-                    .unwrap_or("sonar");
-                
+                let api_key = self.config.api_key.as_ref().ok_or_else(|| {
+                    Error::new(Status::InvalidArg, "Perplexity API key is required")
+                })?;
+                let model = self.config.model.as_deref().unwrap_or("sonar");
+
                 Ok(graphbit_core::llm::LlmConfig::Perplexity {
                     api_key: api_key.clone(),
                     model: model.to_string(),
@@ -258,7 +278,7 @@ impl LlmClient {
             provider => Err(Error::new(
                 Status::InvalidArg,
                 format!("Unsupported provider: {}", provider),
-            ))
+            )),
         }
     }
 }

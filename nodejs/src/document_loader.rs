@@ -118,7 +118,9 @@ impl DocumentLoader {
     /// Create a new document loader
     #[napi(constructor)]
     pub fn new(config: &DocumentLoaderConfig) -> Self {
-        Self { config: config.clone() }
+        Self {
+            config: config.clone(),
+        }
     }
 
     /// Load a document from a file path
@@ -138,7 +140,8 @@ impl DocumentLoader {
                 .load_document(&file_path, &document_type)
                 .await
                 .map_err(|e| format!("Failed to load document: {}", e))
-        }).await;
+        })
+        .await;
 
         match result {
             Ok(Ok(core_content)) => {
@@ -166,7 +169,11 @@ impl DocumentLoader {
 
     /// Load a document from text content
     #[napi]
-    pub async fn load_from_text(&self, content: String, metadata: Option<HashMap<String, String>>) -> Result<DocumentContent> {
+    pub async fn load_from_text(
+        &self,
+        content: String,
+        metadata: Option<HashMap<String, String>>,
+    ) -> Result<DocumentContent> {
         validate_non_empty_string(&content, "content")?;
 
         // For text content, we just return it directly with minimal processing
@@ -206,7 +213,8 @@ impl DocumentLoader {
                 .load_document(&url, document_type)
                 .await
                 .map_err(|e| format!("Failed to load from URL: {}", e))
-        }).await;
+        })
+        .await;
 
         match result {
             Ok(Ok(core_content)) => {

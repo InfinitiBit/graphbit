@@ -37,7 +37,9 @@ impl std::fmt::Display for ToolExecutionError {
             ToolExecutionError::ExecutionTimeout(msg) => write!(f, "Execution timeout: {}", msg),
             ToolExecutionError::MaxCallsExceeded(msg) => write!(f, "Max calls exceeded: {}", msg),
             ToolExecutionError::ValidationError(msg) => write!(f, "Validation error: {}", msg),
-            ToolExecutionError::SerializationError(msg) => write!(f, "Serialization error: {}", msg),
+            ToolExecutionError::SerializationError(msg) => {
+                write!(f, "Serialization error: {}", msg)
+            }
         }
     }
 }
@@ -90,19 +92,19 @@ pub struct ExecutorConfig {
     /// Maximum execution time per tool in milliseconds
     #[pyo3(get, set)]
     pub max_execution_time_ms: u64,
-    
+
     /// Maximum number of sequential tool calls
     #[pyo3(get, set)]
     pub max_tool_calls: usize,
-    
+
     /// Whether to continue execution if a tool fails
     #[pyo3(get, set)]
     pub continue_on_error: bool,
-    
+
     /// Whether to store execution results
     #[pyo3(get, set)]
     pub store_results: bool,
-    
+
     /// Whether to enable detailed logging
     #[pyo3(get, set)]
     pub enable_logging: bool,
@@ -228,11 +230,13 @@ impl ToolExecutor {
     #[pyo3(signature = (registry=None, config=None))]
     pub fn new(registry: Option<&ToolRegistry>, config: Option<ExecutorConfig>) -> Self {
         let reg = Arc::new(Mutex::new(
-            registry.map(|r| r.clone()).unwrap_or_else(ToolRegistry::new)
+            registry
+                .map(|r| r.clone())
+                .unwrap_or_else(ToolRegistry::new),
         ));
-        
+
         let conf = config.unwrap_or_default();
-        
+
         Self {
             registry: reg,
             execution_context: Arc::new(Mutex::new(ExecutionContext::new())),
@@ -241,7 +245,11 @@ impl ToolExecutor {
     }
 
     /// Execute a sequence of tool calls
-    pub fn execute_tools(&self, tool_calls: &Bound<'_, PyList>, py: Python<'_>) -> PyResult<ToolResultCollection> {
+    pub fn execute_tools(
+        &self,
+        tool_calls: &Bound<'_, PyList>,
+        py: Python<'_>,
+    ) -> PyResult<ToolResultCollection> {
         // Validate configuration first
         self.validate_config()?;
 
@@ -255,14 +263,20 @@ impl ToolExecutor {
         // Reset execution context
         {
             let mut context = self.execution_context.lock().map_err(|e| {
-                ToolExecutionError::ContextLockError(format!("Failed to acquire context lock: {}", e))
+                ToolExecutionError::ContextLockError(format!(
+                    "Failed to acquire context lock: {}",
+                    e
+                ))
             })?;
             context.reset();
             context.start_execution();
         }
 
         if self.config.enable_logging {
-            info!("Starting tool execution sequence with {} tools", tool_calls.len());
+            info!(
+                "Starting tool execution sequence with {} tools",
+                tool_calls.len()
+            );
         }
 
         let mut results = ToolResultCollection::new();
@@ -311,25 +325,26 @@ impl ToolExecutor {
                 }
                 continue;
             }
-            
+
             if self.config.enable_logging {
                 debug!("Executing tool {}: {}", index + 1, tool_call.name);
             }
 
             // Execute the tool
             let result = self.execute_single_tool_internal(tool_call, py)?;
-            
+
             // Store result
             if self.config.store_results {
                 results.add(result.clone());
-                
+
                 let mut context = self.execution_context.lock().map_err(|e| {
-                    PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-                        format!("Failed to acquire context lock: {}", e)
-                    )
+                    PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+                        "Failed to acquire context lock: {}",
+                        e
+                    ))
                 })?;
                 context.add_result(result.clone());
-                
+
                 // Store result as variable for next tools
                 let var_name = format!("tool_result_{}", execution_count + 1);
                 let result_value = serde_json::to_value(&result.output).unwrap_or(Value::Null);
@@ -340,70 +355,78 @@ impl ToolExecutor {
 
             // Check if we should continue on error
             if !result.success && !self.config.continue_on_error {
-                error!("Tool execution failed and continue_on_error is false: {}", 
-                       result.error.unwrap_or_else(|| "Unknown error".to_string()));
+                error!(
+                    "Tool execution failed and continue_on_error is false: {}",
+                    result.error.unwrap_or_else(|| "Unknown error".to_string())
+                );
                 break;
             }
         }
 
         if self.config.enable_logging {
-            info!("Tool execution sequence completed. Executed {} tools in {}ms", 
-                  execution_count, start_time.elapsed().as_millis());
+            info!(
+                "Tool execution sequence completed. Executed {} tools in {}ms",
+                execution_count,
+                start_time.elapsed().as_millis()
+            );
         }
 
         Ok(results)
     }
 
-
-
     /// Get execution results
     pub fn get_results(&self) -> PyResult<ToolResultCollection> {
         let context = self.execution_context.lock().map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-                format!("Failed to acquire context lock: {}", e)
-            )
+            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+                "Failed to acquire context lock: {}",
+                e
+            ))
         })?;
-        
+
         Ok(context.results.clone())
     }
 
     /// Get execution variables
     pub fn get_variables(&self) -> PyResult<String> {
         let context = self.execution_context.lock().map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-                format!("Failed to acquire context lock: {}", e)
-            )
+            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+                "Failed to acquire context lock: {}",
+                e
+            ))
         })?;
-        
+
         serde_json::to_string(&context.variables).map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>(
-                format!("Failed to serialize variables: {}", e)
-            )
+            PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                "Failed to serialize variables: {}",
+                e
+            ))
         })
     }
 
     /// Set execution variable
     pub fn set_variable(&self, key: String, value: &Bound<'_, PyAny>) -> PyResult<()> {
         let mut context = self.execution_context.lock().map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-                format!("Failed to acquire context lock: {}", e)
-            )
+            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+                "Failed to acquire context lock: {}",
+                e
+            ))
         })?;
-        
+
         let json_value = self.python_to_json_value(value)?;
         context.set_variable(key, json_value);
-        
+
         Ok(())
     }
 
     /// Get execution variable
     pub fn get_variable(&self, key: &str) -> PyResult<Option<String>> {
         let context = self.execution_context.lock().map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-                format!("Failed to acquire context lock: {}", e)
-            )
+            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+                "Failed to acquire context lock: {}",
+                e
+            ))
         })?;
-        
+
         if let Some(value) = context.get_variable(key) {
             Ok(Some(value.to_string()))
         } else {
@@ -414,11 +437,12 @@ impl ToolExecutor {
     /// Clear execution context
     pub fn clear_context(&self) -> PyResult<()> {
         let mut context = self.execution_context.lock().map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-                format!("Failed to acquire context lock: {}", e)
-            )
+            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+                "Failed to acquire context lock: {}",
+                e
+            ))
         })?;
-        
+
         context.reset();
         Ok(())
     }
@@ -426,15 +450,17 @@ impl ToolExecutor {
     /// Get execution statistics
     pub fn get_execution_stats(&self) -> PyResult<String> {
         let context = self.execution_context.lock().map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-                format!("Failed to acquire context lock: {}", e)
-            )
+            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+                "Failed to acquire context lock: {}",
+                e
+            ))
         })?;
-        
-        let elapsed_ms = context.start_time
+
+        let elapsed_ms = context
+            .start_time
             .map(|start| start.elapsed().as_millis() as u64)
             .unwrap_or(0);
-        
+
         let stats = serde_json::json!({
             "execution_id": context.current_execution_id,
             "tool_calls": context.tool_call_count,
@@ -444,11 +470,12 @@ impl ToolExecutor {
             "successful_results": context.results.success_count(),
             "failed_results": context.results.failure_count()
         });
-        
+
         serde_json::to_string_pretty(&stats).map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>(
-                format!("Failed to serialize stats: {}", e)
-            )
+            PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                "Failed to serialize stats: {}",
+                e
+            ))
         })
     }
 
@@ -460,11 +487,16 @@ impl ToolExecutor {
 
 impl ToolExecutor {
     /// Execute a single tool call (internal method)
-    fn execute_single_tool_internal(&self, tool_call: LlmToolCall, py: Python<'_>) -> PyResult<ToolResult> {
+    fn execute_single_tool_internal(
+        &self,
+        tool_call: LlmToolCall,
+        py: Python<'_>,
+    ) -> PyResult<ToolResult> {
         let registry = self.registry.lock().map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-                format!("Failed to acquire registry lock: {}", e)
-            )
+            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+                "Failed to acquire registry lock: {}",
+                e
+            ))
         })?;
 
         // Convert parameters to PyDict
@@ -477,13 +509,13 @@ impl ToolExecutor {
     fn validate_config(&self) -> Result<(), ToolExecutionError> {
         if self.config.max_execution_time_ms == 0 {
             return Err(ToolExecutionError::ValidationError(
-                "Max execution time must be greater than 0".to_string()
+                "Max execution time must be greater than 0".to_string(),
             ));
         }
 
         if self.config.max_tool_calls == 0 {
             return Err(ToolExecutionError::ValidationError(
-                "Max tool calls must be greater than 0".to_string()
+                "Max tool calls must be greater than 0".to_string(),
             ));
         }
 
@@ -494,20 +526,20 @@ impl ToolExecutor {
     fn validate_tool_call(&self, tool_call: &LlmToolCall) -> Result<(), ToolExecutionError> {
         if tool_call.name.trim().is_empty() {
             return Err(ToolExecutionError::ValidationError(
-                "Tool name cannot be empty".to_string()
+                "Tool name cannot be empty".to_string(),
             ));
         }
 
         if tool_call.id.trim().is_empty() {
             return Err(ToolExecutionError::ValidationError(
-                "Tool call ID cannot be empty".to_string()
+                "Tool call ID cannot be empty".to_string(),
             ));
         }
 
         // Validate parameters is a valid JSON object
         if !tool_call.parameters.is_object() && !tool_call.parameters.is_null() {
             return Err(ToolExecutionError::ValidationError(
-                "Tool parameters must be a JSON object or null".to_string()
+                "Tool parameters must be a JSON object or null".to_string(),
             ));
         }
 
@@ -515,68 +547,88 @@ impl ToolExecutor {
     }
 
     /// Check if execution should be stopped due to limits
-    fn check_execution_limits(&self, execution_count: usize, start_time: Instant) -> Result<(), ToolExecutionError> {
+    fn check_execution_limits(
+        &self,
+        execution_count: usize,
+        start_time: Instant,
+    ) -> Result<(), ToolExecutionError> {
         if execution_count >= self.config.max_tool_calls {
-            return Err(ToolExecutionError::MaxCallsExceeded(
-                format!("Reached maximum tool call limit: {}", self.config.max_tool_calls)
-            ));
+            return Err(ToolExecutionError::MaxCallsExceeded(format!(
+                "Reached maximum tool call limit: {}",
+                self.config.max_tool_calls
+            )));
         }
 
         if start_time.elapsed().as_millis() as u64 > self.config.max_execution_time_ms {
-            return Err(ToolExecutionError::ExecutionTimeout(
-                format!("Reached maximum execution time: {}ms", self.config.max_execution_time_ms)
-            ));
+            return Err(ToolExecutionError::ExecutionTimeout(format!(
+                "Reached maximum execution time: {}ms",
+                self.config.max_execution_time_ms
+            )));
         }
 
         Ok(())
     }
 
     /// Parse a tool call from Python object
-    fn parse_tool_call(&self, tool_call_obj: &Bound<'_, PyAny>, _py: Python<'_>) -> PyResult<LlmToolCall> {
+    fn parse_tool_call(
+        &self,
+        tool_call_obj: &Bound<'_, PyAny>,
+        _py: Python<'_>,
+    ) -> PyResult<LlmToolCall> {
         // Try to extract as dictionary first
         if let Ok(dict) = tool_call_obj.downcast::<PyDict>() {
-            let id = dict.get_item("id")?
+            let id = dict
+                .get_item("id")?
                 .map(|item| item.extract::<String>())
                 .transpose()?
                 .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
-            
-            let name = dict.get_item("name")?
-                .ok_or_else(|| PyErr::new::<pyo3::exceptions::PyKeyError, _>("Missing 'name' in tool call"))?
+
+            let name = dict
+                .get_item("name")?
+                .ok_or_else(|| {
+                    PyErr::new::<pyo3::exceptions::PyKeyError, _>("Missing 'name' in tool call")
+                })?
                 .extract::<String>()?;
-            
-            let parameters = dict.get_item("parameters")?
+
+            let parameters = dict
+                .get_item("parameters")?
                 .map(|p| self.python_to_json_value(&p))
                 .transpose()?
                 .unwrap_or(Value::Object(serde_json::Map::new()));
-            
-            return Ok(LlmToolCall { id, name, parameters });
+
+            return Ok(LlmToolCall {
+                id,
+                name,
+                parameters,
+            });
         }
-        
+
         // Try to extract as JSON string
         if let Ok(json_str) = tool_call_obj.extract::<String>() {
             return serde_json::from_str(&json_str).map_err(|e| {
-                PyErr::new::<pyo3::exceptions::PyValueError, _>(
-                    format!("Failed to parse tool call JSON: {}", e)
-                )
+                PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                    "Failed to parse tool call JSON: {}",
+                    e
+                ))
             });
         }
-        
+
         Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
-            "Tool call must be a dictionary or JSON string"
+            "Tool call must be a dictionary or JSON string",
         ))
     }
 
     /// Convert JSON value to PyDict
     fn json_to_pydict<'a>(&self, value: &Value, py: Python<'a>) -> PyResult<Bound<'a, PyDict>> {
         let dict = PyDict::new(py);
-        
+
         if let Value::Object(map) = value {
             for (key, val) in map {
                 let py_val = self.json_value_to_python(val, py)?;
                 dict.set_item(key, py_val)?;
             }
         }
-        
+
         Ok(dict)
     }
 

@@ -946,8 +946,11 @@ impl WorkflowExecutor {
         let has_tools = node_config.contains_key("tool_schemas");
 
         // DEBUG: Log tool detection
-        tracing::info!("Agent tool detection - has_tools: {}, config keys: {:?}",
-                      has_tools, node_config.keys().collect::<Vec<_>>());
+        tracing::info!(
+            "Agent tool detection - has_tools: {}, config keys: {:?}",
+            has_tools,
+            node_config.keys().collect::<Vec<_>>()
+        );
         if let Some(tool_schemas) = node_config.get("tool_schemas") {
             tracing::info!("Tool schemas found: {}", tool_schemas);
         }
@@ -955,12 +958,9 @@ impl WorkflowExecutor {
         if has_tools {
             // Execute agent with tool calling orchestration
             tracing::info!("Executing agent with tools - prompt: '{}'", resolved_prompt);
-            let result = Self::execute_agent_with_tools(
-                agent_id,
-                &resolved_prompt,
-                node_config,
-                agent,
-            ).await;
+            let result =
+                Self::execute_agent_with_tools(agent_id, &resolved_prompt, node_config, agent)
+                    .await;
             tracing::info!("Agent with tools execution result: {:?}", result);
             result
         } else {
@@ -985,7 +985,8 @@ impl WorkflowExecutor {
         use crate::llm::{LlmRequest, LlmTool};
 
         // Extract tool schemas from node config
-        let tool_schemas = node_config.get("tool_schemas")
+        let tool_schemas = node_config
+            .get("tool_schemas")
             .and_then(|v| v.as_array())
             .ok_or_else(|| GraphBitError::validation("node_config", "Missing tool_schemas"))?;
 
@@ -997,7 +998,7 @@ impl WorkflowExecutor {
             if let (Some(name), Some(description), Some(parameters)) = (
                 schema.get("name").and_then(|v| v.as_str()),
                 schema.get("description").and_then(|v| v.as_str()),
-                schema.get("parameters")
+                schema.get("parameters"),
             ) {
                 tools.push(LlmTool::new(name, description, parameters.clone()));
             }
@@ -1014,19 +1015,31 @@ impl WorkflowExecutor {
 
         // DEBUG: Log LLM response details
         tracing::info!("LLM Response - Content: '{}'", llm_response.content);
-        tracing::info!("LLM Response - Tool calls count: {}", llm_response.tool_calls.len());
+        tracing::info!(
+            "LLM Response - Tool calls count: {}",
+            llm_response.tool_calls.len()
+        );
         for (i, tool_call) in llm_response.tool_calls.iter().enumerate() {
-            tracing::info!("Tool call {}: {} with params: {:?}", i, tool_call.name, tool_call.parameters);
+            tracing::info!(
+                "Tool call {}: {} with params: {:?}",
+                i,
+                tool_call.name,
+                tool_call.parameters
+            );
         }
 
         // Check if the LLM made any tool calls
         if !llm_response.tool_calls.is_empty() {
-            tracing::info!("LLM made {} tool calls - these should be executed by the Python layer", llm_response.tool_calls.len());
+            tracing::info!(
+                "LLM made {} tool calls - these should be executed by the Python layer",
+                llm_response.tool_calls.len()
+            );
 
             // Instead of executing tools in Rust, return a structured response that indicates
             // tool calls need to be executed by the Python layer
-            let tool_calls_json = serde_json::to_value(&llm_response.tool_calls)
-                .map_err(|e| GraphBitError::workflow_execution(format!("Failed to serialize tool calls: {}", e)))?;
+            let tool_calls_json = serde_json::to_value(&llm_response.tool_calls).map_err(|e| {
+                GraphBitError::workflow_execution(format!("Failed to serialize tool calls: {}", e))
+            })?;
 
             // Return a structured response that the Python layer can interpret
             Ok(serde_json::json!({
@@ -1038,7 +1051,10 @@ impl WorkflowExecutor {
             }))
         } else {
             // No tool calls, return the original response
-            tracing::info!("No tool calls made by LLM, returning original response: {}", llm_response.content);
+            tracing::info!(
+                "No tool calls made by LLM, returning original response: {}",
+                llm_response.content
+            );
             Ok(serde_json::Value::String(llm_response.content))
         }
     }

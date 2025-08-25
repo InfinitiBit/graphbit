@@ -23,7 +23,12 @@ pub struct ToolMetadata {
 }
 
 impl ToolMetadata {
-    pub fn new(name: String, description: String, parameters_schema: serde_json::Value, return_type: String) -> Self {
+    pub fn new(
+        name: String,
+        description: String,
+        parameters_schema: serde_json::Value,
+        return_type: String,
+    ) -> Self {
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
@@ -48,7 +53,7 @@ impl ToolMetadata {
             SystemTime::now()
                 .duration_since(UNIX_EPOCH)
                 .unwrap_or_default()
-                .as_millis() as u64
+                .as_millis() as u64,
         );
     }
 
@@ -110,19 +115,19 @@ impl ToolRegistry {
         // Validate inputs
         if name.trim().is_empty() {
             return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
-                "Tool name cannot be empty"
+                "Tool name cannot be empty",
             ));
         }
 
         if description.trim().is_empty() {
             return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
-                "Tool description cannot be empty"
+                "Tool description cannot be empty",
             ));
         }
 
         // Convert parameters schema to JSON
         let schema_json = python_dict_to_json(parameters_schema)?;
-        
+
         // Create metadata
         let metadata = ToolMetadata::new(
             name.clone(),
@@ -134,18 +139,20 @@ impl ToolRegistry {
         // Store tool and metadata
         {
             let mut tools = self.tools.write().map_err(|e| {
-                PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-                    format!("Failed to acquire tools lock: {}", e)
-                )
+                PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+                    "Failed to acquire tools lock: {}",
+                    e
+                ))
             })?;
             tools.insert(name.clone(), function);
         }
 
         {
             let mut meta = self.metadata.write().map_err(|e| {
-                PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-                    format!("Failed to acquire metadata lock: {}", e)
-                )
+                PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+                    "Failed to acquire metadata lock: {}",
+                    e
+                ))
             })?;
             meta.insert(name, metadata);
         }
@@ -156,15 +163,17 @@ impl ToolRegistry {
     /// Unregister a tool
     pub fn unregister_tool(&self, name: &str) -> PyResult<bool> {
         let mut tools = self.tools.write().map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-                format!("Failed to acquire tools lock: {}", e)
-            )
+            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+                "Failed to acquire tools lock: {}",
+                e
+            ))
         })?;
 
         let mut metadata = self.metadata.write().map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-                format!("Failed to acquire metadata lock: {}", e)
-            )
+            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+                "Failed to acquire metadata lock: {}",
+                e
+            ))
         })?;
 
         let removed_tool = tools.remove(name).is_some();
@@ -176,9 +185,10 @@ impl ToolRegistry {
     /// Check if a tool is registered
     pub fn has_tool(&self, name: &str) -> PyResult<bool> {
         let tools = self.tools.read().map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-                format!("Failed to acquire tools lock: {}", e)
-            )
+            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+                "Failed to acquire tools lock: {}",
+                e
+            ))
         })?;
         Ok(tools.contains_key(name))
     }
@@ -186,9 +196,10 @@ impl ToolRegistry {
     /// Get list of registered tool names
     pub fn list_tools(&self) -> PyResult<Vec<String>> {
         let tools = self.tools.read().map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-                format!("Failed to acquire tools lock: {}", e)
-            )
+            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+                "Failed to acquire tools lock: {}",
+                e
+            ))
         })?;
         Ok(tools.keys().cloned().collect())
     }
@@ -196,16 +207,18 @@ impl ToolRegistry {
     /// Get tool metadata
     pub fn get_tool_metadata(&self, name: &str) -> PyResult<Option<String>> {
         let metadata = self.metadata.read().map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-                format!("Failed to acquire metadata lock: {}", e)
-            )
+            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+                "Failed to acquire metadata lock: {}",
+                e
+            ))
         })?;
 
         if let Some(meta) = metadata.get(name) {
             let json = serde_json::to_string(meta).map_err(|e| {
-                PyErr::new::<pyo3::exceptions::PyValueError, _>(
-                    format!("Failed to serialize metadata: {}", e)
-                )
+                PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                    "Failed to serialize metadata: {}",
+                    e
+                ))
             })?;
             Ok(Some(json))
         } else {
@@ -216,9 +229,10 @@ impl ToolRegistry {
     /// Get all tools as LlmTool format for agent integration
     pub fn get_llm_tools(&self) -> PyResult<Vec<String>> {
         let metadata = self.metadata.read().map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-                format!("Failed to acquire metadata lock: {}", e)
-            )
+            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+                "Failed to acquire metadata lock: {}",
+                e
+            ))
         })?;
 
         let mut llm_tools = Vec::new();
@@ -228,11 +242,12 @@ impl ToolRegistry {
                 meta.description.clone(),
                 meta.parameters_schema.clone(),
             );
-            
+
             let json = serde_json::to_string(&llm_tool).map_err(|e| {
-                PyErr::new::<pyo3::exceptions::PyValueError, _>(
-                    format!("Failed to serialize LlmTool: {}", e)
-                )
+                PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                    "Failed to serialize LlmTool: {}",
+                    e
+                ))
             })?;
             llm_tools.push(json);
         }
@@ -241,21 +256,25 @@ impl ToolRegistry {
     }
 
     /// Execute a tool by name with parameters
-    pub fn execute_tool(&self, name: &str, params: &Bound<'_, PyDict>, py: Python<'_>) -> PyResult<ToolResult> {
+    pub fn execute_tool(
+        &self,
+        name: &str,
+        params: &Bound<'_, PyDict>,
+        py: Python<'_>,
+    ) -> PyResult<ToolResult> {
         let start_time = Instant::now();
-        
+
         // Get the tool function
         let function = {
             let tools = self.tools.read().map_err(|e| {
-                PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-                    format!("Failed to acquire tools lock: {}", e)
-                )
+                PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+                    "Failed to acquire tools lock: {}",
+                    e
+                ))
             })?;
-            
+
             tools.get(name).map(|f| f.clone_ref(py)).ok_or_else(|| {
-                PyErr::new::<pyo3::exceptions::PyKeyError, _>(
-                    format!("Tool '{}' not found", name)
-                )
+                PyErr::new::<pyo3::exceptions::PyKeyError, _>(format!("Tool '{}' not found", name))
             })?
         };
 
@@ -267,26 +286,27 @@ impl ToolRegistry {
             Ok(result) => {
                 let duration = start_time.elapsed().as_millis() as u64;
                 let output = result.to_string();
-                
+
                 // Record execution in metadata
                 self.record_tool_execution(name, duration)?;
-                
+
                 let tool_result = ToolResult::new(name.to_string(), params_str, output, duration);
-                
+
                 // Add to execution history
                 self.add_to_history(tool_result.clone())?;
-                
+
                 tool_result
             }
             Err(e) => {
                 let duration = start_time.elapsed().as_millis() as u64;
                 let error_msg = format!("Tool execution failed: {}", e);
-                
-                let tool_result = ToolResult::failure(name.to_string(), params_str, error_msg, duration);
-                
+
+                let tool_result =
+                    ToolResult::failure(name.to_string(), params_str, error_msg, duration);
+
                 // Add to execution history even for failures
                 self.add_to_history(tool_result.clone())?;
-                
+
                 tool_result
             }
         };
@@ -297,9 +317,10 @@ impl ToolRegistry {
     /// Get execution history
     pub fn get_execution_history(&self) -> PyResult<Vec<ToolResult>> {
         let history = self.execution_history.read().map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-                format!("Failed to acquire history lock: {}", e)
-            )
+            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+                "Failed to acquire history lock: {}",
+                e
+            ))
         })?;
         Ok(history.clone())
     }
@@ -307,9 +328,10 @@ impl ToolRegistry {
     /// Clear execution history
     pub fn clear_history(&self) -> PyResult<()> {
         let mut history = self.execution_history.write().map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-                format!("Failed to acquire history lock: {}", e)
-            )
+            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+                "Failed to acquire history lock: {}",
+                e
+            ))
         })?;
         history.clear();
         Ok(())
@@ -318,15 +340,17 @@ impl ToolRegistry {
     /// Get registry statistics
     pub fn get_stats(&self) -> PyResult<String> {
         let metadata = self.metadata.read().map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-                format!("Failed to acquire metadata lock: {}", e)
-            )
+            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+                "Failed to acquire metadata lock: {}",
+                e
+            ))
         })?;
 
         let history = self.execution_history.read().map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-                format!("Failed to acquire history lock: {}", e)
-            )
+            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+                "Failed to acquire history lock: {}",
+                e
+            ))
         })?;
 
         let total_tools = metadata.len();
@@ -347,18 +371,20 @@ impl ToolRegistry {
         });
 
         serde_json::to_string_pretty(&stats).map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>(
-                format!("Failed to serialize stats: {}", e)
-            )
+            PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                "Failed to serialize stats: {}",
+                e
+            ))
         })
     }
 
     /// String representation
     pub fn __repr__(&self) -> PyResult<String> {
         let tools = self.tools.read().map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-                format!("Failed to acquire tools lock: {}", e)
-            )
+            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+                "Failed to acquire tools lock: {}",
+                e
+            ))
         })?;
         Ok(format!("ToolRegistry(tools={})", tools.len()))
     }
@@ -368,9 +394,10 @@ impl ToolRegistry {
     /// Record tool execution in metadata (internal method)
     fn record_tool_execution(&self, name: &str, duration_ms: u64) -> PyResult<()> {
         let mut metadata = self.metadata.write().map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-                format!("Failed to acquire metadata lock: {}", e)
-            )
+            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+                "Failed to acquire metadata lock: {}",
+                e
+            ))
         })?;
 
         if let Some(meta) = metadata.get_mut(name) {
@@ -383,9 +410,10 @@ impl ToolRegistry {
     /// Add result to execution history (internal method)
     fn add_to_history(&self, result: ToolResult) -> PyResult<()> {
         let mut history = self.execution_history.write().map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-                format!("Failed to acquire history lock: {}", e)
-            )
+            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+                "Failed to acquire history lock: {}",
+                e
+            ))
         })?;
 
         history.push(result);

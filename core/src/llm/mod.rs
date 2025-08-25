@@ -161,7 +161,11 @@ impl LlmMessage {
     pub fn tool(tool_call_id: impl Into<String>, result: impl Into<String>) -> Self {
         Self {
             role: LlmRole::Tool,
-            content: format!("Tool call {} result: {}", tool_call_id.into(), result.into()),
+            content: format!(
+                "Tool call {} result: {}",
+                tool_call_id.into(),
+                result.into()
+            ),
             tool_calls: Vec::new(),
         }
     }
