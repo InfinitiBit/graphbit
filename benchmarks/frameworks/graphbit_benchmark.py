@@ -9,13 +9,7 @@ import contextlib
 import os
 import sys
 from typing import Dict, Optional
-
-try:
-    from graphbit import LlmClient, LlmConfig, configure_runtime, init
-except ImportError:
-    print("GraphBit Python bindings not installed. " "Run 'maturin develop' in graphbit/")
-    sys.exit(1)
-
+from graphbit import LlmClient, LlmConfig, configure_runtime, init
 
 from .common import (
     COMPLEX_WORKFLOW_STEPS,
