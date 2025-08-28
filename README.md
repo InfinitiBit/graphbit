@@ -3,7 +3,7 @@
 # GraphBit - High Performance Agentic Framework
 
 <p align="center">
-    <img src="assets/Logo.png" width="140px" alt="Logo" />
+    <img src="assets/Logo.png" width="140px" style="border-radius: 50%;" alt="Logo" />
 </p>
 
 <!-- Added placeholders for links, fill it up when the corresponding links are available. -->
@@ -36,6 +36,7 @@ Designed to run **multi-agent workflows in parallel**, Graphbit persists memory 
 
 ##  Key Features
 
+- **Tool Selection** - LLMs intelligently select tools based on descriptions
 - **Type Safety** - Strong typing throughout the execution pipeline
 - **Reliability** - Circuit breakers, retry policies, and error handling
 - **Multi-LLM Support** - OpenAI, Anthropic, Ollama, HuggingFace
@@ -66,8 +67,7 @@ export ANTHROPIC_API_KEY=your_anthropic_api_key_here
 ```python
 import os
 
-from graphbit import LlmConfig, LlmClient, Executor, Workflow, Node
-from graphbit.tools.decorators import tool
+from graphbit import LlmConfig, Executor, Workflow, Node, tool
 
 # Initialize and configure
 config = LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4o-mini")
@@ -75,39 +75,39 @@ config = LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4o-mini")
 # Create executor
 executor = Executor(config)
 
-# Create a tool
-@tool(description="Get weather information")
+# Create tools with clear descriptions for LLM selection
+@tool(description="Get current weather information for any city")
 def get_weather(location: str) -> dict:
     return {"location": location, "temperature": 22, "condition": "sunny"}
+
+@tool(description="Perform mathematical calculations and return results")
+def calculate(expression: str) -> str:
+    return f"Result: {eval(expression)}"
 
 # Build workflow
 workflow = Workflow("Analysis Pipeline")
 
-analyzer = Node.agent(
-    name = "Data Analyzer", 
-    prompt = f"Analyze the following data: {input}"
+# Create agent nodes
+smart_agent = Node.agent(
+    name="Smart Agent",
+    prompt="What's the weather in Paris and calculate 15 + 27?",
+    tools=[get_weather, calculate]
 )
 
 processor = Node.agent(
     name = "Data Processor",
-    prompt = "Process and summarize the data from Data Analyzer."
-)
-
-agent_with_tools = graphbit.Node.agent(
-    name="Weather Assistant",
-    prompt= f"You are a weather assistant. Use tools when needed: {input}",
-    agent_id="weather_agent",  # Optional, auto-generated if not provided
-    tools=[get_weather]  # List of decorated tool functions
+    prompt = "Process the results obtained from Smart Agent."
 )
 
 # Connect and execute
-id1 = workflow.add_node(analyzer)
+id1 = workflow.add_node(smart_agent)
 id2 = workflow.add_node(processor)
-id3 = workflow.add_node(agent_with_tools)
 workflow.connect(id1, id2)
 
 result = executor.execute(workflow)
-print(f"Workflow completed: {result.is_successful()}")
+print(f"Workflow completed: {result.is_success()}")
+print("\nSmart Agent Output: \n", result.get_node_output("Smart Agent"))
+print("\nData Processor Output: \n", result.get_node_output("Data Processor"))
 ```
 
 ## Architecture
