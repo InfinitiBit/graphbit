@@ -3,7 +3,7 @@
 # GraphBit - High Performance Agentic Framework
 
 <p align="center">
-    <img src="assets/Logo.png" width="140px" style="border-radius: 50%;" alt="Logo" />
+    <img src="assets/Logo1.png" width="140px" style="border-radius: 50%;" alt="Logo" />
 </p>
 
 <!-- Added placeholders for links, fill it up when the corresponding links are available. -->
