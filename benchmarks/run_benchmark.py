@@ -209,8 +209,8 @@ class ComprehensiveBenchmarkRunner:
         if self.verbose:
             click.echo(f"\n{scenario_name} Results{avg_note}:")
             click.echo(f"  Execution Time: {metrics.execution_time_ms:.2f} ms")
-            click.echo(f"  Memory Usage: {metrics.memory_usage_mb:.8f} MB")
-            click.echo(f"  CPU Usage: {metrics.cpu_usage_percent:.8f}%")
+            click.echo(f"  Memory Usage: {metrics.memory_usage_mb:.3f} MB")
+            click.echo(f"  CPU Usage: {metrics.cpu_usage_percent:.3f}%")
             click.echo(f"  Token Count: {metrics.token_count}")
             click.echo(f"  Throughput: {metrics.throughput_tasks_per_sec:.2f} tasks/sec")
             click.echo(f"  Error Rate: {metrics.error_rate:.2%}")
@@ -226,7 +226,7 @@ class ComprehensiveBenchmarkRunner:
                     else:
                         click.echo(f"    {key}: {value}")
         else:
-            self.log(f"{scenario_name}{avg_note}: {metrics.execution_time_ms:.0f}ms, {metrics.memory_usage_mb:.6f}MB, {metrics.cpu_usage_percent:.6f}% CPU, {metrics.token_count} tokens")
+            self.log(f"{scenario_name}{avg_note}: {metrics.execution_time_ms:.0f}ms, {metrics.memory_usage_mb:.3f}MB, {metrics.cpu_usage_percent:.3f}% CPU, {metrics.token_count} tokens")
 
     async def run_framework_scenario(
         self,
@@ -329,7 +329,7 @@ class ComprehensiveBenchmarkRunner:
             print(f"\n{framework_name} Performance Overview:")
             for scenario_name, metrics in framework_info["results"].items():
                 if metrics is not None:
-                    print(f"  {scenario_name}: {metrics.execution_time_ms:.0f}ms, {metrics.memory_usage_mb:.6f}MB, {metrics.cpu_usage_percent:.6f}% CPU, {metrics.token_count} tokens")
+                    print(f"  {scenario_name}: {metrics.execution_time_ms:.0f}ms, {metrics.memory_usage_mb:.3f}MB, {metrics.cpu_usage_percent:.3f}% CPU, {metrics.token_count} tokens")
 
     def generate_comparison_report(self) -> None:
         """Generate a comparison report across all frameworks."""
