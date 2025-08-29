@@ -3,13 +3,13 @@
 # GraphBit - High Performance Agentic Framework
 
 <p align="center">
-    <img src="assets/Logo1.png" width="140px" style="border-radius: 50%;" alt="Logo" />
+    <img src="assets/Logo1.png" width="160px" alt="Logo" />
 </p>
 
 <!-- Added placeholders for links, fill it up when the corresponding links are available. -->
 <p align="center">
     <a href="https://graphbit.ai/">Website</a> | 
-    <a href="https://graphbit-docs.vercel.app/docs">Docs</a> |
+    <a href="https://docs.graphbit.ai/">Docs</a> |
     <a href="https://discord.gg/8TvUK6uf">Discord</a> |
     <a href="https://docs.google.com/spreadsheets/d/1deQk0p7cCJUeeZw3t8FimxVg4jc99w0Bw1XQyLPN0Zk/edit?usp=sharing">Roadmap</a> 
     <br /><br />
@@ -124,7 +124,6 @@ GraphBit provides a rich Python API for building and integrating agentic workflo
 ## Contributing to GraphBit
 
 We welcome contributions. To get started, please see the [Contributing](CONTRIBUTING.md) file for development setup and guidelines.
-
 
 GraphBit is built by a wonderful community of researchers and engineers.
 
