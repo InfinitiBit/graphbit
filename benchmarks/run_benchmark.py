@@ -48,8 +48,6 @@ from frameworks.common import (
         set_process_affinity,
     )
 
-
-
 if sys.platform == "win32" or sys.platform == "darwin":
 
     def sched_getaffinity(pid=0):
@@ -69,7 +67,7 @@ def _default_concurrency() -> int:
 
 
 # Central global variable for number of runs
-NUM_RUNS = 1
+NUM_RUNS = 10
 DEFAULT_CONCURRENCY = _default_concurrency()
 
 # Framework specific modules are loaded lazily inside ``main`` to allow running
