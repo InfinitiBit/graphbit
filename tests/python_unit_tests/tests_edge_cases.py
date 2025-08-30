@@ -208,12 +208,15 @@ class TestEdgeCases:
     def test_environment_variable_edge_cases(self):
         """Test edge cases with environment variables."""
         import os
+        import platform
 
         original_env = os.environ.copy()
 
         try:
-            # Test with extreme environment variables
-            os.environ["VERY_LONG_VAR"] = "a" * 100000
+            # Test with environment variables within platform limits
+            # Windows has a 32767 character limit, so use a safe size
+            max_var_length = 30000 if platform.system() == "Windows" else 100000
+            os.environ["VERY_LONG_VAR"] = "a" * max_var_length
             os.environ["UNICODE_VAR"] = "🚀测试"
             # Skip null byte test as it causes issues
             # os.environ['NULL_VAR'] = 'hello\x00world'
