@@ -10,9 +10,9 @@ This guideline explains how to use MongoDB as both a general-purpose and a vecto
 ## Prerequisites
 
 - **MongoDB** running locally or in the cloud (e.g., MongoDB Atlas)
-- **Python environment** with `pymongo` and `graphbit` installed:
+- **GraphBit with MongoDB extension** installed:
   ```bash
-  pip install pymongo graphbit
+  pip install graphbit[pymongo]
   ```
 - **OpenAI API Key** for embeddings
 - **Environment variable** for your OpenAI API key:

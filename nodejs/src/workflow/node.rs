@@ -41,7 +41,9 @@ impl Node {
             name.clone(),
             format!("Agent: {}", name),
             NodeType::Agent {
-                agent_id: AgentId::from_string(&id).map_err(|e| Error::new(Status::InvalidArg, format!("Invalid agent ID: {}", e)))?,
+                agent_id: AgentId::from_string(&id).map_err(|e| {
+                    Error::new(Status::InvalidArg, format!("Invalid agent ID: {}", e))
+                })?,
                 prompt_template: prompt,
             },
         );
