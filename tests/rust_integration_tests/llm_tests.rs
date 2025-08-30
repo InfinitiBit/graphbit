@@ -1,6 +1,6 @@
 //! LLM Provider Integration Tests
 //!
-//! Tests for LLM providers including OpenAI, Anthropic, HuggingFace, and Ollama
+//! Tests for LLM providers including OpenAI, Anthropic, and Ollama
 //! with both mocked and real API interactions.
 
 use graphbit_core::llm::*;
@@ -31,19 +31,6 @@ async fn test_anthropic_provider_creation() {
     let provider = provider_result.unwrap();
     assert_eq!(provider.provider_name(), "anthropic");
     assert_eq!(provider.model_name(), "claude-3-sonnet-20240229");
-}
-
-#[tokio::test]
-async fn test_huggingface_provider_creation() {
-    graphbit_core::init().expect("Failed to initialize GraphBit");
-
-    let config = LlmConfig::huggingface("test-api-key", "microsoft/DialoGPT-medium");
-    let provider_result = LlmProviderFactory::create_provider(config);
-    assert!(provider_result.is_ok());
-
-    let provider = provider_result.unwrap();
-    assert_eq!(provider.provider_name(), "huggingface");
-    assert_eq!(provider.model_name(), "microsoft/DialoGPT-medium");
 }
 
 #[tokio::test]
@@ -361,42 +348,6 @@ async fn test_anthropic_real_api_call() {
         Err(e) => {
             println!("Anthropic API call failed: {e:?}");
             panic!("Anthropic API call should succeed with valid credentials");
-        }
-    }
-}
-
-#[tokio::test]
-async fn test_huggingface_real_api_call() {
-    graphbit_core::init().expect("Failed to initialize GraphBit");
-
-    // Skip if no real API key is provided
-    if !super::has_huggingface_api_key() {
-        println!("Skipping real HuggingFace API test - no valid API key");
-        return;
-    }
-
-    let api_key = super::get_huggingface_api_key_or_skip();
-    let config = LlmConfig::huggingface(api_key, "microsoft/DialoGPT-medium");
-    let provider = LlmProviderFactory::create_provider(config).unwrap();
-
-    let request = LlmRequest::new("Hello there!")
-        .with_max_tokens(20)
-        .with_temperature(0.7);
-
-    let result = provider.complete(request).await;
-    match result {
-        Ok(response) => {
-            assert!(!response.content.is_empty());
-            assert_eq!(response.model, "microsoft/DialoGPT-medium");
-            println!(
-                "HuggingFace real API call successful: {content}",
-                content = response.content
-            );
-        }
-        Err(e) => {
-            println!("HuggingFace API call failed: {e:?}");
-            // Note: HuggingFace API might be less reliable, so we don't fail the test
-            println!("HuggingFace API call failed (this might be expected): {e:?}");
         }
     }
 }

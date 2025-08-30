@@ -54,7 +54,6 @@ class IntegrationTestRunner:
         api_keys = {
             "OPENAI_API_KEY": os.getenv("OPENAI_API_KEY"),
             "ANTHROPIC_API_KEY": os.getenv("ANTHROPIC_API_KEY"),
-            "HUGGINGFACE_API_KEY": os.getenv("HUGGINGFACE_API_KEY"),
         }
 
         print("\nAPI Key Status:")

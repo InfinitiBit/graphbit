@@ -39,7 +39,7 @@ Designed to run **multi-agent workflows in parallel**, Graphbit persists memory 
 - **Tool Selection** - LLMs intelligently select tools based on descriptions
 - **Type Safety** - Strong typing throughout the execution pipeline
 - **Reliability** - Circuit breakers, retry policies, and error handling
-- **Multi-LLM Support** - OpenAI, Anthropic, Ollama, HuggingFace
+- **Multi-LLM Support** - OpenAI, Anthropic, Ollama
 - **Resource Management** - Concurrency controls and memory optimization
 - **Observability** - Built-in metrics and execution tracing
 
@@ -136,4 +136,4 @@ GraphBit is built by a wonderful community of researchers and engineers.
 
 <a href="https://github.com/InfinitiBit/graphbit/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=InfinitiBit/graphbit&columns=10" />
-</a> 
+</a>

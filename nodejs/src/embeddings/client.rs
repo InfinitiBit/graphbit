@@ -138,7 +138,6 @@ impl EmbeddingClient {
     fn convert_to_core_config(&self) -> Result<graphbit_core::embeddings::EmbeddingConfig> {
         let provider = match self.config.provider.as_str() {
             "openai" => graphbit_core::embeddings::EmbeddingProvider::OpenAI,
-            "huggingface" => graphbit_core::embeddings::EmbeddingProvider::HuggingFace,
             provider => {
                 return Err(Error::new(
                     Status::InvalidArg,

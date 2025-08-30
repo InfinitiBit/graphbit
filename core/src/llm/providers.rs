@@ -26,11 +26,6 @@ pub enum LlmConfig {
         model: String,
         base_url: Option<String>,
     },
-    HuggingFace {
-        api_key: String,
-        model: String,
-        base_url: Option<String>,
-    },
     Ollama {
         model: String,
         base_url: Option<String>,
@@ -75,15 +70,6 @@ impl LlmConfig {
         }
     }
 
-    /// Create HuggingFace configuration
-    pub fn huggingface(api_key: impl Into<String>, model: impl Into<String>) -> Self {
-        Self::HuggingFace {
-            api_key: api_key.into(),
-            model: model.into(),
-            base_url: None,
-        }
-    }
-
     /// Create Perplexity configuration
     pub fn perplexity(api_key: impl Into<String>, model: impl Into<String>) -> Self {
         Self::Perplexity {
@@ -115,7 +101,6 @@ impl LlmConfig {
             LlmConfig::OpenAI { .. } => "openai",
             LlmConfig::Anthropic { .. } => "anthropic",
             LlmConfig::DeepSeek { .. } => "deepseek",
-            LlmConfig::HuggingFace { .. } => "huggingface",
             LlmConfig::Ollama { .. } => "ollama",
             LlmConfig::Perplexity { .. } => "perplexity",
             LlmConfig::Custom { provider_type, .. } => provider_type,
@@ -128,7 +113,6 @@ impl LlmConfig {
             LlmConfig::OpenAI { model, .. } => model,
             LlmConfig::Anthropic { model, .. } => model,
             LlmConfig::DeepSeek { model, .. } => model,
-            LlmConfig::HuggingFace { model, .. } => model,
             LlmConfig::Ollama { model, .. } => model,
             LlmConfig::Perplexity { model, .. } => model,
             LlmConfig::Custom { config, .. } => config

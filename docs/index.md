@@ -53,7 +53,7 @@ GraphBit is a declarative framework for building reliable AI agent workflows wit
 
 - **🔒 Type Safety** - Strong typing throughout the execution pipeline
 - **🛡️ Reliability** - Circuit breakers, retry policies, and error handling  
-- **🤖 Multi-LLM Support** - OpenAI, Anthropic, Ollama, HuggingFace
+- **🤖 Multi-LLM Support** - OpenAI, Anthropic, Ollama
 - **⚡ Performance** - Rust core with Python bindings for optimal speed
 - **📊 Observability** - Built-in metrics and execution tracing
 - **🔧 Resource Management** - Concurrency controls and memory optimization
@@ -85,4 +85,4 @@ GraphBit is released under the [Proprietary License](../LICENSE).
 
 ---
 
-*Ready to build your first AI workflow? Start with our [Quick Start Tutorial](getting-started/quickstart.md)!* 
+*Ready to build your first AI workflow? Start with our [Quick Start Tutorial](getting-started/quickstart.md)!*

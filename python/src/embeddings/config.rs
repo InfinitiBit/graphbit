@@ -30,21 +30,4 @@ impl EmbeddingConfig {
             },
         })
     }
-
-    #[staticmethod]
-    fn huggingface(api_key: String, model: String) -> PyResult<Self> {
-        validate_api_key(&api_key, "HuggingFace")?;
-
-        Ok(Self {
-            inner: CoreEmbeddingConfig {
-                provider: EmbeddingProvider::HuggingFace,
-                api_key,
-                model,
-                base_url: None,
-                timeout_seconds: None,
-                max_batch_size: None,
-                extra_params: HashMap::new(),
-            },
-        })
-    }
 }

@@ -243,18 +243,6 @@ impl LlmClient {
                     base_url: self.config.base_url.clone(),
                 })
             }
-            "huggingface" => {
-                let api_key = self.config.api_key.as_ref().ok_or_else(|| {
-                    Error::new(Status::InvalidArg, "HuggingFace API key is required")
-                })?;
-                let model = self.config.model.as_deref().unwrap_or("gpt2");
-
-                Ok(graphbit_core::llm::LlmConfig::HuggingFace {
-                    api_key: api_key.clone(),
-                    model: model.to_string(),
-                    base_url: self.config.base_url.clone(),
-                })
-            }
             "ollama" => {
                 let model = self.config.model.as_deref().unwrap_or("llama3.2");
 

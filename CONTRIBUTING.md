@@ -42,7 +42,6 @@ Before you run the pre-commit hook, make sure you have put the relevant keys in 
 ```bash
 export OPENAI_API_KEY=your_openai_api_key
 export ANTHROPIC_API_KEY=your_anthropic_api_key
-export HUGGINGFACE_API_KEY=your_huggingface_api_key
 ```
 7. After making changes to the code, please run the integration tests for both Python and Rust:
 ```bash
@@ -75,4 +74,4 @@ This framework utilizes the following code quality tools:
 **Additional Tools:**
 - typos: Spell checking
 - hadolint: Dockerfile linting
-- shellcheck: Shell script linting 
+- shellcheck: Shell script linting

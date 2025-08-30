@@ -5,7 +5,6 @@
 
 pub mod anthropic;
 pub mod deepseek;
-pub mod huggingface;
 pub mod ollama;
 pub mod openai;
 pub mod perplexity;
@@ -256,22 +255,6 @@ impl LlmProviderFactory {
                     )?))
                 } else {
                     Ok(Box::new(deepseek::DeepSeekProvider::new(api_key, model)?))
-                }
-            }
-            LlmConfig::HuggingFace {
-                api_key,
-                model,
-                base_url,
-                ..
-            } => {
-                if let Some(base_url) = base_url {
-                    Ok(Box::new(huggingface::HuggingFaceProvider::with_base_url(
-                        api_key, model, base_url,
-                    )?))
-                } else {
-                    Ok(Box::new(huggingface::HuggingFaceProvider::new(
-                        api_key, model,
-                    )?))
                 }
             }
             LlmConfig::Ollama {

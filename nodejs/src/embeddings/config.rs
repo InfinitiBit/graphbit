@@ -8,7 +8,7 @@ use std::collections::HashMap;
 #[napi]
 #[derive(Clone)]
 pub struct EmbeddingConfig {
-    /// Provider name (e.g., "openai", "huggingface", "local")
+    /// Provider name (e.g., "openai", "local")
     pub provider: String,
     /// API key for the provider
     pub api_key: Option<String>,
@@ -65,22 +65,6 @@ impl EmbeddingConfig {
         })
     }
 
-    /// Create a configuration for Hugging Face embeddings
-    #[napi(factory)]
-    pub fn huggingface(api_key: String, model: Option<String>) -> Result<Self> {
-        validate_api_key(&api_key, "HuggingFace")?;
-
-        Ok(Self {
-            provider: "huggingface".to_string(),
-            api_key: Some(api_key),
-            base_url: Some("https://api-inference.huggingface.co".to_string()),
-            model: model.or_else(|| Some("sentence-transformers/all-MiniLM-L6-v2".to_string())),
-            config: HashMap::new(),
-            timeout_ms: Some(30000), // 30 seconds
-            max_retries: Some(3),
-        })
-    }
-
     /// Create a configuration for local embeddings
     #[napi(factory)]
     pub fn local(base_url: String, model: Option<String>) -> Result<Self> {
@@ -116,7 +100,7 @@ impl EmbeddingConfig {
 
         // Check provider-specific requirements
         match self.provider.as_str() {
-            "openai" | "huggingface" => {
+            "openai" => {
                 if self.api_key.is_none() {
                     return Err(Error::new(
                         Status::InvalidArg,

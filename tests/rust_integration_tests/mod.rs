@@ -30,13 +30,6 @@ pub fn has_anthropic_api_key() -> bool {
         .unwrap_or(false)
 }
 
-/// Check if a valid HuggingFace API key is available
-pub fn has_huggingface_api_key() -> bool {
-    std::env::var("HUGGINGFACE_API_KEY")
-        .map(|key| !key.is_empty() && key != "test-api-key-placeholder")
-        .unwrap_or(false)
-}
-
 /// Check if Ollama is available (by checking if the service is running)
 pub async fn has_ollama_available() -> bool {
     // Try to connect to default Ollama endpoint
@@ -66,17 +59,6 @@ pub fn get_anthropic_api_key_or_skip() -> String {
         Ok(key) if !key.is_empty() && key != "test-api-key-placeholder" => key,
         _ => {
             println!("Skipping test - no valid ANTHROPIC_API_KEY found");
-            panic!("TEST_SKIP");
-        }
-    }
-}
-
-/// Get HuggingFace API key or skip test if not available
-pub fn get_huggingface_api_key_or_skip() -> String {
-    match std::env::var("HUGGINGFACE_API_KEY") {
-        Ok(key) if !key.is_empty() && key != "test-api-key-placeholder" => key,
-        _ => {
-            println!("Skipping test - no valid HUGGINGFACE_API_KEY found");
             panic!("TEST_SKIP");
         }
     }
@@ -115,12 +97,6 @@ macro_rules! skip_if_no_api {
     (anthropic) => {
         if !$crate::has_anthropic_api_key() {
             println!("Skipping test - no valid ANTHROPIC_API_KEY found");
-            return;
-        }
-    };
-    (huggingface) => {
-        if !$crate::has_huggingface_api_key() {
-            println!("Skipping test - no valid HUGGINGFACE_API_KEY found");
             return;
         }
     };

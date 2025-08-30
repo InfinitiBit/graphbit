@@ -1,7 +1,7 @@
 //! Embeddings Integration Tests
 //!
 //! Tests for embedding generation, vector operations, and similarity search
-//! using different providers (OpenAI, HuggingFace).
+//! using different providers (OpenAI).
 
 use graphbit_core::embeddings::*;
 use serde_json::json;
@@ -9,9 +9,9 @@ use std::collections::HashMap;
 
 fn create_test_embedding_config() -> EmbeddingConfig {
     EmbeddingConfig {
-        provider: EmbeddingProvider::HuggingFace,
+        provider: EmbeddingProvider::OpenAI,
         api_key: "test-key".to_string(),
-        model: "sentence-transformers/all-MiniLM-L6-v2".to_string(),
+        model: "text-embedding-ada-002".to_string(),
         base_url: None,
         timeout_seconds: Some(30),
         max_batch_size: Some(32),
@@ -24,8 +24,8 @@ async fn test_embedding_config_creation() {
     graphbit_core::init().expect("Failed to initialize GraphBit");
 
     let config = create_test_embedding_config();
-    assert_eq!(config.provider, EmbeddingProvider::HuggingFace);
-    assert_eq!(config.model, "sentence-transformers/all-MiniLM-L6-v2");
+    assert_eq!(config.provider, EmbeddingProvider::OpenAI);
+    assert_eq!(config.model, "text-embedding-ada-002");
     assert_eq!(config.timeout_seconds, Some(30));
     assert_eq!(config.max_batch_size, Some(32));
 }
@@ -50,11 +50,8 @@ async fn test_embedding_provider_factory() {
 
     assert!(provider_result.is_ok(), "Should create provider");
     let provider = provider_result.unwrap();
-    assert_eq!(provider.provider_name(), "huggingface");
-    assert_eq!(
-        provider.model_name(),
-        "sentence-transformers/all-MiniLM-L6-v2"
-    );
+    assert_eq!(provider.provider_name(), "openai");
+    assert_eq!(provider.model_name(), "text-embedding-ada-002");
 }
 
 #[tokio::test]
@@ -333,55 +330,6 @@ async fn test_openai_real_batch_embeddings() {
 }
 
 #[tokio::test]
-async fn test_huggingface_real_embeddings() {
-    graphbit_core::init().expect("Failed to initialize GraphBit");
-
-    // Skip if no real API key is provided
-    if !super::has_huggingface_api_key() {
-        println!("Skipping real HuggingFace embeddings test - no valid API key");
-        return;
-    }
-
-    let api_key = super::get_huggingface_api_key_or_skip();
-    let config = EmbeddingConfig {
-        provider: EmbeddingProvider::HuggingFace,
-        api_key,
-        model: "sentence-transformers/all-MiniLM-L6-v2".to_string(),
-        base_url: None,
-        timeout_seconds: Some(60), // HuggingFace can be slower
-        max_batch_size: Some(32),
-        extra_params: HashMap::new(),
-    };
-
-    let service = EmbeddingService::new(config).expect("Failed to create service");
-
-    // Test single text embedding
-    let result = service
-        .embed_text("This is a test sentence for embedding")
-        .await;
-    match result {
-        Ok(embedding) => {
-            assert!(!embedding.is_empty(), "Embedding should not be empty");
-            // MiniLM-L6-v2 typically returns 384 dimensions
-            assert_eq!(
-                embedding.len(),
-                384,
-                "MiniLM-L6-v2 should return 384 dimensions"
-            );
-            println!(
-                " HuggingFace real embeddings successful with {} dimensions",
-                embedding.len()
-            );
-        }
-        Err(e) => {
-            println!(" HuggingFace embeddings failed: {e:?}");
-            // HuggingFace API can be unreliable, so we log but don't fail the test
-            println!("HuggingFace embeddings failed (this might be expected): {e:?}");
-        }
-    }
-}
-
-#[tokio::test]
 async fn test_semantic_search_with_real_embeddings() {
     graphbit_core::init().expect("Failed to initialize GraphBit");
 
@@ -476,111 +424,35 @@ async fn test_semantic_search_with_real_embeddings() {
 }
 
 #[tokio::test]
-async fn test_embedding_provider_comparison() {
+async fn test_openai_provider_capabilities() {
     graphbit_core::init().expect("Failed to initialize GraphBit");
 
-    let test_text = "Artificial intelligence and machine learning are revolutionizing technology";
-    let mut successful_providers = Vec::new();
+    let config = EmbeddingConfig {
+        provider: EmbeddingProvider::OpenAI,
+        api_key: "test".to_string(),
+        model: "text-embedding-ada-002".to_string(),
+        base_url: None,
+        timeout_seconds: None,
+        max_batch_size: None,
+        extra_params: HashMap::new(),
+    };
 
-    // Test OpenAI if available
-    if super::has_openai_api_key() {
-        let api_key = std::env::var("OPENAI_API_KEY").unwrap();
-        let config = EmbeddingConfig {
-            provider: EmbeddingProvider::OpenAI,
-            api_key,
-            model: "text-embedding-ada-002".to_string(),
-            base_url: None,
-            timeout_seconds: Some(30),
-            max_batch_size: Some(16),
-            extra_params: HashMap::new(),
-        };
+    let provider = EmbeddingProviderFactory::create_provider(config).unwrap();
 
-        let service = EmbeddingService::new(config).expect("Failed to create OpenAI service");
-        if let Ok(embedding) = service.embed_text(test_text).await {
-            successful_providers.push(("OpenAI", embedding.len()));
-        }
-    }
+    // OpenAI provider should support basic functionality
+    assert!(
+        provider.supports_batch(),
+        "Provider should support batch processing"
+    );
+    assert!(
+        provider.max_batch_size() > 0,
+        "Provider should have positive max batch size"
+    );
 
-    // Test HuggingFace if available
-    if super::has_huggingface_api_key() {
-        let api_key = std::env::var("HUGGINGFACE_API_KEY").unwrap();
-        let config = EmbeddingConfig {
-            provider: EmbeddingProvider::HuggingFace,
-            api_key,
-            model: "sentence-transformers/all-MiniLM-L6-v2".to_string(),
-            base_url: None,
-            timeout_seconds: Some(60),
-            max_batch_size: Some(32),
-            extra_params: HashMap::new(),
-        };
-
-        let service = EmbeddingService::new(config).expect("Failed to create HuggingFace service");
-        if let Ok(embedding) = service.embed_text(test_text).await {
-            successful_providers.push(("HuggingFace", embedding.len()));
-        }
-    }
-
-    println!("🔍 Embedding provider comparison:");
-    for (provider_name, dimensions) in &successful_providers {
-        println!("  {provider_name} -> {dimensions} dimensions");
-    }
-
-    if successful_providers.is_empty() {
-        println!("No embedding providers available for comparison test");
-    } else {
-        println!(
-            "Successfully tested {} embedding provider(s)",
-            successful_providers.len()
-        );
-    }
-
-    // Verify we can create services even without API calls
-    // This test documents that the embedding comparison ran, regardless of provider availability
-}
-
-#[tokio::test]
-async fn test_embedding_provider_capabilities() {
-    graphbit_core::init().expect("Failed to initialize GraphBit");
-
-    let configs = vec![
-        EmbeddingConfig {
-            provider: EmbeddingProvider::OpenAI,
-            api_key: "test".to_string(),
-            model: "text-embedding-ada-002".to_string(),
-            base_url: None,
-            timeout_seconds: None,
-            max_batch_size: None,
-            extra_params: HashMap::new(),
-        },
-        EmbeddingConfig {
-            provider: EmbeddingProvider::HuggingFace,
-            api_key: "test".to_string(),
-            model: "sentence-transformers/all-MiniLM-L6-v2".to_string(),
-            base_url: None,
-            timeout_seconds: None,
-            max_batch_size: None,
-            extra_params: HashMap::new(),
-        },
-    ];
-
-    for config in configs {
-        let provider = EmbeddingProviderFactory::create_provider(config).unwrap();
-
-        // All providers should support basic functionality
-        assert!(
-            provider.supports_batch(),
-            "Provider should support batch processing"
-        );
-        assert!(
-            provider.max_batch_size() > 0,
-            "Provider should have positive max batch size"
-        );
-
-        // Validate configuration
-        let validation_result = provider.validate_config();
-        assert!(
-            validation_result.is_ok(),
-            "Provider configuration should be valid"
-        );
-    }
+    // Validate configuration
+    let validation_result = provider.validate_config();
+    assert!(
+        validation_result.is_ok(),
+        "Provider configuration should be valid"
+    );
 }

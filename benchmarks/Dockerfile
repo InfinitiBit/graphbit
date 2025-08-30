@@ -71,8 +71,6 @@ RUN echo '#!/bin/bash' > /app/entrypoint.sh && \
     echo 'if [ -n "$ANTHROPIC_API_KEY" ]; then' >> /app/entrypoint.sh && \
     echo '    export ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY"' >> /app/entrypoint.sh && \
     echo 'fi' >> /app/entrypoint.sh && \
-    echo 'if [ -n "$HUGGINGFACE_API_KEY" ]; then' >> /app/entrypoint.sh && \
-    echo '    export HUGGINGFACE_API_KEY="$HUGGINGFACE_API_KEY"' >> /app/entrypoint.sh && \
     echo 'fi' >> /app/entrypoint.sh && \
     echo 'cd /app' >> /app/entrypoint.sh && \
     echo 'exec poetry run python benchmarks/"$@"' >> /app/entrypoint.sh && \

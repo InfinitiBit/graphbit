@@ -97,26 +97,6 @@ impl LlmConfig {
         })
     }
 
-    /// Create a configuration for HuggingFace
-    #[napi(factory)]
-    pub fn huggingface(
-        api_key: String,
-        model: Option<String>,
-        base_url: Option<String>,
-    ) -> Result<Self> {
-        validate_api_key(&api_key, "HuggingFace")?;
-
-        Ok(Self {
-            provider: "huggingface".to_string(),
-            api_key: Some(api_key),
-            base_url: base_url.or_else(|| Some("https://api-inference.huggingface.co".to_string())),
-            model: model.or_else(|| Some("gpt2".to_string())),
-            config: HashMap::new(),
-            timeout_ms: Some(30000), // 30 seconds
-            max_retries: Some(3),
-        })
-    }
-
     /// Create a configuration for Ollama
     #[napi(factory)]
     pub fn ollama(model: Option<String>, base_url: Option<String>) -> Result<Self> {
@@ -202,7 +182,7 @@ impl LlmConfig {
 
         // Check provider-specific requirements
         match self.provider.as_str() {
-            "openai" | "anthropic" | "deepseek" | "huggingface" | "perplexity" => {
+            "openai" | "anthropic" | "deepseek" | "perplexity" => {
                 if self.api_key.is_none() {
                     return Err(Error::new(
                         Status::InvalidArg,

@@ -47,28 +47,6 @@ class TestAPIKeyValidation:
         with pytest.raises((ValueError, RuntimeError)):
             graphbit.LlmConfig.anthropic("invalid")
 
-    def test_huggingface_api_key_validation(self) -> None:
-        """Test HuggingFace API key validation with various invalid keys."""
-        # Test empty API key for LLM
-        with pytest.raises((ValueError, RuntimeError)) as exc_info:
-            graphbit.LlmConfig.huggingface("", "gpt2")
-        assert "empty" in str(exc_info.value).lower()
-
-        # Test too short API key for LLM
-        with pytest.raises((ValueError, RuntimeError)) as exc_info:
-            graphbit.LlmConfig.huggingface("hf_short", "gpt2")
-        assert "short" in str(exc_info.value).lower()
-
-        # Test empty API key for embeddings
-        with pytest.raises((ValueError, RuntimeError)) as exc_info:
-            graphbit.EmbeddingConfig.huggingface("", "facebook/bart-base")
-        assert "empty" in str(exc_info.value).lower()
-
-        # Test too short API key for embeddings
-        with pytest.raises((ValueError, RuntimeError)) as exc_info:
-            graphbit.EmbeddingConfig.huggingface("hf_short", "facebook/bart-base")
-        assert "short" in str(exc_info.value).lower()
-
     def test_openai_embedding_api_key_validation(self) -> None:
         """Test OpenAI embedding API key validation."""
         # Test empty API key
@@ -92,10 +70,6 @@ class TestAPIKeyValidation:
             # Anthropic format
             config2 = graphbit.LlmConfig.anthropic("sk-ant-" + "x" * 40, "claude-3-sonnet-20240229")
             assert config2.provider() == "anthropic"
-
-            # HuggingFace format
-            config3 = graphbit.LlmConfig.huggingface("hf_" + "x" * 30, "gpt2")
-            assert config3.provider() == "huggingface"
 
         except Exception as e:
             pytest.fail(f"Valid API key format validation failed: {e}")

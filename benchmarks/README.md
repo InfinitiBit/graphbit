@@ -130,7 +130,6 @@ You'll need API keys for the LLM providers you want to test:
 
 - **OpenAI**: Required for most frameworks
 - **Anthropic**: Optional, for Claude models
-- **HuggingFace**: Optional, for open-source models
 
 ### System Requirements
 
@@ -155,7 +154,6 @@ Docker provides a consistent, isolated environment for benchmarking with all dep
    cat > .env << EOF
    OPENAI_API_KEY=your_openai_key_here
    ANTHROPIC_API_KEY=your_anthropic_key_here
-   HUGGINGFACE_API_KEY=your_huggingface_key_here
    EOF
    ```
 
@@ -267,7 +265,6 @@ For development, debugging, or when Docker isn't available.
    ```bash
    export OPENAI_API_KEY="your_openai_key_here"
    export ANTHROPIC_API_KEY="your_anthropic_key_here"
-   export HUGGINGFACE_API_KEY="your_huggingface_key_here"
    ```
 
 2. **Navigate to benchmarks directory:**
@@ -315,7 +312,7 @@ asyncio.run(benchmark.run_simple_task())
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `--provider` | `openai` | LLM provider (openai, anthropic, ollama, huggingface) |
+| `--provider` | `openai` | LLM provider (openai, anthropic, ollama) |
 | `--model` | `gpt-4o-mini` | Model name to use |
 | `--temperature` | `0.1` | Temperature parameter (0.0-2.0) |
 | `--max-tokens` | `2000` | Maximum tokens per response |

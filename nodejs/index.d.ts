@@ -236,7 +236,7 @@ export declare class EmbeddingClient {
   updateConfig(config: EmbeddingConfig): void
 }
 export declare class EmbeddingConfig {
-  /** Provider name (e.g., "openai", "huggingface", "local") */
+  /** Provider name (e.g., "openai", "local") */
   provider: string
   /** API key for the provider */
   apiKey?: string
@@ -254,8 +254,6 @@ export declare class EmbeddingConfig {
   constructor(provider: string, apiKey?: string | undefined | null, baseUrl?: string | undefined | null, model?: string | undefined | null, timeoutMs?: number | undefined | null, maxRetries?: number | undefined | null)
   /** Create a configuration for OpenAI embeddings */
   static openai(apiKey: string, model?: string | undefined | null): EmbeddingConfig
-  /** Create a configuration for Hugging Face embeddings */
-  static huggingface(apiKey: string, model?: string | undefined | null): EmbeddingConfig
   /** Create a configuration for local embeddings */
   static local(baseUrl: string, model?: string | undefined | null): EmbeddingConfig
   /** Set a configuration parameter */
@@ -300,8 +298,6 @@ export declare class LlmConfig {
   static anthropic(apiKey: string, model?: string | undefined | null): LlmConfig
   /** Create a configuration for DeepSeek */
   static deepseek(apiKey: string, model?: string | undefined | null): LlmConfig
-  /** Create a configuration for HuggingFace */
-  static huggingface(apiKey: string, model?: string | undefined | null, baseUrl?: string | undefined | null): LlmConfig
   /** Create a configuration for Ollama */
   static ollama(model?: string | undefined | null, baseUrl?: string | undefined | null): LlmConfig
   /** Create a configuration for Perplexity */

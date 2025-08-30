@@ -75,59 +75,6 @@ class TestOpenAIEmbeddings:
             pytest.fail(f"Embedding consistency test failed: {e}")
 
 
-class TestHuggingFaceEmbeddings:
-    """Integration tests for HuggingFace embeddings."""
-
-    @pytest.fixture
-    def hf_api_key(self) -> str:
-        """Get HuggingFace API key from environment."""
-        api_key = os.getenv("HUGGINGFACE_API_KEY")
-        if not api_key:
-            pytest.skip("HUGGINGFACE_API_KEY not set")
-            raise RuntimeError("Should not reach here due to pytest.skip")
-        return api_key
-
-    @pytest.fixture
-    def hf_config(self, hf_api_key: str) -> Any:
-        """Create HuggingFace embedding configuration."""
-        return graphbit.EmbeddingConfig.huggingface(api_key=hf_api_key, model="facebook/bart-base")
-
-    @pytest.fixture
-    def hf_client(self, hf_config: Any) -> Any:
-        """Create HuggingFace embedding client."""
-        return graphbit.EmbeddingClient(hf_config)
-
-    def test_hf_config_creation(self, hf_config: Any) -> None:
-        """Test HuggingFace config creation."""
-        assert hf_config is not None
-
-    def test_hf_client_creation(self, hf_client: Any) -> None:
-        """Test HuggingFace client creation."""
-        assert hf_client is not None
-
-    def test_hf_single_embedding(self, hf_client: Any) -> None:
-        """Test single text embedding with HuggingFace."""
-        try:
-            embedding = hf_client.embed("Natural language processing")
-            assert isinstance(embedding, list)
-            assert len(embedding) > 0
-            assert all(isinstance(x, float) for x in embedding)
-        except Exception as e:
-            pytest.fail(f"HF single embedding failed: {e}")
-
-    def test_hf_multiple_embeddings(self, hf_client: Any) -> None:
-        """Test multiple text embeddings with HuggingFace."""
-        texts = ["Deep learning", "Neural networks", "Transformer models", "BERT"]
-        try:
-            embeddings = hf_client.embed_many(texts)
-            assert isinstance(embeddings, list)
-            assert len(embeddings) == len(texts)
-            assert all(isinstance(emb, list) for emb in embeddings)
-            assert all(len(emb) > 0 for emb in embeddings)
-        except Exception as e:
-            pytest.fail(f"HF multiple embeddings failed: {e}")
-
-
 class TestEmbeddingUtilities:
     """Integration tests for embedding utility functions."""
 
@@ -178,9 +125,6 @@ class TestCrossProviderEmbeddings:
 
         if os.getenv("OPENAI_API_KEY"):
             configs["openai"] = graphbit.EmbeddingConfig.openai(api_key=os.getenv("OPENAI_API_KEY"), model="text-embedding-3-small")
-
-        if os.getenv("HUGGINGFACE_API_KEY"):
-            configs["huggingface"] = graphbit.EmbeddingConfig.huggingface(api_key=os.getenv("HUGGINGFACE_API_KEY"), model="facebook/bart-base")
 
         return configs
 

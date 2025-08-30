@@ -50,7 +50,6 @@ pub fn validate_api_key(api_key: &str, provider: &str) -> Result<()> {
         "openai" => 20,
         "anthropic" => 15,
         "deepseek" => 15,
-        "huggingface" => 10,
         "perplexity" => 15,
         _ => 8,
     };
@@ -80,14 +79,6 @@ pub fn validate_api_key(api_key: &str, provider: &str) -> Result<()> {
                 return Err(Error::new(
                     Status::InvalidArg,
                     "Anthropic API key must start with 'sk-ant-'",
-                ));
-            }
-        }
-        "huggingface" => {
-            if !api_key.starts_with("hf_") {
-                return Err(Error::new(
-                    Status::InvalidArg,
-                    "HuggingFace API key must start with 'hf_'",
                 ));
             }
         }
