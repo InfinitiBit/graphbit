@@ -1,0 +1,58 @@
+name: Sync docs/ to InfinitiBit/graphbit-docs
+
+on:
+  push:
+    branches: [ main ]          # change if your source default branch is different
+    paths:
+      - 'docs/**'               # only run when docs/ changes
+      - '.github/workflows/sync-docs-to-target.yml'
+  workflow_dispatch: {}          # allow manual runs if you want
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    env:
+      TARGET_REPO: InfinitiBit/graphbit-docs
+      TARGET_BRANCH: main
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ensure rsync is available
+        run: sudo apt-get update && sudo apt-get install -y rsync
+
+      - name: Configure git
+        run: |
+          git config --global user.name  "sync-bot"
+          git config --global user.email "sync-bot@users.noreply.github.com"
+          # ensure our PAT is used (not the checkout token header)
+          git config --global --unset-all http.https://github.com/.extraheader || true
+
+      - name: Clone target repo
+        env:
+          GH_PAT: ${{ secrets.TARGET_REPO_TOKEN }}
+        run: |
+          git clone --depth 1 https://${GH_PAT}@github.com/${{ env.TARGET_REPO }}.git target
+          cd target
+          git checkout ${{ env.TARGET_BRANCH }} || git checkout -b ${{ env.TARGET_BRANCH }}
+          cd ..
+
+      - name: Copy docs/ (one-way sync; delete removed files)
+        run: |
+          mkdir -p target/docs
+          rsync -av --delete --exclude ".git" docs/ target/docs/
+
+      - name: Commit & push if changed
+        working-directory: target
+        env:
+          GH_PAT: ${{ secrets.TARGET_REPO_TOKEN }}
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            git add -A
+            git commit -m "chore(sync): ${GITHUB_REPOSITORY}@${GITHUB_SHA::7} → docs/"
+            git push https://${GH_PAT}@github.com/${{ env.TARGET_REPO }}.git HEAD:${{ env.TARGET_BRANCH }}
+          else
+            echo "No changes to commit."
+          fi
