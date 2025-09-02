@@ -745,18 +745,37 @@ async fn test_document_error_handling() {
 }
 
 #[tokio::test]
-async fn test_url_loading_placeholder() {
+async fn test_url_loading_functionality() {
     graphbit_core::init().expect("Failed to initialize GraphBit");
 
     let loader = DocumentLoader::new();
 
-    // Test URL loading (currently not implemented)
+    // Test URL loading with invalid URL format (no protocol)
+    let result = loader.load_document("invalid-url", "txt").await;
+    assert!(result.is_err());
+    let error = result.unwrap_err();
+    assert!(
+        error.to_string().contains("File not found")
+            || error.to_string().contains("Invalid URL format")
+    );
+
+    // Test URL loading with unsupported protocol
     let result = loader
-        .load_document("https://example.com/document.txt", "txt")
+        .load_document("ftp://example.com/document.txt", "txt")
         .await;
     assert!(result.is_err());
     let error = result.unwrap_err();
-    assert!(error
+    assert!(error.to_string().contains("Invalid URL format"));
+
+    // Test URL loading that will likely fail due to network/server issues
+    let result = loader
+        .load_document("https://nonexistent-domain-12345.com/document.txt", "txt")
+        .await;
+    // This should fail with a network error, not "not implemented"
+    assert!(result.is_err());
+    // Just verify it's not the old "not implemented" error
+    let error = result.unwrap_err();
+    assert!(!error
         .to_string()
         .contains("URL loading not yet implemented"));
 }

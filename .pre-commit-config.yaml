@@ -140,7 +140,7 @@ repos:
   rev: v1.28.3
   hooks:
   - id: typos
-    exclude: ^(Cargo\.lock|poetry\.lock|CHANGELOG\.md)$
+    exclude: ^(site/|Cargo\.lock|poetry\.lock|CHANGELOG\.md)$
 
 
 

@@ -3,7 +3,7 @@
 import os
 import uuid
 
-import graphbit
+from graphbit import Executor, LlmConfig, Node, Workflow
 
 MEMORY_INTENSIVE_PROMPT = (
     "You are tasked with conducting an in-depth legal and technical research analysis for a novel software application "
@@ -77,12 +77,11 @@ def run_memory_intensive_llama():
     os.environ["OLLAMA_MODEL"] = "llama3.2"
     model = os.getenv("OLLAMA_MODEL", "llama3.2")
 
-    graphbit.init()
     print(f"[LOG] Using Ollama model: {model}")
-    llm_config = graphbit.LlmConfig.ollama(model)
+    llm_config = LlmConfig.ollama(model)
 
     # Create memory-optimized executor with extended timeout for large prompts
-    executor = graphbit.Executor.new_memory_optimized(llm_config, timeout_seconds=300)
+    executor = Executor(llm_config, timeout_seconds=300)
 
     # Configure additional settings for memory-intensive tasks
     executor.configure(timeout_seconds=300, max_retries=3, enable_metrics=True, debug=False)
@@ -90,9 +89,9 @@ def run_memory_intensive_llama():
     agent_id = str(uuid.uuid4())
 
     # Create workflow directly
-    workflow = graphbit.Workflow("Memory Intensive Workflow")
+    workflow = Workflow("Memory Intensive Workflow")
 
-    node = graphbit.Node.agent(name="Memory Intensive Task", prompt=MEMORY_INTENSIVE_PROMPT, agent_id=agent_id)
+    node = Node.agent(name="Memory Intensive Task", prompt=MEMORY_INTENSIVE_PROMPT, agent_id=agent_id)
 
     workflow.add_node(node)
     workflow.validate()

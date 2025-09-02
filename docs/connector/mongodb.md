@@ -86,15 +86,14 @@ print(f"Document deleted. Remaining: {list(general_collection.find({}))}")
 ### 3.1. Generate and Store an Embedding
 
 ```python
-import graphbit
+from graphbit import EmbeddingConfig, EmbeddingClient
 
-graphbit.init()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
     raise ValueError("Please set the OPENAI_API_KEY environment variable.")
 
-embedding_config = graphbit.EmbeddingConfig.openai(OPENAI_API_KEY, "text-embedding-3-small")
-embedding_client = graphbit.EmbeddingClient(embedding_config)
+embedding_config = EmbeddingConfig.openai(OPENAI_API_KEY, "text-embedding-3-small")
+embedding_client = EmbeddingClient(embedding_config)
 
 text = "This is a sample document for vector search."
 embedding = embedding_client.embed(text)
@@ -114,7 +113,7 @@ results = vector_collection.find({})
 best_score = -1
 best_doc = None
 for doc in results:
-    score = graphbit.EmbeddingClient.similarity(query_embedding, doc["embedding"])
+    score = EmbeddingClient.similarity(query_embedding, doc["embedding"])
     if score > best_score:
         best_score = score
         best_doc = doc
@@ -151,9 +150,8 @@ print(f"Inserted {len(batch_texts)} documents with OpenAI embeddings.")
 ```python
 import os
 from pymongo import MongoClient
-import graphbit
+from graphbit import EmbeddingConfig, EmbeddingClient
 
-graphbit.init()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 MONGO_URI = "mongodb://localhost:27017"
 client = MongoClient(MONGO_URI)
@@ -168,15 +166,15 @@ print(col.find_one({"name": "Alice"}))
 col.delete_one({"name": "Alice"})
 
 # Vector storage and search
-embedding_config = graphbit.EmbeddingConfig.openai(OPENAI_API_KEY, "text-embedding-3-small")
-embedding_client = graphbit.EmbeddingClient(embedding_config)
+embedding_config = EmbeddingConfig.openai(OPENAI_API_KEY, "text-embedding-3-small")
+embedding_client = EmbeddingClient(embedding_config)
 text = "This is a sample document for vector search."
 embedding = embedding_client.embed(text)
 vec_col = db["vector_data"]
 vec_col.insert_one({"item_id": "item123", "embedding": embedding})
 
 query_embedding = embedding_client.embed("Find documents related to vector search.")
-best_doc = max(vec_col.find({}), key=lambda doc: graphbit.EmbeddingClient.similarity(query_embedding, doc["embedding"]), default=None)
+best_doc = max(vec_col.find({}), key=lambda doc: EmbeddingClient.similarity(query_embedding, doc["embedding"]), default=None)
 if best_doc:
     print(f"Most similar document: {best_doc['item_id']}")
 

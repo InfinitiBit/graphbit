@@ -5,6 +5,10 @@ import os
 from typing import Any, Dict, Optional
 
 from langchain.prompts import PromptTemplate
+from pydantic import SecretStr
+from langchain_openai import ChatOpenAI
+from langchain_anthropic import ChatAnthropic
+from langchain_ollama import ChatOllama
 
 from .common import (
     COMPLEX_WORKFLOW_STEPS,
@@ -41,7 +45,6 @@ class LangChainBenchmark(BaseBenchmark):
 
     async def setup(self) -> None:
         """Set up LangChain for benchmarking."""
-        from pydantic import SecretStr
 
         # Get LLM configuration from config
         llm_config_obj: LLMConfig | None = self.config.get("llm_config")
@@ -55,8 +58,6 @@ class LangChainBenchmark(BaseBenchmark):
             if not api_key:
                 raise ValueError("OpenAI API key not found in environment or config")
 
-            from langchain_openai import ChatOpenAI
-
             self.llm = ChatOpenAI(
                 model=llm_config_obj.model,
                 api_key=SecretStr(api_key),
@@ -68,8 +69,6 @@ class LangChainBenchmark(BaseBenchmark):
             if not api_key:
                 raise ValueError("Anthropic API key not found in environment or config")
 
-            from langchain_anthropic import ChatAnthropic
-
             self.llm = ChatAnthropic(
                 model=llm_config_obj.model,
                 api_key=SecretStr(api_key),
@@ -79,8 +78,6 @@ class LangChainBenchmark(BaseBenchmark):
 
         elif llm_config_obj.provider == LLMProvider.OLLAMA:
             base_url = llm_config_obj.base_url or "http://localhost:11434"
-
-            from langchain_ollama import ChatOllama
 
             self.llm = ChatOllama(
                 model=llm_config_obj.model,

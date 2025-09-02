@@ -16,45 +16,36 @@ Performance optimization in GraphBit focuses on:
 ### Parallel Processing
 
 ```python
-import graphbit
+from graphbit import Workflow, Node, LlmConfig, Executor
 import time
 import os
-
-# Initialize GraphBit
-graphbit.init()
 
 def create_parallel_workflow():
     """Create workflow optimized for parallel execution."""
     
-    workflow = graphbit.Workflow("Parallel Processing Workflow")
+    workflow = Workflow("Parallel Processing Workflow")
     
     # Input processor
-    input_processor = graphbit.Node.agent(
+    input_processor = Node.agent(
         name="Input Processor",
-        prompt="Prepare data for parallel processing: {input}",
+        prompt=f"Prepare data for parallel processing: {input}",
         agent_id="input_processor"
     )
     
     # Parallel processing branches
     branch_nodes = []
     for i in range(4):  # Create 4 parallel branches
-        branch = graphbit.Node.agent(
+        branch = Node.agent(
             name=f"Parallel Branch {i+1}",
-            prompt=f"Process branch {i+1} data: {{prepared_data}}",
+            prompt=f"Process the provided prepared branch {i+1} data",
             agent_id=f"branch_{i+1}"
         )
         branch_nodes.append(branch)
     
     # Results aggregator
-    aggregator = graphbit.Node.agent(
+    aggregator = Node.agent(
         name="Results Aggregator",
-        prompt="""
-        Combine results from parallel branches:
-        Branch 1: {branch_1_output}
-        Branch 2: {branch_2_output}
-        Branch 3: {branch_3_output}
-        Branch 4: {branch_4_output}
-        """,
+        prompt="Combine results from parallel branches that provided you output",
         agent_id="aggregator"
     )
     
@@ -77,14 +68,14 @@ def create_performance_optimized_executor():
     """Create executor optimized for performance."""
     
     # Use fast, cost-effective model
-    config = graphbit.LlmConfig.openai(
+    config = LlmConfig.openai(
         api_key=os.getenv("OPENAI_API_KEY"),
         model="gpt-4o-mini"  # Fast and efficient model
     )
     
     # Create high-performance executor
-    executor = graphbit.Executor.new_high_throughput(
-        llm_config=config,
+    executor = Executor(
+        config=config,
         timeout_seconds=60,
         debug=False
     )
@@ -97,11 +88,13 @@ def create_performance_optimized_executor():
 ### Different Executor Configurations
 
 ```python
+from graphbit import LlmConfig, Executor
+
 def create_optimized_executors():
     """Create different executor types for various performance needs."""
     
     # Base LLM configuration
-    llm_config = graphbit.LlmConfig.openai(
+    llm_config = LlmConfig.openai(
         api_key=os.getenv("OPENAI_API_KEY"),
         model="gpt-4o-mini"
     )
@@ -109,30 +102,24 @@ def create_optimized_executors():
     executors = {}
     
     # Standard executor - balanced performance
-    executors["standard"] = graphbit.Executor(
+    executors["standard"] = Executor(
         config=llm_config,
         timeout_seconds=60,
         debug=False
     )
     
     # High-throughput executor - maximize parallel processing
-    executors["high_throughput"] = graphbit.Executor.new_high_throughput(
-        llm_config=llm_config,
+    executors["high_throughput"] = Executor(
+        config=llm_config,
         timeout_seconds=120,
         debug=False
     )
     
     # Low-latency executor - minimize response time
-    executors["low_latency"] = graphbit.Executor.new_low_latency(
-        llm_config=llm_config,
+    executors["low_latency"] = Executor(
+        config=llm_config,
+        lightweight_mode=True,
         timeout_seconds=30,
-        debug=False
-    )
-    
-    # Memory-optimized executor - minimize memory usage
-    executors["memory_optimized"] = graphbit.Executor.new_memory_optimized(
-        llm_config=llm_config,
-        timeout_seconds=90,
         debug=False
     )
     
@@ -179,22 +166,26 @@ def benchmark_executor_types(workflow, test_input):
 ### Memory Optimization
 
 ```python
+from graphbit import Workflow, Node
+import time
+
 def create_memory_optimized_workflow():
     """Create workflow optimized for memory usage."""
     
-    workflow = graphbit.Workflow("Memory Optimized Workflow")
+    workflow = Workflow("Memory Optimized Workflow")
     
     # Use concise prompts to reduce memory usage
-    data_processor = graphbit.Node.agent(
+    data_processor = Node.agent(
         name="Memory Efficient Processor",
-        prompt="Analyze: {input}",  # Concise prompt
+        prompt=f"Analyze: {input}",  # Concise prompt
         agent_id="mem_processor"
     )
     
-    # Data compressor using transform node
-    compressor = graphbit.Node.transform(
+    # Data compressor using agent node
+    compressor = Node.agent(
         name="Data Compressor",
-        transformation="uppercase"  # Simple transformation to reduce data size
+        prompt="Compress and optimize the analyzed data",
+        agent_id="compressor"
     )
     
     # Build memory-efficient workflow
@@ -261,6 +252,8 @@ def execute_with_memory_monitoring(workflow, executor):
 ### Environment-Specific Optimization
 
 ```python
+from graphbit import LlmConfig, Executor
+
 def get_optimized_config(environment="production", workload_type="balanced"):
     """Get optimized configuration for specific environment and workload."""
     
@@ -304,32 +297,27 @@ def create_optimized_executor(environment="production", workload_type="balanced"
     config_params = get_optimized_config(environment, workload_type)
     
     # LLM configuration
-    llm_config = graphbit.LlmConfig.openai(
+    llm_config = LlmConfig.openai(
         api_key=os.getenv("OPENAI_API_KEY"),
         model=config_params["model"]
     )
     
     # Create executor based on workload type
     if workload_type == "high_throughput":
-        executor = graphbit.Executor.new_high_throughput(
-            llm_config=llm_config,
+        executor = Executor(
+            config=llm_config,
             timeout_seconds=config_params["timeout"],
             debug=False
         )
     elif workload_type == "low_latency":
-        executor = graphbit.Executor.new_low_latency(
-            llm_config=llm_config,
-            timeout_seconds=config_params["timeout"],
-            debug=False
-        )
-    elif workload_type == "memory_optimized":
-        executor = graphbit.Executor.new_memory_optimized(
-            llm_config=llm_config,
+        executor = Executor(
+            config=llm_config,
+            lightweight_mode=True,
             timeout_seconds=config_params["timeout"],
             debug=False
         )
     else:
-        executor = graphbit.Executor(
+        executor = Executor(
             config=llm_config,
             timeout_seconds=config_params["timeout"],
             debug=False
@@ -343,97 +331,91 @@ def create_optimized_executor(environment="production", workload_type="balanced"
 ### Client Configuration and Performance
 
 ```python
-def create_optimized_llm_client():
+from graphbit import LlmConfig, LlmClient
+import time
+import os
+
+async def create_optimized_llm_client():
     """Create optimized LLM client for best performance."""
-    
     # OpenAI configuration with performance settings
-    openai_config = graphbit.LlmConfig.openai(
+    openai_config = LlmConfig.openai(
         api_key=os.getenv("OPENAI_API_KEY"),
         model="gpt-4o-mini"  # Fast and cost-effective
     )
     
     # Create client
-    client = graphbit.LlmClient(openai_config)
-    
+    client = LlmClient(openai_config)
     # Warm up the client
     try:
-        client.warmup()
+        await client.warmup()
         print("✅ Client warmed up successfully")
     except Exception as e:
         print(f"⚠️ Client warmup failed: {e}")
-    
+
     return client
 
-def benchmark_llm_providers():
+async def benchmark_llm_providers():
     """Benchmark different LLM providers for performance."""
-    
     providers = {
-        "openai_gpt4o_mini": graphbit.LlmConfig.openai(
+        "openai_gpt4o_mini": LlmConfig.openai(
             api_key=os.getenv("OPENAI_API_KEY"),
             model="gpt-4o-mini"
         ),
-        "anthropic_claude": graphbit.LlmConfig.anthropic(
+        "anthropic_claude": LlmConfig.anthropic(
             api_key=os.getenv("ANTHROPIC_API_KEY"),
-            model="claude-3-5-sonnet-20241022"
+            model="claude-3-5-haiku-20241022"
         ),
-        "ollama_llama": graphbit.LlmConfig.ollama(
-            model="llama3.2"
-        )
+        "ollama_llama": LlmConfig.ollama(model="llama3.2")
     }
     
-    test_prompt = "Summarize this text in one sentence: {input}"
-    test_input = "The quick brown fox jumps over the lazy dog."
+    input = "The quick brown fox jumps over the lazy dog."
+    test_prompt = f"Summarize this text in one sentence: {input}"
     
     results = {}
     
     for provider_name, config in providers.items():
         print(f"Testing {provider_name}...")
-        
         try:
-            client = graphbit.LlmClient(config)
-            
+            client = LlmClient(config)
+
             # Warm up
-            client.warmup()
-            
+            await client.warmup()
+
             # Time the completion
             start_time = time.time()
-            
-            response = client.complete(test_prompt, {"input": test_input})
-            
+
+            response = client.complete(test_prompt)
+
             duration_ms = (time.time() - start_time) * 1000
-            
-            # Get client statistics
+
+            # Get client stats
             stats = client.get_stats()
-            
+            print(f"Stats for {provider_name}: {stats}")
+
             results[provider_name] = {
                 "duration_ms": duration_ms,
                 "success": True,
-                "response_length": len(response),
+                "response_length": len(response or ""),
                 "stats": stats
             }
-            
             print(f"  ✅ {provider_name}: {duration_ms:.1f}ms")
-            
+
         except Exception as e:
-            results[provider_name] = {
-                "success": False,
-                "error": str(e)
-            }
+            results[provider_name] = {"success": False, "error": str(e)}
             print(f"  ❌ {provider_name}: Failed - {e}")
-    
+
     return results
 
-def optimize_client_batch_processing():
+async def optimize_client_batch_processing():
     """Demonstrate optimized batch processing."""
-    
-    config = graphbit.LlmConfig.openai(
+    config = LlmConfig.openai(
         api_key=os.getenv("OPENAI_API_KEY"),
         model="gpt-4o-mini"
     )
-    
-    client = graphbit.LlmClient(config)
-    client.warmup()
-    
+
+    client = LlmClient(config)
+    await client.warmup()
+
     # Test data
     test_prompts = [
         "Summarize: {text}",
@@ -441,26 +423,28 @@ def optimize_client_batch_processing():
         "Analyze sentiment: {text}",
         "Generate title: {text}"
     ]
-    
     test_texts = [
         "The weather is beautiful today.",
         "I'm frustrated with the slow service.",
         "This product exceeds all expectations.",
         "The meeting was productive and insightful."
     ]
-    
+
     # Batch processing
     start_time = time.time()
     
-    batch_inputs = []
-    for prompt in test_prompts:
-        for text in test_texts:
-            batch_inputs.append({"prompt": prompt, "text": text})
+    # Build batch inputs using list comprehension
+    batch_inputs = [
+            prompt.format(text=text)
+            for prompt in test_prompts
+            for text in test_texts
+        ]
+    
+    print("batch input: ",batch_inputs)
+    print()
     
     # Process batch
-    batch_results = client.batch_complete(
-        [(item["prompt"], {"text": item["text"]}) for item in batch_inputs]
-    )
+    batch_results = await client.complete_batch(prompts=batch_inputs)
     
     batch_duration_ms = (time.time() - start_time) * 1000
     
@@ -475,6 +459,10 @@ def optimize_client_batch_processing():
 ### Efficient Workflow Patterns
 
 ```python
+from graphbit import Workflow, Node
+
+input = "Sample input for processing"
+
 def create_high_performance_patterns():
     """Create various high-performance workflow patterns."""
     
@@ -486,27 +474,24 @@ def create_high_performance_patterns():
     # 2. Pipeline Pattern
     patterns["pipeline"] = create_pipeline_workflow()
     
-    # 3. Conditional Processing Pattern
-    patterns["conditional"] = create_conditional_workflow()
-    
     return patterns
 
 def create_fan_out_fan_in_workflow():
     """Create efficient fan-out/fan-in workflow."""
     
-    workflow = graphbit.Workflow("Fan-Out Fan-In Workflow")
+    workflow = Workflow("Fan-Out Fan-In Workflow")
     
     # Single input processor
-    input_node = graphbit.Node.agent(
+    input_node = Node.agent(
         name="Input Splitter",
-        prompt="Split this input for parallel processing: {input}",
+        prompt=f"Split this input for parallel processing: {input}",
         agent_id="splitter"
     )
     
     # Multiple parallel processors
     processors = []
     for i in range(3):
-        processor = graphbit.Node.agent(
+        processor = Node.agent(
             name=f"Processor {i+1}",
             prompt=f"Process part {i+1}: {{split_input}}",
             agent_id=f"processor_{i+1}"
@@ -514,9 +499,9 @@ def create_fan_out_fan_in_workflow():
         processors.append(processor)
     
     # Single aggregator
-    aggregator = graphbit.Node.agent(
+    aggregator = Node.agent(
         name="Result Aggregator",
-        prompt="Combine results: {processor_1_output}, {processor_2_output}, {processor_3_output}",
+        prompt=f"Combine results from all the processor nodes",
         agent_id="aggregator"
     )
     
@@ -535,19 +520,19 @@ def create_fan_out_fan_in_workflow():
 def create_pipeline_workflow():
     """Create efficient pipeline workflow."""
     
-    workflow = graphbit.Workflow("Pipeline Workflow")
+    workflow = Workflow("Pipeline Workflow")
     
     # Sequential processing stages
     stages = [
         ("Data Validator", "Validate input data: {input}"),
-        ("Data Processor", "Process validated data: {validated_data}"),
-        ("Data Formatter", "Format processed data: {processed_data}"),
-        ("Quality Checker", "Check quality: {formatted_data}")
+        ("Data Processor", "Process validated data"),
+        ("Data Formatter", "Format processed data"),
+        ("Quality Checker", "Check quality")
     ]
     
     nodes = []
     for i, (name, prompt) in enumerate(stages):
-        node = graphbit.Node.agent(
+        node = Node.agent(
             name=name,
             prompt=prompt,
             agent_id=f"stage_{i+1}"
@@ -562,51 +547,6 @@ def create_pipeline_workflow():
         workflow.connect(node_ids[i], node_ids[i + 1])
     
     return workflow
-
-def create_conditional_workflow():
-    """Create efficient conditional workflow."""
-    
-    workflow = graphbit.Workflow("Conditional Workflow")
-    
-    # Input analyzer
-    analyzer = graphbit.Node.agent(
-        name="Input Analyzer",
-        prompt="Analyze input type and complexity: {input}",
-        agent_id="analyzer"
-    )
-    
-    # Condition node
-    condition = graphbit.Node.condition(
-        name="Complexity Check",
-        expression="complexity == 'simple'"
-    )
-    
-    # Simple processor
-    simple_processor = graphbit.Node.agent(
-        name="Simple Processor",
-        prompt="Quick processing: {input}",
-        agent_id="simple_proc"
-    )
-    
-    # Complex processor
-    complex_processor = graphbit.Node.agent(
-        name="Complex Processor", 
-        prompt="Detailed processing: {input}",
-        agent_id="complex_proc"
-    )
-    
-    # Build conditional workflow
-    analyzer_id = workflow.add_node(analyzer)
-    condition_id = workflow.add_node(condition)
-    simple_id = workflow.add_node(simple_processor)
-    complex_id = workflow.add_node(complex_processor)
-    
-    # Connect: analyzer -> condition -> appropriate processor
-    workflow.connect(analyzer_id, condition_id)
-    workflow.connect(condition_id, simple_id)   # true branch
-    workflow.connect(condition_id, complex_id)  # false branch
-    
-    return workflow
 ```
 
 ## Performance Monitoring and Profiling
@@ -614,6 +554,8 @@ def create_conditional_workflow():
 ### Real-time Performance Tracking
 
 ```python
+import time
+
 def create_performance_profiler():
     """Create performance profiler for workflows."""
     
@@ -722,12 +664,14 @@ def run_comprehensive_performance_test():
 ### Response Caching
 
 ```python
+import hashlib
+import json
+from typing import Dict, Any
+from graphbit import Workflow, Node
+import time
+
 def implement_response_caching():
     """Implement response caching for repeated queries."""
-    
-    import hashlib
-    import json
-    from typing import Dict, Any
     
     class CachedExecutor:
         def __init__(self, base_executor, cache_size=1000):
@@ -800,11 +744,11 @@ def test_caching_performance():
     cached_executor = CachedExecutorClass(base_executor)
     
     # Create simple test workflow
-    workflow = graphbit.Workflow("Cache Test Workflow")
+    workflow = Workflow("Cache Test Workflow")
     
-    test_agent = graphbit.Node.agent(
+    test_agent = Node.agent(
         name="Test Agent",
-        prompt="Process this input: {input}",
+        prompt=f"Process this input: {input}",
         agent_id="test_agent"
     )
     
@@ -1027,8 +971,6 @@ def create_performance_test_suite():
 
 # Usage example
 if __name__ == "__main__":
-    # Initialize GraphBit
-    graphbit.init()
     
     # Create test workflow and executor
     test_workflow = create_memory_optimized_workflow()

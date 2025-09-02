@@ -48,13 +48,12 @@ if not client.collection_exists(COLLECTION):
 Use Graphbit's embedding client to generate embeddings and upsert them into Qdrant:
 
 ```python
-import graphbit
+from graphbit import EmbeddingClient, EmbeddingConfig
 
-graphbit.init()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 EMBEDDING_MODEL = "text-embedding-3-small"
-embedding_client = graphbit.EmbeddingClient(
-    graphbit.EmbeddingConfig.openai(model=EMBEDDING_MODEL, api_key=OPENAI_API_KEY)
+embedding_client = EmbeddingClient(
+    EmbeddingConfig.openai(model=EMBEDDING_MODEL, api_key=OPENAI_API_KEY)
 )
 
 texts = [
@@ -97,7 +96,7 @@ import os
 import uuid
 from qdrant_client import QdrantClient
 from qdrant_client.models import VectorParams, Distance, PointStruct
-import graphbit
+from graphbit import EmbeddingClient, EmbeddingConfig
 
 COLLECTION = "graphbit-vector"
 DIMENSION = 1536
@@ -109,11 +108,10 @@ if not client.collection_exists(COLLECTION):
         vectors_config=VectorParams(size=DIMENSION, distance=Distance.COSINE),
     )
 
-graphbit.init()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 EMBEDDING_MODEL = "text-embedding-3-small"
-embedding_client = graphbit.EmbeddingClient(
-    graphbit.EmbeddingConfig.openai(model=EMBEDDING_MODEL, api_key=OPENAI_API_KEY)
+embedding_client = EmbeddingClient(
+    EmbeddingConfig.openai(model=EMBEDDING_MODEL, api_key=OPENAI_API_KEY)
 )
 
 texts = [

@@ -17,12 +17,9 @@ Reliability in GraphBit encompasses:
 ### Basic Error Handling
 
 ```python
-import graphbit
+from graphbit import Workflow, Node
 import time
-import os
 
-# Initialize GraphBit
-graphbit.init()
 
 def safe_workflow_execution(workflow, executor, max_retries=3):
     """Execute workflow with comprehensive error handling."""
@@ -33,7 +30,7 @@ def safe_workflow_execution(workflow, executor, max_retries=3):
             
             result = executor.execute(workflow)
             
-            if result.is_completed():
+            if result.is_success():
                 print("✅ Workflow executed successfully")
                 return result
             else:
@@ -64,12 +61,12 @@ def safe_workflow_execution(workflow, executor, max_retries=3):
 def create_fault_tolerant_workflow():
     """Create workflow with built-in fault tolerance."""
     
-    workflow = graphbit.Workflow("Fault Tolerant Workflow")
+    workflow = Workflow("Fault Tolerant Workflow")
     
     # Input validator with error handling
-    validator = graphbit.Node.agent(
+    validator = Node.agent(
         name="Input Validator",
-        prompt="""
+        prompt=f"""
         Validate this input and handle any issues gracefully:
         
         Input: {input}
@@ -85,12 +82,10 @@ def create_fault_tolerant_workflow():
     )
     
     # Robust processor with fallback logic
-    processor = graphbit.Node.agent(
+    processor = Node.agent(
         name="Robust Processor",
         prompt="""
-        Process this validated input with error resilience:
-        
-        Input: {validated_input}
+        Process the validated input with error resilience:
         
         If processing encounters issues:
         1. Try alternative processing methods
@@ -103,12 +98,10 @@ def create_fault_tolerant_workflow():
     )
     
     # Error recovery node
-    recovery_handler = graphbit.Node.agent(
+    recovery_handler = Node.agent(
         name="Recovery Handler",
         prompt="""
-        Handle any errors or partial results:
-        
-        Results: {processed_results}
+        Handle any errors or partial results in the input:
         
         If there are errors or incomplete results:
         1. Attempt data recovery
@@ -135,7 +128,10 @@ def create_fault_tolerant_workflow():
 
 ```python
 from enum import Enum
-from datetime import datetime, timedelta
+from datetime import datetime
+from graphbit import LlmConfig, Executor
+import os
+import time
 
 class CircuitState(Enum):
     CLOSED = "closed"
@@ -205,7 +201,7 @@ class ReliableExecutor:
             result = self.base_executor.execute(workflow)
             duration = time.time() - start_time
             
-            if result.is_completed():
+            if result.is_success():
                 self.circuit_breaker.record_success()
                 return result
             else:
@@ -220,12 +216,12 @@ def create_circuit_breaker_executor():
     """Create executor with circuit breaker protection."""
     
     # Base executor
-    llm_config = graphbit.LlmConfig.openai(
+    llm_config = LlmConfig.openai(
         api_key=os.getenv("OPENAI_API_KEY"),
         model="gpt-4o-mini"
     )
     
-    base_executor = graphbit.Executor(llm_config)
+    base_executor = Executor(llm_config)
     
     # Circuit breaker configuration
     circuit_breaker = CircuitBreaker(
@@ -245,6 +241,7 @@ def create_circuit_breaker_executor():
 
 ```python
 import random
+import time
 from typing import Callable, Optional
 
 class RetryStrategy:
@@ -301,7 +298,7 @@ class RetryableExecutor:
             try:
                 result = self.base_executor.execute(workflow)
                 
-                if result.is_completed():
+                if result.is_success():
                     if attempt > 0:
                         print(f"✅ Workflow succeeded on attempt {attempt + 1}")
                     return result
@@ -339,6 +336,12 @@ class RetryableExecutor:
 ### Health Check System
 
 ```python
+from typing import Callable
+from graphbit import get_system_info, health_check, LlmConfig, LlmClient
+from datetime import datetime
+import time
+import os
+
 class HealthChecker:
     """Comprehensive health monitoring system."""
     
@@ -416,13 +419,13 @@ def create_health_checks():
     def check_graphbit_system():
         """Check GraphBit system health."""
         try:
-            system_info = graphbit.get_system_info()
-            health_check = graphbit.health_check()
+            system_info = get_system_info()
+            health_check_info = health_check()
             
             return {
                 "system_available": True,
                 "runtime_initialized": system_info.get("runtime_initialized", False),
-                "health_check": health_check
+                "health_check": health_check_info
             }
         except Exception as e:
             return False
@@ -430,15 +433,15 @@ def create_health_checks():
     def check_llm_connectivity():
         """Check LLM provider connectivity."""
         try:
-            config = graphbit.LlmConfig.openai(
+            config = LlmConfig.openai(
                 api_key=os.getenv("OPENAI_API_KEY"),
-                model="gpt-4o-mini"
+                model="gpt-3.5-turbo"
             )
             
-            client = graphbit.LlmClient(config)
+            client = LlmClient(config)
             
             # Simple test completion
-            response = client.complete("Test connectivity: {input}", {"input": "test"})
+            response = client.complete("Test")
             
             return {
                 "provider_accessible": True,
@@ -461,6 +464,8 @@ def create_health_checks():
 ### Graceful Degradation
 
 ```python
+from graphbit import Workflow, Node
+
 class FallbackWorkflow:
     """Workflow with multiple fallback levels."""
     
@@ -492,7 +497,7 @@ class FallbackWorkflow:
                 print("🚀 Attempting primary workflow...")
                 result = executor.execute(self.primary_workflow)
                 
-                if result.is_completed():
+                if result.is_success():
                     print("✅ Primary workflow succeeded")
                     return result
                 else:
@@ -507,7 +512,7 @@ class FallbackWorkflow:
                 print(f"🔄 Attempting fallback {i+1}...")
                 result = executor.execute(fallback["workflow"])
                 
-                if result.is_completed():
+                if result.is_success():
                     print(f"✅ Fallback {i+1} succeeded")
                     return result
                 else:
@@ -523,11 +528,11 @@ def create_degraded_processing_workflows():
     """Create workflows with different levels of processing."""
     
     # High-quality processing (primary)
-    primary_workflow = graphbit.Workflow("High Quality Processing")
+    primary_workflow = Workflow("High Quality Processing")
     
-    primary_processor = graphbit.Node.agent(
+    primary_processor = Node.agent(
         name="Advanced Processor",
-        prompt="""
+        prompt=f"""
         Perform comprehensive analysis of this input:
         
         Input: {input}
@@ -545,22 +550,28 @@ def create_degraded_processing_workflows():
     primary_workflow.add_node(primary_processor)
     
     # Basic processing (fallback)
-    fallback_workflow = graphbit.Workflow("Basic Processing")
+    fallback_workflow = Workflow("Basic Processing")
     
-    basic_processor = graphbit.Node.agent(
+    basic_processor = Node.agent(
         name="Basic Processor",
-        prompt="Provide a simple summary of: {input}",
+        prompt=f"Provide a simple summary of: {input}",
         agent_id="basic_processor"
     )
     
     fallback_workflow.add_node(basic_processor)
     
     # Emergency processing (last resort)
-    emergency_workflow = graphbit.Workflow("Emergency Processing")
+    emergency_workflow = Workflow("Emergency Processing")
     
-    emergency_processor = graphbit.Node.transform(
+    emergency_processor = Node.agent(
         name="Emergency Processor",
-        transformation="uppercase"  # Simple transformation as last resort
+        prompt="""
+        As an emergency fallback, perform a simple transformation:
+        
+        Convert the input to UPPERCASE and return the transformed text.
+        If conversion is not possible, return the original input and a short note explaining why.
+        """,
+        agent_id="emergency_processor"
     )
     
     emergency_workflow.add_node(emergency_processor)
@@ -579,12 +590,16 @@ def create_degraded_processing_workflows():
 ### Complete Reliability Stack
 
 ```python
+from graphbit import Executor, LlmConfig
+import os
+import time
+
 class ProductionExecutor:
     """Production-ready executor with full reliability stack."""
     
     def __init__(self, llm_config):
         # Base executor
-        self.base_executor = graphbit.Executor(llm_config)
+        self.base_executor = Executor(llm_config)
         
         # Reliability components
         self.circuit_breaker = CircuitBreaker(failure_threshold=3, recovery_timeout=30)
@@ -623,7 +638,7 @@ class ProductionExecutor:
                 # Execute workflow
                 result = self.base_executor.execute(workflow)
                 
-                if result.is_completed():
+                if result.is_success():
                     self.success_count += 1
                     self.circuit_breaker.record_success()
                     return result
@@ -665,7 +680,7 @@ class ProductionExecutor:
 def create_production_executor():
     """Create production-ready executor."""
     
-    llm_config = graphbit.LlmConfig.openai(
+    llm_config = LlmConfig.openai(
         api_key=os.getenv("OPENAI_API_KEY"),
         model="gpt-4o-mini"
     )
@@ -735,9 +750,6 @@ def classify_error_type(error):
 def example_production_usage():
     """Example of production reliability patterns."""
     
-    # Initialize GraphBit
-    graphbit.init()
-    
     # Create production executor
     prod_executor = create_production_executor()
     
@@ -748,8 +760,8 @@ def example_production_usage():
         # Execute with full reliability features
         result = prod_executor.execute(workflow, execution_id="example_prod_run")
         
-        if result.is_completed():
-            print(f"✅ Production execution successful: {result.output()}")
+        if result.is_success():
+            print(f"✅ Production execution successful: {result.get_all_node_outputs()}")
         else:
             print(f"❌ Production execution failed: {result.error()}")
         

@@ -3,7 +3,7 @@
 import os
 import uuid
 
-import graphbit
+from graphbit import Executor, LlmConfig, Node, Workflow
 
 COMPLEX_WORKFLOW_STEPS = [
     {
@@ -111,22 +111,21 @@ def run_complex_workflow_mistral():
     os.environ["OLLAMA_MODEL"] = "llama3.2"
     model = os.getenv("OLLAMA_MODEL", "llama3.2")
 
-    graphbit.init()
     print(f"[LOG] Using Ollama model: {model}")
-    llm_config = graphbit.LlmConfig.ollama(model)
+    llm_config = LlmConfig.ollama(model)
 
     # Create memory-optimized executor with timeout
-    executor = graphbit.Executor.new_memory_optimized(llm_config, timeout_seconds=300)
+    executor = Executor(llm_config, timeout_seconds=300)
 
     agent_id = str(uuid.uuid4())
 
     # Create workflow
-    workflow = graphbit.Workflow("Complex Workflow Benchmark")
+    workflow = Workflow("Complex Workflow Benchmark")
 
     # Create nodes and track their IDs
     node_ids = {}
     for step in COMPLEX_WORKFLOW_STEPS:
-        node = graphbit.Node.agent(name=step["task"], prompt=step["prompt"], agent_id=agent_id)
+        node = Node.agent(name=step["task"], prompt=step["prompt"], agent_id=agent_id)
         node_id = workflow.add_node(node)
         node_ids[step["task"]] = node_id
 

@@ -75,13 +75,12 @@ conn.commit()
 ### 2.1. Generate and Store an Embedding
 
 ```python
-import graphbit
+from graphbit import EmbeddingConfig, EmbeddingClient
 import json
 
-graphbit.init()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-embedding_config = graphbit.EmbeddingConfig.openai(OPENAI_API_KEY, "text-embedding-3-small")
-embedding_client = graphbit.EmbeddingClient(embedding_config)
+embedding_config = EmbeddingConfig.openai(OPENAI_API_KEY, "text-embedding-3-small")
+embedding_client = EmbeddingClient(embedding_config)
 
 # Generate embedding from text
 doc_text = "This is a sample document for vector search."
@@ -172,14 +171,13 @@ print(f"Inserted {len(batch_texts)} documents with embeddings.")
 ```python
 import os
 import psycopg2
-import graphbit
+from graphbit import EmbeddingConfig, EmbeddingClient
 import json
 import ast
 
-graphbit.init()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-embedding_config = graphbit.EmbeddingConfig.openai(OPENAI_API_KEY, "text-embedding-3-small")
-embedding_client = graphbit.EmbeddingClient(embedding_config)
+embedding_config = EmbeddingConfig.openai(OPENAI_API_KEY, "text-embedding-3-small")
+embedding_client = EmbeddingClient(embedding_config)
 
 conn = psycopg2.connect(
     dbname="vector_db",

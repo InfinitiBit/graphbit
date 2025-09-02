@@ -239,6 +239,8 @@ pub struct WorkflowContext {
     pub state: WorkflowState,
     /// Shared variables accessible by all agents
     pub variables: HashMap<String, serde_json::Value>,
+    /// Node outputs for automatic data flow
+    pub node_outputs: HashMap<String, serde_json::Value>,
     /// Execution metadata
     pub metadata: HashMap<String, serde_json::Value>,
     /// Start time of the workflow execution
@@ -256,6 +258,7 @@ impl WorkflowContext {
             workflow_id,
             state: WorkflowState::Pending,
             variables: HashMap::with_capacity(8),
+            node_outputs: HashMap::with_capacity(8),
             metadata: HashMap::with_capacity(4),
             started_at: chrono::Utc::now(),
             completed_at: None,
@@ -318,6 +321,43 @@ impl WorkflowContext {
             Some(duration.num_milliseconds() as u64)
         }
     }
+
+    /// Store a node's output in the context for automatic data flow
+    #[inline]
+    pub fn set_node_output(&mut self, node_id: &NodeId, output: serde_json::Value) {
+        self.node_outputs.insert(node_id.to_string(), output);
+    }
+
+    /// Store a node's output in the context for automatic data flow using the node name as key
+    #[inline]
+    pub fn set_node_output_by_name(&mut self, node_name: &str, output: serde_json::Value) {
+        self.node_outputs.insert(node_name.to_string(), output);
+    }
+
+    /// Get a node's output from the context
+    #[inline]
+    pub fn get_node_output(&self, node_id: &str) -> Option<&serde_json::Value> {
+        self.node_outputs.get(node_id)
+    }
+
+    /// Get a nested value from a node's output using dot notation
+    pub fn get_nested_output(&self, reference: &str) -> Option<&serde_json::Value> {
+        let parts: Vec<&str> = reference.split('.').collect();
+        if parts.is_empty() {
+            return None;
+        }
+
+        let node_output = self.get_node_output(parts[0])?;
+        if parts.len() == 1 {
+            return Some(node_output);
+        }
+
+        let mut current = node_output;
+        for part in &parts[1..] {
+            current = current.get(part)?;
+        }
+        Some(current)
+    }
 }
 
 impl Default for WorkflowContext {
@@ -326,6 +366,7 @@ impl Default for WorkflowContext {
             workflow_id: WorkflowId::default(),
             state: WorkflowState::Pending,
             variables: HashMap::with_capacity(16),
+            node_outputs: HashMap::with_capacity(16),
             metadata: HashMap::with_capacity(8),
             started_at: chrono::Utc::now(),
             completed_at: None,
@@ -412,11 +453,13 @@ pub struct NodeExecutionResult {
     pub completed_at: Option<chrono::DateTime<chrono::Utc>>,
     /// Number of retries attempted (if retry logic is used)
     pub retry_count: u32,
+    /// ID of the node that was executed
+    pub node_id: NodeId,
 }
 
 impl NodeExecutionResult {
     /// Create a successful execution result
-    pub fn success(output: serde_json::Value) -> Self {
+    pub fn success(output: serde_json::Value, node_id: NodeId) -> Self {
         Self {
             success: true,
             output,
@@ -426,11 +469,12 @@ impl NodeExecutionResult {
             started_at: chrono::Utc::now(),
             completed_at: None,
             retry_count: 0,
+            node_id,
         }
     }
 
     /// Create a failed execution result
-    pub fn failure(error: String) -> Self {
+    pub fn failure(error: String, node_id: NodeId) -> Self {
         Self {
             success: false,
             output: serde_json::Value::Null,
@@ -440,6 +484,7 @@ impl NodeExecutionResult {
             started_at: chrono::Utc::now(),
             completed_at: None,
             retry_count: 0,
+            node_id,
         }
     }
 
@@ -449,15 +494,13 @@ impl NodeExecutionResult {
         self
     }
 
-    /// Set the execution duration
-    #[inline]
+    /// Set execution duration
     pub fn with_duration(mut self, duration_ms: u64) -> Self {
         self.duration_ms = duration_ms;
         self
     }
 
-    /// Set the retry count
-    #[inline]
+    /// Set retry count
     pub fn with_retry_count(mut self, retry_count: u32) -> Self {
         self.retry_count = retry_count;
         self
@@ -482,6 +525,7 @@ impl Default for NodeExecutionResult {
             started_at: chrono::Utc::now(),
             completed_at: None,
             retry_count: 0,
+            node_id: NodeId::new(),
         }
     }
 }

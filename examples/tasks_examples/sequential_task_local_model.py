@@ -3,7 +3,7 @@
 import os
 import uuid
 
-import graphbit
+from graphbit import Executor, LlmConfig, Node, Workflow
 
 SEQUENTIAL_TASKS = [
     "Research and outline a legal strategy to protect a software library (and future SDK) from unauthorized use, replication, and reverse engineering—especially during the pre-patent stage.",
@@ -49,17 +49,16 @@ def run_sequential_pipeline_mistral():
     os.environ["OLLAMA_MODEL"] = "llama3.2"
     model = os.getenv("OLLAMA_MODEL", "llama3.2")
 
-    graphbit.init()
     print(f"[LOG] Using Ollama model: {model}")
-    llm_config = graphbit.LlmConfig.ollama(model)
+    llm_config = LlmConfig.ollama(model)
 
     # Create executor with high throughput mode and configure timeout
-    executor = graphbit.Executor.new_high_throughput(llm_config, timeout_seconds=60)
+    executor = Executor(llm_config, timeout_seconds=60)
     # Configure additional settings
     executor.configure(timeout_seconds=60, max_retries=2, enable_metrics=True, debug=True)
 
     # Create workflow directly (no builder pattern in Python bindings)
-    workflow = graphbit.Workflow("Sequential Pipeline Workflow")
+    workflow = Workflow("Sequential Pipeline Workflow")
 
     previous_node_id = None
     total_tokens = 0
@@ -72,7 +71,7 @@ def run_sequential_pipeline_mistral():
         # Generate unique agent ID for each step
         agent_id = str(uuid.uuid4())
 
-        node = graphbit.Node.agent(name=f"Step {i+1}", prompt=task, agent_id=agent_id)
+        node = Node.agent(name=f"Step {i+1}", prompt=task, agent_id=agent_id)
 
         node_id = workflow.add_node(node)
         node_ids.append(node_id)

@@ -7,28 +7,28 @@ This guide provides simple, practical examples to help you get started with Grap
 Analyze text content and extract key insights:
 
 ```python
-import graphbit
 import os
 
+from graphbit import LlmConfig, Node, Workflow, Executor
+
 # Initialize
-graphbit.init()
-config = graphbit.LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4o-mini")
+config = LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4o-mini")
 
 # Create workflow
-workflow = graphbit.Workflow("Text Analysis")
-analyzer = graphbit.Node.agent(
+workflow = Workflow("Text Analysis")
+analyzer = Node.agent(
     name="Text Analyzer",
-    prompt="Analyze this text and provide 3 key insights: {input}",
+    prompt=f"Analyze this text and provide 3 key insights: {input}",
     agent_id="analyzer"
 )
 
 workflow.add_node(analyzer)
 
 # Execute
-executor = graphbit.Executor(config)
+executor = Executor(config)
 result = executor.execute(workflow)
 
-print(f"Analysis: {result.get_variable('output')}")
+print(f"Analysis: {result.get_node_output('Text Analyzer')}")
 ```
 
 ## Example 2: Sequential Pipeline  
@@ -36,26 +36,26 @@ print(f"Analysis: {result.get_variable('output')}")
 Create a multi-step content processing pipeline:
 
 ```python
-import graphbit
 import os
 
+from graphbit import LlmConfig, Workflow, Node, Executor
+
 def create_content_pipeline():
-    graphbit.init()
-    config = graphbit.LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4o-mini")
+    config = LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4o-mini")
     
-    workflow = graphbit.Workflow("Content Pipeline")
+    workflow = Workflow("Content Pipeline")
     
     # Step 1: Research
-    researcher = graphbit.Node.agent(
+    researcher = Node.agent(
         name="Researcher",
-        prompt="Research 3 key facts about: {topic}",
+        prompt=f"Research 3 key facts about: {topic}",
         agent_id="researcher"
     )
     
     # Step 2: Writer
-    writer = graphbit.Node.agent(
+    writer = Node.agent(
         name="Writer",
-        prompt="Write a paragraph about {topic} using these facts: {research_output}",
+        prompt=f"Write a paragraph about {topic} using the facts from Researcher.",
         agent_id="writer"
     )
     
@@ -64,155 +64,60 @@ def create_content_pipeline():
     writer_id = workflow.add_node(writer)
     workflow.connect(research_id, writer_id)
     
-    executor = graphbit.Executor(config)
+    executor = Executor(config)
     
     return executor.execute(workflow)
 
 # Usage
 result = create_content_pipeline()
-print(f"Final content: {result.get_variable('output')}")
+print(f"Final content: {result.get_node_output('Writer')}")
 ```
 
-## Example 3: Conditional Workflow
-
-Use condition nodes for branching logic:
-
-```python
-import graphbit
-import os
-
-def create_quality_check_workflow():
-    graphbit.init()
-    config = graphbit.LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4o-mini")
-    
-    workflow = graphbit.Workflow("Quality Check")
-    
-    # Analyzer
-    analyzer = graphbit.Node.agent(
-        name="Quality Checker",
-        prompt="Rate this content quality from 1-10: {input}",
-        agent_id="checker"
-    )
-    
-    # Condition
-    quality_gate = graphbit.Node.condition(
-        name="Quality Gate",
-        expression="quality_score > 7"
-    )
-    
-    # Approver
-    approver = graphbit.Node.agent(
-        name="Content Approver",
-        prompt="Approve this high-quality content: {input}",
-        agent_id="approver"
-    )
-    
-    # Connect with conditional flow
-    check_id = workflow.add_node(analyzer)
-    gate_id = workflow.add_node(quality_gate)
-    approve_id = workflow.add_node(approver)
-    
-    workflow.connect(check_id, gate_id)
-    workflow.connect(gate_id, approve_id)
-    
-    executor = graphbit.Executor(config)
-    
-    return executor.execute(workflow)
-```
-
-## Example 4: Data Transformation
-
-Transform data between workflow steps:
-
-```python
-import graphbit
-import os
-
-def create_transform_workflow():
-    graphbit.init()
-    config = graphbit.LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4o-mini")
-    
-    workflow = graphbit.Workflow("Data Transform")
-    
-    # Generator
-    generator = graphbit.Node.agent(
-        name="Data Generator",
-        prompt="Generate a JSON object with name, age, and city for a person",
-        agent_id="generator"
-    )
-    
-    # Transformer
-    transformer = graphbit.Node.transform(
-        name="JSON Extractor",
-        transformation="json_extract"
-    )
-    
-    # Processor
-    processor = graphbit.Node.agent(
-        name="Data Processor",
-        prompt="Summarize this person's data: {extracted_data}",
-        agent_id="processor"
-    )
-    
-    # Connect
-    gen_id = workflow.add_node(generator)
-    trans_id = workflow.add_node(transformer)
-    proc_id = workflow.add_node(processor)
-    
-    workflow.connect(gen_id, trans_id)
-    workflow.connect(trans_id, proc_id)
-    
-    executor = graphbit.Executor(config)
-    
-    return executor.execute(workflow)
-```
-
-## Example 5: Multiple LLM Providers
+## Example 3: Multiple LLM Providers
 
 Use different LLM providers in the same workflow:
 
 ```python
-import graphbit
 import os
 
+from graphbit import LlmConfig, Node, Workflow, Executor
+
 def multi_provider_example():
-    graphbit.init()
-    
     # OpenAI for creative tasks
-    openai_config = graphbit.LlmConfig.openai(
+    openai_config = LlmConfig.openai(
         os.getenv("OPENAI_API_KEY"), 
         "gpt-4o-mini"
     )
     
     # Anthropic for analytical tasks
-    anthropic_config = graphbit.LlmConfig.anthropic(
+    anthropic_config = LlmConfig.anthropic(
         os.getenv("ANTHROPIC_API_KEY"),
-        "claude-3-5-sonnet-20241022"
+        "claude-sonnet-4-20250514"
     )
     
     # Ollama for local execution
-    ollama_config = graphbit.LlmConfig.ollama("llama3.2")
+    ollama_config = LlmConfig.ollama("llama3.2")
     
     # Create separate executors for different providers
-    creative_executor = graphbit.Executor(openai_config)
-    analytical_executor = graphbit.Executor(anthropic_config)
-    local_executor = graphbit.Executor(ollama_config)
+    creative_executor = Executor(openai_config)
+    analytical_executor = Executor(anthropic_config)
+    local_executor = Executor(ollama_config)
     
     # Creative workflow
-    creative_workflow = graphbit.Workflow("Creative Writing")
-    writer = graphbit.Node.agent(
+    creative_workflow = Workflow("Creative Writing")
+    writer = Node.agent(
         name="Creative Writer",
-        prompt="Write a creative story about: {topic}",
+        prompt=f"Write a creative story about: {topic}",
         agent_id="creative_writer"
     )
     
     creative_workflow.add_node(writer)
     
     # Analytical workflow
-    analytical_workflow = graphbit.Workflow("Analysis")
-    analyzer = graphbit.Node.agent(
+    analytical_workflow = Workflow("Analysis")
+    analyzer = Node.agent(
         name="Data Analyzer",
-        prompt="Analyze this data and provide insights: {data}",
+        prompt=f"Analyze this data and provide insights: {data}",
         agent_id="analyzer"
     )
     
@@ -222,38 +127,35 @@ def multi_provider_example():
     creative_result = creative_executor.execute(creative_workflow)
     analytical_result = analytical_executor.execute(analytical_workflow)
     
-    print(f"Creative (OpenAI): {creative_result.get_variable('output')}")
-    print(f"Analytical (Anthropic): {analytical_result.get_variable('output')}")
+    print(f"Creative (OpenAI): {creative_result.get_node_output('Creative Writer')}")
+    print(f"Analytical (Anthropic): {analytical_result.get_node_output('Data Analyzer')}")
     
     return creative_result, analytical_result
 ```
 
-## Example 6: Error Handling and Performance Optimization
+## Example 4: Error Handling and Performance Optimization
 
 Build robust workflows with error handling and optimized performance:
 
 ```python
-import graphbit
 import os
 
+from graphbit import LlmConfig, Node, Workflow, Executor
+
 def robust_workflow_example():
-    graphbit.init()
-    config = graphbit.LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4o-mini")
+    config = LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4o-mini")
     
     # Create high-throughput executor with timeout
-    executor = graphbit.Executor.new_high_throughput(config, timeout_seconds=120)
+    executor = Executor(config, timeout_seconds=120)
     
     # Alternative: Create low-latency executor for real-time
-    # executor = graphbit.Executor.new_low_latency(config, timeout_seconds=30)
+    # executor = Executor(config, lightweight_mode=True, timeout_seconds=60)
     
-    # Alternative: Create memory-optimized executor
-    # executor = graphbit.Executor.new_memory_optimized(config)
+    workflow = Workflow("Robust Workflow")
     
-    workflow = graphbit.Workflow("Robust Workflow")
-    
-    agent = graphbit.Node.agent(
+    agent = Node.agent(
         name="Reliable Agent",
-        prompt="Process this data reliably: {input}",
+        prompt=f"Process this data reliably: {input}",
         agent_id="reliable"
     )
     
@@ -262,7 +164,7 @@ def robust_workflow_example():
     try:
         result = executor.execute(workflow)
         if result.is_success():
-            print(f"Success: {result.get_variable('output')}")
+            print(f"Success: {result.get_node_output('output')}")
             print(f"Execution time: {result.execution_time_ms()}ms")
             print(f"Execution mode: {executor.get_execution_mode()}")
         else:
@@ -275,24 +177,23 @@ def robust_workflow_example():
 robust_workflow_example()
 ```
 
-## Example 7: Embeddings and Similarity
+## Example 5: Embeddings and Similarity
 
 Use embeddings for semantic search and similarity:
 
 ```python
-import graphbit
 import os
 
-def embeddings_example():
-    graphbit.init()
-    
+from graphbit import EmbeddingConfig, EmbeddingClient
+
+def embeddings_example():    
     # Create embedding service
-    embedding_config = graphbit.EmbeddingConfig.openai(
+    embedding_config = EmbeddingConfig.openai(
         os.getenv("OPENAI_API_KEY"), 
         "text-embedding-3-small"
     )
     
-    service = graphbit.EmbeddingClient(embedding_config)
+    service = EmbeddingClient(embedding_config)
     
     # Process multiple texts
     texts = [
@@ -302,11 +203,11 @@ def embeddings_example():
     ]
     
     print("Generating embeddings...")
+
+    embeddings = service.embed_many(texts)
     
-    # Note: Actual embedding implementation depends on the binding
-    # This is a conceptual example
-    for i, text in enumerate(texts):
-        print(f"Text {i+1}: {text}")
+    for i, embedding in enumerate(embeddings):
+        print(f"Text {i+1}: {embedding}")
     
     print("Embeddings generated successfully")
 
@@ -314,19 +215,18 @@ def embeddings_example():
 embeddings_example()
 ```
 
-## Example 8: System Monitoring and Diagnostics
+## Example 6: System Monitoring and Diagnostics
 
 Monitor GraphBit performance and health:
 
 ```python
-import graphbit
 import os
 
-def system_monitoring_example():
-    graphbit.init()
-    
+from graphbit import LlmConfig, Node, Workflow, Executor, get_system_info, health_check
+
+def system_monitoring_example():    
     # Get system information
-    system_info = graphbit.get_system_info()
+    system_info = get_system_info()
     print("🖥️ System Information:")
     print(f"   GraphBit version: {system_info['version']}")
     print(f"   Python binding version: {system_info['python_binding_version']}")
@@ -335,7 +235,7 @@ def system_monitoring_example():
     print(f"   Runtime initialized: {system_info['runtime_initialized']}")
     
     # Perform health check
-    health = graphbit.health_check()
+    health = health_check()
     print("\nHealth Check:")
     print(f"   Overall healthy: {health['overall_healthy']}")
     print(f"   Runtime healthy: {health['runtime_healthy']}")
@@ -343,8 +243,8 @@ def system_monitoring_example():
     print(f"   Available memory: {health.get('available_memory_mb', 'N/A')} MB")
     
     # Create and monitor an executor
-    config = graphbit.LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4o-mini")
-    executor = graphbit.Executor(config, debug=True)  # Enable debugging
+    config = LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4o-mini")
+    executor = Executor(config, debug=True)  # Enable debugging
     
     # Get executor statistics
     stats = executor.get_stats()
@@ -353,10 +253,10 @@ def system_monitoring_example():
     print(f"   Lightweight mode: {executor.is_lightweight_mode()}")
     
     # Execute a simple workflow to generate stats
-    workflow = graphbit.Workflow("Monitoring Test")
-    agent = graphbit.Node.agent(
+    workflow = Workflow("Monitoring Test")
+    agent = Node.agent(
         name="Monitor Agent",
-        prompt="Say hello: {input}",
+        prompt=f"Say hello: {input}",
         agent_id="monitor"
     )
     workflow.add_node(agent)
@@ -374,31 +274,31 @@ if __name__ == "__main__":
     system_monitoring_example()
 ```
 
-## Example 9: Workflow Validation
+## Example 7: Workflow Validation
 
 Validate workflow structure before execution:
 
 ```python
-import graphbit
 import os
 
+from graphbit import LlmConfig, Node, Workflow, Executor
+
 def workflow_validation_example():
-    graphbit.init()
-    config = graphbit.LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4o-mini")
+    config = LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4o-mini")
     
     # Create a workflow
-    workflow = graphbit.Workflow("Validation Test")
+    workflow = Workflow("Validation Test")
     
     # Add nodes
-    node1 = graphbit.Node.agent(
+    node1 = Node.agent(
         name="First Agent",
-        prompt="Process input: {input}",
+        prompt=f"Process input: {input}",
         agent_id="agent1"
     )
     
-    node2 = graphbit.Node.agent(
+    node2 = Node.agent(
         name="Second Agent", 
-        prompt="Continue processing: {previous_output}",
+        prompt="Continue processing the input.",
         agent_id="agent2"
     )
     
@@ -412,9 +312,9 @@ def workflow_validation_example():
         print("Workflow validation passed")
         
         # Execute the validated workflow
-        executor = graphbit.Executor(config)
+        executor = Executor(config)
         result = executor.execute(workflow)
-        print(f"Execution completed: {result.get_variable('output')}")
+        print(f"Execution completed: {result.get_node_output('Second Agent')}")
         
     except Exception as e:
         print(f"Workflow validation failed: {e}")
@@ -431,8 +331,7 @@ workflow_validation_example()
 4. **Monitor Performance**: Use `result.execution_time_ms()` to track execution times
 5. **Validate Workflows**: Call `workflow.validate()` before execution
 6. **Use Templates**: Create reusable workflow patterns
-7. **Choose Appropriate Executors**: Use `new_high_throughput()`, `new_low_latency()`, or `new_memory_optimized()` based on your needs
-8. **Check System Health**: Use `graphbit.health_check()` for diagnostics
+7. **Check System Health**: Use `health_check()` for diagnostics
 
 ## Next Steps
 

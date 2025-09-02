@@ -20,7 +20,7 @@ This guide explains how to connect Pinecone to Graphbit, enabling you to perform
 
 ---
 
-## Step 1: Initialize Pinecone and Graphbit
+## Step 1: Initialize Pinecone
 
 Set up Pinecone and Graphbit, and ensure the index exists and is ready:
 
@@ -29,7 +29,6 @@ import os
 import time
 import uuid
 from pinecone import Pinecone, ServerlessSpec
-import graphbit
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -48,8 +47,6 @@ pinecone_client.create_index(
 )
 
 index = pinecone_client.Index(INDEX_NAME)
-
-graphbit.init()
 ```
 
 ---
@@ -59,11 +56,13 @@ graphbit.init()
 Use Graphbit's embedding client to generate embeddings and upsert them into Pinecone:
 
 ```python
+from graphbit import EmbeddingConfig, EmbeddingClient
+
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 EMBEDDING_MODEL = "text-embedding-3-small"
 
-embedding_config = graphbit.EmbeddingConfig.openai(model=EMBEDDING_MODEL, api_key=OPENAI_API_KEY)
-embedding_client = graphbit.EmbeddingClient(embedding_config)
+embedding_config = EmbeddingConfig.openai(model=EMBEDDING_MODEL, api_key=OPENAI_API_KEY)
+embedding_client = EmbeddingClient(embedding_config)
 
 texts = [
     "GraphBit is a framework for LLM workflows and agent orchestration.",
@@ -114,7 +113,7 @@ import uuid
 
 from pinecone import Pinecone, ServerlessSpec
 
-import graphbit
+from graphbit import EmbeddingConfig, EmbeddingClient
 
 INDEX_NAME = "graphbit-vector"
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
@@ -144,12 +143,11 @@ if index_name not in [idx["name"] for idx in index_list]:
 else:
     index = pinecone_client.Index(index_name)
 
-graphbit.init()
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 EMBEDDING_MODEL = "text-embedding-3-small"
-embedding_config = graphbit.EmbeddingConfig.openai(model=EMBEDDING_MODEL, api_key=OPENAI_API_KEY)
-embedding_client = graphbit.EmbeddingClient(embedding_config)
+embedding_config = EmbeddingConfig.openai(model=EMBEDDING_MODEL, api_key=OPENAI_API_KEY)
+embedding_client = EmbeddingClient(embedding_config)
 
 text = ["GraphBit is a framework for LLM workflows and agent orchestration.", "Pinecone enables vector search over high-dimensional embeddings.", "OpenAI offers tools for LLMs and embeddings."]
 embeddings = embedding_client.embed_many(text)

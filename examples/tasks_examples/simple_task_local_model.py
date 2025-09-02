@@ -3,7 +3,7 @@
 import os
 import uuid
 
-import graphbit
+from graphbit import Executor, LlmConfig, Node, Workflow
 
 SIMPLE_TASK_PROMPT = (
     "You've discovered a mysterious journal entry from a time traveler. "
@@ -53,18 +53,16 @@ def run_simple_task_local():
     os.environ["OLLAMA_MODEL"] = "llama3.2"  # use available model
     model = os.getenv("OLLAMA_MODEL", "llama3.2")
 
-    graphbit.init()
-
     print(f"[LOG] Using Ollama model: {model}")
-    llm_config = graphbit.LlmConfig.ollama(model)
+    llm_config = LlmConfig.ollama(model)
 
-    executor = graphbit.Executor.new_low_latency(llm_config)
+    executor = Executor(llm_config, lightweight_mode=True)
 
     agent_id = str(uuid.uuid4())
 
-    workflow = graphbit.Workflow("Simple Task Workflow")
+    workflow = Workflow("Simple Task Workflow")
 
-    node = graphbit.Node.agent(name="Task Executor", prompt=SIMPLE_TASK_PROMPT, agent_id=agent_id)
+    node = Node.agent(name="Task Executor", prompt=SIMPLE_TASK_PROMPT, agent_id=agent_id)
 
     workflow.add_node(node)
     workflow.validate()

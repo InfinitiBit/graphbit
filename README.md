@@ -102,6 +102,7 @@ processor = Node.agent(
 # Connect and execute
 id1 = workflow.add_node(smart_agent)
 id2 = workflow.add_node(processor)
+id3 = workflow.add_node(agent_with_tools)
 workflow.connect(id1, id2)
 
 result = executor.execute(workflow)

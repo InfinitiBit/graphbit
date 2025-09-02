@@ -14,13 +14,13 @@ GraphBit workflows are built using:
 ### Creating a Workflow
 
 ```python
-import graphbit
+from graphbit import init, Workflow, Node, Executor, LlmConfig
 
 # Initialize GraphBit
-graphbit.init()
+init()
 
 # Create a new workflow
-workflow = graphbit.Workflow("My AI Pipeline")
+workflow = Workflow("My AI Pipeline")
 ```
 
 ### Creating Nodes
@@ -31,51 +31,36 @@ GraphBit supports several node types:
 Execute AI tasks using LLM providers:
 
 ```python
+from graphbit import Node
 # Basic agent node
-analyzer = graphbit.Node.agent(
+analyzer = Node.agent(
     name="Data Analyzer",
-    prompt="Analyze this data for patterns: {input}",
+    prompt=f"Analyze this data for patterns: {input}",
     agent_id="analyzer_001"  # Optional - auto-generated if not provided
 )
 
 # Agent with explicit ID
-summarizer = graphbit.Node.agent(
+summarizer = Node.agent(
     name="Content Summarizer", 
-    prompt="Summarize the following content: {analysis}",
+    prompt="Summarize the following analyzed content",
     agent_id="summarizer"
 )
-```
 
-#### Transform Nodes
-Process and modify data:
-
-```python
 # Text transformation
-formatter = graphbit.Node.transform(
-    name="Text Formatter",
-    transformation="uppercase"
-)
+formatter = Node.agent(
+        name="Output Formatter",
+        prompt="Transform the provided text to uppercase",
+        agent_id="formatter"
+    )
 
-# Other available transformations
-lowercase_node = graphbit.Node.transform("Lowercase", "lowercase")
+# Other types of transformation
+lowercase_node = Node.agent(
+        name="Output Formatter",
+        prompt="Transform the provided text to lowercase",
+        agent_id="formatter"
+    )
 ```
 
-#### Condition Nodes
-Make decisions based on data evaluation:
-
-```python
-# Quality check
-quality_gate = graphbit.Node.condition(
-    name="Quality Gate",
-    expression="quality_score > 0.8 and confidence > 0.7"
-)
-
-# Simple condition
-threshold_check = graphbit.Node.condition(
-    name="Threshold Check", 
-    expression="value > 100"
-)
-```
 
 ### Building the Workflow
 
@@ -83,13 +68,11 @@ threshold_check = graphbit.Node.condition(
 # Add nodes to workflow and get their IDs
 analyzer_id = workflow.add_node(analyzer)
 formatter_id = workflow.add_node(formatter)
-quality_id = workflow.add_node(quality_gate)
 summarizer_id = workflow.add_node(summarizer)
 
 # Connect nodes to define data flow
 workflow.connect(analyzer_id, formatter_id)
-workflow.connect(formatter_id, quality_id)
-workflow.connect(quality_id, summarizer_id)
+workflow.connect(formatter_id, summarizer_id)
 
 # Validate workflow structure
 workflow.validate()
@@ -103,24 +86,24 @@ Create linear processing pipelines:
 
 ```python
 # Create workflow
-workflow = graphbit.Workflow("Sequential Pipeline")
+workflow = Workflow("Sequential Pipeline")
 
 # Create processing steps
-step1 = graphbit.Node.agent(
+step1 = Node.agent(
     name="Input Processor",
-    prompt="Process the initial input: {input}",
+    prompt=f"Process the initial input: {input}",
     agent_id="step1"
 )
 
-step2 = graphbit.Node.agent(
+step2 = Node.agent(
     name="Data Enricher", 
-    prompt="Enrich the processed data: {step1_output}",
+    prompt="Enrich the processed data",
     agent_id="step2"
 )
 
-step3 = graphbit.Node.agent(
+step3 = Node.agent(
     name="Final Formatter",
-    prompt="Format the final output: {step2_output}",
+    prompt="Format the final output",
     agent_id="step3"
 )
 
@@ -141,38 +124,38 @@ Create workflows with multiple parallel processing paths:
 
 ```python
 # Create workflow
-workflow = graphbit.Workflow("Parallel Analysis")
+workflow = Workflow("Parallel Analysis")
 
 # Input node
-input_processor = graphbit.Node.agent(
+input_processor = Node.agent(
     name="Input Processor",
-    prompt="Prepare data for analysis: {input}",
+    prompt=f"Prepare data for analysis: {input}",
     agent_id="input_proc"
 )
 
 # Parallel analysis branches
-sentiment_analyzer = graphbit.Node.agent(
+sentiment_analyzer = Node.agent(
     name="Sentiment Analyzer",
-    prompt="Analyze sentiment of: {processed_data}",
+    prompt="Analyze sentiment of processed data",
     agent_id="sentiment"
 )
 
-topic_analyzer = graphbit.Node.agent(
+topic_analyzer = Node.agent(
     name="Topic Analyzer", 
-    prompt="Extract key topics from: {processed_data}",
+    prompt="Extract key topics from processed data",
     agent_id="topics"
 )
 
-quality_analyzer = graphbit.Node.agent(
+quality_analyzer = Node.agent(
     name="Quality Analyzer",
-    prompt="Assess content quality of: {processed_data}",
+    prompt="Assess content quality of processed data",
     agent_id="quality"
 )
 
 # Result aggregator
-aggregator = graphbit.Node.agent(
+aggregator = Node.agent(
     name="Result Aggregator",
-    prompt="Combine analysis results:\nSentiment: {sentiment_output}\nTopics: {topics_output}\nQuality: {quality_output}",
+    prompt=("Combine analysis results from: Sentiment\nTopics\nQuality"),
     agent_id="aggregator"
 )
 
@@ -196,113 +179,15 @@ workflow.connect(quality_id, agg_id)
 workflow.validate()
 ```
 
-### Conditional Workflows
-
-Use condition nodes for dynamic routing:
-
-```python
-# Create workflow
-workflow = graphbit.Workflow("Conditional Processing")
-
-# Content analyzer
-analyzer = graphbit.Node.agent(
-    name="Content Analyzer",
-    prompt="Analyze content quality (score 1-10): {input}",
-    agent_id="analyzer"
-)
-
-# Quality gate condition
-quality_gate = graphbit.Node.condition(
-    name="Quality Gate",
-    expression="quality_score >= 7"
-)
-
-# High quality path
-approver = graphbit.Node.agent(
-    name="Content Approver",
-    prompt="Approve high-quality content: {analyzed_content}",
-    agent_id="approver"
-)
-
-# Low quality path  
-improver = graphbit.Node.agent(
-    name="Content Improver",
-    prompt="Suggest improvements for: {analyzed_content}",
-    agent_id="improver"
-)
-
-# Build conditional flow
-analyzer_id = workflow.add_node(analyzer)
-gate_id = workflow.add_node(quality_gate)
-approve_id = workflow.add_node(approver)
-improve_id = workflow.add_node(improver)
-
-# Connect analyzer to quality gate
-workflow.connect(analyzer_id, gate_id)
-
-# Connect based on conditions (simplified - actual conditional routing 
-# is handled by the executor based on the condition node evaluation)
-workflow.connect(gate_id, approve_id)
-workflow.connect(gate_id, improve_id)
-
-workflow.validate()
-```
-
-### Data Transformation Pipelines
-
-Combine transform nodes with AI agents:
-
-```python
-# Create workflow
-workflow = graphbit.Workflow("Data Transformation Pipeline")
-
-# Text preprocessor
-preprocessor = graphbit.Node.transform(
-    name="Text Preprocessor",
-    transformation="lowercase"
-)
-
-# Content processor
-processor = graphbit.Node.agent(
-    name="Content Processor", 
-    prompt="Process the cleaned text: {preprocessed_text}",
-    agent_id="processor"
-)
-
-# Output formatter
-formatter = graphbit.Node.transform(
-    name="Output Formatter",
-    transformation="uppercase"
-)
-
-# Final quality check
-validator = graphbit.Node.condition(
-    name="Output Validator",
-    expression="length > 10"
-)
-
-# Build transformation pipeline
-prep_id = workflow.add_node(preprocessor)
-proc_id = workflow.add_node(processor)
-format_id = workflow.add_node(formatter)
-valid_id = workflow.add_node(validator)
-
-workflow.connect(prep_id, proc_id)
-workflow.connect(proc_id, format_id)
-workflow.connect(format_id, valid_id)
-
-workflow.validate()
-```
-
 ## Node Properties and Management
 
 ### Accessing Node Information
 
 ```python
 # Create a node
-analyzer = graphbit.Node.agent(
+analyzer = Node.agent(
     name="Data Analyzer",
-    prompt="Analyze: {input}",
+    prompt=f"Analyze: {input}",
     agent_id="analyzer"
 )
 
@@ -311,7 +196,7 @@ print(f"Node ID: {analyzer.id()}")
 print(f"Node Name: {analyzer.name()}")
 
 # Add to workflow
-workflow = graphbit.Workflow("Test Workflow")
+workflow = Workflow("Test Workflow")
 node_id = workflow.add_node(analyzer)
 print(f"Workflow Node ID: {node_id}")
 ```
@@ -322,22 +207,16 @@ Use descriptive, clear names for nodes:
 
 ```python
 # Good - descriptive and clear
-email_analyzer = graphbit.Node.agent(
+email_analyzer = Node.agent(
     name="Email Content Analyzer",
-    prompt="Analyze email for spam indicators: {email_content}",
+    prompt=f"Analyze email for spam indicators: {email_content}",
     agent_id="email_spam_detector"
 )
 
-# Good - indicates purpose
-quality_gate = graphbit.Node.condition(
-    name="Content Quality Gate",
-    expression="spam_score < 0.3"
-)
-
 # Avoid - vague names
-node1 = graphbit.Node.agent(
+node1 = Node.agent(
     name="Node1", 
-    prompt="Do something: {input}",
+    prompt=f"Do something: {input}",
     agent_id="n1"
 )
 ```
@@ -347,14 +226,16 @@ node1 = graphbit.Node.agent(
 ### Setting up Execution
 
 ```python
+from graphbit import LlmConfig, Executor
+import os
 # Create LLM configuration
-llm_config = graphbit.LlmConfig.openai(
-    api_key="your-openai-key",
+llm_config = LlmConfig.openai(
+    api_key=os.getenv("OPENAI_API_KEY"),
     model="gpt-4o-mini"
 )
 
 # Create executor
-executor = graphbit.Executor(
+executor = Executor(
     config=llm_config,
     timeout_seconds=300,
     debug=False
@@ -365,7 +246,7 @@ result = executor.execute(workflow)
 
 # Check results
 if result.is_completed():
-    print("Success:", result.output())
+    print("Success:", result.get_all_nodes_outputs())
 elif result.is_failed():
     print("Failed:", result.error())
 ```
@@ -389,38 +270,46 @@ result = asyncio.run(run_workflow())
 ### Multi-Stage Processing
 
 ```python
+from graphbit import Node
+
 def create_multi_stage_workflow():
-    workflow = graphbit.Workflow("Multi-Stage Processing")
+    workflow = Workflow("Multi-Stage Processing")
     
     # Stage 1: Data Preparation
-    cleaner = graphbit.Node.transform("Data Cleaner", "lowercase")
-    validator = graphbit.Node.condition("Data Validator", "length > 5")
+    cleaner = Node.agent(
+        name="Data Cleaner",
+        prompt=f"Normalize and clean input text: {input}",
+        agent_id="cleaner"
+    )
     
     # Stage 2: Analysis
-    analyzer = graphbit.Node.agent(
+    analyzer = Node.agent(
         name="Content Analyzer",
-        prompt="Analyze cleaned content: {cleaned_data}",
+        prompt="Analyze cleaned content",
         agent_id="analyzer"
     )
     
     # Stage 3: Output Processing
-    formatter = graphbit.Node.transform("Output Formatter", "uppercase")
-    finalizer = graphbit.Node.agent(
+    
+    formatter = Node.agent(
+        name="Output Formatter",
+        prompt="Transform the provided text to uppercase",
+        agent_id="formatter"
+    )
+    finalizer = Node.agent(
         name="Output Finalizer",
-        prompt="Finalize the analysis: {formatted_output}",
+        prompt="Finalize the analysis",
         agent_id="finalizer"
     )
     
     # Build multi-stage pipeline
     clean_id = workflow.add_node(cleaner)
-    valid_id = workflow.add_node(validator)
     analyze_id = workflow.add_node(analyzer)
     format_id = workflow.add_node(formatter)
     final_id = workflow.add_node(finalizer)
     
     # Connect stages
-    workflow.connect(clean_id, valid_id)
-    workflow.connect(valid_id, analyze_id)
+    workflow.connect(clean_id, analyze_id)
     workflow.connect(analyze_id, format_id)
     workflow.connect(format_id, final_id)
     
@@ -432,13 +321,13 @@ def create_multi_stage_workflow():
 
 ```python
 def create_robust_workflow():
-    workflow = graphbit.Workflow("Robust Processing")
+    workflow = Workflow("Robust Processing")
     
     try:
         # Add nodes
-        processor = graphbit.Node.agent(
+        processor = Node.agent(
             name="Data Processor",
-            prompt="Process: {input}",
+            prompt=f"Process: {input}",
             agent_id="processor"
         )
         
@@ -459,7 +348,7 @@ def create_robust_workflow():
 ```python
 # Organize complex workflows into functions
 def create_analysis_workflow():
-    workflow = graphbit.Workflow("Content Analysis")    
+    workflow = Workflow("Content Analysis")    
     # Input processing
     input_node = create_input_processor()    
     # Analysis stages  
@@ -482,10 +371,31 @@ def create_analysis_workflow():
     return workflow
 
 def create_input_processor():
-    return graphbit.Node.agent(
+    return Node.agent(
         name="Input Processor",
-        prompt="Prepare input for analysis: {input}",
+        prompt=f"Prepare input for analysis: {input}",
         agent_id="input_processor"
+    )
+
+def create_sentiment_analyzer():
+    return Node.agent(
+        name="Sentiment Analyzer",
+        prompt="Analyze sentiment of processed data",
+        agent_id="sentiment"
+    )
+
+def create_topic_analyzer():
+    return Node.agent(
+        name="Topic Analyzer", 
+        prompt="Extract key topics from processed data",
+        agent_id="topics"
+    )
+
+def create_output_formatter():
+    return Node.agent(
+        name="Output Formatter",
+        prompt="Transform the provided text to uppercase",
+        agent_id="formatter"
     )
 ```
 
@@ -514,22 +424,23 @@ if test_workflow(workflow):
 # Choose appropriate executor for your use case
 def get_executor_for_workload(workload_type, llm_config):
     if workload_type == "batch":
-        return graphbit.Executor.new_high_throughput(
-            llm_config=llm_config,
+        return Executor(
+            config=llm_config,
             timeout_seconds=600
         )
     elif workload_type == "realtime":
-        return graphbit.Executor.new_low_latency(
-            llm_config=llm_config,
+        return Executor(
+            config=llm_config,
+            lightweight_mode=true
             timeout_seconds=30
         )
     elif workload_type == "constrained":
-        return graphbit.Executor.new_memory_optimized(
-            llm_config=llm_config,
+        return Executor(
+            config=llm_config,
             timeout_seconds=300
         )
     else:
-        return graphbit.Executor(
+        return Executor(
             config=llm_config,
             timeout_seconds=300
         )
@@ -540,9 +451,7 @@ def get_executor_for_workload(workload_type, llm_config):
 | Pattern | Use Case | Example |
 |---------|----------|---------|
 | Sequential | Linear processing | Data cleaning → Analysis → Output |
-| Parallel | Independent analysis | Multiple analyzers running simultaneously |  
-| Conditional | Dynamic routing | Quality gate directing to approval/rejection |
-| Transform | Data preprocessing | Text cleaning and formatting |
+| Parallel | Independent analysis | Multiple analyzers running simultaneously | 
 | Multi-stage | Complex pipelines | Preparation → Analysis → Finalization |
 
 ## What's Next

@@ -7,6 +7,8 @@ from typing import Any, Dict, List, Optional
 from llama_index.core import Settings, VectorStoreIndex
 from llama_index.core.schema import Document
 from llama_index.llms.openai import OpenAI
+from llama_index.llms.anthropic import Anthropic
+from llama_index.llms.ollama import Ollama
 
 from .common import (
     COMPLEX_WORKFLOW_STEPS,
@@ -68,8 +70,6 @@ class LlamaIndexBenchmark(BaseBenchmark):
             if not api_key:
                 raise ValueError("Anthropic API key not found in environment or config")
 
-            from llama_index.llms.anthropic import Anthropic
-
             self.llm = Anthropic(
                 model=llm_config_obj.model,
                 api_key=api_key,
@@ -79,8 +79,6 @@ class LlamaIndexBenchmark(BaseBenchmark):
 
         elif llm_config_obj.provider == LLMProvider.OLLAMA:
             base_url = llm_config_obj.base_url or "http://localhost:11434"
-
-            from llama_index.llms.ollama import Ollama
 
             self.llm = Ollama(
                 model=llm_config_obj.model,

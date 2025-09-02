@@ -116,6 +116,9 @@ pub trait AgentTrait: Send + Sync {
     fn capabilities(&self) -> &[AgentCapability] {
         &self.config().capabilities
     }
+
+    /// Get access to the LLM provider for direct tool calling
+    fn llm_provider(&self) -> &LlmProvider;
 }
 
 /// Standard LLM-based agent implementation
@@ -257,6 +260,10 @@ impl AgentTrait for Agent {
 
     async fn validate_output(&self, output: &str, schema: &serde_json::Value) -> ValidationResult {
         self.validator.validate_against_schema(output, schema)
+    }
+
+    fn llm_provider(&self) -> &LlmProvider {
+        &self.llm_provider
     }
 }
 

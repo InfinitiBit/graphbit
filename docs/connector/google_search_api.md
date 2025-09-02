@@ -101,13 +101,12 @@ def process_search_results(results, max_snippets=3):
 1. **Initialize Graphbit and configure your LLM:**
 
     ```python
-    import graphbit
+    from graphbit import LlmConfig, Executor
     from dotenv import load_dotenv
     import os
     load_dotenv()
-    graphbit.init()
-    llm_config = graphbit.LlmConfig.openai(os.getenv("OPENAI_API_KEY"))
-    executor = graphbit.Executor(llm_config)
+    llm_config = LlmConfig.openai(os.getenv("OPENAI_API_KEY"))
+    executor = Executor(llm_config)
     ```
 
 2. **Run the workflow and retrieve the summary:**
@@ -126,8 +125,7 @@ def process_search_results(results, max_snippets=3):
 
 ```python
 import requests
-import graphbit
-from graphbit import Node, Workflow
+from graphbit import Node, Workflow, LlmConfig, Executor
 import os
 from dotenv import load_dotenv
 
@@ -162,9 +160,8 @@ agent = Node.agent(
 workflow = Workflow("Google Search Workflow")
 workflow.add_node(agent)
 
-graphbit.init()
-llm_config = graphbit.LlmConfig.openai(OPENAI_API_KEY)
-executor = graphbit.Executor(llm_config)
+llm_config = LlmConfig.openai(OPENAI_API_KEY)
+executor = Executor(llm_config)
 
 result = executor.execute(workflow)
 if result.is_success():

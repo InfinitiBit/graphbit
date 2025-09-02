@@ -1,81 +1,84 @@
 # Changelog
 
-## [0.1.0] - 2024-06-11
+## [0.4.0] – Draft
 
-### Added
-- **Core Framework**: Initial release of GraphBit declarative agentic workflow automation framework
-- **Multi-LLM Support**: 
-  - OpenAI integration with GPT models
-  - Anthropic integration with Claude models
-  - Ollama integration for local LLM inference
-  - Extensible provider system for custom LLM integrations
-- **Graph-Based Workflows**: 
-  - Directed acyclic graph (DAG) workflow representation
-  - Dependency management and topological execution
-  - Node types: agent nodes, transform nodes, conditional nodes
-- **Concurrent Execution**: 
-  - Parallel node execution with configurable concurrency limits
-  - Async/await support throughout the framework
-  - Intelligent dependency resolution
-- **Type Safety**: 
-  - Strong typing with comprehensive validation
-  - UUID-based identifiers for all components
-  - JSON schema validation for LLM outputs
-- **Python Bindings**: 
-  - Full Python API via PyO3
-  - Async support in Python
-  - Integration examples for FastAPI, Django, and Jupyter
-- **CLI Tool** (`graphbit`):
-  - Project initialization with `graphbit init`
-  - Workflow validation with `graphbit validate`
-  - Workflow execution with `graphbit run`
-  - Configuration management
-  - Debug and verbose modes
-- **Declarative Configuration**: 
-  - JSON-based workflow definitions
-  - Environment variable support
-  - Custom configuration files
-- **Error Handling & Reliability**:
-  - Built-in retry logic with exponential backoff
-  - Comprehensive error types and handling
-  - Graceful failure recovery
-- **Usage Tracking**:
-  - Token usage monitoring
-  - Cost estimation for API-based providers
-  - Performance metrics collection
-- **Documentation & Examples**:
-  - Comprehensive README with architecture overview
-  - Ollama integration guide
-  - Testing guide with benchmarking
-  - Extensive example collection
-  - Python and Rust API documentation
-- **Testing Infrastructure**:
-  - Unit and integration tests
-  - Benchmarking suite
-  - Mock LLM providers for testing
-  - CI/CD configuration
+- Rust core and Python binding: agentic workflow with dep-batching and parent preamble
+- SECURITY.md added
+- Document loader support in Python binding
+- LLM-GraphBit-Playwright browser automation agent implemented
+- Google Search API integration
+- DeepSeek & Perplexity provider support
+- Vector DB docs: FAISS, Milvus, Pinecone, Qdrant, ChromaDB, Weaviate, MongoDB, PGVector, MariaDB, IBM Db2, Elasticsearch, AWS boto3
+- Embeddings docs updated; async-vs-sync guide
+- Chatbot development example added
+- Text splitter utility added
+- Complete MkDocs site (Material theme)
+- AI LLM multi-agent benchmark report summary
+- Cross-platform CPU affinity logic with macOS fallback
+- Resolved pre-commit hook failures; improved security compliance
+- Updated black and dependency checks; codebase reformatted
 
-### Technical Details
-- **Language**: Rust with Python bindings
-- **Minimum Rust Version**: 1.70+
-- **Architecture**: Modular design with clear separation of concerns
-- **Core Modules**:
-  - `agents/`: Agent abstraction and LLM-backed implementations
-  - `llm/`: Multi-provider LLM integration
-  - `graph/`: Graph-based workflow representation and execution
-  - `validation/`: JSON schema and custom validation system
-  - `workflow/`: Workflow execution engine
-  - `types/`: Strong type system
-  - `errors/`: Comprehensive error handling
 
-### Dependencies
-- **Rust Workspace Dependencies**:
-  - `tokio` 1.0+ for async runtime
-  - `serde` 1.0+ for serialization
-  - `anyhow` and `thiserror` for error handling
-  - `uuid` 1.0+ for unique identifiers
-  - `petgraph` 0.6+ for graph algorithms
-  - `reqwest` 0.11+ for HTTP client
-  - `clap` 4.0+ for CLI interface
-  - `pyo3` 0.20+ for Python bindings
-  - `chrono` 0.4+ for date/time handling
+## [0.3.0-alpha] – 2025-07-16
+
+- Comprehensive Python tests added
+- Rust integration test coverage improved
+- Improved benchmark runner
+- Benchmark run consistency improved
+- Centralized control of benchmark run counts
+- Centralized run configuration committed
+- Explicit flags/config for run counts
+- Explicit run control documented
+- Dockerization support for benchmark
+- Production volume mount paths refined
+- Tarpaulin coverage added for Rust
+- Tarpaulin configuration integrated
+- Benchmark documentation updated
+- Root README updated
+- Contributing guidelines updated
+
+
+## [0.2.0-alpha] – 2025-06-28
+
+- Ollama Python support added
+- Hugging Face Python binding added
+- LangGraph integrated into benchmark framework
+- CrewAI benchmark scenarios optimized for performance and reliability
+- Performance optimizations
+- Benchmark and Python binding refactors
+- New integration tests added
+- Python integration tests expanded
+- Fixed Python integration tests for GitHub Actions
+- Python examples for GraphBit added
+- Benchmark evaluation updated
+- Example code updated
+- Python documentation updated
+- Pre-commit issues resolved
+- Pre-test commit fixed for all files
+- Makefile fixes
+- Root README updated
+- GitHub Actions workflow removed
+
+
+## [0.1.0] - 2025-06-11
+
+- Initial GraphBit release: declarative agentic workflow framework
+- Modular architecture with core modules (agents, llm, graph, validation, workflow, types, errors)
+- Multi-LLM support: OpenAI GPT, Anthropic Claude, Ollama, extensible providers
+- Graph-based workflows (DAG), dependency management, topological execution
+- Node types: agent, transform, conditional
+- Parallel execution with configurable concurrency
+- Async/await support throughout
+- Full Python API via PyO3 with async support
+- Strong typing and validation
+- JSON schema validation for LLM outputs
+- UUID identifiers for all components
+- Intelligent dependency resolution
+- Error handling: retries with backoff, comprehensive errors, failure recovery
+- Usage tracking: tokens, cost estimation, performance metrics
+- CLI (graphbit): init, validate, run, config, debug/verbose
+- JSON workflow configs with env var support and custom files
+- Integration examples: FastAPI, Django, Jupyter
+- Documentation and examples: README, Ollama guide, testing/benchmarking, Python and Rust API docs
+- Testing: unit/integration, benchmarking suite, mock LLM providers, CI/CD
+- Dependencies and MSRV: tokio, serde, anyhow/thiserror, uuid, petgraph, reqwest, clap, pyo3, chrono; Rust 1.70+

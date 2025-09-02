@@ -12,7 +12,7 @@ from typing import List, Optional
 
 from dotenv import load_dotenv
 
-import graphbit
+from graphbit import EmbeddingClient, EmbeddingConfig, LlmClient, LlmConfig
 
 from .const import ConfigConstants
 
@@ -37,19 +37,17 @@ class LLMManager:
         Args:
             api_key (str): OpenAI API key for accessing the language model.
         """
-        graphbit.init()
-
         # Ensure OpenAI API key is present
         if not api_key:
             raise ValueError("OPENAI_API_KEY environment variable is not set. Please set it in your environment.")
 
         # Configure LLM
-        self.llm_config = graphbit.LlmConfig.openai(model=ConfigConstants.OPENAI_LLM_MODEL, api_key=api_key)
-        self.llm_client = graphbit.LlmClient(self.llm_config)
+        self.llm_config = LlmConfig.openai(model=ConfigConstants.OPENAI_LLM_MODEL, api_key=api_key)
+        self.llm_client = LlmClient(self.llm_config)
 
         # Configure embeddings
-        self.embedding_config = graphbit.EmbeddingConfig.openai(model=ConfigConstants.OPENAI_EMBEDDING_MODEL, api_key=api_key)
-        self.embedding_client = graphbit.EmbeddingClient(self.embedding_config)
+        self.embedding_config = EmbeddingConfig.openai(model=ConfigConstants.OPENAI_EMBEDDING_MODEL, api_key=api_key)
+        self.embedding_client = EmbeddingClient(self.embedding_config)
 
     def embed(self, text: str) -> List[float]:
         """Generate embeddings for the given text using the configured embedding model."""

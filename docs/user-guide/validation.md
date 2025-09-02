@@ -16,27 +16,24 @@ GraphBit validation operates at multiple levels:
 ### Basic Workflow Validation
 
 ```python
-import graphbit
-
-# Initialize GraphBit
-graphbit.init()
+from graphbit import init, Workflow, Node
 
 def validate_workflow_basic():
     """Basic workflow validation example."""
     
     # Create a workflow
-    workflow = graphbit.Workflow("Basic Validation Test")
+    workflow = Workflow("Basic Validation Test")
     
     # Add nodes
-    processor = graphbit.Node.agent(
+    processor = Node.agent(
         name="Data Processor",
-        prompt="Process this data: {input}",
+        prompt=f"Process this data: {input}",
         agent_id="processor"
     )
     
-    validator = graphbit.Node.agent(
+    validator = Node.agent(
         name="Result Validator",
-        prompt="Validate these results: {processed_data}",
+        prompt="Validate the processed data results",
         agent_id="validator"
     )
     
@@ -58,41 +55,27 @@ def validate_workflow_basic():
 def validate_workflow_comprehensive():
     """Comprehensive workflow validation with detailed checks."""
     
-    workflow = graphbit.Workflow("Comprehensive Validation Test")
+    workflow = Workflow("Comprehensive Validation Test")
     
     # Create nodes with various types
-    input_node = graphbit.Node.agent(
+    input_node = Node.agent(
         name="Input Handler",
-        prompt="Handle input: {input}",
+        prompt=f"Handle input: {input}",
         agent_id="input_handler"
     )
     
-    transform_node = graphbit.Node.transform(
-        name="Data Transformer",
-        transformation="uppercase"
-    )
-    
-    condition_node = graphbit.Node.condition(
-        name="Quality Check",
-        expression="quality_score > 0.8"
-    )
-    
-    output_node = graphbit.Node.agent(
+    output_node = Node.agent(
         name="Output Generator",
-        prompt="Generate output: {transformed_data}",
+        prompt="Generate output with available data",
         agent_id="output_generator"
     )
     
     # Add nodes to workflow
     input_id = workflow.add_node(input_node)
-    transform_id = workflow.add_node(transform_node)
-    condition_id = workflow.add_node(condition_node)
     output_id = workflow.add_node(output_node)
     
     # Create connections
-    workflow.connect(input_id, transform_id)
-    workflow.connect(transform_id, condition_id)
-    workflow.connect(condition_id, output_id)
+    workflow.connect(input_id, output_id)
     
     # Perform validation
     validation_results = {
@@ -128,15 +111,17 @@ def validate_workflow_comprehensive():
 ### Data Format Validation
 
 ```python
+from graphbit import Workflow, Node
+
 def create_input_validation_workflow():
     """Create workflow with robust input validation."""
     
-    workflow = graphbit.Workflow("Input Validation Workflow")
+    workflow = Workflow("Input Validation Workflow")
     
     # Input validator node
-    input_validator = graphbit.Node.agent(
+    input_validator = Node.agent(
         name="Input Validator",
-        prompt="""
+        prompt=f"""
         Validate the following input data:
         
         Input: {input}
@@ -157,12 +142,10 @@ def create_input_validation_workflow():
     )
     
     # Data sanitizer
-    data_sanitizer = graphbit.Node.agent(
+    data_sanitizer = Node.agent(
         name="Data Sanitizer",
         prompt="""
         Sanitize and clean the validated input:
-        
-        Validation Results: {validation_results}
         
         If validation passed:
         1. Remove any unsafe content
@@ -282,6 +265,7 @@ def example_input_validation():
 
 ```python
 import os
+from graphbit import LlmConfig, LlmClient, EmbeddingConfig, EmbeddingClient
 
 def validate_llm_configuration(config):
     """Validate LLM configuration."""
@@ -295,13 +279,13 @@ def validate_llm_configuration(config):
     try:
         # Test OpenAI configuration
         if hasattr(config, 'provider') and config.provider == 'openai':
-            openai_config = graphbit.LlmConfig.openai(
+            openai_config = LlmConfig.openai(
                 api_key=os.getenv("OPENAI_API_KEY"),
                 model="gpt-4o-mini"
             )
             
             # Create client to test configuration
-            client = graphbit.LlmClient(openai_config)
+            client = LlmClient(openai_config)
             
             # Test basic connectivity
             try:
@@ -314,12 +298,12 @@ def validate_llm_configuration(config):
         # Test Anthropic configuration  
         elif hasattr(config, 'provider') and config.provider == 'anthropic':
             try:
-                anthropic_config = graphbit.LlmConfig.anthropic(
+                anthropic_config = LlmConfig.anthropic(
                     api_key=os.getenv("ANTHROPIC_API_KEY"),
-                    model="claude-3-5-sonnet-20241022"
+                    model="claude-3-5-haiku-20241022"
                 )
                 
-                client = graphbit.LlmClient(anthropic_config)
+                client = LlmClient(anthropic_config)
                 client.warmup()
                 print("✅ Anthropic configuration valid")
             except Exception as e:
@@ -329,11 +313,11 @@ def validate_llm_configuration(config):
         # Test Ollama configuration
         elif hasattr(config, 'provider') and config.provider == 'ollama':
             try:
-                ollama_config = graphbit.LlmConfig.ollama(
+                ollama_config = LlmConfig.ollama(
                     model="llama3.2"
                 )
                 
-                client = graphbit.LlmClient(ollama_config)
+                client = LlmClient(ollama_config)
                 client.warmup()
                 print("✅ Ollama configuration valid")
             except Exception as e:
@@ -356,11 +340,11 @@ def validate_embedding_configuration():
     
     try:
         # Test OpenAI embeddings
-        openai_config = graphbit.EmbeddingConfig.openai(
+        openai_config = EmbeddingConfig.openai(
             api_key=os.getenv("OPENAI_API_KEY")
         )
         
-        client = graphbit.EmbeddingClient(openai_config)
+        client = EmbeddingClient(openai_config)
         
         # Test embedding generation
         test_embedding = client.embed("Test embedding")
@@ -372,11 +356,11 @@ def validate_embedding_configuration():
         
         # Test HuggingFace embeddings
         try:
-            hf_config = graphbit.EmbeddingConfig.huggingface(
-                model="sentence-transformers/all-MiniLM-L6-v2"
+            hf_config = EmbeddingConfig.huggingface(
+                model="intfloat/multilingual-e5-large"
             )
             
-            hf_client = graphbit.EmbeddingClient(hf_config)
+            hf_client = EmbeddingClient(hf_config)
             hf_embedding = hf_client.embed("Test embedding")
             
             if hf_embedding and len(hf_embedding) > 0:
@@ -399,15 +383,17 @@ def validate_embedding_configuration():
 ### Runtime Validation
 
 ```python
+from graphbit import Workflow, Node
+
 def create_execution_validation_workflow():
     """Create workflow with execution validation."""
     
-    workflow = graphbit.Workflow("Execution Validation Workflow")
+    workflow = Workflow("Execution Validation Workflow")
     
     # Pre-execution validator
-    pre_validator = graphbit.Node.agent(
+    pre_validator = Node.agent(
         name="Pre-Execution Validator",
-        prompt="""
+        prompt=f"""
         Validate input before processing:
         
         Input: {input}
@@ -424,12 +410,10 @@ def create_execution_validation_workflow():
     )
     
     # Main processor
-    processor = graphbit.Node.agent(
+    processor = Node.agent(
         name="Main Processor",
         prompt="""
-        Process the validated input:
-        
-        Validated Input: {validated_input}
+        Process the validated input
         
         Perform the main processing task and include quality metrics.
         """,
@@ -437,12 +421,10 @@ def create_execution_validation_workflow():
     )
     
     # Post-execution validator
-    post_validator = graphbit.Node.agent(
+    post_validator = Node.agent(
         name="Post-Execution Validator",
         prompt="""
         Validate processing results:
-        
-        Processing Results: {processing_results}
         
         Check:
         1. Results are complete
@@ -477,11 +459,11 @@ def validate_execution_result(result):
     }
     
     # Check if execution completed
-    if result.is_completed():
+    if result.is_success():
         validation_report["execution_successful"] = True
         
         # Get output
-        output = result.output()
+        output = result.get_all_node_outputs()
         
         # Validate output
         if output:
@@ -533,25 +515,25 @@ def validate_execution_result(result):
 ### Result Quality Validation
 
 ```python
+from graphbit import Workflow, Node
+
 def create_output_validation_workflow():
     """Create workflow with comprehensive output validation."""
     
-    workflow = graphbit.Workflow("Output Validation Workflow")
+    workflow = Workflow("Output Validation Workflow")
     
     # Content generator
-    generator = graphbit.Node.agent(
+    generator = Node.agent(
         name="Content Generator",
-        prompt="Generate content based on: {input}",
+        prompt=f"Generate content based on: {input}",
         agent_id="generator"
     )
     
     # Quality checker
-    quality_checker = graphbit.Node.agent(
+    quality_checker = Node.agent(
         name="Quality Checker",
         prompt="""
-        Evaluate the quality of this generated content:
-        
-        Content: {generated_content}
+        Evaluate the quality of the generated content:
         
         Rate on a scale of 1-10 for:
         1. Accuracy
@@ -566,12 +548,10 @@ def create_output_validation_workflow():
     )
     
     # Format validator
-    format_validator = graphbit.Node.agent(
+    format_validator = Node.agent(
         name="Format Validator",
         prompt="""
-        Validate the format of this content:
-        
-        Content: {quality_checked_content}
+        Validate the format of the content:
         
         Check:
         1. Proper structure
@@ -670,6 +650,9 @@ def validate_output_quality(output, criteria=None):
 ### Comprehensive Validation Testing
 
 ```python
+from graphbit import Workflow, Node, LlmConfig, EmbeddingConfig
+import os
+
 def create_validation_test_suite():
     """Create comprehensive validation test suite."""
     
@@ -710,12 +693,12 @@ def create_validation_test_suite():
             """Test validation of invalid workflow."""
             
             # Create intentionally invalid workflow
-            workflow = graphbit.Workflow("Invalid Test Workflow")
+            workflow = Workflow("Invalid Test Workflow")
             
             # Add node but don't connect it properly (this may or may not be invalid depending on GraphBit's rules)
-            node = graphbit.Node.agent(
+            node = Node.agent(
                 name="Isolated Node",
-                prompt="Process: {input}",
+                prompt=f"Process: {input}",
                 agent_id="isolated"
             )
             workflow.add_node(node)
@@ -764,7 +747,7 @@ def create_validation_test_suite():
             
             # Test LLM configuration
             try:
-                config = graphbit.LlmConfig.openai(
+                config = LlmConfig.openai(
                     api_key=os.getenv("OPENAI_API_KEY") or "test-key",
                     model="gpt-4o-mini"
                 )
@@ -779,7 +762,7 @@ def create_validation_test_suite():
             
             # Test embedding configuration
             try:
-                embed_config = graphbit.EmbeddingConfig.openai(
+                embed_config = EmbeddingConfig.openai(
                     api_key=os.getenv("OPENAI_API_KEY") or "test-key"
                 )
                 
@@ -832,9 +815,6 @@ def create_validation_test_suite():
 
 def example_comprehensive_validation():
     """Example of comprehensive validation testing."""
-    
-    # Initialize GraphBit
-    graphbit.init()
     
     # Create test suite
     test_suite = create_validation_test_suite()
@@ -911,11 +891,10 @@ def handle_validation_error(validation_result, context="validation"):
 ### Complete Validation Example
 
 ```python
+from graphbit import Llmconfig, Executor
+
 def example_complete_validation():
     """Complete example of validation in practice."""
-    
-    # Initialize GraphBit
-    graphbit.init()
     
     print("🚀 Starting Complete Validation Example")
     
@@ -935,12 +914,12 @@ def example_complete_validation():
     
     # 3. Configuration validation
     try:
-        llm_config = graphbit.LlmConfig.openai(
+        llm_config = LlmConfig.openai(
             api_key=os.getenv("OPENAI_API_KEY"),
             model="gpt-4o-mini"
         )
         
-        executor = graphbit.Executor(llm_config)
+        executor = Executor(llm_config)
         print("✅ Configuration validation passed")
         
     except Exception as e:
@@ -957,7 +936,7 @@ def example_complete_validation():
             return False
         
         # 5. Output validation
-        output_validation = validate_output_quality(result.output())
+        output_validation = validate_output_quality(result.get_node_output("Input Validator"))
         
         if output_validation["overall_score"] < 0.5:
             print(f"⚠️ Output quality score low: {output_validation['overall_score']}")
@@ -980,4 +959,4 @@ if __name__ == "__main__":
 - Learn about [Reliability](reliability.md) for building robust validated systems
 - Explore [Monitoring](monitoring.md) for tracking validation metrics  
 - Check [Performance](performance.md) for optimizing validation overhead
-- See [Error Handling](reliability.md#error-handling-patterns) for comprehensive error management 
+- See [Error Handling](reliability.md#error-handling-patterns) for comprehensive error management

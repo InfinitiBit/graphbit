@@ -14,7 +14,7 @@ We'll build an intelligent document analysis and recommendation system that:
 ## Complete System Implementation
 
 ```python
-import graphbit
+from graphbit import init, LlmConfig, EmbeddingConfig, EmbeddingClient, Executor, Workflow, Node, get_system_info, health_check
 import os
 import json
 import asyncio
@@ -48,44 +48,36 @@ class IntelligentDocumentPipeline:
         """Initialize the intelligent document pipeline."""
         
         # Initialize GraphBit
-        graphbit.init(log_level="info", enable_tracing=True)
+        init(log_level="info", enable_tracing=True)
         
         # Configure multiple LLM providers
         self.llm_configs = {
-            'openai': graphbit.LlmConfig.openai(openai_api_key, "gpt-4o-mini"),
-            'openai_fast': graphbit.LlmConfig.openai(openai_api_key, "gpt-4o-mini")
+            'openai': LlmConfig.openai(openai_api_key, "gpt-4o-mini"),
+            'openai_fast': LlmConfig.openai(openai_api_key, "gpt-4o-mini")
         }
         
         if anthropic_api_key:
-            self.llm_configs['anthropic'] = graphbit.LlmConfig.anthropic(
+            self.llm_configs['anthropic'] = LlmConfig.anthropic(
                 anthropic_api_key, 
-                "claude-3-5-sonnet-20241022"
+                "claude-3-5-haiku-20241022"
             )
         
         # Configure embeddings
-        self.embedding_config = graphbit.EmbeddingConfig.openai(
+        self.embedding_config = EmbeddingConfig.openai(
             openai_api_key,
             "text-embedding-3-small"
         )
-        self.embedding_client = graphbit.EmbeddingClient(self.embedding_config)
+        self.embedding_client = EmbeddingClient(self.embedding_config)
         
         # Create executors for different use cases
         self.executors = {
-            'analysis': graphbit.Executor(
+            'analysis': Executor(
                 self.llm_configs['openai'],
                 timeout_seconds=180,
                 debug=True
             ),
-            'batch': graphbit.Executor.new_high_throughput(
-                self.llm_configs['openai_fast'],
-                timeout_seconds=120,
-                debug=False
-            ),
-            'fast': graphbit.Executor.new_low_latency(
-                self.llm_configs['openai_fast'],
-                timeout_seconds=60,
-                debug=False
-            )
+            'batch': Executor(self.llm_configs['openai_fast'], timeout_seconds=120, debug=False),
+            'fast': Executor(self.llm_configs['openai_fast'], lightweight_mode = True, timeout_seconds=60, debug=False)
         }
         
         # Document storage
@@ -96,7 +88,7 @@ class IntelligentDocumentPipeline:
         # Create workflows
         self.workflows = self.create_workflows()
     
-    def create_workflows(self) -> Dict[str, graphbit.Workflow]:
+    def create_workflows(self) -> Dict[str, Workflow]:
         """Create all workflow pipelines."""
         workflows = {}
         
@@ -114,15 +106,15 @@ class IntelligentDocumentPipeline:
         
         return workflows
     
-    def create_document_analysis_workflow(self) -> graphbit.Workflow:
+    def create_document_analysis_workflow(self) -> Workflow:
         """Create comprehensive document analysis workflow."""
         
-        workflow = graphbit.Workflow("Document Analysis Pipeline")
+        workflow = Workflow("Document Analysis Pipeline")
         
         # Content Preprocessor
-        preprocessor = graphbit.Node.agent(
+        preprocessor = Node.agent(
             name="Content Preprocessor",
-            prompt="""Preprocess this document for analysis:
+            prompt=f"""Preprocess this document for analysis:
 
 Title: {title}
 Content: {content}
@@ -141,11 +133,9 @@ Provide structured preprocessing results.
         )
         
         # Content Analyzer
-        analyzer = graphbit.Node.agent(
+        analyzer = Node.agent(
             name="Content Analyzer",
             prompt="""Analyze this preprocessed document content:
-
-{preprocessed_content}
 
 Perform comprehensive analysis:
 
@@ -161,12 +151,9 @@ Format response as JSON with clear sections for each analysis type.
         )
         
         # Summary Generator
-        summarizer = graphbit.Node.agent(
+        summarizer = Node.agent(
             name="Summary Generator",
             prompt="""Generate a comprehensive summary based on this analysis:
-
-Content Analysis: {analysis_results}
-Original Content: {preprocessed_content}
 
 Create:
 1. **Executive Summary**: 2-3 sentence overview
@@ -186,20 +173,21 @@ Keep summary informative yet concise.
         summary_id = workflow.add_node(summarizer)
         
         workflow.connect(prep_id, analyze_id)
+        workflow.connect(prep_id, summary_id)
         workflow.connect(analyze_id, summary_id)
         
         workflow.validate()
         return workflow
     
-    def create_content_enhancement_workflow(self) -> graphbit.Workflow:
+    def create_content_enhancement_workflow(self) -> Workflow:
         """Create content enhancement and optimization workflow."""
         
-        workflow = graphbit.Workflow("Content Enhancement Pipeline")
+        workflow = Workflow("Content Enhancement Pipeline")
         
         # Content Reviewer
-        reviewer = graphbit.Node.agent(
+        reviewer = Node.agent(
             name="Content Reviewer",
-            prompt="""Review this content for enhancement opportunities:
+            prompt=f"""Review this content for enhancement opportunities:
 
 {content}
 
@@ -216,11 +204,10 @@ Provide specific, actionable recommendations.
         )
         
         # Enhancement Suggester
-        enhancer = graphbit.Node.agent(
+        enhancer = Node.agent(
             name="Enhancement Suggester",
-            prompt="""Based on this review, suggest specific enhancements:
+            prompt=f"""Based on this review, suggest specific enhancements:
 
-Review Results: {review_results}
 Original Content: {content}
 
 Suggest improvements for:
@@ -244,15 +231,15 @@ Prioritize suggestions by impact and feasibility.
         workflow.validate()
         return workflow
     
-    def create_quality_assessment_workflow(self) -> graphbit.Workflow:
+    def create_quality_assessment_workflow(self) -> Workflow:
         """Create quality assessment workflow."""
         
-        workflow = graphbit.Workflow("Quality Assessment Pipeline")
+        workflow = Workflow("Quality Assessment Pipeline")
         
         # Quality Assessor
-        assessor = graphbit.Node.agent(
+        assessor = Node.agent(
             name="Quality Assessor",
-            prompt="""Assess the quality of this content comprehensively:
+            prompt=f"""Assess the quality of this content comprehensively:
 
 {content}
 
@@ -269,18 +256,10 @@ Provide overall quality score and detailed feedback.
             agent_id="assessor"
         )
         
-        # Quality Gate
-        quality_gate = graphbit.Node.condition(
-            name="Quality Gate",
-            expression="overall_quality >= 7"
-        )
-        
         # Improvement Recommender
-        improver = graphbit.Node.agent(
+        improver = Node.agent(
             name="Improvement Recommender",
             prompt="""Based on this quality assessment, recommend improvements:
-
-Quality Assessment: {quality_results}
 
 For content that scored below 7, provide:
 1. **Priority Issues**: Most critical problems to address
@@ -295,24 +274,22 @@ Focus on actionable, specific recommendations.
         
         # Connect pipeline
         assess_id = workflow.add_node(assessor)
-        gate_id = workflow.add_node(quality_gate)
         improve_id = workflow.add_node(improver)
         
-        workflow.connect(assess_id, gate_id)
-        workflow.connect(gate_id, improve_id)
+        workflow.connect(assess_id, improve_id)
         
         workflow.validate()
         return workflow
     
-    def create_recommendation_workflow(self) -> graphbit.Workflow:
+    def create_recommendation_workflow(self) -> Workflow:
         """Create intelligent recommendation workflow."""
         
-        workflow = graphbit.Workflow("Recommendation Engine")
+        workflow = Workflow("Recommendation Engine")
         
         # Context Analyzer
-        context_analyzer = graphbit.Node.agent(
+        context_analyzer = Node.agent(
             name="Context Analyzer",
-            prompt="""Analyze the context for generating recommendations:
+            prompt=f"""Analyze the context for generating recommendations:
 
 Current Document: {current_document}
 Similar Documents: {similar_documents}
@@ -332,11 +309,9 @@ Provide context analysis for recommendation generation.
         )
         
         # Recommendation Generator
-        recommender = graphbit.Node.agent(
+        recommender = Node.agent(
             name="Recommendation Generator",
-            prompt="""Generate intelligent recommendations based on this context:
-
-Context Analysis: {context_analysis}
+            prompt=f"""Generate intelligent recommendations based on this context:
 
 Generate recommendations for:
 1. **Related Content**: Documents or topics to explore next
@@ -392,7 +367,7 @@ Rank recommendations by relevance and provide reasoning.
             
             if result.is_success():
                 # Parse results (simplified - in practice you'd parse JSON)
-                output = result.get_output()
+                output = result.get_node_output("Summary Generator")
                 
                 return AnalysisResult(
                     document_id=document.id,
@@ -437,7 +412,7 @@ Rank recommendations by relevance and provide reasoning.
             if i == doc_index:
                 continue
                 
-            similarity = graphbit.EmbeddingClient.similarity(query_embedding, embedding)
+            similarity = EmbeddingClient.similarity(query_embedding, embedding)
             similarities.append({
                 'document_id': doc.id,
                 'title': doc.title,
@@ -474,7 +449,7 @@ Rank recommendations by relevance and provide reasoning.
             
             if result.is_success():
                 # Parse recommendations from output
-                output = result.get_output()
+                output = result.get_all_node_outputs()
                 # In practice, you'd parse structured JSON output
                 return ["Recommendation 1", "Recommendation 2", "Recommendation 3"]
             else:
@@ -538,8 +513,8 @@ Rank recommendations by relevance and provide reasoning.
                 'total': len(self.embeddings),
                 'dimension': len(self.embeddings[0]) if self.embeddings else 0
             },
-            'system': graphbit.get_system_info(),
-            'health': graphbit.health_check()
+            'system': get_system_info(),
+            'health': health_check()
         }
         
         # Calculate document statistics
@@ -700,7 +675,6 @@ async def main():
 if __name__ == "__main__":
     asyncio.run(main())
 ```
-
 ## Key System Features
 
 ### Comprehensive Integration
@@ -712,7 +686,6 @@ if __name__ == "__main__":
 ### Advanced Capabilities
 - **Batch Processing**: Efficient handling of multiple documents
 - **Async Operations**: Non-blocking operations for better performance
-- **Quality Gates**: Conditional workflow execution based on quality scores
 - **Intelligent Recommendations**: Context-aware recommendation generation
 
 ### Production Features
@@ -727,4 +700,4 @@ if __name__ == "__main__":
 - **Knowledge Management**: Semantic search and recommendation systems
 - **Research Tools**: Comprehensive analysis and insight generation
 
-This comprehensive example demonstrates how GraphBit's various components work together to create sophisticated, production-ready AI applications that can handle complex workflows with reliability and performance. 
+This comprehensive example demonstrates how GraphBit's various components work together to create sophisticated, production-ready AI applications that can handle complex workflows with reliability and performance.

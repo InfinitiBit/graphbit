@@ -4,9 +4,11 @@
 //! LLM providers while maintaining strong type safety and validation.
 
 pub mod anthropic;
+pub mod deepseek;
 pub mod huggingface;
 pub mod ollama;
 pub mod openai;
+pub mod perplexity;
 pub mod providers;
 pub mod response;
 
@@ -155,6 +157,19 @@ impl LlmMessage {
         }
     }
 
+    /// Create a tool message (for tool call results)
+    pub fn tool(tool_call_id: impl Into<String>, result: impl Into<String>) -> Self {
+        Self {
+            role: LlmRole::Tool,
+            content: format!(
+                "Tool call {} result: {}",
+                tool_call_id.into(),
+                result.into()
+            ),
+            tool_calls: Vec::new(),
+        }
+    }
+
     /// Add tool calls to the message
     #[inline]
     pub fn with_tool_calls(mut self, tool_calls: Vec<LlmToolCall>) -> Self {
@@ -229,6 +244,20 @@ impl LlmProviderFactory {
             LlmConfig::Anthropic { api_key, model, .. } => {
                 Ok(Box::new(anthropic::AnthropicProvider::new(api_key, model)?))
             }
+            LlmConfig::DeepSeek {
+                api_key,
+                model,
+                base_url,
+                ..
+            } => {
+                if let Some(base_url) = base_url {
+                    Ok(Box::new(deepseek::DeepSeekProvider::with_base_url(
+                        api_key, model, base_url,
+                    )?))
+                } else {
+                    Ok(Box::new(deepseek::DeepSeekProvider::new(api_key, model)?))
+                }
+            }
             LlmConfig::HuggingFace {
                 api_key,
                 model,
@@ -254,6 +283,22 @@ impl LlmProviderFactory {
                     )?))
                 } else {
                     Ok(Box::new(ollama::OllamaProvider::new(model)?))
+                }
+            }
+            LlmConfig::Perplexity {
+                api_key,
+                model,
+                base_url,
+                ..
+            } => {
+                if let Some(base_url) = base_url {
+                    Ok(Box::new(perplexity::PerplexityProvider::with_base_url(
+                        api_key, model, base_url,
+                    )?))
+                } else {
+                    Ok(Box::new(perplexity::PerplexityProvider::new(
+                        api_key, model,
+                    )?))
                 }
             }
             LlmConfig::Custom { provider_type, .. } => Err(GraphBitError::config(format!(
