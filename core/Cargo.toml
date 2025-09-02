@@ -33,7 +33,7 @@ description = "Core engine for GraphBit agentic workflow automation"
 edition = "2021"
 name = "graphbit-core"
 repository = "https://github.com/InfinitiBit/graphbit"
-version = "0.1.0"
+version = "0.3.0-alpha"
 
 [target.'cfg(unix)'.dependencies]
 jemallocator = "0.5"

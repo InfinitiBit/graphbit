@@ -34,7 +34,7 @@ edition = "2021"
 name = "graphbit"
 publish = false
 repository = "https://github.com/InfinitiBit/graphbit"
-version = "0.1.0"
+version = "0.3.0-alpha"
 
 # Optimized debug builds for development
 [profile.dev]
