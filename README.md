@@ -3,7 +3,7 @@
 # GraphBit - High Performance Agentic Framework
 
 <p align="center">
-    <img src="assets/Logo1.png" width="160px" alt="Logo" />
+    <img src="assets/logo(circle).png" width="160px" alt="Logo" />
 </p>
 
 <!-- Added placeholders for links, fill it up when the corresponding links are available. -->
@@ -111,6 +111,10 @@ print("\nData Processor Output: \n", result.get_node_output("Data Processor"))
 ```
 
 ## Architecture
+
+<p align="center">
+  <img src="assets/high-level-achitecture.png" height="180" alt="GraphBit Architecture">
+</p>
 
 Three-tier design for reliability and performance:
 - **Python API** - PyO3 bindings with async support
