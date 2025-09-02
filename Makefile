@@ -37,7 +37,8 @@ endif
         build-perf install-perf test-perf benchmark-perf \
         quick quick-python pre-commit-install pre-commit-run pre-commit-update pre-commit-clean \
         examples watch-test watch-check release-check typos lint-fix format-check test-integration test-coverage \
-        create-env create-conda-env check-env init
+        create-env create-conda-env check-env init check-poetry check-environment install-dependencies \
+        validate-installation install-quick install-force
 
 # -------------------------------------------
 #  Help
@@ -95,9 +96,138 @@ dev-setup: ## Set up development environment
 	$(PYTHON_ENV) pre-commit install --hook-type pre-push
 	@echo " Development environment ready!"
 
-install: ## Install all dependencies
-	$(PYTHON_ENV) poetry install --with dev,benchmarks
-	cargo fetch
+install: ## Comprehensive install: dependencies, Cargo build, and Maturin development setup
+	@echo "🚀 Starting comprehensive installation process..."
+	@$(MAKE) check-poetry
+	@$(MAKE) check-environment
+	@$(MAKE) install-dependencies
+	@$(MAKE) validate-installation
+	@echo "✅ Comprehensive installation completed successfully!"
+	@echo "🎉 Your GraphBit development environment is ready!"
+
+check-poetry: ## Check if Poetry is installed and install if needed
+	@echo "🔍 Checking Poetry installation..."
+ifeq ($(SHELL_TYPE),windows)
+	@powershell -Command "try { \
+		if (!(Get-Command poetry -ErrorAction SilentlyContinue)) { \
+			Write-Host '📦 Poetry not found. Installing Poetry...' -ForegroundColor Yellow; \
+			(Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | python -; \
+			Write-Host '✅ Poetry installed successfully!' -ForegroundColor Green; \
+			Write-Host '⚠️  Please restart your terminal or run the following command:' -ForegroundColor Yellow; \
+			Write-Host '   refreshenv' -ForegroundColor Cyan; \
+			Write-Host '   Then run: make install' -ForegroundColor Cyan; \
+			exit 1; \
+		} else { \
+			Write-Host '✅ Poetry is already installed' -ForegroundColor Green; \
+		} \
+	} catch { \
+		Write-Host '❌ Failed to install Poetry automatically' -ForegroundColor Red; \
+		Write-Host '💡 Please install Poetry manually:' -ForegroundColor Yellow; \
+		Write-Host '   Visit: https://python-poetry.org/docs/#installation' -ForegroundColor Cyan; \
+		exit 1; \
+	}"
+else
+	@if ! command -v poetry >/dev/null 2>&1; then \
+		echo "📦 Poetry not found. Installing Poetry..."; \
+		if curl -sSL https://install.python-poetry.org | python3 -; then \
+			echo "✅ Poetry installed successfully!"; \
+			echo "⚠️  Please restart your terminal or run:"; \
+			echo "   source ~/.bashrc"; \
+			echo "   Then run: make install"; \
+			exit 1; \
+		else \
+			echo "❌ Failed to install Poetry automatically"; \
+			echo "💡 Please install Poetry manually:"; \
+			echo "   Visit: https://python-poetry.org/docs/#installation"; \
+			exit 1; \
+		fi; \
+	else \
+		echo "✅ Poetry is already installed"; \
+	fi
+endif
+
+check-environment: ## Check and validate Python environment
+	@echo "🔍 Checking Python environment..."
+ifeq ($(ENV_TYPE),conda)
+	@echo "🐍 Using Conda environment: graphbit"
+	@if ! conda info --envs | grep -q "^graphbit "; then \
+		echo "❌ Conda environment 'graphbit' not found!"; \
+		echo "💡 Creating conda environment..."; \
+		$(MAKE) create-conda-env; \
+	else \
+		echo "✅ Conda environment 'graphbit' found"; \
+	fi
+else ifeq ($(ENV_TYPE),venv)
+	@echo "🐍 Using virtual environment: .venv"
+ifeq ($(SHELL_TYPE),windows)
+	@if not exist ".venv\Scripts\activate.bat" ( \
+		echo "❌ Virtual environment not found at .venv!"; \
+		echo "💡 Please create it with: python -m venv .venv"; \
+		echo "💡 Then activate it with: .venv\Scripts\activate.bat"; \
+		exit /b 1; \
+	) else ( \
+		echo "✅ Virtual environment found at .venv"; \
+	)
+else
+	@if [ ! -f ".venv/bin/activate" ]; then \
+		echo "❌ Virtual environment not found at .venv!"; \
+		echo "💡 Please create it with: python -m venv .venv"; \
+		echo "💡 Then activate it with: source .venv/bin/activate"; \
+		exit 1; \
+	else \
+		echo "✅ Virtual environment found at .venv"; \
+	fi
+endif
+else ifeq ($(ENV_TYPE),poetry)
+	@echo "🐍 Using Poetry environment management"
+	@echo "✅ Poetry will manage the virtual environment automatically"
+else
+	@echo "⚠️  Unknown ENV_TYPE: $(ENV_TYPE), defaulting to conda"
+	@$(MAKE) ENV_TYPE=conda check-environment
+endif
+
+install-dependencies: ## Install Python and Rust dependencies, build workspace, and setup development environment
+	@echo "📦 Installing Python dependencies with Poetry..."
+	@$(PYTHON_ENV) poetry install --with dev,benchmarks || { echo "❌ Poetry install failed"; exit 1; }
+	@echo "🦀 Fetching Rust dependencies..."
+	@cargo fetch || { echo "❌ Cargo fetch failed"; exit 1; }
+	@echo "🔨 Building Rust workspace..."
+	@cargo build --workspace || { echo "❌ Cargo build failed"; exit 1; }
+	@echo "🐍 Installing Python extension module in development mode..."
+	@$(PYTHON_ENV) maturin develop || { echo "❌ Maturin develop failed"; exit 1; }
+	@echo "✅ All dependencies installed and workspace built successfully!"
+
+validate-installation: ## Validate that installation was successful
+	@echo "🔍 Validating installation..."
+	@echo "📋 Checking Poetry environment..."
+	@$(PYTHON_ENV) poetry check || echo "⚠️  Poetry check failed"
+	@echo "📋 Checking Python packages..."
+	@$(PYTHON_ENV) python -c "import sys; print(f'✅ Python {sys.version} is working')"
+	@echo "📋 Checking Rust toolchain..."
+	@cargo --version || echo "⚠️  Cargo not available"
+	@echo "📋 Checking Maturin installation..."
+	@$(PYTHON_ENV) python -c "import maturin; print('✅ Maturin is available')" || echo "⚠️  Maturin not available"
+	@echo "📋 Checking key Python dependencies..."
+	@$(PYTHON_ENV) python -c "import click, rich, typer; print('✅ Core dependencies available')" || echo "⚠️  Some Python dependencies may not be fully installed"
+	@echo "📋 Checking if Python extension module can be imported..."
+	@$(PYTHON_ENV) python -c "try: import graphbit; print('✅ GraphBit Python extension module is working'); except ImportError as e: print(f'⚠️  GraphBit module import failed: {e}')" || echo "⚠️  Could not test GraphBit module import"
+	@echo "✅ Installation validation completed!"
+
+install-quick: ## Quick install with build assuming Poetry and environment are already set up
+	@echo "⚡ Quick installation (skipping environment checks)..."
+	@$(PYTHON_ENV) poetry install --with dev,benchmarks || { echo "❌ Poetry install failed"; exit 1; }
+	@cargo fetch || { echo "❌ Cargo fetch failed"; exit 1; }
+	@cargo build --workspace || { echo "❌ Cargo build failed"; exit 1; }
+	@$(PYTHON_ENV) maturin develop || { echo "❌ Maturin develop failed"; exit 1; }
+	@echo "✅ Quick installation completed!"
+
+install-force: ## Force install with build without any checks (use with caution)
+	@echo "⚠️  Force installation (no safety checks)..."
+	@poetry install --with dev,benchmarks || { echo "❌ Poetry install failed"; exit 1; }
+	@cargo fetch || { echo "❌ Cargo fetch failed"; exit 1; }
+	@cargo build --workspace || { echo "❌ Cargo build failed"; exit 1; }
+	@poetry run maturin develop || { echo "❌ Maturin develop failed"; exit 1; }
+	@echo "✅ Force installation completed!"
 
 clean: ## Clean build artifacts
 	cargo clean
@@ -149,9 +279,12 @@ build:
 	cargo build --workspace --release
 	$(PYTHON_ENV) poetry build
 
-build-dev:
-	cargo build --workspace
-	$(PYTHON_ENV) pip install -e .
+build-dev: ## Build workspace and install Python extension in development mode
+	@echo "🔨 Building Rust workspace in development mode..."
+	@cargo build --workspace || { echo "❌ Cargo build failed"; exit 1; }
+	@echo "🐍 Installing Python extension module in development mode..."
+	@$(PYTHON_ENV) maturin develop || { echo "❌ Maturin develop failed"; exit 1; }
+	@echo "✅ Development build completed!"
 
 docs:
 	cargo doc --workspace --no-deps --open
