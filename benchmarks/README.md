@@ -188,16 +188,3 @@ Results are saved in multiple formats:
    - Debug information
 
 ---
-
-For issues and questions:
-- **Issues**: Create a [GitHub Issues](https://github.com/InfinitiBit/graphbit/issues) with benchmark logs
-- **Discussions**: Use [GitHub Discussions](https://github.com/InfinitiBit/graphbit/discussions) for questions
-- **Documentation**: Check the main [GraphBit documentation](https://docs.graphbit.ai/)
-
----
-
-## License
-
-This benchmark suite is part of the GraphBit project and follows the same license terms. 
-
----
