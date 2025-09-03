@@ -28,7 +28,7 @@ pub struct RuntimeConfig {
 impl Default for RuntimeConfig {
     fn default() -> Self {
         Self {
-            worker_threads: None, // Use default (number of CPU cores)
+            worker_threads: None,    // Use default (number of CPU cores)
             thread_stack_size: None, // Use system default
             enable_blocking_pool: true,
             max_blocking_threads: None, // Use default (512)
@@ -50,10 +50,7 @@ pub struct RuntimeManager {
 
 impl RuntimeManager {
     fn new(config: RuntimeConfig) -> Result<Self, GraphBitError> {
-        info!(
-            "Initializing GraphBit runtime with config: {:?}",
-            config
-        );
+        info!("Initializing GraphBit runtime with config: {:?}", config);
 
         let mut builder = Builder::new_multi_thread();
 
@@ -111,13 +108,11 @@ impl RuntimeManager {
 /// Initialize runtime with default configuration
 pub fn get_runtime() -> Arc<RuntimeManager> {
     RUNTIME
-        .get_or_init(|| {
-            match RuntimeManager::new(RuntimeConfig::default()) {
-                Ok(manager) => Arc::new(manager),
-                Err(e) => {
-                    error!("Failed to initialize runtime: {}", e);
-                    panic!("Critical failure: Could not initialize runtime: {}", e);
-                }
+        .get_or_init(|| match RuntimeManager::new(RuntimeConfig::default()) {
+            Ok(manager) => Arc::new(manager),
+            Err(e) => {
+                error!("Failed to initialize runtime: {}", e);
+                panic!("Critical failure: Could not initialize runtime: {}", e);
             }
         })
         .clone()

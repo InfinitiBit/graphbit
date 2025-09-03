@@ -630,6 +630,7 @@ impl WorkflowExecutor {
                         &node.id,
                         agent_id,
                         prompt_template,
+                        &node.config,
                         context.clone(),
                         agents.clone(),
                     )
@@ -670,13 +671,29 @@ impl WorkflowExecutor {
                         let mut ctx = context.lock().await;
                         ctx.set_node_output(&node.id, output.clone());
                         ctx.set_node_output_by_name(&node.name, output.clone());
+
+                        // PRODUCTION FIX: Also populate variables for backward compatibility
+                        // This ensures extract_output() functions work correctly
+                        if let Ok(output_str) = serde_json::to_string(&output) {
+                            ctx.set_variable(
+                                node.name.clone(),
+                                serde_json::Value::String(output_str.clone()),
+                            );
+                            ctx.set_variable(
+                                node.id.to_string(),
+                                serde_json::Value::String(output_str),
+                            );
+                        }
+
                         // Debug: confirm storage keys available after this node completes
                         let keys: Vec<String> = ctx.node_outputs.keys().cloned().collect();
+                        let var_keys: Vec<String> = ctx.variables.keys().cloned().collect();
                         tracing::debug!(
                             node_id = %node.id,
                             node_name = %node.name,
                             available_output_keys = ?keys,
-                            "Stored node output"
+                            available_variable_keys = ?var_keys,
+                            "Stored node output and variables"
                         );
                     }
 
@@ -737,6 +754,7 @@ impl WorkflowExecutor {
         current_node_id: &NodeId,
         agent_id: &crate::types::AgentId,
         prompt_template: &str,
+        node_config: &std::collections::HashMap<String, serde_json::Value>,
         context: Arc<Mutex<WorkflowContext>>,
         agents: Arc<RwLock<HashMap<crate::types::AgentId, Arc<dyn AgentTrait>>>>,
     ) -> GraphBitResult<serde_json::Value> {
@@ -924,15 +942,121 @@ impl WorkflowExecutor {
             resolved
         };
 
-        // Create agent message with resolved prompt
-        let message = AgentMessage::new(
-            agent_id.clone(),
-            None,
-            MessageContent::Text(resolved_prompt),
-        );
+        // Check if this node has tools configured
+        let has_tools = node_config.contains_key("tool_schemas");
 
-        // Execute agent
-        agent.execute(message).await
+        // DEBUG: Log tool detection
+        tracing::info!(
+            "Agent tool detection - has_tools: {}, config keys: {:?}",
+            has_tools,
+            node_config.keys().collect::<Vec<_>>()
+        );
+        if let Some(tool_schemas) = node_config.get("tool_schemas") {
+            tracing::info!("Tool schemas found: {}", tool_schemas);
+        }
+
+        if has_tools {
+            // Execute agent with tool calling orchestration
+            tracing::info!("Executing agent with tools - prompt: '{}'", resolved_prompt);
+            let result =
+                Self::execute_agent_with_tools(agent_id, &resolved_prompt, node_config, agent)
+                    .await;
+            tracing::info!("Agent with tools execution result: {:?}", result);
+            result
+        } else {
+            // Execute agent without tools (original behavior)
+            let message = AgentMessage::new(
+                agent_id.clone(),
+                None,
+                MessageContent::Text(resolved_prompt),
+            );
+            agent.execute(message).await
+        }
+    }
+
+    /// Execute an agent with tool calling orchestration
+    async fn execute_agent_with_tools(
+        _agent_id: &crate::types::AgentId,
+        prompt: &str,
+        node_config: &std::collections::HashMap<String, serde_json::Value>,
+        agent: Arc<dyn AgentTrait>,
+    ) -> GraphBitResult<serde_json::Value> {
+        tracing::info!("Starting execute_agent_with_tools for agent: {}", _agent_id);
+        use crate::llm::{LlmRequest, LlmTool};
+
+        // Extract tool schemas from node config
+        let tool_schemas = node_config
+            .get("tool_schemas")
+            .and_then(|v| v.as_array())
+            .ok_or_else(|| GraphBitError::validation("node_config", "Missing tool_schemas"))?;
+
+        tracing::info!("Found {} tool schemas", tool_schemas.len());
+
+        // Convert tool schemas to LlmTool objects
+        let mut tools = Vec::new();
+        for schema in tool_schemas {
+            if let (Some(name), Some(description), Some(parameters)) = (
+                schema.get("name").and_then(|v| v.as_str()),
+                schema.get("description").and_then(|v| v.as_str()),
+                schema.get("parameters"),
+            ) {
+                tools.push(LlmTool::new(name, description, parameters.clone()));
+            }
+        }
+
+        // Create initial LLM request with tools
+        let mut request = LlmRequest::new(prompt);
+        for tool in &tools {
+            request = request.with_tool(tool.clone());
+        }
+
+        // Execute LLM request directly to get tool calls
+        let llm_response = agent.llm_provider().complete(request).await?;
+
+        // DEBUG: Log LLM response details
+        tracing::info!("LLM Response - Content: '{}'", llm_response.content);
+        tracing::info!(
+            "LLM Response - Tool calls count: {}",
+            llm_response.tool_calls.len()
+        );
+        for (i, tool_call) in llm_response.tool_calls.iter().enumerate() {
+            tracing::info!(
+                "Tool call {}: {} with params: {:?}",
+                i,
+                tool_call.name,
+                tool_call.parameters
+            );
+        }
+
+        // Check if the LLM made any tool calls
+        if !llm_response.tool_calls.is_empty() {
+            tracing::info!(
+                "LLM made {} tool calls - these should be executed by the Python layer",
+                llm_response.tool_calls.len()
+            );
+
+            // Instead of executing tools in Rust, return a structured response that indicates
+            // tool calls need to be executed by the Python layer
+            let tool_calls_json = serde_json::to_value(&llm_response.tool_calls).map_err(|e| {
+                GraphBitError::workflow_execution(format!("Failed to serialize tool calls: {}", e))
+            })?;
+
+            // Return a structured response that the Python layer can interpret
+            Ok(serde_json::json!({
+                "type": "tool_calls_required",
+                "content": llm_response.content,
+                "tool_calls": tool_calls_json,
+                "original_prompt": prompt,
+                "message": "Tool execution should be handled by Python layer with proper tool registry"
+            }))
+        } else {
+            // No tool calls, return the original response
+            tracing::info!(
+                "No tool calls made by LLM, returning original response: {}",
+                llm_response.content
+            );
+            Ok(serde_json::Value::String(llm_response.content))
+        }
     }
 
     /// Execute a condition node (static version)

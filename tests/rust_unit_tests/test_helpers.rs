@@ -16,22 +16,27 @@ use tokio::runtime::Runtime;
 pub fn has_openai_key() -> bool {
     env::var("OPENAI_API_KEY").is_ok()
 }
+
 #[allow(dead_code)]
 pub fn has_anthropic_key() -> bool {
     env::var("ANTHROPIC_API_KEY").is_ok()
 }
+
 #[allow(dead_code)]
 pub fn has_huggingface_key() -> bool {
     env::var("HUGGINGFACE_API_KEY").is_ok()
 }
+
 #[allow(dead_code)]
 pub fn has_perplexity_key() -> bool {
     env::var("PERPLEXITY_API_KEY").is_ok()
 }
+
 #[allow(dead_code)]
 pub fn has_deepseek_key() -> bool {
     env::var("DEEPSEEK_API_KEY").is_ok()
 }
+
 #[allow(dead_code)]
 // Ollama Helper
 pub async fn is_ollama_available() -> bool {
@@ -45,6 +50,7 @@ pub async fn is_ollama_available() -> bool {
         Err(_) => false,
     }
 }
+
 #[allow(dead_code)]
 // Test LLM Provider Factory
 pub fn create_test_llm_provider() -> Box<dyn LlmProviderTrait> {
@@ -56,6 +62,7 @@ pub fn create_test_llm_provider() -> Box<dyn LlmProviderTrait> {
     };
     LlmProviderFactory::create_provider(config).unwrap()
 }
+
 #[allow(dead_code)]
 // Test Embedding Provider Factory
 pub fn create_test_embedding_provider() -> Box<dyn EmbeddingProviderTrait> {
@@ -70,6 +77,7 @@ pub fn create_test_embedding_provider() -> Box<dyn EmbeddingProviderTrait> {
     };
     EmbeddingProviderFactory::create_provider(config).unwrap()
 }
+
 #[allow(dead_code)]
 // Test Agent Builder
 pub async fn create_test_agent() -> Arc<Agent> {
@@ -89,6 +97,7 @@ pub async fn create_test_agent() -> Arc<Agent> {
             .unwrap(),
     )
 }
+
 #[allow(dead_code)]
 // Test Workflow Builder
 pub fn create_test_workflow() -> graphbit_core::workflow::Workflow {
@@ -98,6 +107,7 @@ pub fn create_test_workflow() -> graphbit_core::workflow::Workflow {
         .build()
         .unwrap()
 }
+
 #[allow(dead_code)]
 // Test Node Creation
 pub fn create_test_node(
@@ -107,6 +117,7 @@ pub fn create_test_node(
     node.tags = Vec::new();
     node
 }
+
 #[allow(dead_code)]
 // Test Executor
 pub fn create_test_executor() -> WorkflowExecutor {
@@ -114,6 +125,7 @@ pub fn create_test_executor() -> WorkflowExecutor {
         .with_max_node_execution_time(5000)
         .with_fail_fast(true)
 }
+
 #[allow(dead_code)]
 // Temporary File Helper
 pub fn create_temp_file(content: &str) -> tempfile::NamedTempFile {
@@ -123,6 +135,7 @@ pub fn create_temp_file(content: &str) -> tempfile::NamedTempFile {
     temp_file.flush().unwrap();
     temp_file
 }
+
 #[allow(dead_code)]
 // Test Data Generator
 pub struct TestData {
@@ -130,7 +143,7 @@ pub struct TestData {
     pub json: serde_json::Value,
     pub file: tempfile::NamedTempFile,
 }
-#[allow(dead_code)]
+
 impl TestData {
     pub fn new() -> Self {
         let text = "This is test content".to_string();
@@ -147,12 +160,13 @@ impl TestData {
         Self { text, json, file }
     }
 }
-#[allow(dead_code)]
+
 impl Default for TestData {
     fn default() -> Self {
         Self::new()
     }
 }
+
 #[allow(dead_code)]
 // Async Test Helper
 pub fn run_async<F>(future: F) -> F::Output
@@ -174,6 +188,7 @@ pub fn create_mock_llm_config() -> graphbit_core::llm::LlmConfig {
         organization: None,
     }
 }
+
 #[allow(dead_code)]
 /// Create a test retry configuration
 pub fn create_test_retry_config() -> graphbit_core::types::RetryConfig {
@@ -181,6 +196,7 @@ pub fn create_test_retry_config() -> graphbit_core::types::RetryConfig {
         .with_exponential_backoff(100, 2.0, 5000)
         .with_jitter(0.1)
 }
+
 #[allow(dead_code)]
 /// Create various test error types
 pub fn create_test_errors() -> Vec<graphbit_core::errors::GraphBitError> {
@@ -209,6 +225,7 @@ pub fn create_test_errors() -> Vec<graphbit_core::errors::GraphBitError> {
         },
     ]
 }
+
 #[allow(dead_code)]
 /// Wait for a condition to be true with timeout
 pub async fn wait_for_condition<F>(
@@ -232,6 +249,7 @@ where
 
     false
 }
+
 #[allow(dead_code)]
 /// Measure execution time of an async operation
 pub async fn measure_async_execution_time<F, Fut, T>(operation: F) -> (T, std::time::Duration)
@@ -244,6 +262,7 @@ where
     let duration = start.elapsed();
     (result, duration)
 }
+
 #[allow(dead_code)]
 /// Measure execution time of a sync operation
 pub fn measure_execution_time<F, T>(operation: F) -> (T, std::time::Duration)

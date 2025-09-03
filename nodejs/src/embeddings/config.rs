@@ -1,6 +1,6 @@
 //! Embedding configuration for GraphBit Node.js bindings
 
-use crate::validation::{validate_non_empty_string, validate_api_key};
+use crate::validation::{validate_api_key, validate_non_empty_string};
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use std::collections::HashMap;

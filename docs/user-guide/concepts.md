@@ -18,22 +18,22 @@ GraphBit is built around these core concepts:
 Before using GraphBit, you must initialize the library:
 
 ```python
-import graphbit
+from graphbit import init, version, get_system_info, health_check
 
 # Basic initialization
-graphbit.init()
+init()
 
 # With custom configuration
-graphbit.init(
+init(
     log_level="info",           # trace, debug, info, warn, error
     enable_tracing=True,        # Enable detailed logging
     debug=False                 # Debug mode
 )
 
 # Check system status
-print(f"GraphBit version: {graphbit.version()}")
-print("System info:", graphbit.get_system_info())
-print("Health check:", graphbit.health_check())
+print(f"GraphBit version: {version()}")
+print("System info:", get_system_info())
+print("Health check:", health_check())
 ```
 
 ### Runtime Configuration
@@ -41,14 +41,16 @@ print("Health check:", graphbit.health_check())
 For advanced use cases, configure the async runtime:
 
 ```python
+from graphbit import configure_runtime, init
+
 # Configure before init() if needed
-graphbit.configure_runtime(
+configure_runtime(
     worker_threads=8,           # Number of worker threads
     max_blocking_threads=16,    # Max blocking thread pool size
     thread_stack_size_mb=2      # Stack size per thread in MB
 )
 
-graphbit.init()
+init()
 ```
 
 ## LLM Providers
@@ -58,26 +60,28 @@ GraphBit supports multiple LLM providers with consistent APIs.
 ### Provider Configuration
 
 ```python
+from graphbit import LlmConfig
+
 # OpenAI
-openai_config = graphbit.LlmConfig.openai(
+openai_config = LlmConfig.openai(
     api_key="your-openai-key",
     model="gpt-4o-mini"  # Optional, defaults to gpt-4o-mini
 )
 
 # Anthropic
-anthropic_config = graphbit.LlmConfig.anthropic(
+anthropic_config = LlmConfig.anthropic(
     api_key="your-anthropic-key", 
     model="claude-3-5-sonnet-20241022"  # Optional, defaults to claude-3-5-sonnet
 )
 
 # DeepSeek
-deepseek_config = graphbit.LlmConfig.deepseek(
+deepseek_config = LlmConfig.deepseek(
     api_key="your-deepseek-key",
     model="deepseek-chat"  # Optional, defaults to deepseek-chat
 )
 
 # Ollama (local models)
-ollama_config = graphbit.LlmConfig.ollama(
+ollama_config = LlmConfig.ollama(
     model="llama3.2"  # Optional, defaults to llama3.2
 )
 ```
@@ -85,8 +89,10 @@ ollama_config = graphbit.LlmConfig.ollama(
 ### LLM Client Usage
 
 ```python
+from graphbit import LlmClient
+
 # Create client
-client = graphbit.LlmClient(openai_config, debug=False)
+client = LlmClient(openai_config, debug=False)
 
 # Basic completion
 response = client.complete(
@@ -151,34 +157,20 @@ A **Workflow** defines the structure and flow of your AI pipeline.
 ### Creating Workflows
 
 ```python
+from graphbit import Workflow, Node, Executor
+
 # Create a workflow
-workflow = graphbit.Workflow("My AI Pipeline")
+workflow = Workflow("My AI Pipeline")
 
 # Add nodes to workflow
-agent_node = graphbit.Node.agent(
+agent_node = Node.agent(
     name="Analyzer",
-    prompt="Analyze this data: {input}",
+    prompt=f"Analyze this data: {input}",
     agent_id="analyzer_001"  # Optional
-)
-
-transform_node = graphbit.Node.transform(
-    name="Formatter", 
-    transformation="uppercase"
-)
-
-condition_node = graphbit.Node.condition(
-    name="Quality Check",
-    expression="quality_score > 0.8"
 )
 
 # Add nodes and get their IDs
 agent_id = workflow.add_node(agent_node)
-transform_id = workflow.add_node(transform_node)
-condition_id = workflow.add_node(condition_node)
-
-# Connect nodes
-workflow.connect(agent_id, transform_id)
-workflow.connect(transform_id, condition_id)
 
 # Validate workflow structure
 workflow.validate()
@@ -190,12 +182,14 @@ workflow.validate()
 
 ### Node Types
 
-#### 1. Agent Nodes
+#### Agent Nodes
 Execute AI tasks using LLM providers:
 
 ```python
+from graphbit import Node
+
 # Basic agent node
-analyzer = graphbit.Node.agent(
+analyzer = Node.agent(
     name="Data Analyzer",
     prompt="Analyze the following data and identify key patterns: {input}",
     agent_id="analyzer"  # Optional - auto-generated if not provided
@@ -206,27 +200,7 @@ print(f"Node ID: {analyzer.id()}")
 print(f"Node Name: {analyzer.name()}")
 ```
 
-#### 2. Transform Nodes
-Process and modify data:
-
-```python
-# Text transformation
-formatter = graphbit.Node.transform(
-    name="Text Formatter",
-    transformation="uppercase"  # Available: uppercase, lowercase, etc.
-)
-```
-
-#### 3. Condition Nodes
-Make decisions based on data evaluation:
-
-```python
-# Conditional logic
-gate = graphbit.Node.condition(
-    name="Quality Gate",
-    expression="score > 75 and confidence > 0.8"
-)
-```
+---
 
 ## Workflow Execution
 
@@ -235,32 +209,21 @@ gate = graphbit.Node.condition(
 ### Executor Types
 
 ```python
+from graphbit import Executor
+
 # Standard executor
-executor = graphbit.Executor(
+executor = Executor(
     config=llm_config,
     lightweight_mode=False,  # For backward compatibility
     timeout_seconds=300,     # 5 minutes
     debug=False
 )
 
-# High-throughput executor (for batch processing)
-high_throughput = graphbit.Executor.new_high_throughput(
-    llm_config=llm_config,
-    timeout_seconds=600,
-    debug=False
-)
-
 # Low-latency executor (for real-time applications)
-low_latency = graphbit.Executor.new_low_latency(
-    llm_config=llm_config,
-    timeout_seconds=30,
-    debug=False
-)
-
-# Memory-optimized executor (for resource-constrained environments)
-memory_optimized = graphbit.Executor.new_memory_optimized(
-    llm_config=llm_config,
-    timeout_seconds=300,
+executor = Executor(
+    config=llm_config,
+    lightweight_mode=True,  
+    timeout_seconds=300,     # 5 minutes
     debug=False
 )
 ```
@@ -273,7 +236,7 @@ result = executor.execute(workflow)
 
 # Check execution results
 if result.is_completed():
-    print("Success:", result.output())
+    print("Success:", result.get_all_node_outputs())
 elif result.is_failed():
     print("Failed:", result.error())
 
@@ -316,14 +279,16 @@ print(f"Lightweight mode: {executor.is_lightweight_mode()}")
 ### Embedding Configuration
 
 ```python
+from graphbit import EmbeddingConfig
+
 # OpenAI embeddings
-embedding_config = graphbit.EmbeddingConfig.openai(
+embedding_config = EmbeddingConfig.openai(
     api_key="your-openai-key",
     model="text-embedding-3-small"  # Optional
 )
 
 # HuggingFace embeddings  
-hf_embedding_config = graphbit.EmbeddingConfig.huggingface(
+hf_embedding_config = EmbeddingConfig.huggingface(
     api_key="your-hf-key",
     model="sentence-transformers/all-MiniLM-L6-v2"
 )
@@ -332,8 +297,10 @@ hf_embedding_config = graphbit.EmbeddingConfig.huggingface(
 ### Using Embeddings
 
 ```python
+from graphbit import EmbeddingClient
+
 # Create embedding client
-embedding_client = graphbit.EmbeddingClient(embedding_config)
+embedding_client = EmbeddingClient(embedding_config)
 
 # Single text embedding
 vector = embedding_client.embed("This is a sample text")
@@ -345,7 +312,7 @@ vectors = embedding_client.embed_many(texts)
 print(f"Generated {len(vectors)} embeddings")
 
 # Calculate similarity
-similarity = graphbit.EmbeddingClient.similarity(vector1, vector2)
+similarity = EmbeddingClient.similarity(vector1, vector2)
 print(f"Cosine similarity: {similarity}")
 ```
 
@@ -354,10 +321,13 @@ print(f"Cosine similarity: {similarity}")
 GraphBit provides comprehensive error handling:
 
 ```python
+from graphbit import init
+
 try:
-    graphbit.init()
+    init()
     
     # Your workflow code here
+
     result = executor.execute(workflow)
     
     if result.is_failed():

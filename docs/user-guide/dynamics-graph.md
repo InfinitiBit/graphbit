@@ -16,10 +16,7 @@ Dynamic workflow creation allows you to:
 ### Simple Dynamic Workflow
 
 ```python
-import graphbit
-
-# Initialize GraphBit
-graphbit.init()
+from graphbit import Workflow, Node
 
 def create_dynamic_workflow(input_data):
     """Creates a workflow dynamically based on input data."""
@@ -50,19 +47,19 @@ def detect_data_type(data):
 def create_text_processing_workflow():
     """Create workflow optimized for text processing."""
     
-    workflow = graphbit.Workflow("Text Processing Workflow")
+    workflow = Workflow("Text Processing Workflow")
     
     # Text analyzer
-    analyzer = graphbit.Node.agent(
+    analyzer = Node.agent(
         name="Text Analyzer",
-        prompt="Analyze this text: {input}",
+        prompt=f"Analyze this text: {input}",
         agent_id="text_analyzer"
     )
     
     # Sentiment detector
-    sentiment = graphbit.Node.agent(
+    sentiment = Node.agent(
         name="Sentiment Detector",
-        prompt="Determine sentiment of: {analyzed_text}",
+        prompt="Determine sentiment of the analyzed data.",
         agent_id="sentiment_detector"
     )
     
@@ -77,19 +74,19 @@ def create_text_processing_workflow():
 def create_numerical_analysis_workflow():
     """Create workflow optimized for numerical analysis."""
     
-    workflow = graphbit.Workflow("Numerical Analysis Workflow")
+    workflow = Workflow("Numerical Analysis Workflow")
     
     # Statistical analyzer
-    stats = graphbit.Node.agent(
+    stats = Node.agent(
         name="Statistical Analyzer",
-        prompt="Perform statistical analysis on: {input}",
+        prompt=f"Perform statistical analysis on: {input}",
         agent_id="stats_analyzer"
     )
     
     # Trend detector
-    trends = graphbit.Node.agent(
+    trends = Node.agent(
         name="Trend Detector",
-        prompt="Identify trends in: {stats_results}",
+        prompt="Identify trends in stats analyzed.",
         agent_id="trend_detector"
     )
     
@@ -104,19 +101,19 @@ def create_numerical_analysis_workflow():
 def create_mixed_data_workflow():
     """Create workflow for mixed data types."""
     
-    workflow = graphbit.Workflow("Mixed Data Workflow")
+    workflow = Workflow("Mixed Data Workflow")
     
     # Data classifier
-    classifier = graphbit.Node.agent(
+    classifier = Node.agent(
         name="Data Classifier",
-        prompt="Classify this mixed data: {input}",
+        prompt=f"Classify this mixed data: {input}",
         agent_id="classifier"
     )
     
     # Multi-modal processor
-    processor = graphbit.Node.agent(
+    processor = Node.agent(
         name="Multi-Modal Processor",
-        prompt="Process classified data: {classified_data}",
+        prompt="Process classified data.",
         agent_id="multimodal_processor"
     )
     
@@ -131,12 +128,12 @@ def create_mixed_data_workflow():
 def create_generic_workflow():
     """Create generic workflow for unknown data types."""
     
-    workflow = graphbit.Workflow("Generic Workflow")
+    workflow = Workflow("Generic Workflow")
     
     # Generic processor
-    processor = graphbit.Node.agent(
+    processor = Node.agent(
         name="Generic Processor",
-        prompt="Process this input: {input}",
+        prompt=f"Process this input: {input}",
         agent_id="generic_processor"
     )
     
@@ -150,10 +147,12 @@ def create_generic_workflow():
 ### Data-Driven Node Creation
 
 ```python
+from graphbit import Workflow, Node
+
 def create_data_driven_workflow(schema):
     """Create workflow based on data schema."""
     
-    workflow = graphbit.Workflow("Data-Driven Workflow")
+    workflow = Workflow("Data-Driven Workflow")
     
     node_ids = []
     
@@ -175,9 +174,9 @@ def create_data_driven_workflow(schema):
         node_ids.append((field_name, node_id))
     
     # Create aggregator node
-    aggregator = graphbit.Node.agent(
+    aggregator = Node.agent(
         name="Data Aggregator",
-        prompt="Combine and analyze these processed fields: {all_results}",
+        prompt="Combine and analyze these processed fields",
         agent_id="aggregator"
     )
     
@@ -191,7 +190,7 @@ def create_data_driven_workflow(schema):
 
 def create_text_processing_node(field_name):
     """Create node for text field processing."""
-    return graphbit.Node.agent(
+    return Node.agent(
         name=f"{field_name} Text Processor",
         prompt=f"Process {field_name} text field: {{{field_name}_input}}",
         agent_id=f"{field_name}_text_processor"
@@ -199,7 +198,7 @@ def create_text_processing_node(field_name):
 
 def create_numerical_processing_node(field_name):
     """Create node for numerical field processing."""
-    return graphbit.Node.agent(
+    return Node.agent(
         name=f"{field_name} Numerical Processor",
         prompt=f"Analyze {field_name} numerical data: {{{field_name}_input}}",
         agent_id=f"{field_name}_num_processor"
@@ -207,7 +206,7 @@ def create_numerical_processing_node(field_name):
 
 def create_date_processing_node(field_name):
     """Create node for date field processing."""
-    return graphbit.Node.agent(
+    return Node.agent(
         name=f"{field_name} Date Processor",
         prompt=f"Analyze {field_name} date patterns: {{{field_name}_input}}",
         agent_id=f"{field_name}_date_processor"
@@ -215,326 +214,11 @@ def create_date_processing_node(field_name):
 
 def create_generic_processing_node(field_name):
     """Create generic processing node."""
-    return graphbit.Node.agent(
+    return Node.agent(
         name=f"{field_name} Generic Processor",
         prompt=f"Process {field_name} field: {{{field_name}_input}}",
         agent_id=f"{field_name}_generic_processor"
     )
-```
-
-### Conditional Workflow Generation
-
-```python
-def create_conditional_workflow(requirements):
-    """Create workflow with conditional branches."""
-    
-    workflow = graphbit.Workflow("Conditional Workflow")
-    
-    # Input processor
-    input_processor = graphbit.Node.agent(
-        name="Input Processor",
-        prompt="Process and analyze input: {input}",
-        agent_id="input_processor"
-    )
-    
-    input_id = workflow.add_node(input_processor)
-    
-    # Create conditional branches based on requirements
-    for requirement in requirements:
-        condition_type = requirement.get("type")
-        condition_value = requirement.get("value")
-        
-        if condition_type == "quality_check":
-            branch = create_quality_branch(condition_value)
-        elif condition_type == "complexity_check":
-            branch = create_complexity_branch(condition_value)
-        elif condition_type == "priority_check":
-            branch = create_priority_branch(condition_value)
-        else:
-            branch = create_default_branch()
-        
-        # Add branch to workflow
-        for node in branch["nodes"]:
-            node_id = workflow.add_node(node)
-            if branch["condition"]:
-                # Add condition node
-                condition_id = workflow.add_node(branch["condition"])
-                workflow.connect(input_id, condition_id)
-                workflow.connect(condition_id, node_id)
-            else:
-                workflow.connect(input_id, node_id)
-    
-    return workflow
-
-def create_quality_branch(threshold):
-    """Create quality checking branch."""
-    
-    condition = graphbit.Node.condition(
-        name="Quality Gate",
-        expression=f"quality_score > {threshold}"
-    )
-    
-    high_quality_processor = graphbit.Node.agent(
-        name="High Quality Processor",
-        prompt="Process high-quality input: {input}",
-        agent_id="high_quality_proc"
-    )
-    
-    low_quality_processor = graphbit.Node.agent(
-        name="Low Quality Processor",
-        prompt="Enhance and process low-quality input: {input}",
-        agent_id="low_quality_proc"
-    )
-    
-    return {
-        "condition": condition,
-        "nodes": [high_quality_processor, low_quality_processor]
-    }
-
-def create_complexity_branch(complexity_level):
-    """Create complexity-based branch."""
-    
-    condition = graphbit.Node.condition(
-        name="Complexity Check",
-        expression=f"complexity_level <= {complexity_level}"
-    )
-    
-    simple_processor = graphbit.Node.agent(
-        name="Simple Processor",
-        prompt="Quick processing for simple input: {input}",
-        agent_id="simple_proc"
-    )
-    
-    complex_processor = graphbit.Node.agent(
-        name="Complex Processor",
-        prompt="Detailed processing for complex input: {input}",
-        agent_id="complex_proc"
-    )
-    
-    return {
-        "condition": condition,
-        "nodes": [simple_processor, complex_processor]
-    }
-
-def create_priority_branch(priority_level):
-    """Create priority-based branch."""
-    
-    condition = graphbit.Node.condition(
-        name="Priority Check",
-        expression=f"priority >= {priority_level}"
-    )
-    
-    urgent_processor = graphbit.Node.agent(
-        name="Urgent Processor",
-        prompt="Fast processing for urgent input: {input}",
-        agent_id="urgent_proc"
-    )
-    
-    standard_processor = graphbit.Node.agent(
-        name="Standard Processor",
-        prompt="Standard processing: {input}",
-        agent_id="standard_proc"
-    )
-    
-    return {
-        "condition": condition,
-        "nodes": [urgent_processor, standard_processor]
-    }
-
-def create_default_branch():
-    """Create default processing branch."""
-    
-    default_processor = graphbit.Node.agent(
-        name="Default Processor",
-        prompt="Default processing: {input}",
-        agent_id="default_proc"
-    )
-    
-    return {
-        "condition": None,
-        "nodes": [default_processor]
-    }
-```
-
-## Runtime Workflow Modification
-
-### Dynamic Node Addition
-
-```python
-class DynamicWorkflowBuilder:
-    """Builder for dynamic workflow modification."""
-    
-    def __init__(self, base_workflow=None):
-        if base_workflow:
-            self.workflow = base_workflow
-        else:
-            self.workflow = graphbit.Workflow("Dynamic Workflow")
-        self.node_registry = {}
-    
-    def add_processing_stage(self, stage_type, stage_config):
-        """Add a processing stage dynamically."""
-        
-        if stage_type == "validation":
-            node = self._create_validation_node(stage_config)
-        elif stage_type == "transformation":
-            node = self._create_transformation_node(stage_config)
-        elif stage_type == "analysis":
-            node = self._create_analysis_node(stage_config)
-        elif stage_type == "aggregation":
-            node = self._create_aggregation_node(stage_config)
-        else:
-            node = self._create_generic_node(stage_config)
-        
-        node_id = self.workflow.add_node(node)
-        self.node_registry[stage_config.get("name", f"node_{len(self.node_registry)}")] = node_id
-        
-        return node_id
-    
-    def connect_stages(self, source_stage, target_stage):
-        """Connect two stages dynamically."""
-        
-        source_id = self.node_registry.get(source_stage)
-        target_id = self.node_registry.get(target_stage)
-        
-        if source_id and target_id:
-            self.workflow.connect(source_id, target_id)
-            return True
-        return False
-    
-    def add_conditional_branch(self, condition_expr, true_stage, false_stage):
-        """Add conditional branch to workflow."""
-        
-        condition = graphbit.Node.condition(
-            name="Dynamic Condition",
-            expression=condition_expr
-        )
-        
-        condition_id = self.workflow.add_node(condition)
-        
-        # Connect to true and false branches
-        if true_stage in self.node_registry:
-            self.workflow.connect(condition_id, self.node_registry[true_stage])
-        
-        if false_stage in self.node_registry:
-            self.workflow.connect(condition_id, self.node_registry[false_stage])
-        
-        return condition_id
-    
-    def _create_validation_node(self, config):
-        """Create validation node."""
-        return graphbit.Node.agent(
-            name=config.get("name", "Validator"),
-            prompt=f"Validate input according to rules: {config.get('rules', 'standard validation')} - Input: {{input}}",
-            agent_id=config.get("agent_id", "validator")
-        )
-    
-    def _create_transformation_node(self, config):
-        """Create transformation node."""
-        transformation_type = config.get("transformation", "uppercase")
-        return graphbit.Node.transform(
-            name=config.get("name", "Transformer"),
-            transformation=transformation_type
-        )
-    
-    def _create_analysis_node(self, config):
-        """Create analysis node."""
-        return graphbit.Node.agent(
-            name=config.get("name", "Analyzer"),
-            prompt=f"Analyze input for: {config.get('analysis_type', 'general analysis')} - Input: {{input}}",
-            agent_id=config.get("agent_id", "analyzer")
-        )
-    
-    def _create_aggregation_node(self, config):
-        """Create aggregation node."""
-        return graphbit.Node.agent(
-            name=config.get("name", "Aggregator"),
-            prompt=f"Aggregate multiple inputs: {config.get('aggregation_method', 'combine all')} - Inputs: {{inputs}}",
-            agent_id=config.get("agent_id", "aggregator")
-        )
-    
-    def _create_generic_node(self, config):
-        """Create generic node."""
-        return graphbit.Node.agent(
-            name=config.get("name", "Generic Node"),
-            prompt=config.get("prompt", "Process input: {input}"),
-            agent_id=config.get("agent_id", "generic")
-        )
-    
-    def get_workflow(self):
-        """Get the built workflow."""
-        return self.workflow
-
-def create_dynamic_pipeline(pipeline_config):
-    """Create a dynamic processing pipeline."""
-    
-    builder = DynamicWorkflowBuilder()
-    
-    # Add stages from configuration
-    for stage in pipeline_config.get("stages", []):
-        builder.add_processing_stage(stage["type"], stage["config"])
-    
-    # Add connections from configuration
-    for connection in pipeline_config.get("connections", []):
-        builder.connect_stages(connection["source"], connection["target"])
-    
-    # Add conditional branches
-    for branch in pipeline_config.get("branches", []):
-        builder.add_conditional_branch(
-            branch["condition"],
-            branch["true_stage"],
-            branch["false_stage"]
-        )
-    
-    return builder.get_workflow()
-
-# Example usage
-def example_dynamic_pipeline():
-    """Example of creating a dynamic pipeline."""
-    
-    pipeline_config = {
-        "stages": [
-            {
-                "type": "validation",
-                "config": {
-                    "name": "input_validator",
-                    "rules": "check data completeness and format",
-                    "agent_id": "validator"
-                }
-            },
-            {
-                "type": "analysis", 
-                "config": {
-                    "name": "content_analyzer",
-                    "analysis_type": "content quality and relevance",
-                    "agent_id": "content_analyzer"
-                }
-            },
-            {
-                "type": "transformation",
-                "config": {
-                    "name": "data_transformer",
-                    "transformation": "uppercase"
-                }
-            },
-            {
-                "type": "aggregation",
-                "config": {
-                    "name": "result_aggregator",
-                    "aggregation_method": "combine analysis and transformation results",
-                    "agent_id": "aggregator"
-                }
-            }
-        ],
-        "connections": [
-            {"source": "input_validator", "target": "content_analyzer"},
-            {"source": "content_analyzer", "target": "data_transformer"},
-            {"source": "data_transformer", "target": "result_aggregator"}
-        ],
-        "branches": []
-    }
-    
-    workflow = create_dynamic_pipeline(pipeline_config)
-    return workflow
 ```
 
 ## Adaptive Workflow Patterns
@@ -542,12 +226,14 @@ def example_dynamic_pipeline():
 ### Self-Optimizing Workflows
 
 ```python
+from graphbit import Workflow, Node
+
 class AdaptiveWorkflow:
     """Workflow that adapts based on execution history."""
     
     def __init__(self, name):
         self.name = name
-        self.workflow = graphbit.Workflow(name)
+        self.workflow = Workflow(name)
         self.execution_history = []
         self.performance_metrics = {}
         self.optimization_rules = []
@@ -656,9 +342,9 @@ class AdaptiveWorkflow:
     def _add_caching_layer(self):
         """Add caching layer to workflow."""
         
-        cache_node = graphbit.Node.agent(
+        cache_node = Node.agent(
             name="Cache Manager",
-            prompt="Check cache for input: {input}. If found, return cached result, otherwise process normally.",
+            prompt=f"Check cache for input: {input}. If found, return cached result, otherwise process normally.",
             agent_id="cache_manager"
         )
         
@@ -670,9 +356,9 @@ class AdaptiveWorkflow:
         """Add parallel processing capability."""
         
         # Create parallel branch
-        parallel_processor = graphbit.Node.agent(
+        parallel_processor = Node.agent(
             name="Parallel Processor",
-            prompt="Process input in parallel: {input}",
+            prompt=f"Process input in parallel: {input}",
             agent_id="parallel_proc"
         )
         
@@ -691,9 +377,9 @@ def create_adaptive_text_processor():
     adaptive_workflow = AdaptiveWorkflow("Adaptive Text Processor")
     
     # Build initial workflow
-    processor = graphbit.Node.agent(
+    processor = Node.agent(
         name="Text Processor",
-        prompt="Process and analyze this text: {input}",
+        prompt=f"Process and analyze this text: {input}",
         agent_id="text_proc"
     )
     
@@ -730,6 +416,8 @@ def create_adaptive_text_processor():
 ### Template-Based Generation
 
 ```python
+from graphbit import Workflow, Node
+
 class WorkflowTemplate:
     """Template for generating similar workflows."""
     
@@ -746,7 +434,7 @@ class WorkflowTemplate:
     def instantiate(self, parameters):
         """Create workflow instance from template."""
         
-        workflow = graphbit.Workflow(f"{self.template_name}_{parameters.get('instance_id', 'default')}")
+        workflow = Workflow(f"{self.template_name}_{parameters.get('instance_id', 'default')}")
         
         node_map = {}
         
@@ -777,35 +465,11 @@ class WorkflowTemplate:
             for param, value in parameters.items():
                 prompt = prompt.replace(f"${{{param}}}", str(value))
             
-            return graphbit.Node.agent(
+            return Node.agent(
                 name=node_config.get("name", "Agent"),
                 prompt=prompt,
                 agent_id=node_config.get("agent_id", "agent")
             )
-        
-        elif node_type == "transform":
-            return graphbit.Node.transform(
-                name=node_config.get("name", "Transform"),
-                transformation=node_config.get("transformation", "uppercase")
-            )
-        
-        elif node_type == "condition":
-            # Replace template parameters in expression
-            expression = node_config.get("expression", "true")
-            for param, value in parameters.items():
-                expression = expression.replace(f"${{{param}}}", str(value))
-            
-            return graphbit.Node.condition(
-                name=node_config.get("name", "Condition"),
-                expression=expression
-            )
-        
-        # Default to agent node
-        return graphbit.Node.agent(
-            name="Default Agent",
-            prompt="Process input: {input}",
-            agent_id="default"
-        )
 
 def create_data_processing_template():
     """Create a template for data processing workflows."""
@@ -817,28 +481,28 @@ def create_data_processing_template():
             {
                 "id": "validator",
                 "type": "agent",
-                "name": "${domain} Data Validator",
-                "prompt": "Validate ${domain} data according to ${validation_rules}: {input}",
+                "name": f"{domain} Data Validator",
+                "prompt": f"Validate {domain} data according to {validation_rules}: {input}",
                 "agent_id": "validator"
             },
             {
                 "id": "processor",
                 "type": "agent", 
-                "name": "${domain} Processor",
-                "prompt": "Process ${domain} data using ${processing_method}: {validated_data}",
+                "name": f"{domain} Processor",
+                "prompt": f"Process validated data using {processing_method}.",
                 "agent_id": "processor"
             },
-            {
+                        {
                 "id": "quality_check",
-                "type": "condition",
+                "type": "agent",
                 "name": "Quality Gate",
-                "expression": "quality_score >= ${quality_threshold}"
+                "prompt": f"Verify and return the quality of the data using quality_score >= {quality_threshold}."
             },
             {
                 "id": "formatter",
-                "type": "transform",
+                "type": "agent",
                 "name": "Output Formatter",
-                "transformation": "${output_format}"
+                "prompt": f"Generate the output according to the output format: {output_format}"
             }
         ],
         "connections": [
@@ -898,6 +562,8 @@ def create_workflows_from_template():
 ```python
 import json
 
+from graphbit import Workflow, Node
+
 def create_workflow_from_json(json_config):
     """Create workflow from JSON configuration."""
     
@@ -906,7 +572,7 @@ def create_workflow_from_json(json_config):
     else:
         config = json_config
     
-    workflow = graphbit.Workflow(config.get("name", "JSON Workflow"))
+    workflow = Workflow(config.get("name", "JSON Workflow"))
     
     node_map = {}
     
@@ -932,30 +598,11 @@ def _create_node_from_json(node_config):
     node_type = node_config.get("type")
     
     if node_type == "agent":
-        return graphbit.Node.agent(
+        return Node.agent(
             name=node_config.get("name", "Agent"),
-            prompt=node_config.get("prompt", "Process input: {input}"),
+            prompt=node_config.get("prompt", f"Process input: {input}"),
             agent_id=node_config.get("agent_id", "agent")
         )
-    
-    elif node_type == "transform":
-        return graphbit.Node.transform(
-            name=node_config.get("name", "Transform"),
-            transformation=node_config.get("transformation", "uppercase")
-        )
-    
-    elif node_type == "condition":
-        return graphbit.Node.condition(
-            name=node_config.get("name", "Condition"),
-            expression=node_config.get("expression", "true")
-        )
-    
-    # Default to agent node
-    return graphbit.Node.agent(
-        name="Default Agent",
-        prompt="Process input: {input}",
-        agent_id="default"
-    )
 
 # Example JSON configurations
 def get_example_workflow_configs():
@@ -973,9 +620,9 @@ def get_example_workflow_configs():
             },
             {
                 "id": "formatter",
-                "type": "transform",
+                "type": "agent",
                 "name": "Output Formatter",
-                "transformation": "uppercase"
+                "prompt": "Turn the analysis in uppercase."
             }
         ],
         "connections": [
@@ -995,29 +642,29 @@ def get_example_workflow_configs():
             },
             {
                 "id": "quality_check",
-                "type": "condition",
+                "type": "agent",
                 "name": "Quality Gate",
-                "expression": "quality_score > 0.8"
+                "prompt": "Verify and return the quality of the data using quality_score > 0.8."
             },
             {
                 "id": "high_quality_processor",
                 "type": "agent",
                 "name": "High Quality Processor",
-                "prompt": "Process high-quality data: {processed_input}",
+                "prompt": "Process high-quality data.",
                 "agent_id": "hq_proc"
             },
             {
                 "id": "enhancement_processor",
                 "type": "agent",
                 "name": "Enhancement Processor",
-                "prompt": "Enhance and process lower-quality data: {processed_input}",
+                "prompt": "Enhance and process lower-quality data.",
                 "agent_id": "enhancement_proc"
             },
             {
                 "id": "aggregator",
                 "type": "agent",
                 "name": "Result Aggregator",
-                "prompt": "Combine processing results: {results}",
+                "prompt": "Combine processing results.",
                 "agent_id": "aggregator"
             }
         ],
@@ -1091,10 +738,10 @@ def safe_dynamic_workflow_creation(creation_func, *args, **kwargs):
         print(f"Error creating dynamic workflow: {e}")
         
         # Return a simple fallback workflow
-        fallback_workflow = graphbit.Workflow("Fallback Workflow")
-        fallback_node = graphbit.Node.agent(
+        fallback_workflow = Workflow("Fallback Workflow")
+        fallback_node = Node.agent(
             name="Fallback Processor",
-            prompt="Process input safely: {input}",
+            prompt=f"Process input safely: {input}",
             agent_id="fallback"
         )
         fallback_workflow.add_node(fallback_node)
@@ -1107,11 +754,10 @@ def safe_dynamic_workflow_creation(creation_func, *args, **kwargs):
 ### Complete Dynamic Workflow Example
 
 ```python
+from graphbit import LlmConfig, Executor
+
 def example_complete_dynamic_workflow():
     """Complete example of dynamic workflow creation and execution."""
-    
-    # Initialize GraphBit
-    graphbit.init()
     
     # Create dynamic workflow based on input
     input_data = {
@@ -1128,11 +774,11 @@ def example_complete_dynamic_workflow():
         print("✅ Dynamic workflow created and validated successfully")
         
         # Create executor
-        llm_config = graphbit.LlmConfig.openai(
+        llm_config = LlmConfig.openai(
             api_key=os.getenv("OPENAI_API_KEY"),
             model="gpt-4o-mini"
         )
-        executor = graphbit.Executor(llm_config)
+        executor = Executor(llm_config)
         
         # Execute workflow
         result = executor.execute(workflow)

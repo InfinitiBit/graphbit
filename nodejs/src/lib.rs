@@ -193,7 +193,9 @@ pub async fn get_system_info() -> Result<SystemInfo> {
         nodejs_binding_version: env!("CARGO_PKG_VERSION").to_string(),
         runtime_uptime_seconds: runtime_stats.as_ref().map(|s| s.uptime.as_secs() as i64),
         runtime_worker_threads: runtime_stats.as_ref().map(|s| s.worker_threads as i32),
-        runtime_max_blocking_threads: runtime_stats.as_ref().map(|s| s.max_blocking_threads as i32),
+        runtime_max_blocking_threads: runtime_stats
+            .as_ref()
+            .map(|s| s.max_blocking_threads as i32),
         cpu_count: num_cpus::get() as i32,
         runtime_initialized: runtime::is_runtime_initialized(),
         memory_allocator: if cfg!(target_os = "linux") {
@@ -297,8 +299,14 @@ pub async fn health_check() -> Result<HealthCheck> {
         runtime_uptime_ok,
         worker_threads_ok,
         runtime_stats_available,
-        total_memory_mb: runtime_stats.as_ref().and_then(|_| sys_info::mem_info().ok()).map(|info| info.total as i64 / 1024),
-        available_memory_mb: runtime_stats.as_ref().and_then(|_| sys_info::mem_info().ok()).map(|info| info.avail as i64 / 1024),
+        total_memory_mb: runtime_stats
+            .as_ref()
+            .and_then(|_| sys_info::mem_info().ok())
+            .map(|info| info.total as i64 / 1024),
+        available_memory_mb: runtime_stats
+            .as_ref()
+            .and_then(|_| sys_info::mem_info().ok())
+            .map(|info| info.avail as i64 / 1024),
         memory_healthy,
         memory_info_available,
         timestamp: chrono::Utc::now().timestamp(),

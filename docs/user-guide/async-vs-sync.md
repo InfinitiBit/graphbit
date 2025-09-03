@@ -55,23 +55,12 @@ GraphBit's Python bindings provide both synchronous (blocking) and asynchronous 
 
 | Function      | Type |
 |---------------|------|
-| [`new_high_thoroughput`](llm-providers.md#executor-types-for-different-providers)              | Sync         |
-| [`new_low_latency`](llm-providers.md#executor-types-for-different-providers)              | Sync         |
-| [`new_memory_optimized`](llm-providers.md#executor-types-for-different-providers)              | Sync         |
 | [`configure`](concepts.md#executor-configuration)              | Sync         |
 | [`get_stats`](../api-reference/python-api.md#get_stats)              | Sync         |
 | [`reset_stats`](../api-reference/python-api.md#reset_stats)              | Sync         |
 | [`get_execution_mode`](../api-reference/python-api.md#get_execution_mode)              | Sync         |
 | [`execute`](workflow-builder.md#setting-up-execution)              | Async         |
 | [`run_async`](workflow-builder.md#asynchronous-execution)              | Async         |
-
-### Workflow Node 
-
-| Function      | Type |
-|---------------|------|
-| [`agent`](../api-reference/node-types.md#basic-agent-node)              | Sync         |
-| [`condition`](../api-reference/node-types.md#basic-condition-node)              | Sync         |
-| [`transform`](../api-reference/node-types.md#basic-transform-node)              | Sync         |
 
 ### Workflow Result 
 
@@ -84,6 +73,8 @@ GraphBit's Python bindings provide both synchronous (blocking) and asynchronous 
 | [`get_variable`](../api-reference/python-api.md#get_variablekey)              | Sync         |
 | [`get_all_variables`](../api-reference/python-api.md#get_all_variables)              | Sync         |
 | [`variables`](../api-reference/python-api.md#variables)              | Sync         |
+| [`get_node_output`](../api-reference/python-api.md#get_node_output)              | Sync         |
+| [`get_all_node_outputs`](../api-reference/python-api.md#get_all_node_outputs)              | Sync         |
 
 ---
 
@@ -93,13 +84,12 @@ GraphBit's Python bindings provide both synchronous (blocking) and asynchronous 
 
 ```python
 import os
-import graphbit
 
-graphbit.init()
+from graphbit import LlmConfig, LlmClient
 
-config = graphbit.LlmConfig.openai(os.getenv("OPENAI_API_KEY"))
+config = LlmConfig.openai(os.getenv("OPENAI_API_KEY"))
 
-client = graphbit.LlmClient(config)
+client = LlmClient(config)
 result = client.complete("Hello, world!")
 print(result)
 ```
@@ -108,12 +98,13 @@ print(result)
 
 ```python
 import os
-import graphbit
 import asyncio
 
-config = graphbit.LlmConfig.openai(os.getenv("OPENAI_API_KEY"))
+from graphbit import LlmConfig, LlmClient
 
-client = graphbit.LlmClient(config)
+config = LlmConfig.openai(os.getenv("OPENAI_API_KEY"))
+
+client = LlmClient(config)
 
 async def main():
     result = await client.complete_async("Hello, async world!")

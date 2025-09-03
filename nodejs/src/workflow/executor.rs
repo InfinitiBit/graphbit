@@ -32,20 +32,21 @@ impl Executor {
         _context: &WorkflowContext,
     ) -> Result<WorkflowResult> {
         let start_time = Instant::now();
-        
+
         // Validate workflow before execution
         workflow.validate()?;
 
         // Create a workflow executor from core
         let executor = graphbit_core::workflow::WorkflowExecutor::new();
-        
+
         // Clone the workflow for async execution
         let workflow_clone = workflow.inner.clone();
-        
+
         let execution_result = tokio::task::spawn(async move {
             // Execute the workflow
             executor.execute(workflow_clone).await
-        }).await;
+        })
+        .await;
 
         let duration = start_time.elapsed();
 
@@ -53,32 +54,29 @@ impl Executor {
             Ok(Ok(core_result)) => {
                 // Convert core result to our result format
                 let mut result_data = HashMap::new();
-                
+
                 // Extract data from core result - using variables field
                 for (key, value) in core_result.variables {
                     result_data.insert(key, value.to_string());
                 }
 
-                let mut result = WorkflowResult::success(result_data, Some(duration.as_millis() as i64));
-                
+                let mut result =
+                    WorkflowResult::success(result_data, Some(duration.as_millis() as i64));
+
                 // Add execution metadata
                 result.set_metadata("node_count".to_string(), workflow.node_count().to_string());
                 result.set_metadata("edge_count".to_string(), workflow.edge_count().to_string());
-                
+
                 Ok(result)
             }
-            Ok(Err(e)) => {
-                Ok(WorkflowResult::failure(
-                    format!("Workflow execution failed: {}", e),
-                    Some(duration.as_millis() as i64),
-                ))
-            }
-            Err(e) => {
-                Ok(WorkflowResult::failure(
-                    format!("Task execution failed: {}", e),
-                    Some(duration.as_millis() as i64),
-                ))
-            }
+            Ok(Err(e)) => Ok(WorkflowResult::failure(
+                format!("Workflow execution failed: {}", e),
+                Some(duration.as_millis() as i64),
+            )),
+            Err(e) => Ok(WorkflowResult::failure(
+                format!("Task execution failed: {}", e),
+                Some(duration.as_millis() as i64),
+            )),
         }
     }
 

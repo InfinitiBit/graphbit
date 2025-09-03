@@ -8,18 +8,14 @@ import shutil
 import sys
 import time
 import tracemalloc
+import psutil
+import ctypes
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
-
-try:
-    import psutil
-except Exception as e:  # pragma: no cover - optional dependency
-    psutil = None
-    print(f"Warning: psutil not available ({e}). Benchmark metrics will be limited.")
 
 # Configure logging
 # Standard LLM Configuration Constants
@@ -34,8 +30,6 @@ class LLMProvider(Enum):
     OPENAI = "openai"
     ANTHROPIC = "anthropic"
     OLLAMA = "ollama"
-    HUGGINGFACE = "huggingface"
-
 
 @dataclass
 class LLMConfig:
@@ -52,15 +46,12 @@ class LLMConfig:
     # Provider-specific configurations
     extra_params: Dict[str, Any] = field(default_factory=dict)
 
-
 # Provider-specific model presets
 PROVIDER_MODELS = {
     LLMProvider.OPENAI: ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo", "o1-preview", "o1-mini"],
     LLMProvider.ANTHROPIC: ["claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022", "claude-3-opus-20240229", "claude-3-sonnet-20240229", "claude-3-haiku-20240307"],
-    LLMProvider.OLLAMA: ["llama3.2", "llama3.1", "codellama", "mistral", "phi3", "qwen2.5"],
-    LLMProvider.HUGGINGFACE: ["microsoft/DialoGPT-medium", "microsoft/DialoGPT-large", "facebook/blenderbot-400M-distill", "google/flan-t5-large"],
+    LLMProvider.OLLAMA: ["llama3.2", "llama3.1", "codellama", "mistral", "phi3", "qwen2.5"]
 }
-
 
 class BenchmarkLogger:
     """Utility class for logging benchmark LLM outputs to files."""
@@ -151,8 +142,6 @@ class PerformanceMonitor:
 
     def __init__(self) -> None:
         """Initialize the performance monitor."""
-        if psutil is None:
-            raise RuntimeError("psutil is required for performance monitoring")
 
         self.process = psutil.Process()
         self.start_time: float = 0.0
@@ -496,7 +485,7 @@ def parse_core_list(spec: Optional[str]) -> Optional[List[int]]:
 
 def set_process_affinity(cores: Optional[List[int]]) -> None:
     """Apply CPU affinity to the current process if ``cores`` provided."""
-    if cores and psutil is not None:
+    if cores is not None:
         psutil.Process().cpu_affinity(cores)
 
 
@@ -516,8 +505,6 @@ def set_memory_binding(node: Optional[int]) -> None:
         return
 
     try:
-        import ctypes
-
         libnuma = ctypes.CDLL("libnuma.so.1")
         libnuma.numa_available.restype = ctypes.c_int
         if libnuma.numa_available() < 0:

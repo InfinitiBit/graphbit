@@ -58,6 +58,7 @@ mod errors;
 mod llm;
 mod runtime;
 mod text_splitter;
+mod tools;
 mod validation;
 mod workflow;
 
@@ -69,6 +70,7 @@ pub use text_splitter::{
     CharacterSplitter, RecursiveSplitter, SentenceSplitter, TextChunk, TextSplitterConfig,
     TokenSplitter,
 };
+pub use tools::{ToolDecorator, ToolExecutor, ToolRegistry, ToolResult};
 pub use workflow::{Executor, Node, Workflow, WorkflowContext, WorkflowResult};
 
 /// Global initialization flag to ensure init is called only once
@@ -385,6 +387,35 @@ fn graphbit(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<SentenceSplitter>()?;
     m.add_class::<RecursiveSplitter>()?;
     m.add_class::<text_splitter::splitter::TextSplitter>()?;
+
+    // Tool system classes
+    m.add_class::<ToolResult>()?;
+    m.add_class::<ToolRegistry>()?;
+    m.add_class::<ToolDecorator>()?;
+    m.add_class::<ToolExecutor>()?;
+    m.add_class::<tools::executor::ExecutorConfig>()?;
+    m.add_class::<tools::result::ToolResultCollection>()?;
+
+    // Tool functions
+    m.add_function(wrap_pyfunction!(tools::decorator::tool, m)?)?;
+    m.add_function(wrap_pyfunction!(tools::decorator::get_tool_registry, m)?)?;
+    m.add_function(wrap_pyfunction!(tools::decorator::clear_tools, m)?)?;
+
+    // Tool execution functions
+    m.add_function(wrap_pyfunction!(workflow::node::execute_tool, m)?)?;
+    m.add_function(wrap_pyfunction!(workflow::node::get_registered_tools, m)?)?;
+    m.add_function(wrap_pyfunction!(
+        workflow::node::execute_workflow_tool_calls,
+        m
+    )?)?;
+    m.add_function(wrap_pyfunction!(
+        workflow::node::execute_production_tool_calls,
+        m
+    )?)?;
+    m.add_function(wrap_pyfunction!(
+        workflow::node::sync_global_tools_to_workflow,
+        m
+    )?)?;
 
     // Module metadata
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;

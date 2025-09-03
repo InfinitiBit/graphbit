@@ -7,7 +7,7 @@ use crate::llm::{
 };
 use async_trait::async_trait;
 use reqwest::Client;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
 /// OpenAI API provider
 pub struct OpenAiProvider {
@@ -126,17 +126,48 @@ impl OpenAiProvider {
             .into_iter()
             .next()
             .ok_or_else(|| GraphBitError::llm_provider("openai", "No choices in response"))?;
-
-        let content = choice.message.content;
+            
+        let mut content = choice.message.content;
+        if content.trim().is_empty()
+            && !choice
+                .message
+                .tool_calls
+                .as_ref()
+                .unwrap_or(&vec![])
+                .is_empty()
+        {
+            content = "I'll help you with that using the available tools.".to_string();
+        }
         let tool_calls = choice
             .message
             .tool_calls
             .unwrap_or_default()
             .into_iter()
-            .map(|tc| LlmToolCall {
-                id: tc.id,
-                name: tc.function.name,
-                parameters: serde_json::from_str(&tc.function.arguments).unwrap_or_default(),
+            .map(|tc| {
+                // Production-grade argument parsing with error handling
+                let parameters = if tc.function.arguments.trim().is_empty() {
+                    serde_json::Value::Object(serde_json::Map::new())
+                } else {
+                    match serde_json::from_str(&tc.function.arguments) {
+                        Ok(params) => params,
+                        Err(e) => {
+                            tracing::warn!(
+                                "Failed to parse tool call arguments for {}: {}. Arguments: '{}'",
+                                tc.function.name,
+                                e,
+                                tc.function.arguments
+                            );
+                            // Try to create a simple object with the raw arguments
+                            serde_json::json!({ "raw_arguments": tc.function.arguments })
+                        }
+                    }
+                };
+
+                LlmToolCall {
+                    id: tc.id,
+                    name: tc.function.name,
+                    parameters,
+                }
             })
             .collect();
 
@@ -300,6 +331,7 @@ struct OpenAiRequest {
 #[derive(Debug, Serialize, Deserialize)]
 struct OpenAiMessage {
     role: String,
+    #[serde(deserialize_with = "deserialize_nullable_content")]
     content: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     tool_calls: Option<Vec<OpenAiToolCall>>,
@@ -348,4 +380,14 @@ struct OpenAiChoice {
 struct OpenAiUsage {
     prompt_tokens: u32,
     completion_tokens: u32,
+}
+
+/// Custom deserializer for nullable content field
+/// OpenAI returns null for content when tool calls are made
+fn deserialize_nullable_content<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let opt: Option<String> = Option::deserialize(deserializer)?;
+    Ok(opt.unwrap_or_default())
 }

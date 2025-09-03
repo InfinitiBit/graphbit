@@ -1,6 +1,6 @@
 //! LLM configuration for GraphBit Node.js bindings
 
-use crate::validation::{validate_non_empty_string, validate_api_key};
+use crate::validation::{validate_api_key, validate_non_empty_string};
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use std::collections::HashMap;
@@ -99,7 +99,11 @@ impl LlmConfig {
 
     /// Create a configuration for HuggingFace
     #[napi(factory)]
-    pub fn huggingface(api_key: String, model: Option<String>, base_url: Option<String>) -> Result<Self> {
+    pub fn huggingface(
+        api_key: String,
+        model: Option<String>,
+        base_url: Option<String>,
+    ) -> Result<Self> {
         validate_api_key(&api_key, "HuggingFace")?;
 
         Ok(Self {
@@ -174,13 +178,15 @@ impl LlmConfig {
     /// Set temperature for generation
     #[napi]
     pub fn set_temperature(&mut self, temperature: f64) {
-        self.config.insert("temperature".to_string(), temperature.to_string());
+        self.config
+            .insert("temperature".to_string(), temperature.to_string());
     }
 
     /// Set max tokens for generation
     #[napi]
     pub fn set_max_tokens(&mut self, max_tokens: i32) {
-        self.config.insert("max_tokens".to_string(), max_tokens.to_string());
+        self.config
+            .insert("max_tokens".to_string(), max_tokens.to_string());
     }
 
     /// Set top_p for generation
