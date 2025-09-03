@@ -128,6 +128,18 @@ print("\nData Processor Output: \n", result.get_node_output("Data Processor"))
   <img src="assets/diagram3.png" height="180" alt="GraphBit Architecture">
 </p>
 
+---
+
+<p align="center">
+  <img src="assets/diagram4.png" height="180" alt="GraphBit Architecture">
+</p>
+
+---
+
+<p align="center">
+  <img src="assets/diagram5.png" height="180" alt="GraphBit Architecture">
+</p>
+
 
 Three-tier design for reliability and performance:
 - **Python API** - PyO3 bindings with async support
