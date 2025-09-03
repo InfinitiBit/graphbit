@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1100" height="250" viewBox="0 0 1100 250" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Rust Core: lightest -->
+    <linearGradient id="rustGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#a896fc;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8A6EF9;stop-opacity:1" />
+    </linearGradient>
+    <!-- CLI Tool: medium -->
+    <linearGradient id="cliGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#8A6EF9;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#6C4FF7;stop-opacity:1" />
+    </linearGradient>
+    <!-- Python API: darkest -->
+    <linearGradient id="pythonGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#6C4FF7;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#4A35B8;stop-opacity:1" />
+    </linearGradient>
+    <!-- Gradient for line: left=light, mid=medium, right=dark -->
+    <linearGradient id="blockLineGradient" x1="200" y1="120" x2="900" y2="120" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#a896fc"/>
+      <stop offset="50%" stop-color="#8A6EF9"/>
+      <stop offset="100%" stop-color="#4A35B8"/>
+    </linearGradient>
+    <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="2" dy="4" stdDeviation="3" flood-color="rgba(0,0,0,0.3)"/>
+    </filter>
+  </defs>
+  
+  <!-- Connecting line (matches blocks gradient) -->
+  <line x1="200" y1="120" x2="900" y2="120" stroke="url(#blockLineGradient)" stroke-width="3" stroke-linecap="round" opacity="0.95"/>
+  
+  <!-- Rust Core Layer (left, lightest) -->
+  <rect x="50" y="65" width="300" height="110" rx="16" ry="16"
+        fill="url(#rustGradient)" stroke="#8A6EF9" stroke-width="2" filter="url(#dropShadow)"/>
+  <text x="200" y="110" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="white">
+    Rust Core
+  </text>
+  <text x="200" y="140" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="rgba(255,255,255,0.92)">
+    Workflow engine, agents, LLM providers
+  </text>
+  
+  <!-- Orchestration Layer (center, medium) -->
+  <rect x="400" y="65" width="300" height="110" rx="16" ry="16"
+        fill="url(#cliGradient)" stroke="#6C4FF7" stroke-width="2" filter="url(#dropShadow)"/>
+  <text x="550" y="110" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="white">
+    Orchestration Layer
+  </text>
+  <text x="550" y="140" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="rgba(255,255,255,0.92)">
+    Project management and execution
+  </text>
+  
+  <!-- Python API Layer (right, darkest) -->
+  <rect x="750" y="65" width="300" height="110" rx="16" ry="16"
+        fill="url(#pythonGradient)" stroke="#4A35B8" stroke-width="2" filter="url(#dropShadow)"/>
+  <text x="900" y="110" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="white">
+    Python API
+  </text>
+  <text x="900" y="140" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="rgba(255,255,255,0.92)">
+    PyO3 bindings with async support
+  </text>
+</svg>

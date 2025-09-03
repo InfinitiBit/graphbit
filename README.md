@@ -110,41 +110,16 @@ print("\nSmart Agent Output: \n", result.get_node_output("Smart Agent"))
 print("\nData Processor Output: \n", result.get_node_output("Data Processor"))
 ```
 
-## Architecture
+## High-Level Architecture
 
 <p align="center">
-  <img src="assets/diagram1.png" height="180" alt="GraphBit Architecture">
+  <img src="assets/architecture.svg" height="250" alt="GraphBit Architecture">
 </p>
-
----
-
-<p align="center">
-  <img src="assets/diagram2.png" height="180" alt="GraphBit Architecture">
-</p>
-
----
-
-<p align="center">
-  <img src="assets/diagram3.png" height="180" alt="GraphBit Architecture">
-</p>
-
----
-
-<p align="center">
-  <img src="assets/diagram4.png" height="180" alt="GraphBit Architecture">
-</p>
-
----
-
-<p align="center">
-  <img src="assets/diagram5.png" height="180" alt="GraphBit Architecture">
-</p>
-
 
 Three-tier design for reliability and performance:
-- **Python API** - PyO3 bindings with async support
 - **Rust Core** - Workflow engine, agents, and LLM providers
-- **UI Layer** - Project management and execution
+- **Orchestration Layer** - Project management and execution
+- **Python API** - PyO3 bindings with async support
 
 ## Python API Integrations
 
