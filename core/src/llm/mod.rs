@@ -157,6 +157,19 @@ impl LlmMessage {
         }
     }
 
+    /// Create a tool message (for tool call results)
+    pub fn tool(tool_call_id: impl Into<String>, result: impl Into<String>) -> Self {
+        Self {
+            role: LlmRole::Tool,
+            content: format!(
+                "Tool call {} result: {}",
+                tool_call_id.into(),
+                result.into()
+            ),
+            tool_calls: Vec::new(),
+        }
+    }
+
     /// Add tool calls to the message
     #[inline]
     pub fn with_tool_calls(mut self, tool_calls: Vec<LlmToolCall>) -> Self {

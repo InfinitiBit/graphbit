@@ -1,4 +1,4 @@
-# Document Loading
+# Document Loader
 
 GraphBit extracts content from multiple document formats for AI workflow processing.
 
@@ -8,22 +8,35 @@ GraphBit extracts content from multiple document formats for AI workflow process
 - **DocumentLoaderConfig** - Configuration options  
 - **DocumentContent** - Extracted content and metadata
 
-## Supported Formats
+---
 
-PDF, DOCX, TXT, JSON, CSV, XML, HTML
+## Supported Document Types
+
+| Type   | Description                        |
+|--------|------------------------------------|
+| txt    | Plain text files                   |
+| pdf    | PDF documents                      |
+| docx   | Microsoft Word documents           |
+| json   | JSON structured data files         |
+| csv    | Comma-separated values (spreadsheets) |
+| xml    | XML structured data files          |
+| html   | HTML web pages                     |
+
+---
 
 ## Quick Start
 
 ```python
-from graphbit import init, DocumentLoader
+from graphbit import DocumentLoader
 
-init()
 loader = DocumentLoader()
 
 # Load document
 content = loader.load_document("document.pdf", "pdf")
 print(f"Extracted {content.content_length()} characters")
 ```
+
+---
 
 ## Auto-Detection
 
@@ -39,6 +52,8 @@ def load_document(file_path):
     return loader.load_document(file_path, doc_type)
 ```
 
+---
+
 ## Configuration
 
 ### Basic Setup
@@ -50,6 +65,7 @@ config = DocumentLoaderConfig(
     default_encoding="utf-8",    # Text encoding
     preserve_formatting=True     # Keep formatting
 )
+
 loader = DocumentLoader(config)
 ```
 
@@ -64,6 +80,47 @@ config.extraction_settings = {
     "table_detection": True
 }
 ```
+
+### Properties
+
+#### `max_file_size`
+Get or set the maximum file size limit.
+
+```python
+size = config.max_file_size
+
+config.set_max_file_size = 100_000_000  # 100MB
+```
+
+#### `default_encoding`
+Get or set the default text encoding.
+
+```python
+encoding = config.default_encoding
+
+config.set_default_encoding("utf-8")
+```
+
+#### `preserve_formatting`
+Get or set the formatting preservation flag.
+
+```python
+preserve = config.preserve_formatting
+
+config.set_preserve_formatting(True)
+```
+
+#### `extraction_settings`
+Get or set extraction settings as a dictionary.
+
+```python
+settings = config.extraction_settings
+
+settings = {"pdf_parser": "advanced", "ocr_enabled": True}
+config.set_extraction_settings(settings)
+```
+
+---
 
 ## Document Types
 
@@ -103,6 +160,44 @@ json_content = loader.load_document("data.json", "json")
 csv_content = loader.load_document("data.csv", "csv")
 ```
 
+---
+
+## Static Methods
+
+### `DocumentLoader.supported_types()`
+Get list of supported document types.
+
+```python
+types = DocumentLoader.supported_types()
+print(f"Supported formats: {types}")
+# Output: ['txt', 'pdf', 'docx', 'json', 'csv', 'xml', 'html']
+```
+
+### `DocumentLoader.detect_document_type(file_path)`
+Detect document type from file extension.
+
+```python
+doc_type = DocumentLoader.detect_document_type("report.pdf")
+print(f"Detected type: {doc_type}")  # "pdf"
+
+# Returns None if type cannot be detected
+unknown_type = DocumentLoader.detect_document_type("file.unknown")
+print(unknown_type)  # None
+```
+
+### `DocumentLoader.validate_document_source(source_path, document_type)`
+Validate document source and type combination.
+
+```python
+try:
+    DocumentLoader.validate_document_source("report.pdf", "pdf")
+    print("Valid document source")
+except Exception as e:
+    print(f"Invalid: {e}")
+```
+
+---
+
 ## Batch Processing
 
 ```python
@@ -127,35 +222,7 @@ def process_directory(directory):
     return results
 ```
 
-## Workflow Integration
-
-```python
-from graphbit import Workflow, Node, Executor
-
-# Document processing workflow
-workflow = Workflow("Document Analysis")
-
-# Add document loader node
-doc_loader = Node.document_loader(
-    name="PDF Loader",
-    document_type="pdf",
-    source_path="report.pdf"
-)
-
-# Add analysis agent
-analyzer = Node.agent(
-    name="Analyzer",
-    prompt="Summarize: {input}"
-)
-
-# Connect and execute
-loader_id = workflow.add_node(doc_loader)
-analyzer_id = workflow.add_node(analyzer)
-workflow.connect(loader_id, analyzer_id)
-
-executor = Executor(llm_config)
-result = executor.execute(workflow)
-```
+---
 
 ## Error Handling
 
@@ -193,37 +260,7 @@ def safe_load_document(file_path, max_size=50_000_000):
         return None
 ```
 
-## Performance Tips
-
-### Memory Optimization
-```python
-from graphbit import DocumentLoaderConfig, DocumentLoader
-
-def memory_efficient_processing(files):
-    config = DocumentLoaderConfig(max_file_size=10_000_000)
-    loader = DocumentLoader(config)
-    
-    for file_path in files:
-        content = loader.load_document(file_path, doc_type)
-        # Process immediately, don't store
-        process_content(content)
-        del content  # Free memory
-```
-
-### Batch Configuration
-```python
-from graphbit import DocumentLoaderConfig, DocumentLoader
-
-# Shared loader for multiple files
-config = DocumentLoaderConfig(preserve_formatting=False)  # Faster
-loader = DocumentLoader(config)
-
-# Process in batches
-for batch in chunked(file_list, 10):
-    for file_path in batch:
-        content = loader.load_document(file_path, doc_type)
-        # Process batch...
-```
+---
 
 ## Common Issues
 
@@ -233,6 +270,8 @@ for batch in chunked(file_list, 10):
 | Encoding errors | Set `default_encoding="utf-8"` |
 | Empty PDF content | Enable `ocr_enabled=True` for scanned PDFs |
 | Unsupported format | Check `DocumentLoader.supported_types()` |
+
+---
 
 ## API Reference
 

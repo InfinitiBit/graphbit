@@ -1,105 +1,75 @@
-# UPDATED COPY of AI Framework Benchmark Comparison Report (GraphBit v0.3.0-alpha)
+<div align="center">
 
-**COMPREHENSIVE BENCHMARK COMPARISON REPORT** and **Detailed per-scenario Tables**.
+# **Comprehensive Benchmark Report** and **Detailed Per-Scenario Tables**.
 
-* * *
+<p>
+    Cross-Platform Performance Summary – Intel Xeon, AMD EPYC, Windows, Apple M1
+</p>
 
-## 1\. Introduction & Benchmark Scope
+</div>
 
-* * *
 
-# AI Framework Benchmark Comparison Report (Updated)
+## Introduction & Benchmark Scope
 
-_Cross-Platform Performance Summary – Intel Xeon, AMD EPYC, Windows, Apple M1_
-
-* * *
-
-### 1\. Test Environment Overview
+### 1. Test Environment Overview
 
 We benchmarked six popular AI frameworks across multiple cloud and bare-metal environments:
 
-1.     **AWS t3.small (Intel Xeon Skylake 8175M / Cascade Lake 8259CL)**
+1. **AWS t3.small (Intel Xeon Skylake 8175M / Cascade Lake 8259CL)**
+    - OS: ubuntu
+    - 2 vCPUs, 2 GiB RAM, EBS-Only, 5 Gbps Network
 
-o   OS: ubuntu
+2. **AWS t3a.small (AMD EPYC 7000 Series 7571)**
+    - OS: ubuntu
+    - 2 vCPUs, 2 GiB RAM, EBS-Only, 5 Gbps Network
 
-o   2 vCPUs, 2 GiB RAM, EBS-Only, 5 Gbps Network
+3. **AWS t3.medium (Intel Xeon Skylake 8175M / Cascade Lake 8259CL)**
+    - OS: Windows
+    - 2 vCPUs, 4 GiB RAM, EBS-Only, 5 Gbps Network
 
-2.     **AWS t3a.small (AMD EPYC 7000 Series 7571)**
+4. **AWS t3a.medium (AMD EPYC 7000 Series 7571)**
+    - OS: Windows
+    - 2 vCPUs, 4 GiB RAM, EBS-Only, 5 Gbps Network
 
-o   OS: ubuntu
+5. **AWS mac2.metal (Apple M1 – 4 Performance + 4 Efficiency Cores)**
+    - OS: MacOS
+    - 8 vCPUs, 16 GiB RAM, 10 Gbps Network (8 Gbps EBS)
 
-o   2 vCPUs, 2 GiB RAM, EBS-Only, 5 Gbps Network
+---
 
-3.     **AWS t3.medium (Intel Xeon Skylake 8175M / Cascade Lake 8259CL)**
+### 2. Frameworks Evaluated
+- **GraphBit** – Optimized lightweight multi-agent framework
+- **LangChain** – Mature LLM orchestration framework
+- **LangGraph** – Graph-based agent execution
+- **CrewAI** – Agent collaboration framework
+- **PydanticAI** – Validation-heavy model-driven AI framework
+- **LlamaIndex** – Index-based knowledge retrieval & reasoning
 
-o   OS: Windows
+---
 
-o   2 vCPUs, 4 GiB RAM, EBS-Only, 5 Gbps Network
-
-4.     **AWS t3a.medium (AMD EPYC 7000 Series 7571)**
-
-o   OS: Windows
-
-o   2 vCPUs, 4 GiB RAM, EBS-Only, 5 Gbps Network
-
-5.     **AWS mac2.metal (Apple M1 – 4 Performance + 4 Efficiency Cores)**
-
-o   OS: MacOS
-
-o   8 vCPUs, 16 GiB RAM, 10 Gbps Network (8 Gbps EBS)
-
-* * *
-
-### 2\. Frameworks Evaluated
-
-·       **GraphBit** – Optimized lightweight multi-agent framework
-
-·       **LangChain** – Mature LLM orchestration framework
-
-·       **LangGraph** – Graph-based agent execution
-
-·       **CrewAI** – Agent collaboration framework
-
-·       **PydanticAI** – Validation-heavy model-driven AI framework
-
-·       **LlamaIndex** – Index-based knowledge retrieval & reasoning
-
-* * *
-
-### 3\. Benchmark Scenarios
+### 3. Benchmark Scenarios
 
 Each framework was tested under six common workloads:
 
-1.     **Simple Task** – Quick single-step execution
-
-2.     **Sequential Pipeline** – Multi-step linear processing
-
-3.     **Parallel Pipeline** – Multi-branch parallel execution
-
-4.     **Complex Workflow** – Nested orchestration with multiple dependencies
-
-5.     **Memory Intensive** – High data retention and manipulation tasks
-
-6.     **Concurrent Tasks** – 10 simultaneous tasks
+1. **Simple Task** – Quick single-step execution
+2. **Sequential Pipeline** – Multi-step linear processing
+3. **Parallel Pipeline** – Multi-branch parallel execution
+4. **Complex Workflow** – Nested orchestration with multiple dependencies
+5. **Memory Intensive** – High data retention and manipulation tasks
+6. **Concurrent Tasks** – 10 simultaneous tasks
 
 All tests were repeated **10 times per scenario** and averaged.  
 Metrics captured include:
+- **Execution Time (ms)**
+- **Memory Usage (MB)**
+- **CPU Usage (%)**
+- **Token Count** (proxy for workload complexity)
+- **Throughput (Tasks per Minute)**
+- **Error Rate** (stability)
 
-·       **Execution Time (ms)**
+---
 
-·       **Memory Usage (MB)**
-
-·       **CPU Usage (%)**
-
-·       **Token Count** (proxy for workload complexity)
-
-·       **Throughput (Tasks per Minute)**
-
-·       **Error Rate** (stability)
-
-* * *
-
-## 2\. Metrics Evaluated
+## Metrics Evaluated
 
 | Metric | Description |
 | --- | --- |
@@ -110,9 +80,9 @@ Metrics captured include:
 | Throughput | Tasks completed per second (higher is better) |
 | Success Rate | Whether all tasks completed successfully (target = 100%) |
 
-* * *
+---
 
-## 3\. Overall Framework Summary (Cross-Platform Average)
+## Overall Framework Summary (Cross-Platform Average)
 
 | Framework | Avg CPU (%) | Avg Memory (MB) | Avg Throughput (tasks/min) | Avg Execution Time (ms) | Stability | Note | Efficiency Category |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -123,11 +93,9 @@ Metrics captured include:
 | CrewAI | 0.634 – 13.648 | 0.938 – 2.666 | 4 – 63 | ~2,244 – 65,278 | 100% | Higher CPU/memory usage; stable but not ideal for resource-constrained devices | Resource Heavy |
 | LlamaIndex | 0.433 – 44.132 | 0.000 – 26.929 | 1 – 72 | ~1,069 – 55,822 | 100% | Wide CPU/memory range; may consume significant resources under heavy workloads | Highly Variable |
 
-* * *
+---
 
-## 4\. Use Case Recommendations by Metric
-
-* * *
+## Use Case Recommendations by Metric
 
 ### Lowest CPU Usage
 
@@ -137,8 +105,6 @@ Metrics captured include:
 | 2 | PydanticAI | 0.176 – 4.133 | Low to moderate CPU usage; good for balanced performance | Balanced |
 | 3 | LangChain | 0.171 – 5.329 | Low to moderately high CPU usage; can spike under load | Variable Efficiency |
 
-* * *
-
 ### Lowest Memory Usage
 
 | Rank | Framework | Avg Memory (MB) | Note | Efficiency Category |
@@ -146,8 +112,6 @@ Metrics captured include:
 | 1 | GraphBit | 0.000 – 0.116 | Extremely low memory usage; ideal for memory-limited systems | Ultra-Efficient |
 | 2 | PydanticAI | 0.000 – 0.125 | Very low and consistent memory usage | Ultra-Efficient |
 | 3 | LangChain | 0.000 – 1.050 | Low memory usage overall, but can be higher in some cases | Balanced |
-
-* * *
 
 ### Highest Throughput (Tasks/Minute)
 
@@ -157,8 +121,6 @@ Metrics captured include:
 | 2 | LangChain | 4 – 73 | Strong throughput close to GraphBit; efficient for most workloads | High Performer |
 | 3 | PydanticAI | 4 – 72 | Consistent throughput with good balance of speed and efficiency | Balanced Performer |
 
-* * *
-
 ### Fastest Execution Time
 
 | Rank | Framework | Time (ms) Range | Note | Speed Category |
@@ -167,7 +129,9 @@ Metrics captured include:
 | 2 | PydanticAI | ~1,611 – 55,417 | Nearly as fast as LlamaIndex with lower max time; efficient on varied tasks | High-Speed |
 | 3 | LangChain | ~1,013 – 60,623 | Quick on short tasks but higher variation and occasional slow runs | Variable Speed |
 
-* * *
+---
+
+## Visualization of Benchmark
 
 ![VM1 - AWS t3.small Ubuntu Intel Xeon Skylake8175M / CascadeLake8259CL](../assets/VM1_benchmark_results_of_aws_t3_small_ubuntu_intel_xeon_skylake8175M_cascadelake8259CL_2vcpu_24cpucredits_2gib_ebs_only_up5gbps_network.png)  
 <p align="center"><b>VM1</b> – AWS t3.small, Ubuntu, Intel Xeon Skylake8175M / CascadeLake8259CL, 2 vCPU, 24 CPU credits, 2 GiB RAM, EBS only, up to 5 Gbps network</p>
@@ -184,26 +148,16 @@ Metrics captured include:
 ![VM_5 - AWS mac2.metal Apple M1](../assets/VM_5benchmark_results_of_aws_mac2_metal_apple_m1_4performance_4efficiency_8vcpu_16gib_ebs_only_10gbps_network_8gbps_ebs.png)  
 <p align="center"><b>VM_5</b> – AWS mac2.metal, Apple M1 (4 performance + 4 efficiency cores), 8 vCPU, 16 GiB RAM, EBS only, 10 Gbps network, 8 Gbps EBS</p>
 
+---
 
-
-
-
-
-## Comprehensive Scenario-by-Scenario Comparison
+## Scenario-Level Benchmark Tables
 
 Grouped **by scenario** with performance of all frameworks across each task:
-
-* * *
-
-## 5\. Scenario-Level Benchmark Tables
-
 All results below are **averaged over 10 runs**, tested across both Intel and AMD VMs.
 
-* * *
+### Scenario 1: Simple Task
 
-## Scenario 1: Simple Task
-
-### Simple Task – Cross-Platform Results (Averaged over 10 runs)
+#### Simple Task – Cross-Platform Results (Averaged over 10 runs)
 
 | Framework | Platform | Time (ms) | Memory (MB) | CPU (%) | Tokens | Throughput (tasks/min) |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -238,25 +192,19 @@ All results below are **averaged over 10 runs**, tested across both Intel and AM
 |  | AMD VM Windows | 1342.8 | 0.117 | 4.938 | 95.0 | 46 |
 |  | MacOS M1 VM | 1373.2 | 0.228 | 2.321 | 95.0 | 44 |
 
-* * *
+#### Observation – Simple Task
 
-### Observation – Simple Task
+- **GraphBit** delivers the best overall efficiency, with **lowest CPU usage** (0.000–0.331%), **minimal memory consumption** (0.000–0.148 MB), and consistently fast execution times (~1,091–1,422 ms).
+- **LangChain** shows **moderate CPU usage** (2.402–5.329%) and **higher memory use** (0.333–1.050 MB) but achieves good throughput, especially on Intel Windows (60 tasks/min).
+- **CrewAI** is the **slowest** in this scenario (~2,243–2,694 ms) with **higher CPU usage** (2.665–5.608%) and higher memory needs (0.362–0.600 MB), making it less efficient for simple tasks.
+- **PydanticAI** has **low memory** (0.000–0.113 MB) and **moderate CPU** (0.912–2.696%) but slower execution times (~1,610–2,523 ms) compared to top performers.
+- **LlamaIndex** achieves **fast execution times** (~1,069–1,603 ms) but with **higher CPU usage** (2.321–10.057%) and variable memory usage (0.104–0.228 MB).
 
-·       **GraphBit** delivers the best overall efficiency, with **lowest CPU usage** (0.000–0.331%), **minimal memory consumption** (0.000–0.148 MB), and consistently fast execution times (~1,091–1,422 ms).
+---
 
-·       **LangChain** shows **moderate CPU usage** (2.402–5.329%) and **higher memory use** (0.333–1.050 MB) but achieves good throughput, especially on Intel Windows (60 tasks/min).
+### Scenario 2: Sequential Pipeline
 
-·       **CrewAI** is the **slowest** in this scenario (~2,243–2,694 ms) with **higher CPU usage** (2.665–5.608%) and higher memory needs (0.362–0.600 MB), making it less efficient for simple tasks.
-
-·       **PydanticAI** has **low memory** (0.000–0.113 MB) and **moderate CPU** (0.912–2.696%) but slower execution times (~1,610–2,523 ms) compared to top performers.
-
-·       **LlamaIndex** achieves **fast execution times** (~1,069–1,603 ms) but with **higher CPU usage** (2.321–10.057%) and variable memory usage (0.104–0.228 MB).
-
-* * *
-
-## Scenario 2: Sequential Pipeline
-
-### Sequential Pipeline – Cross-Platform Results (Averaged over 10 runs)
+#### Sequential Pipeline – Cross-Platform Results (Averaged over 10 runs)
 
 | Framework | Platform | Time (ms) | Memory (MB) | CPU (%) | Tokens | Throughput (tasks/min) |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -291,25 +239,19 @@ All results below are **averaged over 10 runs**, tested across both Intel and AM
 |  | AMD VM Windows | 22496.5 | 0.669 | 0.669 | 2246.7 | 10 |
 |  | MacOS M1 VM | 19915.1 | 0.663 | 0.663 | 2208.0 | 12 |
 
-* * *
+#### Observation – Sequential Pipeline
 
-### Observation – Sequential Pipeline
+- **GraphBit** remains highly **efficient in CPU** (0.031–0.139%) and **low memory use** (0.031–0.139 MB) but has **longer execution times** (~15,857–21,947 ms) and moderate throughput (11–15 tasks/min), making it less ideal for speed-critical complex tasks.
+- **LangChain** shows **moderate memory and CPU usage** (0.365–0.903 MB / 0.365–0.903%) with **faster times** than GraphBit in some cases (~14,742–22,089 ms) and throughput up to 16 tasks/min, offering balanced performance.
+- **CrewAI** is the **heaviest and slowest** option (~30,619–53,335 ms) with **high CPU/memory usage** (0.706–1.945 MB / 0.706–1.945%) and very low throughput (5–7 tasks/min), making it inefficient for this workload.
+- **PydanticAI** delivers **the fastest execution times** (~11,638–14,915 ms) and the **highest throughput** (16–21 tasks/min), but at the cost of **higher CPU/memory usage** (0.511–1.381%).
+- **LlamaIndex** has **moderate performance** (~16,012–22,496 ms) with CPU/memory usage (0.587–1.143%) on the higher side; throughput is decent (10–15 tasks/min) but not outstanding.
 
-·       **GraphBit** remains highly **efficient in CPU** (0.031–0.139%) and **low memory use** (0.031–0.139 MB) but has **longer execution times** (~15,857–21,947 ms) and moderate throughput (11–15 tasks/min), making it less ideal for speed-critical complex tasks.
+---
 
-·       **LangChain** shows **moderate memory and CPU usage** (0.365–0.903 MB / 0.365–0.903%) with **faster times** than GraphBit in some cases (~14,742–22,089 ms) and throughput up to 16 tasks/min, offering balanced performance.
+### Scenario 3: Parallel Pipeline
 
-·       **CrewAI** is the **heaviest and slowest** option (~30,619–53,335 ms) with **high CPU/memory usage** (0.706–1.945 MB / 0.706–1.945%) and very low throughput (5–7 tasks/min), making it inefficient for this workload.
-
-·       **PydanticAI** delivers **the fastest execution times** (~11,638–14,915 ms) and the **highest throughput** (16–21 tasks/min), but at the cost of **higher CPU/memory usage** (0.511–1.381%).
-
-·       **LlamaIndex** has **moderate performance** (~16,012–22,496 ms) with CPU/memory usage (0.587–1.143%) on the higher side; throughput is decent (10–15 tasks/min) but not outstanding.
-
-* * *
-
-## Scenario 3: Parallel Pipeline
-
-### Parallel Pipeline – Cross-Platform Results (Averaged over 10 runs)
+#### Parallel Pipeline – Cross-Platform Results (Averaged over 10 runs)
 
 | Framework | Platform | Time (ms) | Memory (MB) | CPU (%) | Tokens | Throughput (tasks/min) |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -344,27 +286,20 @@ All results below are **averaged over 10 runs**, tested across both Intel and AM
 |  | AMD VM Windows | 4566.0 | 0.087 | 3.647 | 294.9 | 55 |
 |  | MacOS M1 VM | 3422.2 | 0.103 | 3.015 | 293.1 | 72 |
 
-* * *
+#### Observation – Parallel Pipeline
 
-### Observation – Parallel Pipeline
+- **GraphBit** shows **excellent throughput** (55–77 tasks/min) with **minimal CPU usage** (0.000–0.352%) and **very low memory** (0.011–0.072 MB). Execution times (~3,494–4,432 ms) are consistently good, making it one of the most efficient choices for parallel workloads.
+- **LangChain** achieves **strong throughput** (52–73 tasks/min) with **moderate CPU usage** (1.633–3.878%) and slightly higher memory (0.004–0.169 MB) than GraphBit. Execution times (~3,289–4,617 ms) are competitive.
+- **LangGraph** has **good execution times** (~3,115–4,225 ms) and low memory usage (0.055–0.118 MB), but throughput is **0 tasks/min** in all cases, indicating pipeline execution instability or failure in parallel processing.
+- **CrewAI** is **slower** (~3,905–4,973 ms) and **resource-heavy** with high CPU (5.052–13.648%) and memory usage (0.308–0.570 MB), though throughput (48–63 tasks/min) is reasonable.
+- **PydanticAI** offers **balanced performance**, with good throughput (55–72 tasks/min), low memory use (0.069–0.087 MB), and moderate CPU (1.647–4.133%). Execution times (~3,356–4,446 ms) are competitive.
+- **LlamaIndex** performs well in speed (~3,422–4,566 ms) and throughput (55–72 tasks/min) but uses more CPU (2.434–5.999%) and memory (0.058–0.103 MB) than GraphBit.
 
-·       **GraphBit** shows **excellent throughput** (55–77 tasks/min) with **minimal CPU usage** (0.000–0.352%) and **very low memory** (0.011–0.072 MB). Execution times (~3,494–4,432 ms) are consistently good, making it one of the most efficient choices for parallel workloads.
+---
 
-·       **LangChain** achieves **strong throughput** (52–73 tasks/min) with **moderate CPU usage** (1.633–3.878%) and slightly higher memory (0.004–0.169 MB) than GraphBit. Execution times (~3,289–4,617 ms) are competitive.
+### Scenario 4: Complex Workflow
 
-·       **LangGraph** has **good execution times** (~3,115–4,225 ms) and low memory usage (0.055–0.118 MB), but throughput is **0 tasks/min** in all cases, indicating pipeline execution instability or failure in parallel processing.
-
-·       **CrewAI** is **slower** (~3,905–4,973 ms) and **resource-heavy** with high CPU (5.052–13.648%) and memory usage (0.308–0.570 MB), though throughput (48–63 tasks/min) is reasonable.
-
-·       **PydanticAI** offers **balanced performance**, with good throughput (55–72 tasks/min), low memory use (0.069–0.087 MB), and moderate CPU (1.647–4.133%). Execution times (~3,356–4,446 ms) are competitive.
-
-·       **LlamaIndex** performs well in speed (~3,422–4,566 ms) and throughput (55–72 tasks/min) but uses more CPU (2.434–5.999%) and memory (0.058–0.103 MB) than GraphBit.
-
-* * *
-
-## Scenario 4: Complex Workflow
-
-### Complex Workflow – Cross-Platform Results (Averaged over 10 runs)
+#### Complex Workflow – Cross-Platform Results (Averaged over 10 runs)
 
 | Framework | Platform | Time (ms) | Memory (MB) | CPU (%) | Tokens | Throughput (tasks/min) |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -399,25 +334,19 @@ All results below are **averaged over 10 runs**, tested across both Intel and AM
 |  | AMD VM Windows | 22994.9 | 0.496 | 2.127 | 2489.0 | 16 |
 |  | MacOS M1 VM | 25124.9 | 0.347 | 1.949 | 2562.9 | 14 |
 
-* * *
+#### Observation – Complex Workflow
 
-### Observation – Complex Workflow
+- **GraphBit** uses **near-zero CPU** (0.010–0.033%) and **no measurable memory** (0.000 MB) but has **very long execution times** (~46,860–61,448 ms) and low throughput (4–6 tasks/min), making it suitable only for extreme resource-limited environments, not speed.
+- **LangChain** offers slightly faster times (~45,646–57,573 ms) with low CPU (0.171–0.381%) and negligible memory use (0.000–0.081 MB). Throughput is modest (5–6 tasks/min) but more consistent than GraphBit.
+- **CrewAI** is **significantly faster** than GraphBit/LangChain (~31,945–47,264 ms) with higher throughput (6–9 tasks/min) but uses more CPU (0.716–2.111%) and memory (0.278–0.498 MB).
+- **PydanticAI** balances speed (~46,975–55,628 ms) with low CPU (0.179–0.452%) and minimal memory (0.058–0.087 MB), delivering throughput of 5–6 tasks/min.
+- **LlamaIndex** is the **standout performer**, with the **fastest execution times** (~19,358–25,125 ms) and highest throughput (13–18 tasks/min). However, CPU usage is higher (1.295–2.964%) and memory usage is modest (0.000–0.512 MB), making it ideal for performance-focused workflows.
 
-·       **GraphBit** uses **near-zero CPU** (0.010–0.033%) and **no measurable memory** (0.000 MB) but has **very long execution times** (~46,860–61,448 ms) and low throughput (4–6 tasks/min), making it suitable only for extreme resource-limited environments, not speed.
+---
 
-·       **LangChain** offers slightly faster times (~45,646–57,573 ms) with low CPU (0.171–0.381%) and negligible memory use (0.000–0.081 MB). Throughput is modest (5–6 tasks/min) but more consistent than GraphBit.
+### Scenario 5: Memory Intensive
 
-·       **CrewAI** is **significantly faster** than GraphBit/LangChain (~31,945–47,264 ms) with higher throughput (6–9 tasks/min) but uses more CPU (0.716–2.111%) and memory (0.278–0.498 MB).
-
-·       **PydanticAI** balances speed (~46,975–55,628 ms) with low CPU (0.179–0.452%) and minimal memory (0.058–0.087 MB), delivering throughput of 5–6 tasks/min.
-
-·       **LlamaIndex** is the **standout performer**, with the **fastest execution times** (~19,358–25,125 ms) and highest throughput (13–18 tasks/min). However, CPU usage is higher (1.295–2.964%) and memory usage is modest (0.000–0.512 MB), making it ideal for performance-focused workflows.
-
-* * *
-
-## Scenario 5: Memory Intensive
-
-### Memory Intensive – Cross-Platform Results (Averaged over 10 runs)
+#### Memory Intensive – Cross-Platform Results (Averaged over 10 runs)
 
 | Framework | Platform | Time (ms) | Memory (MB) | CPU (%) | Tokens | Throughput (tasks/min) |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -452,25 +381,19 @@ All results below are **averaged over 10 runs**, tested across both Intel and AM
 |  | AMD VM Windows | 33759.7 | 26.929 | 37.967 | 5471.0 | 1 |
 |  | MacOS M1 VM | 22235.9 | 17.800 | 14.303 | 5470.3 | 3 |
 
-* * *
+#### Observation – Memory Intensive
 
-### Observation – Memory Intensive
+- **GraphBit** is the **most memory-efficient**, using **0.000–0.038 MB** with **extremely low CPU usage** (0.000–0.038%) and consistent execution times (~8,377–10,109 ms). Throughput is steady at 6–7 tasks/min, making it ideal for memory-constrained environments.
+- **LangChain** maintains **low memory usage** (0.000–0.077 MB) and **moderate CPU** (0.195–0.490%), with execution times (~7,647–12,144 ms) slightly longer than GraphBit. Throughput ranges from 5–7 tasks/min.
+- **CrewAI** uses **more memory** (0.192–0.389 MB) and **higher CPU** (0.634–1.570%) than the previous three, with execution times (~8,814–15,481 ms) and throughput of 4–6 tasks/min.
+- **PydanticAI** remains **low in memory** (0.053–0.075 MB) and **moderate in CPU** (0.176–0.445%) but has higher execution time variation (~8,081–14,678 ms) and throughput of 4–7 tasks/min.
+- **LlamaIndex** is **by far the heaviest** in memory (13.219–26.929 MB) and CPU (14.303–44.132%) with long execution times (~21,516–33,760 ms) and low throughput (1–3 tasks/min), making it poorly suited for memory-sensitive workloads.
 
-·       **GraphBit** is the **most memory-efficient**, using **0.000–0.038 MB** with **extremely low CPU usage** (0.000–0.038%) and consistent execution times (~8,377–10,109 ms). Throughput is steady at 6–7 tasks/min, making it ideal for memory-constrained environments.
+---
 
-·       **LangChain** maintains **low memory usage** (0.000–0.077 MB) and **moderate CPU** (0.195–0.490%), with execution times (~7,647–12,144 ms) slightly longer than GraphBit. Throughput ranges from 5–7 tasks/min.
+### Scenario 6: Concurrent Tasks
 
-·       **CrewAI** uses **more memory** (0.192–0.389 MB) and **higher CPU** (0.634–1.570%) than the previous three, with execution times (~8,814–15,481 ms) and throughput of 4–6 tasks/min.
-
-·       **PydanticAI** remains **low in memory** (0.053–0.075 MB) and **moderate in CPU** (0.176–0.445%) but has higher execution time variation (~8,081–14,678 ms) and throughput of 4–7 tasks/min.
-
-·       **LlamaIndex** is **by far the heaviest** in memory (13.219–26.929 MB) and CPU (14.303–44.132%) with long execution times (~21,516–33,760 ms) and low throughput (1–3 tasks/min), making it poorly suited for memory-sensitive workloads.
-
-* * *
-
-## Scenario 6: Concurrent Tasks
-
-### Concurrent Tasks – Cross-Platform Results (Averaged over 10 runs)
+#### Concurrent Tasks – Cross-Platform Results (Averaged over 10 runs)
 
 | Framework | Platform | Time (ms) | Memory (MB) | CPU (%) | Tokens | Throughput (tasks/min) |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -505,144 +428,13 @@ All results below are **averaged over 10 runs**, tested across both Intel and AM
 |  | AMD VM Windows | 47743.9 | 0.000 | 0.661 | 7444.7 | 12 |
 |  | MacOS M1 VM | 18887.7 | 0.045 | 1.482 | 7273.9 | 31 |
 
-* * *
-
-### Observation – Concurrent Tasks
-
-·       **GraphBit** uses **minimal memory** (0.000–0.011 MB) and **very low CPU** (0.024–0.130%) but has **long execution times** (~21,257–65,214 ms). Throughput varies significantly (9–28 tasks/min), with MacOS M1 showing the best parallel performance.
-
-·       **LangChain** maintains **low memory** (0.000–0.233 MB) and **moderate CPU usage** (0.311–1.209%), with execution times (~23,951–60,623 ms) and throughput (10–25 tasks/min) close to GraphBit.
-
-·       **LangGraph** delivers **similar speed** (~22,114–59,138 ms) with **low memory** (0.087–0.175 MB) and **moderate CPU** (0.322–1.236%). Throughput reaches up to 27 tasks/min, showing solid concurrency scaling.
-
-·       **CrewAI** is **heavier** in both CPU (1.076–2.888%) and memory (0.504–1.281 MB) but maintains decent throughput (9–23 tasks/min). Execution times (~40,824–65,278 ms) are on the slower side for concurrent work.
-
-·       **PydanticAI** offers **balanced performance** with low memory (0.112–0.148 MB), moderate CPU (0.369–1.299%), and throughput (10–28 tasks/min). Execution times (~21,572–55,257 ms) are competitive, especially on MacOS M1.
-
-·       **LlamaIndex** shows **good concurrency performance** with throughput peaking at **31 tasks/min** and competitive execution times (~18,888–55,822 ms). CPU usage is moderate (0.433–1.482%) with near-zero memory usage on some Linux/Windows platforms.
-
-* * *
-
-## 7\. Key Takeaways (Updated)
-
-### 1\. GraphBit – Ultra-Efficient, Minimal Resource Use
-
-**Strengths:**
-
-·       Lowest CPU usage across all scenarios (0.000–0.352%) and near-zero memory (<0.15 MB).
-
-·       Maintains stable performance in memory-intensive and concurrent tasks without spikes.
-
-·       Excels in scenarios where power efficiency is crucial (e.g., Scenario 5 & Scenario 6).
-
-**Trade-offs:**
-
-·       Slower in complex workflows and heavy pipelines compared to top-speed frameworks like LlamaIndex.
-
-·       Throughput drops in some heavy scenarios (e.g., Complex Workflow ~4–6 tasks/min).
-
-**Best Fit:**
-
-·       Edge computing, embedded systems, serverless functions, or highly resource-constrained deployments.
-
-* * *
-
-### 2\. LlamaIndex – Fastest Execution, Heavy Resource Demand
-
-**Strengths:**
-
-·       Consistently fastest execution in complex workflows (Scenario 4) and top throughput in concurrent tasks (Scenario 6: up to 31 tasks/min).
-
-·       Strong parallel pipeline performance with balanced speed and throughput (Scenario 3).
-
-**Trade-offs:**
-
-·       Very high CPU (up to 44.132%) and large memory consumption (13–26 MB in memory-intensive tasks).
-
-·       Significant performance degradation under memory pressure (Scenario 5).
-
-**Best Fit:**
-
-·       High-performance servers, GPU-backed workloads, and time-critical processing where efficiency is secondary.
-
-* * *
-
-### 3\. LangGraph – Competitive Concurrency, Stability Issues
-
-**Strengths:**
-
-·       Good concurrency scaling on AMD and Apple M1 platforms (Scenario 6 throughput up to 27 tasks/min).
-
-·       Balanced CPU and memory footprint in most successful runs.
-
-**Trade-offs:**
-
-·       Execution failures (0 throughput) in Parallel Pipeline (Scenario 3) and Complex Workflow (Scenario 4) due to token-processing issues.
-
-·       Inconsistent reliability across workloads.
-
-**Best Fit:**
-
-·       Concurrency-heavy environments where stability can be improved with custom error handling and retries.
-
-* * *
-
-### 4\. LangChain – Well-Rounded but Moderately Heavy
-
-**Strengths:**
-
-·       Consistent throughput across most scenarios (Scenario 3: up to 73 tasks/min, Scenario 6: up to 25 tasks/min).
-
-·       Mature ecosystem and strong integration support for complex use cases.
-
-**Trade-offs:**
-
-·       Higher CPU usage even in light workloads (2.4–5.3%).
-
-·       Slightly heavier memory usage in some scenarios compared to other efficient frameworks.
-
-**Best Fit:**
-
-·       Enterprise-grade AI applications where developer productivity and library maturity outweigh minimal resource consumption.
-
-* * *
-
-### 5\. CrewAI – Orchestration-Centric but Resource Intensive
-
-**Strengths:**
-
-·       Performs better in complex orchestration than in simple pipelines (Scenario 4 throughput up to 9 tasks/min).
-
-·       Predictable performance patterns across hardware platforms.
-
-**Trade-offs:**
-
-·       Higher CPU (up to 13.648%) and memory (0.192–2.666 MB) overhead.
-
-·       Lower throughput in light or parallel scenarios compared to top performers.
-
-**Best Fit:**
-
-·       Research, multi-agent experimentation, and prototyping rather than production-scale, cost-sensitive deployments.
-
-* * *
-
-### 6\. PydanticAI – Stable, Balanced, and Predictable
-
-**Strengths:**
-
-·       Consistent performance across scenarios (Scenario 3: up to 72 tasks/min, Scenario 6: up to 28 tasks/min).
-
-·       Low memory usage (0.053–0.148 MB) and moderate CPU draw (0.176–4.133%).
-
-**Trade-offs:**
-
-·       Rarely the fastest in execution or throughput, focusing on dependability rather than peak performance.
-
-**Best Fit:**
-
-·       Regulated industries, compliance-focused systems, and production environments prioritizing stability over raw speed.
-
-* * *
-
-* * *
+#### Observation – Concurrent Tasks
+
+- **GraphBit** uses **minimal memory** (0.000–0.011 MB) and **very low CPU** (0.024–0.130%) but has **long execution times** (~21,257–65,214 ms). Throughput varies significantly (9–28 tasks/min), with MacOS M1 showing the best parallel performance.
+- **LangChain** maintains **low memory** (0.000–0.233 MB) and **moderate CPU usage** (0.311–1.209%), with execution times (~23,951–60,623 ms) and throughput (10–25 tasks/min) close to GraphBit.
+- **LangGraph** delivers **similar speed** (~22,114–59,138 ms) with **low memory** (0.087–0.175 MB) and **moderate CPU** (0.322–1.236%). Throughput reaches up to 27 tasks/min, showing solid concurrency scaling.
+- **CrewAI** is **heavier** in both CPU (1.076–2.888%) and memory (0.504–1.281 MB) but maintains decent throughput (9–23 tasks/min). Execution times (~40,824–65,278 ms) are on the slower side for concurrent work.
+- **PydanticAI** offers **balanced performance** with low memory (0.112–0.148 MB), moderate CPU (0.369–1.299%), and throughput (10–28 tasks/min). Execution times (~21,572–55,257 ms) are competitive, especially on MacOS M1.
+- **LlamaIndex** shows **good concurrency performance** with throughput peaking at **31 tasks/min** and competitive execution times (~18,888–55,822 ms). CPU usage is moderate (0.433–1.482%) with near-zero memory usage on some Linux/Windows platforms.
+
+---

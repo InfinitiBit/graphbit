@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from graphbit import LlmConfig, Executor, Workflow, Node, WorkflowResult
+from graphbit import Executor, LlmConfig, Node, Workflow, WorkflowResult
 
 
 class TestExecutorConfiguration:

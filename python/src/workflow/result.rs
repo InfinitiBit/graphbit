@@ -68,11 +68,27 @@ impl WorkflowResult {
     /// Get a node's output by name or ID
     fn get_node_output(&self, node_name: &str) -> Option<String> {
         self.inner.get_node_output(node_name).and_then(|v| {
-            // Try to get as string first, then fall back to JSON serialization
-            if let Some(s) = v.as_str() {
-                Some(s.to_string())
-            } else {
-                serde_json::to_string(v).ok()
+            // Handle different JSON value types properly
+            match v {
+                serde_json::Value::String(s) => Some(s.clone()),
+                serde_json::Value::Null => None,
+                _ => {
+                    // For non-string values, serialize to JSON and then extract the string content
+                    match serde_json::to_string(v) {
+                        Ok(json_str) => {
+                            // If it's a JSON string, try to extract the inner content
+                            if json_str.starts_with('"')
+                                && json_str.ends_with('"')
+                                && json_str.len() > 2
+                            {
+                                Some(json_str[1..json_str.len() - 1].to_string())
+                            } else {
+                                Some(json_str)
+                            }
+                        }
+                        Err(_) => Some(format!("{:?}", v)),
+                    }
+                }
             }
         })
     }
@@ -83,13 +99,25 @@ impl WorkflowResult {
             .node_outputs
             .iter()
             .filter_map(|(k, v)| {
-                // Try to get as string first, then fall back to JSON serialization
-                let value_str = if let Some(s) = v.as_str() {
-                    s.to_string()
-                } else {
-                    match serde_json::to_string(v) {
-                        Ok(s) => s,
-                        Err(_) => return None,
+                // Handle different JSON value types properly
+                let value_str = match v {
+                    serde_json::Value::String(s) => s.clone(),
+                    serde_json::Value::Null => return None,
+                    _ => {
+                        match serde_json::to_string(v) {
+                            Ok(json_str) => {
+                                // If it's a JSON string, try to extract the inner content
+                                if json_str.starts_with('"')
+                                    && json_str.ends_with('"')
+                                    && json_str.len() > 2
+                                {
+                                    json_str[1..json_str.len() - 1].to_string()
+                                } else {
+                                    json_str
+                                }
+                            }
+                            Err(_) => format!("{:?}", v),
+                        }
                     }
                 };
                 Some((k.clone(), value_str))

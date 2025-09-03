@@ -40,7 +40,7 @@ impl CharacterSplitter {
     #[napi(constructor)]
     pub fn new(chunk_size: i32, chunk_overlap: i32) -> Result<Self> {
         validate_positive_number(chunk_size, "chunk_size")?;
-        
+
         if chunk_overlap >= chunk_size {
             return Err(Error::new(
                 Status::InvalidArg,
@@ -62,10 +62,19 @@ impl CharacterSplitter {
         let splitter = graphbit_core::text_splitter::CharacterSplitter::new(
             self.chunk_size as usize,
             self.chunk_overlap as usize,
-        ).map_err(|e| Error::new(Status::GenericFailure, format!("Failed to create splitter: {}", e)))?;
+        )
+        .map_err(|e| {
+            Error::new(
+                Status::GenericFailure,
+                format!("Failed to create splitter: {}", e),
+            )
+        })?;
 
         let core_chunks = splitter.split_text(&text).map_err(|e| {
-            Error::new(Status::GenericFailure, format!("Failed to split text: {}", e))
+            Error::new(
+                Status::GenericFailure,
+                format!("Failed to split text: {}", e),
+            )
         })?;
 
         let chunks = core_chunks
@@ -104,7 +113,7 @@ impl TokenSplitter {
     #[napi(constructor)]
     pub fn new(chunk_size: i32, chunk_overlap: i32) -> Result<Self> {
         validate_positive_number(chunk_size, "chunk_size")?;
-        
+
         if chunk_overlap >= chunk_size {
             return Err(Error::new(
                 Status::InvalidArg,
@@ -126,10 +135,19 @@ impl TokenSplitter {
         let splitter = graphbit_core::text_splitter::TokenSplitter::new(
             self.chunk_size as usize,
             self.chunk_overlap as usize,
-        ).map_err(|e| Error::new(Status::GenericFailure, format!("Failed to create splitter: {}", e)))?;
+        )
+        .map_err(|e| {
+            Error::new(
+                Status::GenericFailure,
+                format!("Failed to create splitter: {}", e),
+            )
+        })?;
 
         let core_chunks = splitter.split_text(&text).map_err(|e| {
-            Error::new(Status::GenericFailure, format!("Failed to split text: {}", e))
+            Error::new(
+                Status::GenericFailure,
+                format!("Failed to split text: {}", e),
+            )
         })?;
 
         let chunks = core_chunks
@@ -168,7 +186,7 @@ impl SentenceSplitter {
     #[napi(constructor)]
     pub fn new(chunk_size: i32, chunk_overlap: i32) -> Result<Self> {
         validate_positive_number(chunk_size, "chunk_size")?;
-        
+
         if chunk_overlap >= chunk_size {
             return Err(Error::new(
                 Status::InvalidArg,
@@ -190,10 +208,19 @@ impl SentenceSplitter {
         let splitter = graphbit_core::text_splitter::SentenceSplitter::new(
             self.chunk_size as usize,
             self.chunk_overlap as usize,
-        ).map_err(|e| Error::new(Status::GenericFailure, format!("Failed to create splitter: {}", e)))?;
+        )
+        .map_err(|e| {
+            Error::new(
+                Status::GenericFailure,
+                format!("Failed to create splitter: {}", e),
+            )
+        })?;
 
         let core_chunks = splitter.split_text(&text).map_err(|e| {
-            Error::new(Status::GenericFailure, format!("Failed to split text: {}", e))
+            Error::new(
+                Status::GenericFailure,
+                format!("Failed to split text: {}", e),
+            )
         })?;
 
         let chunks = core_chunks
@@ -232,7 +259,7 @@ impl RecursiveSplitter {
     #[napi(constructor)]
     pub fn new(chunk_size: i32, chunk_overlap: i32) -> Result<Self> {
         validate_positive_number(chunk_size, "chunk_size")?;
-        
+
         if chunk_overlap >= chunk_size {
             return Err(Error::new(
                 Status::InvalidArg,
@@ -254,10 +281,19 @@ impl RecursiveSplitter {
         let splitter = graphbit_core::text_splitter::RecursiveSplitter::new(
             self.chunk_size as usize,
             self.chunk_overlap as usize,
-        ).map_err(|e| Error::new(Status::GenericFailure, format!("Failed to create splitter: {}", e)))?;
+        )
+        .map_err(|e| {
+            Error::new(
+                Status::GenericFailure,
+                format!("Failed to create splitter: {}", e),
+            )
+        })?;
 
         let core_chunks = splitter.split_text(&text).map_err(|e| {
-            Error::new(Status::GenericFailure, format!("Failed to split text: {}", e))
+            Error::new(
+                Status::GenericFailure,
+                format!("Failed to split text: {}", e),
+            )
         })?;
 
         let chunks = core_chunks

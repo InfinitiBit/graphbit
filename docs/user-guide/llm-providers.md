@@ -6,10 +6,8 @@ GraphBit supports multiple Large Language Model providers through a unified clie
 
 GraphBit supports these LLM providers:
 - **OpenAI** - GPT models including GPT-4o, GPT-4o-mini
-- **Anthropic** - Claude models including Claude-3.5-Sonnet
+- **Anthropic** - Claude models including Claude-4-Sonnet
 - **Perplexity** - Real-time search-enabled models including Sonar models
-=======
-- **Anthropic** - Claude models including Claude-3.5-Sonnet  
 - **DeepSeek** - High-performance models including DeepSeek-Chat, DeepSeek-Coder, and DeepSeek-Reasoner
 - **HuggingFace** - Access to thousands of models via HuggingFace Inference API
 - **Ollama** - Local model execution with various open-source models
@@ -21,11 +19,12 @@ GraphBit supports these LLM providers:
 Configure OpenAI provider with API key and model selection:
 
 ```python
-import graphbit
 import os
 
+from graphbit import LlmConfig
+
 # Basic OpenAI configuration
-config = graphbit.LlmConfig.openai(
+config = LlmConfig.openai(
     api_key=os.getenv("OPENAI_API_KEY"),
     model="gpt-4o-mini"  # Optional - defaults to gpt-4o-mini
 )
@@ -41,25 +40,19 @@ print(f"Model: {config.model()}")        # "gpt-4o-mini"
 |-------|----------|----------------|-------------|
 | `gpt-4o` | Complex reasoning, latest features | 128K | High quality, slower |
 | `gpt-4o-mini` | Balanced performance and cost | 128K | Good quality, faster |
-| `gpt-4-turbo` | High-quality outputs | 128K | High quality |
-| `gpt-3.5-turbo` | Fast, cost-effective tasks | 16K | Fast, economical |
 
 ```python
 # Model selection examples
-creative_config = graphbit.LlmConfig.openai(
+creative_config = LlmConfig.openai(
     api_key=os.getenv("OPENAI_API_KEY"),
     model="gpt-4o"  # For creative and complex tasks
 )
 
-production_config = graphbit.LlmConfig.openai(
+production_config = LlmConfig.openai(
     api_key=os.getenv("OPENAI_API_KEY"),
     model="gpt-4o-mini"  # Balanced for production
 )
 
-fast_config = graphbit.LlmConfig.openai(
-    api_key=os.getenv("OPENAI_API_KEY"),
-    model="gpt-3.5-turbo"  # For high-volume, simple tasks
-)
 ```
 
 ### Anthropic Configuration
@@ -68,37 +61,36 @@ Configure Anthropic provider for Claude models:
 
 ```python
 # Basic Anthropic configuration
-config = graphbit.LlmConfig.anthropic(
+config = LlmConfig.anthropic(
     api_key=os.getenv("ANTHROPIC_API_KEY"),
-    model="claude-3-5-sonnet-20241022"  # Optional - defaults to claude-3-5-sonnet-20241022
+    model="claude-sonnet-4-20250514"  # Optional - defaults to claude-sonnet-4-20250514
 )
 
 print(f"Provider: {config.provider()}")  # "Anthropic"
-print(f"Model: {config.model()}")        # "claude-3-5-sonnet-20241022"
+print(f"Model: {config.model()}")        # "claude-sonnet-4-20250514"
 ```
 
 #### Available Anthropic Models
 
 | Model | Best For | Context Length | Speed |
 |-------|----------|----------------|-------|
-| `claude-3-opus-20240229` | Most capable, complex analysis | 200K | Slowest, highest quality |
-| `claude-3-sonnet-20240229` | Balanced performance | 200K | Medium speed and quality |
+| `claude-opus-4-1-20250805` | Most capable, complex analysis | 200K | Medium speed, highest quality |
+| `claude-sonnet-4-20250514` | Balanced performance | 200K/1M | Slow speed and good quality |
 | `claude-3-haiku-20240307` | Fast, cost-effective | 200K | Fastest, good quality |
-| `claude-3-5-sonnet-20241022` | Latest, improved reasoning | 200K | Good speed, high quality |
 
 ```python
 # Model selection for different use cases
-complex_config = graphbit.LlmConfig.anthropic(
+complex_config = LlmConfig.anthropic(
     api_key=os.getenv("ANTHROPIC_API_KEY"),
-    model="claude-3-opus-20240229"  # For complex analysis
+    model="claude-opus-4-1-20250805"  # For complex analysis
 )
 
-balanced_config = graphbit.LlmConfig.anthropic(
+balanced_config = LlmConfig.anthropic(
     api_key=os.getenv("ANTHROPIC_API_KEY"),
-    model="claude-3-5-sonnet-20241022"  # For balanced workloads
+    model="claude-sonnet-4-20250514"  # For balanced workloads
 )
 
-fast_config = graphbit.LlmConfig.anthropic(
+fast_config = LlmConfig.anthropic(
     api_key=os.getenv("ANTHROPIC_API_KEY"),
     model="claude-3-haiku-20240307"  # For speed and efficiency
 )
@@ -110,7 +102,7 @@ Configure Perplexity provider to access real-time search-enabled models:
 
 ```python
 # Basic Perplexity configuration
-config = graphbit.LlmConfig.perplexity(
+config = LlmConfig.perplexity(
     api_key=os.getenv("PERPLEXITY_API_KEY"),
     model="sonar"  # Optional - defaults to sonar
 )
@@ -123,43 +115,29 @@ print(f"Model: {config.model()}")        # "sonar"
 
 | Model | Best For | Context Length | Special Features |
 |-------|----------|----------------|------------------|
-| `sonar` | General purpose with search | 8K | Real-time web search, citations |
-| `sonar-reasoning` | Complex reasoning with search | 8K | Multi-step reasoning, web research |
-| `sonar-deep-research` | Comprehensive research | 32K | Exhaustive research, detailed analysis |
-| `pplx-7b-online` | Fast online inference | 4K | Quick responses with web data |
-| `pplx-70b-online` | High-quality online inference | 4K | Better quality with web data |
-| `pplx-7b-chat` | General chat without search | 8K | Standard chat functionality |
-| `pplx-70b-chat` | High-quality chat | 8K | Better chat quality |
+| `sonar` | General purpose with search | 128K | Real-time web search, citations |
+| `sonar-reasoning` | Complex reasoning with search | 128K | Multi-step reasoning, web research |
+| `sonar-deep-research` | Comprehensive research | 128K | Exhaustive research, detailed analysis |
 
 ```python
 # Model selection for different use cases
-research_config = graphbit.LlmConfig.perplexity(
+research_config = LlmConfig.perplexity(
     api_key=os.getenv("PERPLEXITY_API_KEY"),
     model="sonar-deep-research"  # For comprehensive research
 )
 
-reasoning_config = graphbit.LlmConfig.perplexity(
+reasoning_config = LlmConfig.perplexity(
     api_key=os.getenv("PERPLEXITY_API_KEY"),
     model="sonar-reasoning"  # For complex problem solving
 )
 
-fast_search_config = graphbit.LlmConfig.perplexity(
-    api_key=os.getenv("PERPLEXITY_API_KEY"),
-    model="pplx-7b-online"  # For fast web-enabled responses
-)
-
-chat_config = graphbit.LlmConfig.perplexity(
-    api_key=os.getenv("PERPLEXITY_API_KEY"),
-    model="pplx-70b-chat"  # For high-quality chat without search
-)
-=======
 ### DeepSeek Configuration
 
 Configure DeepSeek provider for high-performance, cost-effective AI models:
 
 ```python
 # Basic DeepSeek configuration
-config = graphbit.LlmConfig.deepseek(
+config = LlmConfig.deepseek(
     api_key=os.getenv("DEEPSEEK_API_KEY"),
     model="deepseek-chat"  # Optional - defaults to deepseek-chat
 )
@@ -172,46 +150,26 @@ print(f"Model: {config.model()}")        # "deepseek-chat"
 
 | Model | Best For | Context Length | Performance | Cost |
 |-------|----------|----------------|-------------|------|
-| `deepseek-chat` | General conversation, instruction following | 128K | High quality, fast | $0.14/$0.28 per 1M tokens |
-| `deepseek-coder` | Code generation, programming tasks | 128K | Specialized for code | $0.14/$0.28 per 1M tokens |
-| `deepseek-reasoner` | Complex reasoning, mathematics | 128K | Advanced reasoning | $0.55/$2.19 per 1M tokens |
-
-#### Key Features
-
-- **Cost-Effective**: Among the most competitive pricing in the market
-- **Function Calling**: Full support for tool/function calling
-- **Large Context**: 128K token context window for all models
-- **OpenAI Compatible**: Uses OpenAI-compatible API format
-- **High Performance**: Optimized for speed and quality
+| `deepseek-chat` | General conversation, instruction following | 128K | High quality, fast | 
+| `deepseek-coder` | Code generation, programming tasks | 128K | Specialized for code | 
+| `deepseek-reasoner` | Complex reasoning, mathematics | 128K | Advanced reasoning | 
 
 ```python
 # Model selection for different use cases
-general_config = graphbit.LlmConfig.deepseek(
+general_config = LlmConfig.deepseek(
     api_key=os.getenv("DEEPSEEK_API_KEY"),
     model="deepseek-chat"  # For general tasks and conversation
 )
 
-coding_config = graphbit.LlmConfig.deepseek(
+coding_config = LlmConfig.deepseek(
     api_key=os.getenv("DEEPSEEK_API_KEY"),
     model="deepseek-coder"  # For code generation and programming
 )
 
-reasoning_config = graphbit.LlmConfig.deepseek(
+reasoning_config = LlmConfig.deepseek(
     api_key=os.getenv("DEEPSEEK_API_KEY"),
     model="deepseek-reasoner"  # For complex reasoning tasks
 )
-```
-
-#### DeepSeek API Key Setup
-
-To use DeepSeek models, you need an API key:
-
-1. Create an account at [DeepSeek](https://platform.deepseek.com/)
-2. Generate an API key in your dashboard
-3. Set the environment variable:
-
-```bash
-export DEEPSEEK_API_KEY="your-api-key-here"
 ```
 
 ### HuggingFace Configuration
@@ -220,7 +178,7 @@ Configure HuggingFace provider to access thousands of models via the Inference A
 
 ```python
 # Basic HuggingFace configuration
-config = graphbit.LlmConfig.huggingface(
+config = LlmConfig.huggingface(
     api_key=os.getenv("HUGGINGFACE_API_KEY"),
     model="microsoft/DialoGPT-medium"  # Optional - defaults to microsoft/DialoGPT-medium
 )
@@ -229,7 +187,7 @@ print(f"Provider: {config.provider()}")  # "huggingface"
 print(f"Model: {config.model()}")        # "microsoft/DialoGPT-medium"
 
 # Custom endpoint configuration
-custom_config = graphbit.LlmConfig.huggingface(
+custom_config = LlmConfig.huggingface(
     api_key=os.getenv("HUGGINGFACE_API_KEY"),
     model="mistralai/Mistral-7B-Instruct-v0.1",
     base_url="https://my-custom-endpoint.huggingface.co"  # Optional custom endpoint
@@ -249,47 +207,27 @@ custom_config = graphbit.LlmConfig.huggingface(
 
 ```python
 # Model selection for different use cases
-dialogue_config = graphbit.LlmConfig.huggingface(
+dialogue_config = LlmConfig.huggingface(
     api_key=os.getenv("HUGGINGFACE_API_KEY"),
     model="microsoft/DialoGPT-large"  # For high-quality dialogue
 )
 
-instruction_config = graphbit.LlmConfig.huggingface(
+instruction_config = LlmConfig.huggingface(
     api_key=os.getenv("HUGGINGFACE_API_KEY"),
     model="mistralai/Mistral-7B-Instruct-v0.1"  # For instruction following
 )
 
-code_config = graphbit.LlmConfig.huggingface(
+code_config = LlmConfig.huggingface(
     api_key=os.getenv("HUGGINGFACE_API_KEY"),
     model="microsoft/CodeBERT-base"  # For code-related tasks
 )
 
 # Fast and lightweight option
-lightweight_config = graphbit.LlmConfig.huggingface(
+lightweight_config = LlmConfig.huggingface(
     api_key=os.getenv("HUGGINGFACE_API_KEY"),
     model="microsoft/DialoGPT-medium"  # Balanced performance
 )
 ```
-
-#### HuggingFace API Key Setup
-
-To use HuggingFace models, you need an API key:
-
-1. Create an account at [HuggingFace](https://huggingface.co/)
-2. Generate an API token in your [settings](https://huggingface.co/settings/tokens)
-3. Set the environment variable:
-
-```bash
-export HUGGINGFACE_API_KEY="your-api-key-here"
-```
-
-#### Model Selection Tips
-
-- **Free Tier**: Most models work with free HuggingFace accounts
-- **Custom Models**: You can use any public model from the HuggingFace Hub
-- **Private Models**: Use your own fine-tuned models with appropriate permissions
-- **Performance**: Larger models (7B+) provide better quality but slower responses
-- **Cost**: HuggingFace Inference API has competitive pricing for hosted inference
 
 ### Ollama Configuration
 
@@ -297,7 +235,7 @@ Configure Ollama for local model execution:
 
 ```python
 # Basic Ollama configuration (no API key required)
-config = graphbit.LlmConfig.ollama(
+config = LlmConfig.ollama(
     model="llama3.2"  # Optional - defaults to llama3.2
 )
 
@@ -305,9 +243,9 @@ print(f"Provider: {config.provider()}")  # "Ollama"
 print(f"Model: {config.model()}")        # "llama3.2"
 
 # Other popular models
-mistral_config = graphbit.LlmConfig.ollama(model="mistral")
-codellama_config = graphbit.LlmConfig.ollama(model="codellama")
-phi_config = graphbit.LlmConfig.ollama(model="phi")
+mistral_config = LlmConfig.ollama(model="mistral")
+codellama_config = LlmConfig.ollama(model="codellama")
+phi_config = LlmConfig.ollama(model="phi")
 ```
 
 ## LLM Client Usage
@@ -315,8 +253,10 @@ phi_config = graphbit.LlmConfig.ollama(model="phi")
 ### Creating and Using Clients
 
 ```python
+from graphbit import LlmClient
+
 # Create client with configuration
-client = graphbit.LlmClient(config, debug=False)
+client = LlmClient(config, debug=False)
 
 # Basic text completion
 response = client.complete(
@@ -469,24 +409,26 @@ print("Client statistics reset")
 ### OpenAI Workflow Example
 
 ```python
+import os
+
+from graphbit import LlmConfig, Workflow, Node, Executor
+
 def create_openai_workflow():
     """Create workflow using OpenAI"""
-    # Initialize GraphBit
-    graphbit.init()
     
     # Configure OpenAI
-    config = graphbit.LlmConfig.openai(
+    config = LlmConfig.openai(
         api_key=os.getenv("OPENAI_API_KEY"),
         model="gpt-4o-mini"
     )
     
     # Create workflow
-    workflow = graphbit.Workflow("OpenAI Analysis Pipeline")
+    workflow = Workflow("OpenAI Analysis Pipeline")
     
     # Create analyzer node
-    analyzer = graphbit.Node.agent(
+    analyzer = Node.agent(
         name="GPT Content Analyzer",
-        prompt="Analyze the following content for sentiment, key themes, and quality:\n\n{input}",
+        prompt=f"Analyze the following content for sentiment, key themes, and quality:\n\n{input}",
         agent_id="gpt_analyzer"
     )
     
@@ -495,7 +437,7 @@ def create_openai_workflow():
     workflow.validate()
     
     # Create executor and run
-    executor = graphbit.Executor(config, timeout_seconds=60)
+    executor = Executor(config, timeout_seconds=60)
     return workflow, executor
 
 # Usage
@@ -506,23 +448,26 @@ result = executor.execute(workflow)
 ### Anthropic Workflow Example
 
 ```python
+import os
+
+from graphbit import LlmConfig, Workflow, Node, Executor
+
 def create_anthropic_workflow():
     """Create workflow using Anthropic Claude"""
-    graphbit.init()
     
     # Configure Anthropic
-    config = graphbit.LlmConfig.anthropic(
+    config = LlmConfig.anthropic(
         api_key=os.getenv("ANTHROPIC_API_KEY"),
-        model="claude-3-5-sonnet-20241022"
+        model="claude-sonnet-4-20250514"
     )
     
     # Create workflow
-    workflow = graphbit.Workflow("Claude Analysis Pipeline")
+    workflow = Workflow("Claude Analysis Pipeline")
     
     # Create analyzer with detailed prompt
-    analyzer = graphbit.Node.agent(
+    analyzer = Node.agent(
         name="Claude Content Analyzer",
-        prompt="""
+        prompt=f"""
         Analyze the following content with attention to:
         - Factual accuracy and logical consistency
         - Potential biases or assumptions
@@ -540,7 +485,7 @@ def create_anthropic_workflow():
     workflow.validate()
     
     # Create executor with longer timeout for Claude
-    executor = graphbit.Executor(config, timeout_seconds=120)
+    executor = Executor(config, timeout_seconds=120)
     return workflow, executor
 
 # Usage
@@ -550,23 +495,26 @@ workflow, executor = create_anthropic_workflow()
 ### DeepSeek Workflow Example
 
 ```python
+import os
+
+from graphbit import LlmConfig, Workflow, Node, Executor
+
 def create_deepseek_workflow():
     """Create workflow using DeepSeek models"""
-    graphbit.init()
     
     # Configure DeepSeek
-    config = graphbit.LlmConfig.deepseek(
+    config = LlmConfig.deepseek(
         api_key=os.getenv("DEEPSEEK_API_KEY"),
         model="deepseek-chat"
     )
     
     # Create workflow
-    workflow = graphbit.Workflow("DeepSeek Analysis Pipeline")
+    workflow = Workflow("DeepSeek Analysis Pipeline")
     
     # Create analyzer optimized for DeepSeek's capabilities
-    analyzer = graphbit.Node.agent(
+    analyzer = Node.agent(
         name="DeepSeek Content Analyzer",
-        prompt="""
+        prompt=f"""
         Analyze the following content efficiently and accurately:
         - Main topics and themes
         - Key insights and takeaways
@@ -584,24 +532,23 @@ def create_deepseek_workflow():
     workflow.validate()
     
     # Create executor optimized for DeepSeek's fast inference
-    executor = graphbit.Executor(config, timeout_seconds=90)
+    executor = Executor(config, timeout_seconds=90)
     return workflow, executor
 
 # Usage for different DeepSeek models
 def create_deepseek_coding_workflow():
     """Create workflow for code analysis using DeepSeek Coder"""
-    graphbit.init()
     
-    config = graphbit.LlmConfig.deepseek(
+    config = LlmConfig.deepseek(
         api_key=os.getenv("DEEPSEEK_API_KEY"),
         model="deepseek-coder"
     )
     
-    workflow = graphbit.Workflow("DeepSeek Code Analysis")
+    workflow = Workflow("DeepSeek Code Analysis")
     
-    code_analyzer = graphbit.Node.agent(
+    code_analyzer = Node.agent(
         name="DeepSeek Code Reviewer",
-        prompt="""
+        prompt=f"""
         Review this code for:
         - Code quality and best practices
         - Potential bugs or issues
@@ -616,7 +563,7 @@ def create_deepseek_coding_workflow():
     workflow.add_node(code_analyzer)
     workflow.validate()
     
-    executor = graphbit.Executor(config, timeout_seconds=90)
+    executor = Executor(config, timeout_seconds=90)
     return workflow, executor
 
 # Usage
@@ -626,20 +573,21 @@ workflow, executor = create_deepseek_workflow()
 ### Ollama Workflow Example
 
 ```python
+from graphbit import LlmConfig, Workflow, Node, Executor
+
 def create_ollama_workflow():
     """Create workflow using local Ollama models"""
-    graphbit.init()
     
     # Configure Ollama (no API key needed)
-    config = graphbit.LlmConfig.ollama(model="llama3.2")
+    config = LlmConfig.ollama(model="llama3.2")
     
     # Create workflow
-    workflow = graphbit.Workflow("Local LLM Pipeline")
+    workflow = Workflow("Local LLM Pipeline")
     
     # Create analyzer optimized for local models
-    analyzer = graphbit.Node.agent(
+    analyzer = Node.agent(
         name="Local Model Analyzer",
-        prompt="Analyze this text briefly: {input}",
+        prompt=f"Analyze this text briefly: {input}",
         agent_id="local_analyzer"
     )
     
@@ -647,7 +595,7 @@ def create_ollama_workflow():
     workflow.validate()
     
     # Create executor with longer timeout for local processing
-    executor = graphbit.Executor(config, timeout_seconds=180)
+    executor = Executor(config, timeout_seconds=180)
     return workflow, executor
 
 # Usage
@@ -662,24 +610,24 @@ Configure appropriate timeouts for different providers:
 
 ```python
 # OpenAI - typically faster
-openai_executor = graphbit.Executor(
+openai_executor = Executor(
     openai_config, 
     timeout_seconds=60
 )
 
 
-anthropic_executor = graphbit.Executor(
+anthropic_executor = Executor(
     anthropic_config, 
     timeout_seconds=120
 )
 
-deepseek_executor = graphbit.Executor(
+deepseek_executor = Executor(
     deepseek_config, 
     timeout_seconds=90
 )
 
 
-ollama_executor = graphbit.Executor(
+ollama_executor = Executor(
     ollama_config, 
     timeout_seconds=180
 )
@@ -691,21 +639,16 @@ Choose appropriate executor types based on provider characteristics:
 
 ```python
 # High-throughput for cloud providers
-cloud_executor = graphbit.Executor.new_high_throughput(
+cloud_executor = Executor(
     llm_config=openai_config,
     timeout_seconds=60
 )
 
 # Low-latency for fast providers
-realtime_executor = graphbit.Executor.new_low_latency(
+realtime_executor = Executor(
     llm_config=anthropic_config,
+    lightweight_mode=True,
     timeout_seconds=30
-)
-
-# Memory-optimized for local models
-local_executor = graphbit.Executor.new_memory_optimized(
-    llm_config=ollama_config,
-    timeout_seconds=180
 )
 ```
 
@@ -716,12 +659,12 @@ local_executor = graphbit.Executor.new_memory_optimized(
 ```python
 def robust_llm_usage():
     try:
-        # Initialize and configure
-        graphbit.init()
-        config = graphbit.LlmConfig.openai(
+        # Configure
+        config = LlmConfig.openai(
             api_key=os.getenv("OPENAI_API_KEY")
         )
-        client = graphbit.LlmClient(config)
+
+        client = LlmClient(config)
         
         # Execute with error handling
         response = client.complete(
@@ -765,34 +708,34 @@ Choose providers based on your requirements:
 def get_optimal_config(use_case):
     """Select optimal provider for use case"""
     if use_case == "creative":
-        return graphbit.LlmConfig.openai(
+        return LlmConfig.openai(
             api_key=os.getenv("OPENAI_API_KEY"),
             model="gpt-4o"
         )
     elif use_case == "analytical":
-        return graphbit.LlmConfig.anthropic(
+        return LlmConfig.anthropic(
             api_key=os.getenv("ANTHROPIC_API_KEY"),
-            model="claude-3-5-sonnet-20241022"
+            model="claude-sonnet-4-20250514"
         )
     elif use_case == "cost_effective":
-        return graphbit.LlmConfig.deepseek(
+        return LlmConfig.deepseek(
             api_key=os.getenv("DEEPSEEK_API_KEY"),
             model="deepseek-chat"
         )
     elif use_case == "coding":
-        return graphbit.LlmConfig.deepseek(
+        return LlmConfig.deepseek(
             api_key=os.getenv("DEEPSEEK_API_KEY"),
             model="deepseek-coder"
         )
     elif use_case == "reasoning":
-        return graphbit.LlmConfig.deepseek(
+        return LlmConfig.deepseek(
             api_key=os.getenv("DEEPSEEK_API_KEY"),
             model="deepseek-reasoner"
         )
     elif use_case == "local":
-        return graphbit.LlmConfig.ollama(model="llama3.2")
+        return LlmConfig.ollama(model="llama3.2")
     else:
-        return graphbit.LlmConfig.openai(
+        return LlmConfig.openai(
             api_key=os.getenv("OPENAI_API_KEY"),
             model="gpt-4o-mini"
         )
@@ -826,7 +769,7 @@ def get_api_key(provider):
 
 # Usage
 try:
-    openai_config = graphbit.LlmConfig.openai(
+    openai_config = LlmConfig.openai(
         api_key=get_api_key("openai")
     )
 except ValueError as e:
@@ -848,26 +791,26 @@ class LLMManager:
         
         if key not in self.clients:
             if provider == "openai":
-                config = graphbit.LlmConfig.openai(
+                config = LlmConfig.openai(
                     api_key=get_api_key("openai"),
                     model=model
                 )
             elif provider == "anthropic":
-                config = graphbit.LlmConfig.anthropic(
+                config = LlmConfig.anthropic(
                     api_key=get_api_key("anthropic"),
                     model=model
                 )
             elif provider == "deepseek":
-                config = graphbit.LlmConfig.deepseek(
+                config = LlmConfig.deepseek(
                     api_key=get_api_key("deepseek"),
                     model=model
                 )
             elif provider == "ollama":
-                config = graphbit.LlmConfig.ollama(model=model)
+                config = LlmConfig.ollama(model=model)
             else:
                 raise ValueError(f"Unknown provider: {provider}")
             
-            self.clients[key] = graphbit.LlmClient(config)
+            self.clients[key] = LlmClient(config)
         
         return self.clients[key]
 

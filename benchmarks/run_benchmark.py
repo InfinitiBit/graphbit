@@ -17,50 +17,21 @@ import os
 import sys
 import time
 import traceback
+import click
+import matplotlib.pyplot as plt
+import numpy as np
+import seaborn as sns
 from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
-
-import click
-
-if sys.platform == "win32" or sys.platform == "darwin":
-
-    def sched_getaffinity(pid=0):
-        """Fallback for macOS and Windows to get CPU affinity."""
-        return set(range(os.cpu_count() or 4))  # safe fallback
-
-else:
-    from os import sched_getaffinity
-
-
-try:
-    import matplotlib.pyplot as plt
-    import numpy as np
-    import seaborn as sns
-except Exception as e:  # pragma: no cover - optional deps
-    plt = None  # type: ignore
-    np = None  # type: ignore
-    sns = None  # type: ignore
-    print(f"Warning: visualization libraries not available ({e}). " "Plots will be disabled.")
-
-# API key will be checked later when actually running benchmarks
-
-# Add the benchmarks directory to Python path
-benchmarks_path = Path(__file__).parent / "frameworks"
-sys.path.insert(0, str(benchmarks_path))
-
-
-def _default_concurrency() -> int:
-    return len(sched_getaffinity(0))
-
-
-# Central global variable for number of runs
-NUM_RUNS = 10
-DEFAULT_CONCURRENCY = _default_concurrency()
-
-try:
-    from frameworks.common import (
+from frameworks.crewai_benchmark import CrewAIBenchmark
+from frameworks.graphbit_benchmark import GraphBitBenchmark
+from frameworks.langchain_benchmark import LangChainBenchmark
+from frameworks.langgraph_benchmark import LangGraphBenchmark
+from frameworks.llamaindex_benchmark import LlamaIndexBenchmark
+from frameworks.pydantic_ai_benchmark import PydanticAIBenchmark
+from frameworks.common import (
         DEFAULT_MAX_TOKENS,
         DEFAULT_MODEL,
         DEFAULT_TEMPERATURE,
@@ -76,9 +47,28 @@ try:
         set_memory_binding,
         set_process_affinity,
     )
-except Exception as e:
-    print(f"Warning: failed to import core benchmark utilities ({e}).")
-    raise
+
+if sys.platform == "win32" or sys.platform == "darwin":
+
+    def sched_getaffinity(pid=0):
+        """Fallback for macOS and Windows to get CPU affinity."""
+        return set(range(os.cpu_count() or 4))  
+
+else:
+    from os import sched_getaffinity
+
+# Add the benchmarks directory to Python path
+benchmarks_path = Path(__file__).parent / "frameworks"
+sys.path.insert(0, str(benchmarks_path))
+
+
+def _default_concurrency() -> int:
+    return len(sched_getaffinity(0))
+
+
+# Central global variable for number of runs
+NUM_RUNS = 10
+DEFAULT_CONCURRENCY = _default_concurrency()
 
 # Framework specific modules are loaded lazily inside ``main`` to allow running
 # ``--help`` even when optional dependencies are missing.
@@ -96,15 +86,6 @@ class ComprehensiveBenchmarkRunner:
         num_runs: Optional[int] = None,
     ):
         """Initialize the benchmark runner with configuration."""
-        # Import framework implementations lazily to avoid ImportErrors when
-        # the script is executed with ``--help`` and optional dependencies are
-        # missing.
-        from frameworks.crewai_benchmark import CrewAIBenchmark
-        from frameworks.graphbit_benchmark import GraphBitBenchmark
-        from frameworks.langchain_benchmark import LangChainBenchmark
-        from frameworks.langgraph_benchmark import LangGraphBenchmark
-        from frameworks.llamaindex_benchmark import LlamaIndexBenchmark
-        from frameworks.pydantic_ai_benchmark import PydanticAIBenchmark
 
         self.verbose = verbose
         self.llm_config = llm_config
@@ -140,10 +121,9 @@ class ComprehensiveBenchmarkRunner:
         Path(log_dir).mkdir(exist_ok=True)
         Path(results_dir).mkdir(exist_ok=True)
 
-        # Set up plotting style if visualization libraries are available
-        if plt is not None and sns is not None:
-            plt.style.use("seaborn-v0_8-darkgrid")
-            sns.set_palette("husl")
+        # Set up plotting style using visualization libraries 
+        plt.style.use("seaborn-v0_8-darkgrid")
+        sns.set_palette("husl")
 
         # Initialize framework benchmarks
         self.frameworks: Dict[FrameworkType, Dict[str, Any]] = {
@@ -598,8 +578,6 @@ class ComprehensiveBenchmarkRunner:
         self.save_results_to_json()
         self.create_visualizations()
         self.log(f"Benchmark completed in {overall_time:.2f} seconds")
-        self.log(f"Results saved to: {Path(str(self.config['log_dir'])).absolute()}")
-        self.log(f"Visualizations saved to: {Path(str(self.config['results_dir'])).absolute()}")
         if self.num_runs > 1:
             click.echo(click.style(f"\nNOTE: All reported metrics are averaged over {self.num_runs} runs per scenario.\n", fg="yellow", bold=True))
 
@@ -762,8 +740,6 @@ def main(
     except Exception as e:
         click.echo(f"Benchmark failed: {e}", err=True)
         if verbose:
-            import traceback
-
             traceback.print_exc()
 
 

@@ -1,8 +1,8 @@
 //! Embedding client for GraphBit Node.js bindings
 
 use super::config::EmbeddingConfig;
-use crate::validation::validate_non_empty_string;
 use crate::errors::to_napi_error;
+use crate::validation::validate_non_empty_string;
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use std::collections::HashMap;
@@ -32,7 +32,9 @@ impl EmbeddingClient {
     #[napi(constructor)]
     pub fn new(config: &EmbeddingConfig) -> Result<Self> {
         config.validate()?;
-        Ok(Self { config: config.clone() })
+        Ok(Self {
+            config: config.clone(),
+        })
     }
 
     /// Generate embeddings for text
@@ -63,13 +65,16 @@ impl EmbeddingClient {
 
         // Convert Node.js config to core config
         let core_config = self.convert_to_core_config()?;
-        
+
         // Create the embedding service
-        let embedding_service = graphbit_core::embeddings::EmbeddingService::new(core_config)
-            .map_err(to_napi_error)?;
+        let embedding_service =
+            graphbit_core::embeddings::EmbeddingService::new(core_config).map_err(to_napi_error)?;
 
         // Generate embeddings using the core service
-        let core_embeddings = embedding_service.embed_texts(&texts).await.map_err(to_napi_error)?;
+        let core_embeddings = embedding_service
+            .embed_texts(&texts)
+            .await
+            .map_err(to_napi_error)?;
 
         // Convert f32 to f64 for Node.js compatibility
         let embeddings: Vec<Vec<f64>> = core_embeddings
@@ -101,13 +106,16 @@ impl EmbeddingClient {
     pub async fn get_dimensions(&self) -> Result<i32> {
         // Convert Node.js config to core config
         let core_config = self.convert_to_core_config()?;
-        
+
         // Create the embedding service
-        let embedding_service = graphbit_core::embeddings::EmbeddingService::new(core_config)
-            .map_err(to_napi_error)?;
+        let embedding_service =
+            graphbit_core::embeddings::EmbeddingService::new(core_config).map_err(to_napi_error)?;
 
         // Get dimensions from the service
-        let dimensions = embedding_service.get_dimensions().await.map_err(to_napi_error)?;
+        let dimensions = embedding_service
+            .get_dimensions()
+            .await
+            .map_err(to_napi_error)?;
 
         Ok(dimensions as i32)
     }
@@ -131,16 +139,24 @@ impl EmbeddingClient {
         let provider = match self.config.provider.as_str() {
             "openai" => graphbit_core::embeddings::EmbeddingProvider::OpenAI,
             "huggingface" => graphbit_core::embeddings::EmbeddingProvider::HuggingFace,
-            provider => return Err(Error::new(
-                Status::InvalidArg,
-                format!("Unsupported embedding provider: {}", provider),
-            )),
+            provider => {
+                return Err(Error::new(
+                    Status::InvalidArg,
+                    format!("Unsupported embedding provider: {}", provider),
+                ))
+            }
         };
 
-        let api_key = self.config.api_key.as_ref()
+        let api_key = self
+            .config
+            .api_key
+            .as_ref()
             .ok_or_else(|| Error::new(Status::InvalidArg, "API key is required"))?;
-            
-        let model = self.config.model.as_deref()
+
+        let model = self
+            .config
+            .model
+            .as_deref()
             .unwrap_or("text-embedding-ada-002");
 
         Ok(graphbit_core::embeddings::EmbeddingConfig {

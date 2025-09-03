@@ -16,13 +16,15 @@ GraphBit monitoring encompasses:
 ### Core Metrics Collection
 
 ```python
-import graphbit
 import time
 import json
+import uuid
+import os
+
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 from datetime import datetime, timedelta
-import os
+from graphbit import Workflow, Node, LlmConfig, Executor
 
 @dataclass
 class WorkflowMetrics:
@@ -47,16 +49,13 @@ class WorkflowMonitor:
     
     def start_execution(self, workflow, execution_id=None):
         """Start monitoring a workflow execution."""
-        
         if execution_id is None:
-            execution_id = f"exec_{int(time.time())}"
+            execution_id = f"exec_{int(time.time())}_{uuid.uuid4().hex[:8]}"
         
-        # Count nodes in workflow (basic implementation)
-        node_count = 0
+        # Count nodes in workflow
         try:
-            # Attempt to get node count if workflow has such a method
-            node_count = len(workflow.nodes()) if hasattr(workflow, 'nodes') else 1
-        except:
+            node_count = len(workflow.nodes()) if hasattr(workflow, 'nodes') 
+        except Exception:
             node_count = 1  # Default assumption
         
         metrics = WorkflowMetrics(
@@ -66,13 +65,11 @@ class WorkflowMonitor:
             start_time=datetime.now(),
             node_count=node_count
         )
-        
         self.active_executions[execution_id] = metrics
         return execution_id
     
     def end_execution(self, execution_id, status="completed", error_message=None):
         """End monitoring a workflow execution."""
-        
         if execution_id not in self.active_executions:
             return
         
@@ -84,18 +81,18 @@ class WorkflowMonitor:
         metrics.status = status
         metrics.error_message = error_message
         
+        # Assume all nodes executed if none recorded
+        if metrics.nodes_executed == 0:
+            metrics.nodes_executed = metrics.node_count
+        
         # Move to permanent storage
         self.metrics_store.append(metrics)
         del self.active_executions[execution_id]
     
     def get_metrics_summary(self, time_window_hours=24):
         """Get metrics summary for specified time window."""
-        
         cutoff_time = datetime.now() - timedelta(hours=time_window_hours)
-        recent_metrics = [
-            m for m in self.metrics_store 
-            if m.start_time > cutoff_time
-        ]
+        recent_metrics = [m for m in self.metrics_store if m.start_time > cutoff_time]
         
         if not recent_metrics:
             return {"message": "No metrics in time window"}
@@ -115,43 +112,56 @@ class WorkflowMonitor:
 
 def create_monitored_workflow():
     """Create workflow with built-in monitoring."""
-    
-    # Initialize GraphBit
-    graphbit.init()
-    
-    workflow = graphbit.Workflow("Monitored Workflow")
-    
-    # Monitoring agent
-    monitor = graphbit.Node.agent(
+    workflow = Workflow("Monitored Workflow")
+
+    monitor = Node.agent(
         name="Execution Monitor",
-        prompt="""
-        Monitor this workflow execution:
-        
-        Input: {input}
-        
-        Report:
-        - Processing status
-        - Performance metrics
-        - Any issues detected
-        - Resource usage estimates
-        """,
+        prompt='''
+            "Monitor this workflow execution:\n\n"
+            
+            "Report:\n"
+            "- Processing status\n"
+            "- Performance metrics\n"
+            "- Any issues detected\n"
+            "- Resource usage estimates\n"
+            ''',
         agent_id="monitor"
     )
     
-    # Main processor
-    processor = graphbit.Node.agent(
+    processor = Node.agent(
         name="Main Processor",
-        prompt="Process this data: {input}",
+        prompt="Process this data.",
         agent_id="processor"
     )
     
-    # Build monitored workflow
     monitor_id = workflow.add_node(monitor)
     processor_id = workflow.add_node(processor)
-    
     workflow.connect(monitor_id, processor_id)
-    
     return workflow
+
+def run_with_monitor(workflow: Workflow, monitor: WorkflowMonitor) -> dict:
+    """Execute a workflow while collecting metrics."""
+    exec_id = monitor.start_execution(workflow)
+    try:
+        config = LlmConfig.openai(os.getenv('OPENAI_API_KEY'))
+
+        executor = Executor(config)
+        result = executor.execute(workflow)
+        
+        monitor.end_execution(exec_id, status="completed")
+        return {"execution_id": exec_id, "status": "completed", "result": result.get_all_node_outputs()}
+    except Exception as e:
+        monitor.end_execution(exec_id, status="failed", error_message=str(e))
+        return {"execution_id": exec_id, "status": "failed", "error": str(e)}
+
+# ---------- example usage ----------
+if __name__ == "__main__":
+    wf = create_monitored_workflow()
+    wm = WorkflowMonitor()
+    
+    outcome = run_with_monitor(wf, wm)
+    print("Run outcome:", json.dumps(outcome, default=str, indent=2))
+    print("Summary (24h):", json.dumps(wm.get_metrics_summary(24), default=str, indent=2))
 ```
 
 ## Performance Monitoring
@@ -271,6 +281,14 @@ def monitor_workflow_execution(workflow, executor, monitor=None):
 ### Health Check Implementation
 
 ```python
+import time
+import threading
+from typing import List, Dict
+
+from datetime import datetime, timedelta
+from graphbit import health_check, get_system_info
+
+
 class SystemHealthMonitor:
     """Monitor GraphBit system health."""
     
@@ -310,7 +328,6 @@ class SystemHealthMonitor:
                 time.sleep(self.check_interval)
         
         # Start monitoring in background thread
-        import threading
         monitor_thread = threading.Thread(target=monitor_loop, daemon=True)
         monitor_thread.start()
     
@@ -323,7 +340,7 @@ class SystemHealthMonitor:
         
         try:
             # Use GraphBit's built-in health check
-            health = graphbit.health_check()
+            health = health_check()
             
             # Add custom health metrics
             custom_health = {
@@ -348,7 +365,7 @@ class SystemHealthMonitor:
         
         # Check system info availability
         try:
-            info = graphbit.get_system_info()
+            info = get_system_info()
             checks["system_info_available"] = True
             checks["runtime_initialized"] = info.get("runtime_initialized", False)
         except:
@@ -523,7 +540,6 @@ def execute_with_error_tracking(workflow, executor, error_tracker=None):
             }
             
             try:
-                error_message = result.error()
                 error_tracker.record_error(
                     Exception(f"Workflow execution failed: {error_message}"),
                     error_context
@@ -594,7 +610,7 @@ class BusinessMetricsCollector:
         }
 
 # Example usage with workflow execution
-def execute_with_business_metrics(workflow, executor, metrics_collector=None):
+def execute_with_business_metrics(workflow, executor, node_name, metrics_collector=None):
     """Execute workflow with business metrics collection."""
     
     if metrics_collector is None:
@@ -611,12 +627,12 @@ def execute_with_business_metrics(workflow, executor, metrics_collector=None):
         execution_time = (time.time() - start_time) * 1000
         metrics_collector.record_metric("workflow_execution_time_ms", execution_time)
         
-        if result.is_completed():
+        if result.is_success():
             metrics_collector.record_metric("workflow_executions_completed", 1)
             
             # Record output length if available
             try:
-                output = result.output()
+                output = result.get_node_output(node_name)
                 if isinstance(output, str):
                     metrics_collector.record_metric("workflow_output_length", len(output))
             except:
@@ -638,6 +654,8 @@ def execute_with_business_metrics(workflow, executor, metrics_collector=None):
 ### Simple Text-based Dashboard
 
 ```python
+from graphbit import init
+
 class MonitoringDashboard:
     """Simple text-based monitoring dashboard."""
     
@@ -786,7 +804,7 @@ def setup_comprehensive_monitoring():
 # Usage example
 if __name__ == "__main__":
     # Initialize GraphBit
-    graphbit.init()
+    init()
     
     # Set up monitoring
     monitoring = setup_comprehensive_monitoring()
@@ -803,6 +821,8 @@ if __name__ == "__main__":
 ### Exporting Metrics
 
 ```python
+from graphbit import get_system_info
+
 def export_metrics_to_json(monitors, output_file="graphbit_metrics.json"):
     """Export all metrics to JSON file."""
     
@@ -819,7 +839,7 @@ def export_metrics_to_json(monitors, output_file="graphbit_metrics.json"):
     
     # Add system info if available
     try:
-        export_data["system_info"] = graphbit.get_system_info()
+        export_data["system_info"] = get_system_info()
     except:
         pass
     
