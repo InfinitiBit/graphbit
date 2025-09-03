@@ -3,6 +3,7 @@
 //! Tests for the validation system including type validation,
 //! workflow validation, and custom validation rules.
 
+use graphbit_core::types::{AgentId, AgentMessage, MessageContent};
 use graphbit_core::validation::{TypeValidator, ValidationRule};
 
 #[tokio::test]
@@ -62,6 +63,19 @@ async fn test_json_schema_validation() {
 
     let result = validator.validate_against_schema(&invalid_data.to_string(), &schema);
     assert!(!result.is_valid);
+
+    // Ensure we can validate the same JSON string extracted from a message
+    let msg = AgentMessage::new(
+        AgentId::new(),
+        None,
+        MessageContent::Text(valid_data.to_string()),
+    );
+    if let MessageContent::Text(s) = &msg.content {
+        let msg_res = validator.validate_against_schema(s, &schema);
+        assert!(msg_res.is_valid);
+    } else {
+        panic!("expected text content");
+    }
 }
 
 #[tokio::test]

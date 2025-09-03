@@ -7,13 +7,16 @@
 pub mod agent_tests;
 pub mod concurrency_tests;
 pub mod doc_processing_tests;
+pub mod document_loader_tests;
 pub mod embeddings_tests;
 pub mod error_handling_tests;
+pub mod error_propagation_integration;
 pub mod file_io_tests;
 pub mod full_workflow_tests;
 pub mod graph_tests;
 pub mod llm_tests;
 pub mod validation_tests;
+pub mod workflow_execution_integration;
 pub mod workflow_tests;
 
 /// Check if a valid OpenAI API key is available

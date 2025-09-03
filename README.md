@@ -102,7 +102,6 @@ processor = Node.agent(
 # Connect and execute
 id1 = workflow.add_node(smart_agent)
 id2 = workflow.add_node(processor)
-id3 = workflow.add_node(agent_with_tools)
 workflow.connect(id1, id2)
 
 result = executor.execute(workflow)
@@ -111,16 +110,16 @@ print("\nSmart Agent Output: \n", result.get_node_output("Smart Agent"))
 print("\nData Processor Output: \n", result.get_node_output("Data Processor"))
 ```
 
-## Architecture
+## High-Level Architecture
 
 <p align="center">
-  <img src="assets/high-level-achitecture.png" height="180" alt="GraphBit Architecture">
+  <img src="assets/architecture.svg" height="250" alt="GraphBit Architecture">
 </p>
 
 Three-tier design for reliability and performance:
-- **Python API** - PyO3 bindings with async support
-- **CLI Tool** - Project management and execution
 - **Rust Core** - Workflow engine, agents, and LLM providers
+- **Orchestration Layer** - Project management and execution
+- **Python API** - PyO3 bindings with async support
 
 ## Python API Integrations
 
