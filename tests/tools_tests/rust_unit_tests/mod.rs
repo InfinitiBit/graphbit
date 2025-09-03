@@ -4,8 +4,8 @@
 //! These tests focus on isolated functionality without external dependencies.
 
 pub mod tool_decorator_tests;
-pub mod tool_registry_tests;
 pub mod tool_executor_tests;
+pub mod tool_registry_tests;
 pub mod tool_result_tests;
 
 /// Check if tools module is available for unit testing
@@ -41,36 +41,32 @@ pub fn skip_if_no_tools(reason: &str) {
 }
 
 /// Helper function to create test tool functions for unit tests
-pub fn create_simple_test_tool(name: &str) -> Box<dyn Fn(serde_json::Value) -> Result<serde_json::Value, String> + Send + Sync> {
+pub fn create_simple_test_tool(
+    name: &str,
+) -> Box<dyn Fn(serde_json::Value) -> Result<serde_json::Value, String> + Send + Sync> {
     let name = name.to_string();
-    Box::new(move |input: serde_json::Value| {
-        match name.as_str() {
-            "echo" => Ok(input),
-            "add_one" => {
-                if let Some(value) = input.get("value").and_then(|v| v.as_i64()) {
-                    Ok(serde_json::json!(value + 1))
-                } else {
-                    Err("Invalid parameter for add_one".to_string())
-                }
-            }
-            "to_string" => {
-                Ok(serde_json::json!(input.to_string()))
-            }
-            "fail_on_even" => {
-                if let Some(value) = input.get("value").and_then(|v| v.as_i64()) {
-                    if value % 2 == 0 {
-                        Err("Even numbers cause failure".to_string())
-                    } else {
-                        Ok(serde_json::json!(value))
-                    }
-                } else {
-                    Err("Invalid parameter for fail_on_even".to_string())
-                }
-            }
-            _ => {
-                Err(format!("Unknown test tool: {}", name))
+    Box::new(move |input: serde_json::Value| match name.as_str() {
+        "echo" => Ok(input),
+        "add_one" => {
+            if let Some(value) = input.get("value").and_then(|v| v.as_i64()) {
+                Ok(serde_json::json!(value + 1))
+            } else {
+                Err("Invalid parameter for add_one".to_string())
             }
         }
+        "to_string" => Ok(serde_json::json!(input.to_string())),
+        "fail_on_even" => {
+            if let Some(value) = input.get("value").and_then(|v| v.as_i64()) {
+                if value % 2 == 0 {
+                    Err("Even numbers cause failure".to_string())
+                } else {
+                    Ok(serde_json::json!(value))
+                }
+            } else {
+                Err("Invalid parameter for fail_on_even".to_string())
+            }
+        }
+        _ => Err(format!("Unknown test tool: {}", name)),
     })
 }
 
@@ -89,8 +85,6 @@ pub fn create_simple_tool_metadata(name: &str, description: &str) -> serde_json:
     })
 }
 
-
-
 /// Helper function to validate basic tool result structure
 pub fn validate_basic_tool_result(
     result: &serde_json::Value,
@@ -99,20 +93,26 @@ pub fn validate_basic_tool_result(
 ) -> Result<(), String> {
     if let Some(success) = result.get("success").and_then(|v| v.as_bool()) {
         if success != expected_success {
-            return Err(format!("Expected success={}, got {}", expected_success, success));
+            return Err(format!(
+                "Expected success={}, got {}",
+                expected_success, success
+            ));
         }
     } else {
         return Err("Missing 'success' field in result".to_string());
     }
-    
+
     if let Some(tool_name) = result.get("tool_name").and_then(|v| v.as_str()) {
         if tool_name != expected_tool_name {
-            return Err(format!("Expected tool_name={}, got {}", expected_tool_name, tool_name));
+            return Err(format!(
+                "Expected tool_name={}, got {}",
+                expected_tool_name, tool_name
+            ));
         }
     } else {
         return Err("Missing 'tool_name' field in result".to_string());
     }
-    
+
     if expected_success {
         if result.get("output").is_none() {
             return Err("Missing 'output' field in successful result".to_string());
@@ -122,7 +122,7 @@ pub fn validate_basic_tool_result(
             return Err("Missing 'error' field in failed result".to_string());
         }
     }
-    
+
     Ok(())
 }
 
