@@ -9,6 +9,11 @@ serde = {version = "1.0", features = ["derive"]}
 serde_json = "1.0"
 tempfile = "3.10.0"
 tokio = {version = "1.38", features = ["full"]}
+async-trait = "0.1.88"
+
+[dev-dependencies]
+async-trait = "0.1.88"
+pyo3 = {version = "0.24", features = ["auto-initialize"]}
 
 [features]
 default = []
