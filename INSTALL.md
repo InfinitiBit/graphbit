@@ -82,11 +82,67 @@ After installation, the system validates:
 - ✅ Core Python dependencies
 - ✅ GraphBit Python extension module import
 
+## Testing
+
+### Comprehensive Test Suite with Coverage
+```bash
+make test        # Run all tests (Rust + Python) with coverage reporting
+make tests       # Alias for 'test'
+```
+
+All test commands now include comprehensive coverage reporting:
+- **Rust tests**: Use `cargo llvm-cov` with HTML output
+- **Python tests**: Use `pytest` with branch coverage and HTML reports
+- **Environment**: Automatically sets `TEST_REMOTE_URLS=true` for Python tests
+
+### Granular Test Commands
+```bash
+make test-rust                    # All Rust tests with llvm-cov coverage
+make test-python                  # All Python tests with pytest coverage
+make test-rust-unit              # Only Rust unit tests with coverage
+make test-rust-integration       # Only Rust integration tests with coverage
+make test-python-unit            # Only Python unit tests with coverage
+make test-python-integration     # Only Python integration tests with coverage
+```
+
+### Advanced Testing
+```bash
+make test-all      # Comprehensive tests with pre-validation and coverage
+make test-coverage # Dedicated coverage reporting command
+make test-quick    # Quick tests with coverage for development iteration
+```
+
+### Coverage Reports
+After running tests, coverage reports are generated:
+- **Rust**: HTML coverage report via `cargo llvm-cov`
+- **Python**: HTML coverage report via `pytest --cov` with branch coverage
+- **Exclusions**: Automatically excludes `core/src/llm/`, `core/src/embeddings.rs`, and `python/src/`
+- **Cross-Platform**: Optimized for both Windows PowerShell and Unix environments
+
+### Cross-Platform Support
+The test commands automatically adapt to your platform:
+- **Windows**: Uses PowerShell with proper environment variable syntax
+- **Unix/Linux/macOS**: Uses bash with export syntax
+- **Environment Variables**: `TEST_REMOTE_URLS=true` is set automatically on both platforms
+- **Coverage Config**: Handles platform-specific coverage configuration seamlessly
+
 ## Next Steps
 
 After successful installation:
-1. Run tests: `make test`
-2. Try examples: `make examples`
-3. Start development: `make dev-setup`
+1. **Verify setup**: `make test` - Run comprehensive test suite
+2. **Try examples**: `make examples` - Run example workflows
+3. **Development**: `make dev-setup` - Additional development tools
+4. **Get help**: `make help` - See all available commands
 
-For more commands, run: `make help`
+## Quick Development Workflow
+
+```bash
+# Initial setup (run once)
+make install
+
+# Development cycle
+make test-quick      # Fast testing during development
+make format          # Format code
+make lint           # Check code quality
+make test           # Full test suite before commits
+```
