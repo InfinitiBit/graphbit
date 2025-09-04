@@ -82,6 +82,10 @@ impl graphbit_core::agents::AgentTrait for DummyAgent {
     ) -> graphbit_core::validation::ValidationResult {
         graphbit_core::validation::ValidationResult::success()
     }
+
+    fn llm_provider(&self) -> &graphbit_core::llm::LlmProvider {
+        unimplemented!()
+    }
 }
 
 fn build_dummy_agent(name: &str) -> (graphbit_core::types::AgentId, std::sync::Arc<DummyAgent>) {

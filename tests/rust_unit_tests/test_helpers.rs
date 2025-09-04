@@ -82,8 +82,8 @@ pub fn create_test_embedding_provider() -> Box<dyn EmbeddingProviderTrait> {
 // Test Agent Builder
 pub async fn create_test_agent() -> Arc<Agent> {
     let llm_config = LlmConfig::OpenAI {
-        api_key: "test_key".to_string(),
-        model: "test_model".to_string(),
+        api_key: std::env::var("OPENAI_API_KEY").unwrap(),
+        model: "gpt-3.5-turbo".to_string(),
         base_url: None,
         organization: None,
     };

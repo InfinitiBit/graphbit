@@ -217,7 +217,7 @@ async fn test_ollama_llm() {
 
     let config = llm::LlmConfig::Ollama {
         base_url: Some("http://localhost:11434".to_string()),
-        model: "llama2".to_string(),
+        model: "llama3.2:latest".to_string(),
     };
 
     let provider = llm::LlmProviderFactory::create_provider(config).unwrap();

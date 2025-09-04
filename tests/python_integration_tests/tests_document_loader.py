@@ -88,7 +88,10 @@ class TestDocumentLoader:
         assert document is not None
         assert document.source == text_file
         assert document.document_type == "txt"
-        assert document.content == text_content
+        # Normalize line endings for cross-platform compatibility
+        expected_content = text_content.replace('\r\n', '\n').replace('\r', '\n')
+        actual_content = document.content.replace('\r\n', '\n').replace('\r', '\n')
+        assert actual_content == expected_content
         assert document.file_size > 0
         assert document.extracted_at > 0
         assert not document.is_empty()
