@@ -146,14 +146,6 @@ benchmark = [
   "pydantic-ai"
 ]
 full = [
-  "anthropic",
-  "openai",
-  "langchain",
-  "langchain-openai",
-  "langgraph",
-  "llama-index",
-  "crewai",
-  "pydantic-ai",
   "click",
   "matplotlib",
   "numpy",
@@ -161,7 +153,19 @@ full = [
   "psutil",
   "seaborn",
   "tabulate",
-  "memory-profiler"
+  "memory-profiler",
+  "anthropic",
+  "openai",
+  "langchain",
+  "langchain-openai",
+  "langchain-anthropic",
+  "langchain-ollama",
+  "langgraph",
+  "llama-index",
+  "llama-index-llms-anthropic",
+  "llama-index-cli",
+  "crewai",
+  "pydantic-ai"
 ]
 
 [tool.poetry.group.dev.dependencies]
