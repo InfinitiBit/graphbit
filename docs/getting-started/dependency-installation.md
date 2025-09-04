@@ -7,7 +7,7 @@ This guide explains how to install GraphBit with different dependency configurat
 GraphBit uses a modular dependency system that allows you to install only the components you need:
 
 - **Core dependencies**: Essential packages required for basic GraphBit functionality
-- **Optional dependencies**: Additional packages grouped by functionality (AI providers, vector databases, benchmarking tools)
+- **Optional dependencies**: Additional packages grouped by functionality (vector databases, benchmarking tools, or everything graphbit provides support for)
 - **Extras groups**: Predefined collections of optional dependencies for common use cases
 
 ---
@@ -15,13 +15,6 @@ GraphBit uses a modular dependency system that allows you to install only the co
 ## Core Installation (Minimal Dependencies)
 
 The core installation includes only the essential dependencies needed for basic GraphBit functionality.
-
-### What's Included in Core
-
-- `python-dotenv` - Environment variable management
-- `rich` - Rich text and beautiful formatting
-- `typer` - CLI framework
-- `aiofiles` - Async file operations
 
 ### Installation Commands
 
@@ -39,7 +32,7 @@ uv add graphbit
 ### Core Installation Use Cases
 
 - **Lightweight deployments** where you only need basic workflow functionality
-- **Custom integrations** where you'll add your own AI providers or databases
+- **Custom integrations** where you'll add your own databases
 - **Minimal Docker images** for production environments
 - **Development environments** where you want to add dependencies incrementally
 
@@ -268,8 +261,8 @@ pip install "graphbit[chromadb,pinecone,qdrant,weaviate]"
 
 | Extra Group | AI Providers | Vector DBs | Visualization | Performance | Cloud | Size |
 |-------------|--------------|------------|---------------|-------------|-------|------|
-| Core | ❌ | ❌ | ❌ | ❌ | ❌ | Minimal |
-| `benchmark` | ✅ All | ❌ | ✅ Full | ✅ Full | ❌ | Large |
+| Core | ✅ Built-in | ❌ | ❌ | ❌ | ❌ | Minimal |
+| `benchmark` | ✅ All + External Frameworks | ❌ | ✅ Full | ✅ Full | ❌ | Large |
 | `chromadb` | ❌ | ChromaDB | ❌ | ❌ | ❌ | Small |
 | `pinecone` | ❌ | Pinecone | ❌ | ❌ | ❌ | Small |
 | `pgvector` | ❌ | PostgreSQL | ❌ | ❌ | ❌ | Small |
@@ -384,21 +377,6 @@ print(f"GraphBit version: {version()}")
 # Check system health
 health = health_check()
 print(f"System healthy: {health['overall_healthy']}")
-
-# Verify specific integrations
-try:
-    # Test vector database (example with ChromaDB)
-    import chromadb
-    print("ChromaDB available")
-except ImportError:
-    print("ChromaDB not installed")
-
-try:
-    # Test AI provider (example with OpenAI)
-    import openai
-    print("OpenAI available")
-except ImportError:
-    print("OpenAI not installed")
 ```
 
 ### Getting Help
