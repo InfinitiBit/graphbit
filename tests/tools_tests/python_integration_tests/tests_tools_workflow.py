@@ -1,26 +1,22 @@
 """Integration tests for complete tools workflow functionality with comprehensive coverage."""
 
-import pytest
-import sys
+import json
 import os
 import time
-import json
-import asyncio
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Dict, List, Any, Optional
+from typing import Any, List
+
+import pytest
 
 try:
-    from graphbit import (
-        ToolDecorator, ToolRegistry, ToolExecutor, ToolResult, ToolResultCollection,
-        LlmConfig, Node, Workflow, WorkflowResult, tool, ExecutorConfig
-    )
+    from graphbit import LlmConfig, Node, ToolDecorator, ToolExecutor, ToolRegistry, Workflow
 except ImportError as e:
     pytest.skip(f"GraphBit tools module not available: {e}", allow_module_level=True)
 
 
 def skip_if_no_execute_tool(executor):
-    """Helper function to skip tests if execute_tool method is not available."""
-    if not hasattr(executor, 'execute_tool'):
+    """Skip tests if execute_tool method is not available."""
+    if not hasattr(executor, "execute_tool"):
         pytest.skip("ToolExecutor.execute_tool method not available - requires LlmToolCall objects for execute_tools method")
 
 
@@ -29,19 +25,22 @@ class TestCompleteToolExecutionWorkflow:
 
     @pytest.fixture
     def tool_registry(self):
+        """Create a tool registry for testing."""
         return ToolRegistry()
 
     @pytest.fixture
     def tool_decorator(self, tool_registry):
+        """Create a tool decorator for testing."""
         return ToolDecorator(registry=tool_registry)
 
     @pytest.fixture
     def tool_executor(self, tool_registry):
+        """Create a tool executor for testing."""
         return ToolExecutor(registry=tool_registry)
 
     def test_complete_tool_execution_workflow(self, tool_registry, tool_decorator, tool_executor):
         """Test complete tool execution workflow from registration to execution."""
-        # Step 1: Register tools
+
         @tool_decorator(description="Add two numbers", name="add_numbers", return_type="int")
         def add_numbers(a: int, b: int) -> int:
             return a + b
@@ -69,7 +68,7 @@ class TestCompleteToolExecutionWorkflow:
             assert result3 == "Prefix: test"
 
             # If list_tools is available, check if tools are there
-            if hasattr(tool_registry, 'list_tools'):
+            if hasattr(tool_registry, "list_tools"):
                 tools = tool_registry.list_tools()
                 # Tools might be in global registry instead of test registry
                 # This is expected behavior, so we don't assert on this
@@ -78,7 +77,7 @@ class TestCompleteToolExecutionWorkflow:
             pytest.skip(f"Tool decoration or execution failed: {e}")
 
         # Step 3: Execute tools in sequence (if execute_tool method exists)
-        if hasattr(tool_executor, 'execute_tool'):
+        if hasattr(tool_executor, "execute_tool"):
             add_result = tool_executor.execute_tool("add_numbers", {"a": 5, "b": 3})
             assert add_result.success is True
             assert add_result.output == "8"
@@ -109,7 +108,8 @@ class TestCompleteToolExecutionWorkflow:
         @tool_decorator(description="Generate random number", name="generate_random", return_type="int")
         def generate_random(min_val: int = 1, max_val: int = 100) -> int:
             import random
-            return random.randint(min_val, max_val)
+
+            return random.randint(min_val, max_val)  # nosec B311
 
         @tool_decorator(description="Double a number", name="double_number", return_type="int")
         def double_number(value: int) -> int:
@@ -144,20 +144,10 @@ class TestCompleteToolExecutionWorkflow:
         def test_tool_2(param: str):
             return f"tool_2_result_{param}"
 
-        tool_registry.register_tool(
-            name="direct_tool_1",
-            description="Directly registered tool 1",
-            function=test_tool_1,
-            parameters_schema={"type": "object"},
-            return_type="str"
-        )
+        tool_registry.register_tool(name="direct_tool_1", description="Directly registered tool 1", function=test_tool_1, parameters_schema={"type": "object"}, return_type="str")
 
         tool_registry.register_tool(
-            name="direct_tool_2",
-            description="Directly registered tool 2",
-            function=test_tool_2,
-            parameters_schema={"type": "object", "properties": {"param": {"type": "string"}}},
-            return_type="str"
+            name="direct_tool_2", description="Directly registered tool 2", function=test_tool_2, parameters_schema={"type": "object", "properties": {"param": {"type": "string"}}}, return_type="str"
         )
 
         result1 = tool_executor.execute_tool("direct_tool_1", {})
@@ -177,6 +167,7 @@ class TestCompleteToolExecutionWorkflow:
 
     def test_tool_decorator_integration_with_registry(self, tool_registry, tool_decorator):
         """Test tool decorator integration with registry."""
+
         @tool_decorator(description="Decorated tool", name="decorated_tool", return_type="str")
         def decorated_function(input_text: str) -> str:
             return f"Processed: {input_text.upper()}"
@@ -186,13 +177,13 @@ class TestCompleteToolExecutionWorkflow:
         assert result == "Processed: HELLO WORLD"
 
         # Check if tools are registered (they might be in global registry)
-        if hasattr(tool_registry, 'list_tools'):
+        if hasattr(tool_registry, "list_tools"):
             tools = tool_registry.list_tools()
             # Tools might be in global registry instead of test registry
             print(f"Tools in registry: {tools}")
 
         # Check if get_tool_metadata method exists and works
-        if hasattr(tool_registry, 'get_tool_metadata'):
+        if hasattr(tool_registry, "get_tool_metadata"):
             try:
                 metadata = tool_registry.get_tool_metadata("decorated_tool")
                 if metadata:
@@ -214,7 +205,7 @@ class TestCompleteToolExecutionWorkflow:
             description="Tool for testing result collection",
             function=collection_test_tool,
             parameters_schema={"type": "object", "properties": {"value": {"type": "integer"}}},
-            return_type="integer"
+            return_type="integer",
         )
 
         results = []
@@ -232,7 +223,7 @@ class TestCompleteToolExecutionWorkflow:
         assert metadata.total_duration_ms > 0
         assert metadata.average_duration_ms() > 0
 
-        for i, result in enumerate(results):
+        for _i, result in enumerate(results):
             assert result.tool_name == "collection_test_tool"
             assert result.input_params is not None
             assert result.output is not None
@@ -253,20 +244,10 @@ class TestCompleteToolExecutionWorkflow:
         def error_handler_tool(error_msg: str):
             return f"Handled error: {error_msg}"
 
-        tool_registry.register_tool(
-            name="reliable_tool",
-            description="A reliable tool",
-            function=reliable_tool,
-            parameters_schema={"type": "object"},
-            return_type="str"
-        )
+        tool_registry.register_tool(name="reliable_tool", description="A reliable tool", function=reliable_tool, parameters_schema={"type": "object"}, return_type="str")
 
         tool_registry.register_tool(
-            name="failing_tool",
-            description="A tool that can fail",
-            function=failing_tool,
-            parameters_schema={"type": "object", "properties": {"should_fail": {"type": "boolean"}}},
-            return_type="str"
+            name="failing_tool", description="A tool that can fail", function=failing_tool, parameters_schema={"type": "object", "properties": {"should_fail": {"type": "boolean"}}}, return_type="str"
         )
 
         tool_registry.register_tool(
@@ -274,7 +255,7 @@ class TestCompleteToolExecutionWorkflow:
             description="A tool to handle errors",
             function=error_handler_tool,
             parameters_schema={"type": "object", "properties": {"error_msg": {"type": "string"}}},
-            return_type="str"
+            return_type="str",
         )
 
         reliable_result = tool_executor.execute_tool("reliable_tool", {})
@@ -301,12 +282,14 @@ class TestToolsWithExternalSystems:
 
     @pytest.fixture
     def llm_config(self):
+        """Get LLM config for testing."""
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key or api_key == "test-api-key-placeholder":
             pytest.skip("OPENAI_API_KEY not set or invalid")
         return LlmConfig.openai(api_key, "gpt-3.5-turbo")
 
     def test_tools_with_llm_agent_integration(self, llm_config):
+        """Test tools with LLM agent integration."""
         workflow = Workflow("tools_llm_test")
         agent_node = Node.agent("tools_agent", "Agent that can use tools", "agent_001")
         workflow.add_node(agent_node)
@@ -314,7 +297,7 @@ class TestToolsWithExternalSystems:
         assert workflow is not None
         # Check if workflow has nodes through the graph structure
         # The Workflow class has a 'graph' attribute that contains the nodes
-        if hasattr(workflow, 'graph') and hasattr(workflow.graph, 'nodes'):
+        if hasattr(workflow, "graph") and hasattr(workflow.graph, "nodes"):
             assert len(workflow.graph.nodes) >= 1
         else:
             # Alternative: check if we can validate the workflow (which implies nodes exist)
@@ -326,15 +309,13 @@ class TestToolsWithExternalSystems:
                 # If validation fails, we still added a node so test should pass
                 assert True
 
-    @pytest.mark.skipif(
-        not os.getenv("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY") == "test-api-key-placeholder",
-        reason="OPENAI_API_KEY not set or invalid"
-    )
+    @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY") == "test-api-key-placeholder", reason="OPENAI_API_KEY not set or invalid")
     def test_tools_with_actual_llm_calls(self, llm_config):
+        """Test tools with actual LLM calls."""
         # LlmConfig doesn't expose api_key directly - it's wrapped in the inner enum
         # Instead, check that we have a valid provider and model
-        assert hasattr(llm_config, 'provider')
-        assert hasattr(llm_config, 'model')
+        assert hasattr(llm_config, "provider")
+        assert hasattr(llm_config, "model")
 
         # Verify we have a valid provider (not empty)
         provider = llm_config.provider()
@@ -348,6 +329,7 @@ class TestToolsWithExternalSystems:
             assert model in ["gpt-4o-mini", "gpt-4", "gpt-3.5-turbo"]  # Valid OpenAI models
 
     def test_tools_with_workflow_executor(self, llm_config):
+        """Test tools with workflow executor."""
         workflow = Workflow("tools_workflow_test")
         simple_node = Node.agent("simple_agent", "Simple test agent", "simple_001")
         workflow.add_node(simple_node)
@@ -355,7 +337,7 @@ class TestToolsWithExternalSystems:
         assert workflow is not None
         # Check if workflow has nodes through the graph structure
         # The Workflow class has a 'graph' attribute that contains the nodes
-        if hasattr(workflow, 'graph') and hasattr(workflow.graph, 'nodes'):
+        if hasattr(workflow, "graph") and hasattr(workflow.graph, "nodes"):
             assert len(workflow.graph.nodes) >= 1
         else:
             # Alternative: check if we can validate the workflow (which implies nodes exist)
@@ -373,7 +355,7 @@ class TestMultiToolChainWorkflows:
 
     @pytest.fixture
     def comprehensive_tool_setup(self):
-        """Setup comprehensive tool environment for complex workflows."""
+        """Set comprehensive tool environment for complex workflows."""
         try:
             registry = ToolRegistry()
             decorator = ToolDecorator(registry=registry)
@@ -394,7 +376,7 @@ class TestMultiToolChainWorkflows:
                     return data.upper()
                 elif operation == "multiply" and isinstance(data, (int, float)):
                     return data * 2
-                elif operation == "length" and hasattr(data, '__len__'):
+                elif operation == "length" and hasattr(data, "__len__"):
                     return len(data)
                 return data
 
@@ -431,33 +413,26 @@ class TestMultiToolChainWorkflows:
                     return isinstance(data, str)
                 return True
 
-            return {
-                'registry': registry,
-                'decorator': decorator,
-                'executor': executor
-            }
+            return {"registry": registry, "decorator": decorator, "executor": executor}
         except Exception as e:
             pytest.skip(f"Comprehensive tool setup not available: {e}")
 
     def test_data_processing_chain(self, comprehensive_tool_setup):
         """Test complex data processing chain workflow."""
         try:
-            executor = comprehensive_tool_setup['executor']
+            executor = comprehensive_tool_setup["executor"]
 
             # Step 1: Parse JSON data
             json_data = '{"users": [{"name": "Alice", "score": 85}, {"name": "Bob", "score": 92}]}'
 
-            if hasattr(executor, 'execute_tool'):
+            if hasattr(executor, "execute_tool"):
                 # Parse JSON
                 parse_result = executor.execute_tool("parse_json", {"json_string": json_data})
                 assert parse_result.success is True
                 parsed_data = json.loads(parse_result.output)
 
                 # Extract users array
-                extract_result = executor.execute_tool("extract_field", {
-                    "data": parsed_data,
-                    "field": "users"
-                })
+                extract_result = executor.execute_tool("extract_field", {"data": parsed_data, "field": "users"})
                 assert extract_result.success is True
 
                 # Process each user's score
@@ -466,19 +441,13 @@ class TestMultiToolChainWorkflows:
 
                 for user in users:
                     # Extract score
-                    score_result = executor.execute_tool("extract_field", {
-                        "data": user,
-                        "field": "score"
-                    })
+                    score_result = executor.execute_tool("extract_field", {"data": user, "field": "score"})
 
                     if score_result.success:
                         score = json.loads(score_result.output)
 
                         # Transform score (multiply by 2)
-                        transform_result = executor.execute_tool("transform_data", {
-                            "data": score,
-                            "operation": "multiply"
-                        })
+                        transform_result = executor.execute_tool("transform_data", {"data": score, "operation": "multiply"})
 
                         if transform_result.success:
                             processed_scores.append(json.loads(transform_result.output))
@@ -494,9 +463,9 @@ class TestMultiToolChainWorkflows:
     def test_mathematical_computation_chain(self, comprehensive_tool_setup):
         """Test mathematical computation chain workflow."""
         try:
-            executor = comprehensive_tool_setup['executor']
+            executor = comprehensive_tool_setup["executor"]
 
-            if hasattr(executor, 'execute_tool'):
+            if hasattr(executor, "execute_tool"):
                 # Chain: add(5, 3) -> multiply(result, 2) -> percentage(result, 100)
 
                 # Step 1: Add numbers
@@ -510,10 +479,7 @@ class TestMultiToolChainWorkflows:
                 product_value = json.loads(multiply_result.output)
 
                 # Step 3: Calculate percentage
-                percentage_result = executor.execute_tool("percentage", {
-                    "value": product_value,
-                    "total": 100
-                })
+                percentage_result = executor.execute_tool("percentage", {"value": product_value, "total": 100})
                 assert percentage_result.success is True
                 final_percentage = json.loads(percentage_result.output)
 
@@ -526,9 +492,9 @@ class TestMultiToolChainWorkflows:
     def test_conditional_workflow_chain(self, comprehensive_tool_setup):
         """Test conditional workflow with validation and branching."""
         try:
-            executor = comprehensive_tool_setup['executor']
+            executor = comprehensive_tool_setup["executor"]
 
-            if hasattr(executor, 'execute_tool'):
+            if hasattr(executor, "execute_tool"):
                 test_values = [
                     {"value": "hello", "expected_valid": True, "expected_transform": "HELLO"},
                     {"value": "", "expected_valid": False, "expected_transform": None},
@@ -537,10 +503,7 @@ class TestMultiToolChainWorkflows:
 
                 for test_case in test_values:
                     # Step 1: Validate data
-                    validate_result = executor.execute_tool("validate_data", {
-                        "data": test_case["value"],
-                        "validation_type": "not_empty"
-                    })
+                    validate_result = executor.execute_tool("validate_data", {"data": test_case["value"], "validation_type": "not_empty"})
 
                     assert validate_result.success is True
                     is_valid = json.loads(validate_result.output)
@@ -548,10 +511,7 @@ class TestMultiToolChainWorkflows:
 
                     # Step 2: Conditional transformation
                     if is_valid:
-                        transform_result = executor.execute_tool("transform_data", {
-                            "data": test_case["value"],
-                            "operation": "uppercase"
-                        })
+                        transform_result = executor.execute_tool("transform_data", {"data": test_case["value"], "operation": "uppercase"})
 
                         assert transform_result.success is True
                         transformed = json.loads(transform_result.output)
@@ -566,7 +526,7 @@ class TestConcurrentToolExecution:
 
     @pytest.fixture
     def concurrent_tool_setup(self):
-        """Setup tools for concurrent execution testing."""
+        """Set tools for concurrent execution testing."""
         try:
             registry = ToolRegistry()
             decorator = ToolDecorator(registry=registry)
@@ -595,39 +555,26 @@ class TestConcurrentToolExecution:
                     return [x * 2 for x in data]
                 return data
 
-            return {
-                'registry': registry,
-                'executor': executor
-            }
+            return {"registry": registry, "executor": executor}
         except Exception as e:
             pytest.skip(f"Concurrent tool setup not available: {e}")
 
     def test_parallel_tool_execution(self, concurrent_tool_setup):
         """Test parallel execution of multiple tools."""
         try:
-            executor = concurrent_tool_setup['executor']
+            executor = concurrent_tool_setup["executor"]
 
-            if hasattr(executor, 'execute_tool'):
+            if hasattr(executor, "execute_tool"):
+
                 def execute_tool_worker(tool_name, params, worker_id):
                     try:
                         start_time = time.time()
                         result = executor.execute_tool(tool_name, params)
                         end_time = time.time()
 
-                        return {
-                            'worker_id': worker_id,
-                            'tool_name': tool_name,
-                            'success': result.success,
-                            'duration': end_time - start_time,
-                            'result': result
-                        }
+                        return {"worker_id": worker_id, "tool_name": tool_name, "success": result.success, "duration": end_time - start_time, "result": result}
                     except Exception as e:
-                        return {
-                            'worker_id': worker_id,
-                            'tool_name': tool_name,
-                            'success': False,
-                            'error': str(e)
-                        }
+                        return {"worker_id": worker_id, "tool_name": tool_name, "success": False, "error": str(e)}
 
                 # Execute multiple tools in parallel
                 with ThreadPoolExecutor(max_workers=5) as thread_executor:
@@ -635,32 +582,17 @@ class TestConcurrentToolExecution:
 
                     # Submit CPU intensive tasks
                     for i in range(3):
-                        future = thread_executor.submit(
-                            execute_tool_worker,
-                            "cpu_intensive",
-                            {"iterations": 1000},
-                            f"cpu_{i}"
-                        )
+                        future = thread_executor.submit(execute_tool_worker, "cpu_intensive", {"iterations": 1000}, f"cpu_{i}")
                         futures.append(future)
 
                     # Submit I/O simulation tasks
                     for i in range(3):
-                        future = thread_executor.submit(
-                            execute_tool_worker,
-                            "io_simulation",
-                            {"delay_ms": 100},
-                            f"io_{i}"
-                        )
+                        future = thread_executor.submit(execute_tool_worker, "io_simulation", {"delay_ms": 100}, f"io_{i}")
                         futures.append(future)
 
                     # Submit data processing tasks
                     for i in range(2):
-                        future = thread_executor.submit(
-                            execute_tool_worker,
-                            "process_list",
-                            {"data": [1, 2, 3, 4, 5], "operation": "square"},
-                            f"process_{i}"
-                        )
+                        future = thread_executor.submit(execute_tool_worker, "process_list", {"data": [1, 2, 3, 4, 5], "operation": "square"}, f"process_{i}")
                         futures.append(future)
 
                     # Collect results
@@ -670,11 +602,11 @@ class TestConcurrentToolExecution:
 
                 # Verify parallel execution
                 assert len(results) == 8
-                successful_results = [r for r in results if r['success']]
+                successful_results = [r for r in results if r["success"]]
                 assert len(successful_results) >= 6  # Allow some failures
 
                 # Verify different tool types executed
-                tool_types = set(r['tool_name'] for r in successful_results)
+                tool_types = {r["tool_name"] for r in successful_results}
                 assert len(tool_types) >= 2  # At least 2 different tool types
 
         except Exception as e:
