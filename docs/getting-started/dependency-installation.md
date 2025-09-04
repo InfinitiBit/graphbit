@@ -18,16 +18,20 @@ The core installation includes only the essential dependencies needed for basic 
 
 ### Installation Commands
 
-```bash
-# Using pip (recommended)
-pip install graphbit
+=== "pip"
+    ```bash
+    pip install graphbit
+    ```
 
-# Using Poetry
-poetry add graphbit
+=== "poetry"
+    ```bash
+    poetry add graphbit
+    ```
 
-# Using uv
-uv add graphbit
-```
+=== "uv"
+    ```bash
+    uv add graphbit
+    ```
 
 ### Core Installation Use Cases
 
@@ -54,16 +58,21 @@ Includes comprehensive tools for performance analysis and AI framework compariso
 - **CLI tools**: `click`
 
 **Installation:**
-```bash
-# Using pip
-pip install "graphbit[benchmark]"
 
-# Using Poetry
-poetry add "graphbit[benchmark]"
+=== "pip"
+    ```bash
+    pip install "graphbit[benchmark]"
+    ```
 
-# Using uv
-uv add "graphbit[benchmark]"
-```
+=== "Poetry"
+    ```bash
+    poetry add "graphbit[benchmark]"
+    ```
+
+=== "uv"
+    ```bash
+    uv add "graphbit[benchmark]"
+    ```
 
 **Use cases:**
 - Performance benchmarking against other AI frameworks
@@ -81,16 +90,21 @@ Includes all available optional dependencies for maximum functionality.
 - All utility libraries
 
 **Installation:**
-```bash
-# Using pip
-pip install "graphbit[full]"
 
-# Using Poetry
-poetry add "graphbit[full]"
+=== "pip"
+    ```bash
+    pip install "graphbit[full]"
+    ```
 
-# Using uv
-uv add "graphbit[full]"
-```
+=== "Poetry"
+    ```bash
+    poetry add "graphbit[full]"
+    ```
+
+=== "uv"
+    ```bash
+    uv add "graphbit[full]"
+    ```
 
 **Use cases:**
 - Development environments where you need access to all features
@@ -101,97 +115,253 @@ uv add "graphbit[full]"
 #### Vector Database Extras
 
 ##### `chromadb` - ChromaDB Integration
-```bash
-pip install "graphbit[chromadb]"
-```
+
+=== "pip"
+    ```bash
+    pip install "graphbit[chromadb]"
+    ```
+
+=== "Poetry"
+    ```bash
+    poetry add "graphbit[chromadb]"
+    ```
+
+=== "uv"
+    ```bash
+    uv add "graphbit[chromadb]"
+    ```
 **Includes**: `chromadb`
 **Use case**: Document similarity search, RAG applications
 
 ##### `pinecone` - Pinecone Integration
-```bash
-pip install "graphbit[pinecone]"
-```
+
+=== "pip"
+    ```bash
+    pip install "graphbit[pinecone]"
+    ```
+
+=== "Poetry"
+    ```bash
+    poetry add "graphbit[pinecone]"
+    ```
+
+=== "uv"
+    ```bash
+    uv add "graphbit[pinecone]"
+    ```
 **Includes**: `pinecone`
 **Use case**: Managed vector database for production applications
 
 ##### `qdrant` - Qdrant Integration
-```bash
-pip install "graphbit[qdrant]"
-```
+
+=== "pip"
+    ```bash
+    pip install "graphbit[qdrant]"
+    ```
+
+=== "Poetry"
+    ```bash
+    poetry add "graphbit[qdrant]"
+    ```
+
+=== "uv"
+    ```bash
+    uv add "graphbit[qdrant]"
+    ```
 **Includes**: `qdrant-client`
 **Use case**: Open-source vector database with advanced filtering
 
 ##### `weaviate` - Weaviate Integration
-```bash
-pip install "graphbit[weaviate]"
-```
+
+=== "pip"
+    ```bash
+    pip install "graphbit[weaviate]"
+    ```
+
+=== "Poetry"
+    ```bash
+    poetry add "graphbit[weaviate]"
+    ```
+
+=== "uv"
+    ```bash
+    uv add "graphbit[weaviate]"
+    ```
 **Includes**: `weaviate-client`
 **Use case**: Knowledge graphs and semantic search
 
 ##### `milvus` - Milvus Integration
-```bash
-pip install "graphbit[milvus]"
-```
+
+=== "pip"
+    ```bash
+    pip install "graphbit[milvus]"
+    ```
+
+=== "Poetry"
+    ```bash
+    poetry add "graphbit[milvus]"
+    ```
+
+=== "uv"
+    ```bash
+    uv add "graphbit[milvus]"
+    ```
 **Includes**: `pymilvus`
 **Use case**: Large-scale vector similarity search
 
 ##### `faiss` - FAISS Integration
-```bash
-pip install "graphbit[faiss]"
-```
+
+=== "pip"
+    ```bash
+    pip install "graphbit[faiss]"
+    ```
+
+=== "Poetry"
+    ```bash
+    poetry add "graphbit[faiss]"
+    ```
+
+=== "uv"
+    ```bash
+    uv add "graphbit[faiss]"
+    ```
 **Includes**: `faiss-cpu`, `numpy`
 **Use case**: High-performance similarity search and clustering
 
 ##### `elasticsearch` - Elasticsearch Integration
-```bash
-pip install "graphbit[elasticsearch]"
-```
+
+=== "pip"
+    ```bash
+    pip install "graphbit[elasticsearch]"
+    ```
+
+=== "Poetry"
+    ```bash
+    poetry add "graphbit[elasticsearch]"
+    ```
+
+=== "uv"
+    ```bash
+    uv add "graphbit[elasticsearch]"
+    ```
 **Includes**: `elasticsearch`
 **Use case**: Full-text search with vector capabilities
 
 #### Database Extras
 
 ##### `pgvector` - PostgreSQL with pgvector
-```bash
-pip install "graphbit[pgvector]"
-```
+
+=== "pip"
+    ```bash
+    pip install "graphbit[pgvector]"
+    ```
+
+=== "Poetry"
+    ```bash
+    poetry add "graphbit[pgvector]"
+    ```
+
+=== "uv"
+    ```bash
+    uv add "graphbit[pgvector]"
+    ```
 **Includes**: `psycopg2`
 **Use case**: PostgreSQL with vector extensions
 
 ##### `mariadb` - MariaDB Integration
-```bash
-pip install "graphbit[mariadb]"
-```
+
+=== "pip"
+    ```bash
+    pip install "graphbit[mariadb]"
+    ```
+
+=== "Poetry"
+    ```bash
+    poetry add "graphbit[mariadb]"
+    ```
+
+=== "uv"
+    ```bash
+    uv add "graphbit[mariadb]"
+    ```
 **Includes**: `mariadb`, `numpy`
 **Use case**: MariaDB with vector capabilities
 
 ##### `mongodb` - MongoDB Integration
-```bash
-pip install "graphbit[mongodb]"
-```
+
+=== "pip"
+    ```bash
+    pip install "graphbit[mongodb]"
+    ```
+
+=== "Poetry"
+    ```bash
+    poetry add "graphbit[mongodb]"
+    ```
+
+=== "uv"
+    ```bash
+    uv add "graphbit[mongodb]"
+    ```
 **Includes**: `pymongo`
 **Use case**: Document database with vector search
 
 ##### `db2` - IBM Db2 Integration
-```bash
-pip install "graphbit[db2]"
-```
+
+=== "pip"
+    ```bash
+    pip install "graphbit[db2]"
+    ```
+
+=== "Poetry"
+    ```bash
+    poetry add "graphbit[db2]"
+    ```
+
+=== "uv"
+    ```bash
+    uv add "graphbit[db2]"
+    ```
 **Includes**: `ibm-db`, `numpy`
 **Use case**: Enterprise IBM Db2 database
 
 #### Cloud Provider Extras
 
 ##### `boto3` - Amazon Web Services
-```bash
-pip install "graphbit[boto3]"
-```
+
+=== "pip"
+    ```bash
+    pip install "graphbit[boto3]"
+    ```
+
+=== "Poetry"
+    ```bash
+    poetry add "graphbit[boto3]"
+    ```
+
+=== "uv"
+    ```bash
+    uv add "graphbit[boto3]"
+    ```
 **Includes**: `boto3`
 **Use case**: AWS services integration
 
 ##### `astradb` - DataStax Astra DB
-```bash
-pip install "graphbit[astradb]"
-```
+
+=== "pip"
+    ```bash
+    pip install "graphbit[astradb]"
+    ```
+
+=== "Poetry"
+    ```bash
+    poetry add "graphbit[astradb]"
+    ```
+
+=== "uv"
+    ```bash
+    uv add "graphbit[astradb]"
+    ```
 **Includes**: `astrapy`
 **Use case**: Managed Cassandra with vector search
 
@@ -201,16 +371,41 @@ pip install "graphbit[astradb]"
 
 You can install multiple extras groups simultaneously:
 
-```bash
-# Install multiple specific extras
-pip install "graphbit[chromadb,boto3]"
+=== "pip"
+    ```bash
+    # Install multiple specific extras
+    pip install "graphbit[chromadb,boto3]"
+    
+    # Install benchmark tools with specific database
+    pip install "graphbit[benchmark,pgvector]"
+    
+    # Install full AI stack with vector databases
+    pip install "graphbit[benchmark,chromadb,pinecone,qdrant]"
+    ```
 
-# Install benchmark tools with specific database
-pip install "graphbit[benchmark,pgvector]"
+=== "Poetry"
+    ```bash
+    # Install multiple specific extras
+    poetry add "graphbit[chromadb,boto3]"
+    
+    # Install benchmark tools with specific database
+    poetry add "graphbit[benchmark,pgvector]"
+    
+    # Install full AI stack with vector databases
+    poetry add "graphbit[benchmark,chromadb,pinecone,qdrant]"
+    ```
 
-# Install full AI stack with vector databases
-pip install "graphbit[benchmark,chromadb,pinecone,qdrant]"
-```
+=== "uv"
+    ```bash
+    # Install multiple specific extras
+    uv add "graphbit[chromadb,boto3]"
+    
+    # Install benchmark tools with specific database
+    uv add "graphbit[benchmark,pgvector]"
+    
+    # Install full AI stack with vector databases
+    uv add "graphbit[benchmark,chromadb,pinecone,qdrant]"
+    ```
 
 ---
 
@@ -223,37 +418,107 @@ pip install graphbit
 ```
 
 ### Scenario 2: RAG Application Development
-```bash
-# Vector database
-pip install "graphbit[chromadb]"
+=== "pip"
+    ```bash
+    # Vector database
+    pip install "graphbit[chromadb]"
+    
+    # Alternative with managed vector DB
+    pip install "graphbit[pinecone]"
+    ```
 
-# Alternative with managed vector DB
-pip install "graphbit[pinecone]"
-```
+=== "Poetry"
+    ```bash
+    # Vector database
+    poetry add "graphbit[chromadb]"
+    
+    # Alternative with managed vector DB
+    poetry add "graphbit[pinecone]"
+    ```
+
+=== "uv"
+    ```bash
+    # Vector database
+    uv add "graphbit[chromadb]"
+    
+    # Alternative with managed vector DB
+    uv add "graphbit[pinecone]"
+    ```
 
 ### Scenario 3: Enterprise Production Environment
-```bash
-# PostgreSQL + Boto3
-pip install "graphbit[pgvector,boto3]"
+=== "pip"
+    ```bash
+    # PostgreSQL + Boto3
+    pip install "graphbit[pgvector,boto3]"
+    
+    # IBM enterprise stack
+    pip install "graphbit[db2,boto3]"
+    ```
 
-# IBM enterprise stack
-pip install "graphbit[db2,boto3]"
-```
+=== "Poetry"
+    ```bash
+    # PostgreSQL + Boto3
+    poetry add "graphbit[pgvector,boto3]"
+    
+    # IBM enterprise stack
+    poetry add "graphbit[db2,boto3]"
+    ```
+
+=== "uv"
+    ```bash
+    # PostgreSQL + Boto3
+    uv add "graphbit[pgvector,boto3]"
+    
+    # IBM enterprise stack
+    uv add "graphbit[db2,boto3]"
+    ```
 
 ### Scenario 4: Research and Benchmarking
-```bash
-# Full benchmarking suite
-pip install "graphbit[benchmark]"
+=== "pip"
+    ```bash
+    # Full benchmarking suite
+    pip install "graphbit[benchmark]"
+    
+    # Comprehensive research environment
+    pip install "graphbit[full]"
+    ```
 
-# Comprehensive research environment
-pip install "graphbit[full]"
-```
+=== "Poetry"
+    ```bash
+    # Full benchmarking suite
+    poetry add "graphbit[benchmark]"
+    
+    # Comprehensive research environment
+    poetry add "graphbit[full]"
+    ```
+
+=== "uv"
+    ```bash
+    # Full benchmarking suite
+    uv add "graphbit[benchmark]"
+    
+    # Comprehensive research environment
+    uv add "graphbit[full]"
+    ```
 
 ### Scenario 5: Multi-Cloud Development
-```bash
-# Multiple vector databases for testing
-pip install "graphbit[chromadb,pinecone,qdrant,weaviate]"
-```
+=== "pip"
+    ```bash
+    # Multiple vector databases for testing
+    pip install "graphbit[chromadb,pinecone,qdrant,weaviate]"
+    ```
+
+=== "Poetry"
+    ```bash
+    # Multiple vector databases for testing
+    poetry add "graphbit[chromadb,pinecone,qdrant,weaviate]"
+    ```
+
+=== "uv"
+    ```bash
+    # Multiple vector databases for testing
+    uv add "graphbit[chromadb,pinecone,qdrant,weaviate]"
+    ```
 
 ---
 
