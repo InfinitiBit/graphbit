@@ -64,7 +64,7 @@ Includes comprehensive tools for performance analysis and AI framework compariso
     pip install "graphbit[benchmark]"
     ```
 
-=== "Poetry"
+=== "poetry"
     ```bash
     poetry add "graphbit[benchmark]"
     ```
@@ -96,7 +96,7 @@ Includes all available optional dependencies for maximum functionality.
     pip install "graphbit[full]"
     ```
 
-=== "Poetry"
+=== "poetry"
     ```bash
     poetry add "graphbit[full]"
     ```
@@ -121,7 +121,7 @@ Includes all available optional dependencies for maximum functionality.
     pip install "graphbit[chromadb]"
     ```
 
-=== "Poetry"
+=== "poetry"
     ```bash
     poetry add "graphbit[chromadb]"
     ```
@@ -140,7 +140,7 @@ Includes all available optional dependencies for maximum functionality.
     pip install "graphbit[pinecone]"
     ```
 
-=== "Poetry"
+=== "poetry"
     ```bash
     poetry add "graphbit[pinecone]"
     ```
@@ -159,7 +159,7 @@ Includes all available optional dependencies for maximum functionality.
     pip install "graphbit[qdrant]"
     ```
 
-=== "Poetry"
+=== "poetry"
     ```bash
     poetry add "graphbit[qdrant]"
     ```
@@ -178,7 +178,7 @@ Includes all available optional dependencies for maximum functionality.
     pip install "graphbit[weaviate]"
     ```
 
-=== "Poetry"
+=== "poetry"
     ```bash
     poetry add "graphbit[weaviate]"
     ```
@@ -197,7 +197,7 @@ Includes all available optional dependencies for maximum functionality.
     pip install "graphbit[milvus]"
     ```
 
-=== "Poetry"
+=== "poetry"
     ```bash
     poetry add "graphbit[milvus]"
     ```
@@ -216,7 +216,7 @@ Includes all available optional dependencies for maximum functionality.
     pip install "graphbit[faiss]"
     ```
 
-=== "Poetry"
+=== "poetry"
     ```bash
     poetry add "graphbit[faiss]"
     ```
@@ -235,7 +235,7 @@ Includes all available optional dependencies for maximum functionality.
     pip install "graphbit[elasticsearch]"
     ```
 
-=== "Poetry"
+=== "poetry"
     ```bash
     poetry add "graphbit[elasticsearch]"
     ```
@@ -256,7 +256,7 @@ Includes all available optional dependencies for maximum functionality.
     pip install "graphbit[pgvector]"
     ```
 
-=== "Poetry"
+=== "poetry"
     ```bash
     poetry add "graphbit[pgvector]"
     ```
@@ -275,7 +275,7 @@ Includes all available optional dependencies for maximum functionality.
     pip install "graphbit[mariadb]"
     ```
 
-=== "Poetry"
+=== "poetry"
     ```bash
     poetry add "graphbit[mariadb]"
     ```
@@ -294,7 +294,7 @@ Includes all available optional dependencies for maximum functionality.
     pip install "graphbit[mongodb]"
     ```
 
-=== "Poetry"
+=== "poetry"
     ```bash
     poetry add "graphbit[mongodb]"
     ```
@@ -313,7 +313,7 @@ Includes all available optional dependencies for maximum functionality.
     pip install "graphbit[db2]"
     ```
 
-=== "Poetry"
+=== "poetry"
     ```bash
     poetry add "graphbit[db2]"
     ```
@@ -334,7 +334,7 @@ Includes all available optional dependencies for maximum functionality.
     pip install "graphbit[boto3]"
     ```
 
-=== "Poetry"
+=== "poetry"
     ```bash
     poetry add "graphbit[boto3]"
     ```
@@ -353,7 +353,7 @@ Includes all available optional dependencies for maximum functionality.
     pip install "graphbit[astradb]"
     ```
 
-=== "Poetry"
+=== "poetry"
     ```bash
     poetry add "graphbit[astradb]"
     ```
@@ -383,7 +383,7 @@ You can install multiple extras groups simultaneously:
     pip install "graphbit[benchmark,chromadb,pinecone,qdrant]"
     ```
 
-=== "Poetry"
+=== "poetry"
     ```bash
     # Install multiple specific extras
     poetry add "graphbit[chromadb,boto3]"
@@ -411,11 +411,22 @@ You can install multiple extras groups simultaneously:
 
 ## Installation Scenarios by Use Case
 
-### Scenario 1: Basic AI Workflow Development
-```bash
-# Minimal installation for simple workflows
-pip install graphbit
-```
+### Scenario 1: 
+=== "pip"
+    ```bash
+    # Minimal installation for simple workflows
+    pip install graphbit
+    ```
+=== "poetry"
+    ```bash
+    # Minimal installation for simple workflows
+    poetry add graphbit
+    ```
+=== "uv"
+    ```bash
+    # Minimal installation for simple workflows
+    uv add graphbit
+    ```
 
 ### Scenario 2: RAG Application Development
 === "pip"
@@ -427,7 +438,7 @@ pip install graphbit
     pip install "graphbit[pinecone]"
     ```
 
-=== "Poetry"
+=== "poetry"
     ```bash
     # Vector database
     poetry add "graphbit[chromadb]"
@@ -455,7 +466,7 @@ pip install graphbit
     pip install "graphbit[db2,boto3]"
     ```
 
-=== "Poetry"
+=== "poetry"
     ```bash
     # PostgreSQL + Boto3
     poetry add "graphbit[pgvector,boto3]"
@@ -483,7 +494,7 @@ pip install graphbit
     pip install "graphbit[full]"
     ```
 
-=== "Poetry"
+=== "poetry"
     ```bash
     # Full benchmarking suite
     poetry add "graphbit[benchmark]"
@@ -508,7 +519,7 @@ pip install graphbit
     pip install "graphbit[chromadb,pinecone,qdrant,weaviate]"
     ```
 
-=== "Poetry"
+=== "poetry"
     ```bash
     # Multiple vector databases for testing
     poetry add "graphbit[chromadb,pinecone,qdrant,weaviate]"
@@ -539,26 +550,69 @@ pip install graphbit
 ## Development vs Production Recommendations
 
 ### Development Environment
-```bash
-# Option 1: Start minimal, add as needed
-pip install graphbit
-pip install "graphbit[chromadb]"  # Add vector DB when needed
+=== "pip"
+    ```bash
+    # Option 1: Start minimal, add as needed
+    pip install graphbit
+    pip install "graphbit[chromadb]"  # Add vector DB when needed
 
-# Option 2: Full development stack
-pip install "graphbit[benchmark]"  # Includes AI providers + tools
+    # Option 2: Full development stack
+    pip install "graphbit[benchmark]"  # Includes AI providers + tools
 
-# Option 3: Complete development environment
-pip install "graphbit[full]"  # Everything available
-```
+    # Option 3: Complete development environment
+    pip install "graphbit[full]"  # Everything available
+    ```
+=== "poetry"
+    ```bash
+    # Option 1: Start minimal, add as needed
+    poetry add graphbit
+    poetry add "graphbit[chromadb]"  # Add vector DB when needed
+
+    # Option 2: Full development stack
+    poetry add "graphbit[benchmark]"  # Includes AI providers + tools
+
+    # Option 3: Complete development environment
+    poetry add "graphbit[full]"  # Everything available
+    ```
+=== "uv"
+    ```bash
+    # Option 1: Start minimal, add as needed
+    uv add graphbit
+    uv add "graphbit[chromadb]"  # Add vector DB when needed
+
+    # Option 2: Full development stack
+    uv add "graphbit[benchmark]"  # Includes AI providers + tools
+
+    # Option 3: Complete development environment
+    uv add "graphbit[full]"  # Everything available
+    ```
+
 
 ### Production Environment
-```bash
-# Minimal production deployment
-pip install "graphbit[pgvector,boto3]"  # Only what you need
+=== "pip"
+    ```bash
+    # Minimal production deployment
+    pip install "graphbit[pgvector,boto3]"  # Only what you need
 
-# Specific use case
-pip install "graphbit[pinecone]"  # Managed services only
-```
+    # Specific use case
+    pip install "graphbit[pinecone]"  # Managed services only
+    ```
+=== "poetry"
+    ```bash
+    # Minimal production deployment
+    poetry add "graphbit[pgvector,boto3]"  # Only what you need
+
+    # Specific use case
+    poetry add "graphbit[pinecone]"  # Managed services only
+    ```
+=== "uv"
+    ```bash
+    # Minimal production deployment
+    uv add "graphbit[pgvector,boto3]"  # Only what you need
+
+    # Specific use case
+    uv add "graphbit[pinecone]"  # Managed services only
+    ```
 
 ---
 
@@ -569,64 +623,158 @@ pip install "graphbit[pinecone]"  # Managed services only
 #### 1. Large Installation Size
 **Problem**: `pip install "graphbit[full]"` downloads too many packages
 **Solution**: Use specific extras instead
-```bash
-# Instead of full, use specific combinations
-pip install "graphbit[chromadb,boto3]"
-```
+=== "pip"
+    ```bash
+    # Instead of full, use specific combinations
+    pip install "graphbit[chromadb,boto3]"
+    ```
+=== "poetry"
+    ```bash
+    # Instead of full, use specific combinations
+    poetry add "graphbit[chromadb,boto3]"
+    ```
+=== "uv"
+    ```bash
+    # Instead of full, use specific combinations
+    uv add "graphbit[chromadb,boto3]"
+    ```
 
 #### 2. Dependency Conflicts
 **Problem**: Version conflicts between optional dependencies
 **Solution**: Use virtual environments and specific versions
-```bash
-# Create isolated environment
-python -m venv graphbit-env
-source graphbit-env/bin/activate  # Linux/macOS
-pip install "graphbit[your-extras]"
-```
+=== "pip"
+    ```bash
+    # Create isolated environment
+    python -m venv graphbit-env
+    source graphbit-env/bin/activate  # Linux/macOS
+    pip install "graphbit[your-extras]"
+    ```
+=== "poetry"
+    ```bash
+    # Create isolated environment
+    python -m venv graphbit-env
+    source graphbit-env/bin/activate  # Linux/macOS
+    poetry add "graphbit[your-extras]"
+    ```
+=== "uv"
+    ```bash
+    # Create isolated environment
+    python -m venv graphbit-env
+    source graphbit-env/bin/activate  # Linux/macOS
+    uv add "graphbit[your-extras]"
+    ```
 
 #### 3. Database Driver Installation Failures
 **Problem**: Native database drivers fail to compile
 **Solutions**:
 
 **PostgreSQL (psycopg2)**:
-```bash
-# Install system dependencies first
-# Ubuntu/Debian
-sudo apt-get install libpq-dev python3-dev
+=== "pip"
+    ```bash
+    # Install system dependencies first
+    # Ubuntu/Debian
+    sudo apt-get install libpq-dev python3-dev
 
-# macOS
-brew install postgresql
+    # macOS
+    brew install postgresql
 
-# Then install GraphBit
-pip install "graphbit[pgvector]"
-```
+    # Then install GraphBit
+    pip install "graphbit[pgvector]"
+    ```
+=== "poetry"
+    ```bash
+    # Install system dependencies first
+    # Ubuntu/Debian
+    sudo apt-get install libpq-dev python3-dev
+
+    # macOS
+    brew install postgresql
+
+    # Then install GraphBit
+    poetry add "graphbit[pgvector]"
+    ```
+=== "uv"
+    ```bash
+    # Install system dependencies first
+    # Ubuntu/Debian
+    sudo apt-get install libpq-dev python3-dev
+
+    # macOS
+    brew install postgresql
+
+    # Then install GraphBit
+    uv add "graphbit[pgvector]"
+    ```
 
 **IBM Db2**:
-```bash
-# Requires IBM Db2 client libraries
-# Follow IBM Db2 client installation guide first
-pip install "graphbit[db2]"
-```
+=== "pip"
+    ```bash
+    # Requires IBM Db2 client libraries
+    # Follow IBM Db2 client installation guide first
+    pip install "graphbit[db2]"
+    ```
+=== "poetry"
+    ```bash
+    # Requires IBM Db2 client libraries
+    # Follow IBM Db2 client installation guide first
+    poetry add "graphbit[db2]"
+    ```
+=== "uv"
+    ```bash
+    # Requires IBM Db2 client libraries
+    # Follow IBM Db2 client installation guide first
+    uv add "graphbit[db2]"
+    ```
 
 #### 4. Memory Issues During Installation
 **Problem**: Installation runs out of memory
 **Solution**: Install dependencies separately
-```bash
-# Install heavy dependencies first
-pip install numpy pandas matplotlib
-pip install "graphbit[benchmark]"
-```
+=== "pip"
+    ```bash
+    # Install heavy dependencies first
+    pip install numpy pandas matplotlib
+    pip install "graphbit[benchmark]"
+    ```
+=== "poetry"
+    ```bash
+    # Install heavy dependencies first
+    poetry add numpy pandas matplotlib
+    poetry add "graphbit[benchmark]"
+    ```
+=== "uv"
+    ```bash
+    # Install heavy dependencies first
+    uv add numpy pandas matplotlib
+    uv add "graphbit[benchmark]"
+    ```
 
 #### 5. Network/Proxy Issues
 **Problem**: Cannot download packages from PyPI
 **Solution**: Configure pip for proxy/private PyPI
-```bash
-# Use proxy
-pip install "graphbit[extras]"
+=== "pip"
+    ```bash
+    # Use proxy
+    pip install "graphbit[extras]"
 
-# Use private PyPI
-pip install -i "graphbit[extras]"
-```
+    # Use private PyPI
+    pip install -i "graphbit[extras]"
+    ```
+=== "poetry"
+    ```bash
+    # Use proxy
+    poetry add "graphbit[extras]"
+
+    # Use private PyPI
+    poetry add -i "graphbit[extras]"
+    ```
+=== "uv"
+    ```bash
+    # Use proxy
+    uv add "graphbit[extras]"
+
+    # Use private PyPI
+    uv add -i "graphbit[extras]"
+    ```
 
 ### Verification Commands
 
