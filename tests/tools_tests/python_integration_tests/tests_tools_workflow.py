@@ -7,11 +7,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, List
 
 import pytest
-
-try:
-    from graphbit import LlmConfig, Node, ToolDecorator, ToolExecutor, ToolRegistry, Workflow
-except ImportError as e:
-    pytest.skip(f"GraphBit tools module not available: {e}", allow_module_level=True)
+from graphbit import LlmConfig, Node, ToolDecorator, ToolExecutor, ToolRegistry, Workflow
 
 
 def skip_if_no_execute_tool(executor):
