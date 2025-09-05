@@ -12,7 +12,7 @@ async fn test_tool_registry_thread_safety() {
     // Simulate concurrent tool registrations
     let results = run_concurrent_operations(config.max_concurrent_tools, move |i| {
         // Simulate tool registration
-        Ok(format!("tool_{}", i))
+        Ok(format!("tool_{i}"))
     })
     .await;
 
@@ -31,7 +31,7 @@ async fn test_tool_executor_concurrent_execution() {
     let config = get_tools_test_config();
 
     // Create test tools
-    let test_tools = vec![
+    let test_tools = [
         ("add_numbers", create_test_tool_function("add_numbers")),
         (
             "multiply_numbers",
@@ -58,7 +58,7 @@ async fn test_tool_executor_concurrent_execution() {
     // Verify execution results
     assert_eq!(results.len(), config.max_concurrent_tools);
     for (i, result) in results.iter().enumerate() {
-        assert!(result.is_ok(), "Tool execution {} failed: {:?}", i, result);
+        assert!(result.is_ok(), "Tool execution {i} failed: {result:?}");
     }
 }
 
@@ -94,8 +94,7 @@ async fn test_tool_metadata_management() {
 
     // Create multiple metadata entries
     for i in 0..100 {
-        let metadata =
-            create_test_tool_metadata(&format!("tool_{}", i), &format!("Tool number {}", i));
+        let metadata = create_test_tool_metadata(&format!("tool_{i}"), &format!("Tool number {i}"));
         metadata_collection.push(metadata);
     }
 
@@ -215,7 +214,7 @@ async fn test_tool_concurrency_limits() {
     // Test that we can handle the configured concurrency level
     let results = run_concurrent_operations(config.max_concurrent_tools, |i| {
         // Simulate tool execution
-        Ok(format!("concurrent_tool_{}", i))
+        Ok(format!("concurrent_tool_{i}"))
     })
     .await;
 
@@ -225,7 +224,7 @@ async fn test_tool_concurrency_limits() {
     // Test exceeding limits (should still work but may be slower)
     let high_concurrency = config.max_concurrent_tools * 2;
     let high_results = run_concurrent_operations(high_concurrency, |i| {
-        Ok(format!("high_concurrency_tool_{}", i))
+        Ok(format!("high_concurrency_tool_{i}"))
     })
     .await;
 
