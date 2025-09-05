@@ -21,7 +21,7 @@ pub fn has_tools_module() -> bool {
 /// Skip test if tools module is not available
 pub fn skip_if_no_tools(reason: &str) {
     if !has_tools_module() {
-        println!("Skipping test - tools module not available: {}", reason);
+        println!("Skipping test - tools module not available: {reason}");
         panic!("TEST_SKIP");
     }
 }
@@ -87,7 +87,7 @@ pub fn create_test_tool_function(
                 std::thread::sleep(std::time::Duration::from_millis(100));
                 Ok(serde_json::json!("slow_result"))
             }
-            _ => Err(format!("Unknown test tool: {}", name)),
+            _ => Err(format!("Unknown test tool: {name}")),
         }
     })
 }
@@ -176,8 +176,7 @@ pub fn validate_tool_result(
     if let Some(success) = result.get("success").and_then(|v| v.as_bool()) {
         if success != expected_success {
             return Err(format!(
-                "Expected success={}, got {}",
-                expected_success, success
+                "Expected success={expected_success}, got {success}"
             ));
         }
     } else {
@@ -187,8 +186,7 @@ pub fn validate_tool_result(
     if let Some(tool_name) = result.get("tool_name").and_then(|v| v.as_str()) {
         if tool_name != expected_tool_name {
             return Err(format!(
-                "Expected tool_name={}, got {}",
-                expected_tool_name, tool_name
+                "Expected tool_name={expected_tool_name}, got {tool_name}"
             ));
         }
     } else {
@@ -199,10 +197,8 @@ pub fn validate_tool_result(
         if result.get("output").is_none() {
             return Err("Missing 'output' field in successful result".to_string());
         }
-    } else {
-        if result.get("error").is_none() {
-            return Err("Missing 'error' field in failed result".to_string());
-        }
+    } else if result.get("error").is_none() {
+        return Err("Missing 'error' field in failed result".to_string());
     }
 
     Ok(())
