@@ -35,7 +35,7 @@ pub struct ToolsTestConfig {
 /// Skip test if tools module is not available
 pub fn skip_if_no_tools(reason: &str) {
     if !has_tools_module() {
-        println!("Skipping test - tools module not available: {}", reason);
+        println!("Skipping test - tools module not available: {reason}");
         panic!("TEST_SKIP");
     }
 }
@@ -66,7 +66,7 @@ pub fn create_simple_test_tool(
                 Err("Invalid parameter for fail_on_even".to_string())
             }
         }
-        _ => Err(format!("Unknown test tool: {}", name)),
+        _ => Err(format!("Unknown test tool: {name}")),
     })
 }
 
@@ -94,8 +94,7 @@ pub fn validate_basic_tool_result(
     if let Some(success) = result.get("success").and_then(|v| v.as_bool()) {
         if success != expected_success {
             return Err(format!(
-                "Expected success={}, got {}",
-                expected_success, success
+                "Expected success={expected_success}, got {success}"
             ));
         }
     } else {
@@ -105,8 +104,7 @@ pub fn validate_basic_tool_result(
     if let Some(tool_name) = result.get("tool_name").and_then(|v| v.as_str()) {
         if tool_name != expected_tool_name {
             return Err(format!(
-                "Expected tool_name={}, got {}",
-                expected_tool_name, tool_name
+                "Expected tool_name={expected_tool_name}, got {tool_name}"
             ));
         }
     } else {
@@ -117,10 +115,8 @@ pub fn validate_basic_tool_result(
         if result.get("output").is_none() {
             return Err("Missing 'output' field in successful result".to_string());
         }
-    } else {
-        if result.get("error").is_none() {
-            return Err("Missing 'error' field in failed result".to_string());
-        }
+    } else if result.get("error").is_none() {
+        return Err("Missing 'error' field in failed result".to_string());
     }
 
     Ok(())
@@ -137,9 +133,25 @@ pub fn create_simple_execution_context() -> serde_json::Value {
 
 /// Helper function to create test data for unit tests
 pub fn create_unit_test_data() -> Vec<serde_json::Value> {
+    let timestamp = chrono::Utc::now().timestamp();
     vec![
-        serde_json::json!({"id": 1, "value": "test1"}),
-        serde_json::json!({"id": 2, "value": "test2"}),
-        serde_json::json!({"id": 3, "value": "test3"}),
+        serde_json::json!({
+            "id": 1,
+            "value": "test1",
+            "timestamp": timestamp,
+            "metadata": {"type": "test", "version": "1.0"}
+        }),
+        serde_json::json!({
+            "id": 2,
+            "value": "test2",
+            "timestamp": timestamp + 1,
+            "metadata": {"type": "test", "version": "1.0"}
+        }),
+        serde_json::json!({
+            "id": 3,
+            "value": "test3",
+            "timestamp": timestamp + 2,
+            "metadata": {"type": "test", "version": "1.0"}
+        }),
     ]
 }
