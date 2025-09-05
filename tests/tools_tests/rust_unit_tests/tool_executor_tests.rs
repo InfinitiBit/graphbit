@@ -8,7 +8,7 @@ fn test_tool_executor_creation() {
 
     // Test basic creation
     // Note: This would test actual ToolExecutor creation if available
-    assert!(true, "ToolExecutor creation test passed");
+    // ToolExecutor creation test passed
 }
 
 #[test]
@@ -73,7 +73,7 @@ fn test_tool_executor_statistics_collection() {
     let test_data = create_unit_test_data();
 
     // Verify test data can be used for statistics
-    assert!(test_data.len() > 0);
+    assert!(!test_data.is_empty());
 
     // Simulate statistics collection
     let total_items = test_data.len();
@@ -170,7 +170,7 @@ fn test_tool_executor_with_empty_registry() {
 
     // Verify empty registry behavior
     assert_eq!(empty_data.len(), 0);
-    assert!(test_data.len() > 0);
+    assert!(!test_data.is_empty());
 }
 
 #[test]
