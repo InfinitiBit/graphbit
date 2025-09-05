@@ -547,11 +547,13 @@ impl TextSplitterTrait for SentenceSplitter {
             }
 
             // Move to next chunk with overlap
-            i = if self.chunk_overlap > 0 && j < sentences.len() {
+            let next_i = if self.chunk_overlap > 0 && j < sentences.len() {
                 j.saturating_sub(self.chunk_overlap)
             } else {
                 j
             };
+
+            i = next_i.max(i + 1);
         }
 
         Ok(chunks)
