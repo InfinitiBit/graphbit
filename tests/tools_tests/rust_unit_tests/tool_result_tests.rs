@@ -8,7 +8,7 @@ fn test_tool_result_creation() {
 
     // Test basic creation
     // Note: This would test actual ToolResult creation if available
-    assert!(true, "ToolResult creation test passed");
+    // ToolResult creation test passed
 }
 
 #[test]
@@ -1642,7 +1642,7 @@ fn test_tool_result_structure_validation() {
 
     for item in &test_data {
         for attr in &required_attrs {
-            assert!(item.get(*attr).is_some(), "Missing attribute: {}", attr);
+            assert!(item.get(*attr).is_some(), "Missing attribute: {attr}");
         }
     }
 }
