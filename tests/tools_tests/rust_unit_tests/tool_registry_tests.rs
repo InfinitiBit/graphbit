@@ -8,22 +8,23 @@ fn test_tool_registry_creation() {
 
     // Test basic creation
     // Note: This would test actual ToolRegistry creation if available
-    assert!(true, "ToolRegistry creation test passed");
+    // ToolRegistry creation test passed
 }
 
 #[test]
 fn test_tool_registration_and_retrieval() {
     skip_if_no_tools("ToolRegistry not available");
 
-    // Test tool registration logic
-    let test_tool = create_simple_test_tool("test_tool");
+    // Test tool registration logic using supported tool names
+    let echo_tool = create_simple_test_tool("echo");
 
-    // Test the tool works
-    let result = test_tool(serde_json::json!({"input": "test"}));
+    // Test the echo tool works
+    let result = echo_tool(serde_json::json!({"input": "test"}));
     assert!(result.is_ok());
 
     // Test with different input
-    let result2 = test_tool(serde_json::json!({"value": 42}));
+    let add_one_tool = create_simple_test_tool("add_one");
+    let result2 = add_one_tool(serde_json::json!({"value": 42}));
     assert!(result2.is_ok());
 }
 
@@ -42,7 +43,7 @@ fn test_tool_metadata_management() {
     // Test metadata structure
     let required_fields = ["name", "description", "parameters_schema", "return_type"];
     for field in &required_fields {
-        assert!(metadata.get(*field).is_some(), "Missing field: {}", field);
+        assert!(metadata.get(*field).is_some(), "Missing field: {field}");
     }
 }
 
@@ -277,7 +278,7 @@ fn test_tool_registry_constraint_validation() {
     let test_data = create_unit_test_data();
 
     // Validate constraints
-    assert!(test_data.len() > 0);
+    assert!(!test_data.is_empty());
     assert!(test_data.len() <= 100); // Reasonable upper limit
 
     for item in &test_data {
