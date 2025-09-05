@@ -1,22 +1,19 @@
 """Unit tests for ToolDecorator functionality with comprehensive coverage."""
 
-import pytest
-import sys
-import os
-import json
-import time
-import threading
-import gc
+import contextlib
 import inspect
+import os
+import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from unittest.mock import Mock, patch, MagicMock
 from typing import Any, Dict, List, Optional, Union
 
+import pytest
+
 # Add the parent directory to the path to import graphbit
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../../../'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../../../"))
 
 try:
-    from graphbit import ToolDecorator, ToolRegistry, tool, get_tool_registry, clear_tools
+    from graphbit import ToolDecorator, ToolRegistry, clear_tools, get_tool_registry, tool
 except ImportError as e:
     pytest.skip(f"GraphBit tools module not available: {e}", allow_module_level=True)
 
@@ -30,7 +27,7 @@ class TestToolDecorator:
             decorator = ToolDecorator()
             assert decorator is not None
             # Test that we can access the registry through get_registry method
-            if hasattr(decorator, 'get_registry'):
+            if hasattr(decorator, "get_registry"):
                 registry = decorator.get_registry()
                 assert registry is not None
         except Exception as e:
@@ -43,7 +40,7 @@ class TestToolDecorator:
             decorator = ToolDecorator(registry=registry)
             assert decorator is not None
             # Test that we can access the registry through get_registry method
-            if hasattr(decorator, 'get_registry'):
+            if hasattr(decorator, "get_registry"):
                 retrieved_registry = decorator.get_registry()
                 assert retrieved_registry is not None
         except Exception as e:
@@ -55,7 +52,7 @@ class TestToolDecorator:
             decorator = ToolDecorator(registry=None)
             assert decorator is not None
             # Test that we can access the registry through get_registry method
-            if hasattr(decorator, 'get_registry'):
+            if hasattr(decorator, "get_registry"):
                 registry = decorator.get_registry()
                 assert registry is not None
         except Exception as e:
@@ -67,11 +64,7 @@ class TestToolDecorator:
             decorator = ToolDecorator()
 
             # Test with all parameters specified
-            result = decorator.__call__(
-                description="Comprehensive test tool",
-                name="comprehensive_test_tool",
-                return_type="str"
-            )
+            result = decorator.__call__(description="Comprehensive test tool", name="comprehensive_test_tool", return_type="str")
             assert result is not None
 
             # Test with minimal parameters (only description)
@@ -87,19 +80,11 @@ class TestToolDecorator:
             assert result is not None
 
             # Test with None parameters (should use defaults)
-            result = decorator.__call__(
-                description=None,
-                name=None,
-                return_type=None
-            )
+            result = decorator.__call__(description=None, name=None, return_type=None)
             assert result is not None
 
             # Test with empty string parameters
-            result = decorator.__call__(
-                description="",
-                name="",
-                return_type=""
-            )
+            result = decorator.__call__(description="", name="", return_type="")
             assert result is not None
 
             # Test with no parameters at all
@@ -119,38 +104,22 @@ class TestToolDecorator:
             long_name = "B" * 1000
             long_return_type = "C" * 500
 
-            result = decorator.__call__(
-                description=long_description,
-                name=long_name,
-                return_type=long_return_type
-            )
+            result = decorator.__call__(description=long_description, name=long_name, return_type=long_return_type)
             assert result is not None
 
             # Test with special characters
             special_chars = "!@#$%^&*()_+-=[]{}|;':\",./<>?`~"
-            result = decorator.__call__(
-                description=f"Tool with special chars: {special_chars}",
-                name=f"tool_{special_chars}",
-                return_type=f"type_{special_chars}"
-            )
+            result = decorator.__call__(description=f"Tool with special chars: {special_chars}", name=f"tool_{special_chars}", return_type=f"type_{special_chars}")
             assert result is not None
 
             # Test with unicode characters
             unicode_chars = "🚀🌟🎉💻🔥✨🎯📚🔧⚡"
-            result = decorator.__call__(
-                description=f"Unicode tool: {unicode_chars}",
-                name=f"unicode_tool_{unicode_chars}",
-                return_type=f"unicode_type_{unicode_chars}"
-            )
+            result = decorator.__call__(description=f"Unicode tool: {unicode_chars}", name=f"unicode_tool_{unicode_chars}", return_type=f"unicode_type_{unicode_chars}")
             assert result is not None
 
             # Test with newlines and tabs
             multiline_desc = "Line 1\nLine 2\tTabbed\r\nWindows line ending"
-            result = decorator.__call__(
-                description=multiline_desc,
-                name="multiline_tool",
-                return_type="str"
-            )
+            result = decorator.__call__(description=multiline_desc, name="multiline_tool", return_type="str")
             assert result is not None
 
         except Exception as e:
@@ -190,9 +159,7 @@ class TestToolDecorator:
             assert callable(async_function)
 
             # Test with lambda function
-            lambda_func = decorator(description="Lambda function", name="lambda_func")(
-                lambda x: x * 2
-            )
+            lambda_func = decorator(description="Lambda function", name="lambda_func")(lambda x: x * 2)
             assert callable(lambda_func)
 
         except Exception as e:
@@ -207,7 +174,7 @@ class TestToolDecorator:
             @decorator(description="Function with comprehensive docstring")
             def documented_function(param1: int, param2: str = "default") -> str:
                 """
-                This is a comprehensive documented function.
+                Document a comprehensive function.
 
                 Args:
                     param1 (int): First parameter
@@ -227,11 +194,7 @@ class TestToolDecorator:
 
             # Test with function that has type hints
             @decorator(description="Function with type hints")
-            def typed_function(
-                a: int,
-                b: Optional[str] = None,
-                c: List[Dict[str, Any]] = None
-            ) -> Union[str, Dict[str, Any]]:
+            def typed_function(a: int, b: Optional[str] = None, c: Optional[List[Dict[str, Any]]] = None) -> Union[str, Dict[str, Any]]:
                 return {"a": a, "b": b, "c": c or []}
 
             assert callable(typed_function)
@@ -253,7 +216,6 @@ class TestToolDecorator:
         except Exception as e:
             pytest.skip(f"ToolDecorator metadata extraction not available: {e}")
 
-
     def test_tool_decorator_thread_safety_comprehensive(self):
         """Test ToolDecorator comprehensive thread safety scenarios."""
         try:
@@ -273,10 +235,7 @@ class TestToolDecorator:
 
             # Test with ThreadPoolExecutor for better control
             with ThreadPoolExecutor(max_workers=10) as executor:
-                futures = [
-                    executor.submit(create_decorator_with_id, thread_id)
-                    for thread_id in range(20)
-                ]
+                futures = [executor.submit(create_decorator_with_id, thread_id) for thread_id in range(20)]
 
                 results = []
                 for future in as_completed(futures):
@@ -297,19 +256,13 @@ class TestToolDecorator:
                 # Multiple threads trying to decorate the same function
                 def decorate_function(decorator_id):
                     try:
-                        decorated = base_decorator.__call__(
-                            description=f"Concurrent decoration {decorator_id}",
-                            name=f"concurrent_func_{decorator_id}"
-                        )(target_function)
+                        decorated = base_decorator.__call__(description=f"Concurrent decoration {decorator_id}", name=f"concurrent_func_{decorator_id}")(target_function)
                         return (decorator_id, callable(decorated))
                     except Exception as e:
                         return (decorator_id, str(e))
 
                 with ThreadPoolExecutor(max_workers=5) as executor:
-                    futures = [
-                        executor.submit(decorate_function, i)
-                        for i in range(10)
-                    ]
+                    futures = [executor.submit(decorate_function, i) for i in range(10)]
 
                     decoration_results = []
                     for future in as_completed(futures):
@@ -338,7 +291,7 @@ class TestToolDecorator:
                         return f"worker_{worker_id}_result"
 
                     # Test registry access
-                    if hasattr(decorator, 'get_registry'):
+                    if hasattr(decorator, "get_registry"):
                         registry = decorator.get_registry()
                         return (worker_id, True, registry is not None)
                     else:
@@ -348,10 +301,7 @@ class TestToolDecorator:
                     return (worker_id, False, str(e))
 
             with ThreadPoolExecutor(max_workers=8) as executor:
-                futures = [
-                    executor.submit(create_decorator_with_shared_registry, worker_id)
-                    for worker_id in range(15)
-                ]
+                futures = [executor.submit(create_decorator_with_shared_registry, worker_id) for worker_id in range(15)]
 
                 registry_results = []
                 for future in as_completed(futures):
@@ -375,28 +325,23 @@ class TestToolDecorator:
     def test_tool_decorator_register_method(self):
         """Test ToolDecorator register method."""
         decorator = ToolDecorator()
-        
+
         def test_func():
             return "test"
-        
+
         # Test manual registration
-        result = decorator.register(
-            func=test_func,
-            name="manual_test_func",
-            description="Manually registered function",
-            return_type="str"
-        )
-        
+        result = decorator.register(func=test_func, name="manual_test_func", description="Manually registered function", return_type="str")
+
         # Should not raise an exception
-        assert result is None or True
+        assert result is None or result is True
 
     def test_tool_decorator_with_different_python_versions(self):
         """Test ToolDecorator compatibility with different Python versions."""
         decorator = ToolDecorator()
-        
+
         # Test basic functionality works
         assert decorator is not None
-        
+
         # Test that it works with current Python version
         current_version = sys.version_info
         assert current_version >= (3, 10), "Requires Python 3.10+"
@@ -405,8 +350,9 @@ class TestToolDecorator:
         """Test ToolDecorator comprehensive memory management scenarios."""
         try:
             import gc
-            import psutil
             import os
+
+            import psutil
 
             # Get initial memory usage
             process = psutil.Process(os.getpid())
@@ -431,9 +377,10 @@ class TestToolDecorator:
             decorated_functions = []
 
             for func_id in range(100):
+
                 @decorator(description=f"Memory test function {func_id}", name=f"mem_func_{func_id}")
-                def memory_test_function():
-                    return f"result_{func_id}"
+                def memory_test_function(_func_id=func_id):
+                    return f"result_{_func_id}"
 
                 decorated_functions.append(memory_test_function)
 
@@ -442,7 +389,7 @@ class TestToolDecorator:
                 try:
                     result = func()
                     assert result is not None
-                except Exception:
+                except Exception:  # nosec B110
                     pass  # Some functions might not be executable
 
             # Clean up
@@ -451,7 +398,7 @@ class TestToolDecorator:
             gc.collect()
 
             # Test 3: Stress test with rapid creation/destruction
-            for cycle in range(10):
+            for _cycle in range(10):
                 temp_decorators = []
                 for _ in range(50):
                     temp_decorator = ToolDecorator()
@@ -459,12 +406,11 @@ class TestToolDecorator:
 
                 # Use decorators
                 for i, temp_decorator in enumerate(temp_decorators[:5]):
-                    try:
+                    with contextlib.suppress(Exception):
+
                         @temp_decorator(description=f"Temp function {i}")
                         def temp_function():
                             return "temp_result"
-                    except Exception:
-                        pass
 
                 del temp_decorators
                 gc.collect()
@@ -494,30 +440,27 @@ class TestToolDecorator:
     def test_tool_decorator_serialization_capabilities(self):
         """Test ToolDecorator serialization and deserialization capabilities."""
         try:
-            import pickle
             import json
+            import pickle  # nosec B403
 
             decorator = ToolDecorator()
 
             # Test 1: Pickle serialization (if supported)
             try:
-                pickled_decorator = pickle.dumps(decorator)
-                unpickled_decorator = pickle.loads(pickled_decorator)
+                pickled_decorator = pickle.dumps(decorator)  # nosec B301
+                unpickled_decorator = pickle.loads(pickled_decorator)  # nosec B301
                 assert unpickled_decorator is not None
             except (TypeError, AttributeError, pickle.PicklingError):
                 # Decorator might not be picklable - that's okay
                 pass
 
             # Test 2: JSON serialization of decorator metadata (if available)
-            if hasattr(decorator, 'to_dict') or hasattr(decorator, '__dict__'):
+            if hasattr(decorator, "to_dict") or hasattr(decorator, "__dict__"):
                 try:
-                    if hasattr(decorator, 'to_dict'):
+                    if hasattr(decorator, "to_dict"):
                         decorator_dict = decorator.to_dict()
                     else:
-                        decorator_dict = {
-                            'type': 'ToolDecorator',
-                            'has_get_registry': hasattr(decorator, 'get_registry')
-                        }
+                        decorator_dict = {"type": "ToolDecorator", "has_get_registry": hasattr(decorator, "get_registry")}
 
                     json_str = json.dumps(decorator_dict, default=str)
                     assert json_str is not None
@@ -536,11 +479,11 @@ class TestToolDecorator:
                 return f"processed_{param}"
 
             # Try to serialize function metadata
-            if hasattr(serializable_function, '__dict__'):
+            if hasattr(serializable_function, "__dict__"):
                 func_metadata = {
-                    'name': getattr(serializable_function, '__name__', 'unknown'),
-                    'doc': getattr(serializable_function, '__doc__', None),
-                    'annotations': getattr(serializable_function, '__annotations__', {})
+                    "name": getattr(serializable_function, "__name__", "unknown"),
+                    "doc": getattr(serializable_function, "__doc__", None),
+                    "annotations": getattr(serializable_function, "__annotations__", {}),
                 }
 
                 json_metadata = json.dumps(func_metadata, default=str)
@@ -588,22 +531,18 @@ class TestToolDecoratorAdvancedFeatures:
             decorator = ToolDecorator()
 
             # Test get_registry method
-            if hasattr(decorator, 'get_registry'):
+            if hasattr(decorator, "get_registry"):
                 registry = decorator.get_registry()
                 assert registry is not None
                 assert isinstance(registry, ToolRegistry)
 
             # Test register method
-            if hasattr(decorator, 'register'):
+            if hasattr(decorator, "register"):
+
                 def manual_function():
                     return "manual_result"
 
-                result = decorator.register(
-                    func=manual_function,
-                    name="manual_test_func",
-                    description="Manually registered function",
-                    return_type="str"
-                )
+                result = decorator.register(func=manual_function, name="manual_test_func", description="Manually registered function", return_type="str")
                 assert result is None or result is True
 
         except Exception as e:
@@ -616,13 +555,7 @@ class TestToolDecoratorAdvancedFeatures:
 
             # Test with function that has complex signature
             @decorator(description="Complex signature function")
-            def complex_function(
-                required_param: str,
-                optional_param: int = 42,
-                *args,
-                keyword_only: bool = True,
-                **kwargs
-            ) -> Dict[str, Any]:
+            def complex_function(required_param: str, optional_param: int = 42, *args, keyword_only: bool = True, **kwargs) -> Dict[str, Any]:
                 """
                 Complex function for testing introspection.
 
@@ -636,13 +569,7 @@ class TestToolDecoratorAdvancedFeatures:
                 Returns:
                     Dict containing all parameters
                 """
-                return {
-                    "required_param": required_param,
-                    "optional_param": optional_param,
-                    "args": args,
-                    "keyword_only": keyword_only,
-                    "kwargs": kwargs
-                }
+                return {"required_param": required_param, "optional_param": optional_param, "args": args, "keyword_only": keyword_only, "kwargs": kwargs}
 
             assert callable(complex_function)
 
@@ -651,8 +578,8 @@ class TestToolDecoratorAdvancedFeatures:
             assert len(sig.parameters) >= 4
 
             # Test function annotations
-            annotations = getattr(complex_function, '__annotations__', {})
-            assert 'return' in annotations or len(annotations) >= 0
+            annotations = getattr(complex_function, "__annotations__", {})
+            assert "return" in annotations or len(annotations) >= 0
 
         except Exception as e:
             pytest.skip(f"ToolDecorator function introspection not available: {e}")
@@ -668,30 +595,18 @@ class TestToolDecoratorEdgeCases:
 
             # Test with maximum length strings (within reasonable limits)
             max_desc = "A" * 65535  # 64KB description
-            max_name = "B" * 255    # 255 char name
-            max_type = "C" * 100    # 100 char type
+            max_name = "B" * 255  # 255 char name
+            max_type = "C" * 100  # 100 char type
 
-            result = decorator.__call__(
-                description=max_desc,
-                name=max_name,
-                return_type=max_type
-            )
+            result = decorator.__call__(description=max_desc, name=max_name, return_type=max_type)
             assert result is not None
 
             # Test with minimum valid values
-            result = decorator.__call__(
-                description="A",
-                name="B",
-                return_type="C"
-            )
+            result = decorator.__call__(description="A", name="B", return_type="C")
             assert result is not None
 
             # Test with whitespace-only strings
-            result = decorator.__call__(
-                description="   ",
-                name="\t\n",
-                return_type=" \r "
-            )
+            result = decorator.__call__(description="   ", name="\t\n", return_type=" \r ")
             assert result is not None
 
         except Exception as e:
@@ -713,25 +628,16 @@ class TestToolDecoratorEdgeCases:
             ]
 
             for desc, name, ret_type in unicode_tests:
-                result = decorator.__call__(
-                    description=desc,
-                    name=name,
-                    return_type=ret_type
-                )
+                result = decorator.__call__(description=desc, name=name, return_type=ret_type)
                 assert result is not None
 
             # Test with mixed encodings
             mixed_desc = "Mixed: ASCII + 中文 + العربية + русский + 🌍"
-            result = decorator.__call__(
-                description=mixed_desc,
-                name="mixed_encoding_tool",
-                return_type="str"
-            )
+            result = decorator.__call__(description=mixed_desc, name="mixed_encoding_tool", return_type="str")
             assert result is not None
 
         except Exception as e:
             pytest.skip(f"ToolDecorator unicode testing not available: {e}")
-
 
     def test_tool_decorator_error_recovery(self):
         """Test ToolDecorator error recovery and resilience."""
@@ -759,13 +665,10 @@ class TestToolDecoratorEdgeCases:
             successful_decorations = 0
             for i, func in enumerate(problematic_functions):
                 try:
-                    decorated = decorator.__call__(
-                        description=f"Problematic function {i}",
-                        name=f"problematic_{i}"
-                    )(func)
+                    decorated = decorator.__call__(description=f"Problematic function {i}", name=f"problematic_{i}")(func)
                     if callable(decorated):
                         successful_decorations += 1
-                except Exception:
+                except Exception:  # nosec B110
                     pass  # Expected for some functions
 
             # At least some decorations should succeed
@@ -787,9 +690,10 @@ class TestToolDecoratorEdgeCases:
 
             # Decorate many functions quickly
             for i in range(100):
+
                 @decorator(description=f"Performance test function {i}")
-                def perf_function():
-                    return f"perf_result_{i}"
+                def perf_function(_i=i):
+                    return f"perf_result_{_i}"
 
                 decorated_functions.append(perf_function)
 
@@ -806,7 +710,7 @@ class TestToolDecoratorEdgeCases:
                 try:
                     result = func()
                     results.append(result)
-                except Exception:
+                except Exception:  # nosec B110
                     pass
 
             execution_time = time.time() - start_time
@@ -820,7 +724,6 @@ class TestToolDecoratorEdgeCases:
 
 class TestToolDecoratorIntegration:
     """Integration tests for ToolDecorator with other components."""
-
 
     def test_tool_decorator_compatibility_modes(self):
         """Test ToolDecorator compatibility with different usage patterns."""
@@ -838,11 +741,7 @@ class TestToolDecoratorIntegration:
             def test_func():
                 return "wrapped_result"
 
-            decorated = wrapper.decorate_function(
-                test_func,
-                description="Wrapped function",
-                name="wrapped_func"
-            )
+            decorated = wrapper.decorate_function(test_func, description="Wrapped function", name="wrapped_func")
             assert callable(decorated)
 
             # Test 2: Functional usage
@@ -850,6 +749,7 @@ class TestToolDecoratorIntegration:
                 @decorator(description=f"Functional {func_name}")
                 def functional_function():
                     return f"functional_{func_name}_result"
+
                 return functional_function
 
             decorator = ToolDecorator()
@@ -864,42 +764,40 @@ class TestToolDecoratorIntegration:
 
 
 # Parameterized tests for comprehensive parameter coverage
-@pytest.mark.parametrize("description,name,return_type,should_succeed", [
-    ("Valid description", "valid_name", "str", True),
-    ("", "", "", True),  # Empty strings should be handled
-    (None, None, None, True),  # None values should use defaults
-    ("Very long description " * 100, "long_name", "str", True),
-    ("Unicode: 🚀", "unicode_name", "dict", True),
-    ("Special chars: !@#$%", "special_name", "list", True),
-])
+@pytest.mark.parametrize(
+    "description,name,return_type,should_succeed",
+    [
+        ("Valid description", "valid_name", "str", True),
+        ("", "", "", True),  # Empty strings should be handled
+        (None, None, None, True),  # None values should use defaults
+        ("Very long description " * 100, "long_name", "str", True),
+        ("Unicode: 🚀", "unicode_name", "dict", True),
+        ("Special chars: !@#$%", "special_name", "list", True),
+    ],
+)
 def test_tool_decorator_parameter_combinations(description, name, return_type, should_succeed):
     """Parameterized test for various parameter combinations."""
     try:
         decorator = ToolDecorator()
 
         if should_succeed:
-            result = decorator.__call__(
-                description=description,
-                name=name,
-                return_type=return_type
-            )
+            result = decorator.__call__(description=description, name=name, return_type=return_type)
             assert result is not None
         else:
-            with pytest.raises(Exception):
-                decorator.__call__(
-                    description=description,
-                    name=name,
-                    return_type=return_type
-                )
+            with pytest.raises((ValueError, TypeError, AttributeError)):
+                decorator.__call__(description=description, name=name, return_type=return_type)
     except Exception as e:
         pytest.skip(f"ToolDecorator parameterized testing not available: {e}")
 
 
-@pytest.mark.parametrize("registry_type", [
-    "default",  # Default registry
-    "custom",   # Custom registry
-    "none",     # None registry
-])
+@pytest.mark.parametrize(
+    "registry_type",
+    [
+        "default",  # Default registry
+        "custom",  # Custom registry
+        "none",  # None registry
+    ],
+)
 def test_tool_decorator_registry_types(registry_type):
     """Parameterized test for different registry types."""
     try:
@@ -913,7 +811,7 @@ def test_tool_decorator_registry_types(registry_type):
 
         assert decorator is not None
         # Test that we can access the registry through get_registry method
-        if hasattr(decorator, 'get_registry'):
+        if hasattr(decorator, "get_registry"):
             registry = decorator.get_registry()
             assert registry is not None
 
