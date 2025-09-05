@@ -268,11 +268,13 @@ impl TextSplitterTrait for CharacterSplitter {
             }
 
             // Move to next chunk with overlap
-            char_start = if self.chunk_overlap > 0 && char_end < total_chars {
+            let next_char_start = if self.chunk_overlap > 0 && char_end < total_chars {
                 char_end.saturating_sub(self.chunk_overlap)
             } else {
                 char_end
             };
+
+            char_start = next_char_start.max(char_start + 1);
         }
 
         Ok(chunks)
