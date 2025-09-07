@@ -1,31 +1,169 @@
 [dependencies]
-anyhow = "1.0"
-chrono = {version = "0.4", features = ["serde"]}
-futures = "0.3"
-graphbit-core = {path = "core", features = ["python"]}
-num_cpus = "1.16"
-reqwest = {version = "0.11", features = ["json"]}
-serde = {version = "1.0", features = ["derive"]}
-serde_json = "1.0"
-tempfile = "3.10.0"
-tokio = {version = "1.38", features = ["full"]}
-async-trait = "0.1.88"
+graphbit-core = {workspace = true, features = ["python"]}
+anyhow.workspace = true
+async-trait.workspace = true
+chrono.workspace = true
+futures.workspace = true
+num_cpus.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tempfile.workspace = true
+tokio.workspace = true
 
 [dev-dependencies]
-async-trait = "0.1.88"
-pyo3 = {version = "0.24", features = ["auto-initialize"]}
+pyo3 = {workspace = true, features = ["auto-initialize"]}
+async-trait.workspace = true
 
 [features]
 default = []
 
+[lints]
+workspace = true
+
+# Root package (library crate)
 [package]
-authors = ["GraphBit Team"]
 description = "GraphBit agentic workflow automation framework (library)"
-edition = "2021"
 name = "graphbit"
 publish = false
-repository = "https://github.com/InfinitiBit/graphbit"
-version = "0.1.0"
+authors.workspace = true
+categories.workspace = true
+documentation.workspace = true
+edition.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[profile.bench]
+debug = false
+incremental = false
+lto = "fat"
+opt-level = 3
+
+# Workspace profiles (applied to all members)
+[profile.dev]
+debug = true
+incremental = true
+opt-level = 1
+overflow-checks = true
+
+[profile.release]
+codegen-units = 1
+debug = false
+incremental = false
+lto = "fat"
+opt-level = 3
+panic = "abort"
+strip = "symbols"
+
+# Profile for PyO3 extension modules (optimized for size and performance)
+[profile.release-python]
+codegen-units = 1
+inherits = "release"
+lto = "fat"
+opt-level = "s"  # Optimize for size (important for Python extensions)
+panic = "abort"
+strip = "symbols"
+
+[profile.test]
+debug = true
+incremental = true
+opt-level = 1
 
 [target.'cfg(unix)'.dependencies]
+jemallocator.workspace = true
+
+[workspace]
+members = [
+  "core",
+  "python",
+  "nodejs"
+]
+resolver = "2"
+
+[workspace.dependencies]
+# Core dependencies with consistent versions
+anyhow = "1.0"
+async-trait = "0.1.88"
+chrono = {version = "0.4", features = ["serde"]}
+# Document processing
+docx-rs = "0.4"
+futures = "0.3"
+# Internal dependencies
+graphbit-core = {path = "core"}
+# Platform-specific dependencies
 jemallocator = "0.5"
+# Utilities
+lazy_static = "1.4"
+lopdf = "0.32"
+# Node.js bindings
+napi = {version = "2.16", default-features = false, features = ["napi8", "tokio_rt", "serde-json"]}
+napi-build = "2.1"
+napi-derive = "2.16"
+num_cpus = "1.16"
+# Graph and algorithms
+petgraph = "0.6"
+# Python bindings
+pyo3 = {version = "0.24.1", features = ["extension-module"]}
+pyo3-async-runtimes = {version = "0.24", features = ["tokio-runtime"]}
+rand = "0.8"
+regex = "1.10"
+reqwest = {version = "0.11", features = ["json"]}
+serde = {version = "1.0", features = ["derive"]}
+serde_json = "1.0"
+sys-info = "0.9"
+tempfile = "3.10.0"
+# Error handling
+thiserror = "1.0"
+tokio = {version = "1.38", features = ["full"]}
+# Tracing and logging
+tracing = "0.1"
+tracing-subscriber = {version = "0.3.20", features = ["env-filter", "json"]}
+uuid = {version = "1.8", features = ["v4", "v5", "serde"]}
+
+[workspace.lints.clippy]
+# Set lint groups with proper priority hierarchy
+all = {level = "warn", priority = -1}
+cargo = {level = "warn", priority = -1}
+# Individual lint overrides (higher priority)
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+# Allow some pedantic lints that are too strict for this project
+module_name_repetitions = "allow"
+nursery = {level = "warn", priority = -1}
+pedantic = {level = "warn", priority = -1}
+
+# Workspace-wide lints configuration
+[workspace.lints.rust]
+dead_code = "warn"
+missing_docs = "warn"
+unsafe_code = "forbid"
+unused_imports = "warn"
+unused_variables = "warn"
+
+# Workspace metadata for better tooling support
+[workspace.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[workspace.metadata.release]
+pre-release-replacements = [
+  {file = "CHANGELOG.md", search = "Unreleased", replace = "{{version}}"},
+  {file = "CHANGELOG.md", search = "\\.\\.\\.HEAD", replace = "...{{tag_name}}", exactly = 1},
+  {file = "CHANGELOG.md", search = "ReleaseDate", replace = "{{date}}"},
+  {file = "CHANGELOG.md", search = "<!-- next-header -->", replace = "<!-- next-header -->\n\n## [Unreleased] - ReleaseDate\n", exactly = 1},
+  {file = "CHANGELOG.md", search = "<!-- next-url -->", replace = "<!-- next-url -->\n[Unreleased]: https://github.com/InfinitiBit/graphbit/compare/{{tag_name}}...HEAD", exactly = 1}
+]
+
+[workspace.package]
+authors = ["GraphBit Team"]
+categories = ["development-tools", "api-bindings", "asynchronous"]
+documentation = "https://docs.graphbit.ai"
+edition = "2021"
+homepage = "https://graphbit.ai"
+keywords = ["ai", "automation", "workflow", "agent", "llm"]
+repository = "https://github.com/InfinitiBit/graphbit"
+rust-version = "1.77"
+version = "0.1.0"

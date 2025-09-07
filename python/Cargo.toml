@@ -1,20 +1,20 @@
 [dependencies]
-chrono = {version = "0.4", features = ["serde"]}
-futures = "0.3"
-graphbit-core = {path = "../core", features = ["python"]}
-num_cpus = "1.16"
-pyo3 = {version = "0.24.1", features = ["extension-module"]}
-pyo3-async-runtimes = {version = "0.24", features = ["tokio-runtime"]}
-reqwest = {version = "0.11", features = ["json"]}
-serde = {version = "1.0", features = ["derive"]}
-serde_json = "1.0"
+graphbit-core = {workspace = true, features = ["python"]}
+uuid = {workspace = true, features = ["v4"]}
+chrono.workspace = true
+futures.workspace = true
+num_cpus.workspace = true
+pyo3.workspace = true
+pyo3-async-runtimes.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
 # System information and monitoring
-sys-info = "0.9"
-tokio = {version = "1.38", features = ["full"]}
+sys-info.workspace = true
+tokio.workspace = true
 # Production-grade logging and tracing
-tracing = "0.1"
-tracing-subscriber = {version = "0.3", features = ["env-filter", "json"]}
-uuid = {version = "1.0", features = ["v4"]}
+tracing.workspace = true
+tracing-subscriber.workspace = true
 
 [features]
 cli = []
@@ -27,28 +27,22 @@ profiling = ["tracing-subscriber/env-filter"]
 [lib]
 crate-type = ["cdylib"]
 
+[lints]
+workspace = true
+
 [package]
-authors = ["GraphBit Team"]
 description = "Production-grade Python bindings for GraphBit agentic workflow automation"
-edition = "2021"
-name = "graphbit"
+name = "graphbit-python"
 publish = false
-repository = "https://github.com/InfinitiBit/graphbit"
-version = "0.1.0"
-
-# Optimized debug builds for development
-[profile.dev]
-debug = true
-opt-level = 1
-
-# Performance optimizations for release builds
-[profile.release]
-codegen-units = 1
-debug = false
-lto = true
-opt-level = 3
-panic = "abort"
-strip = true
+authors.workspace = true
+categories.workspace = true
+documentation.workspace = true
+edition.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
 
 [target.'cfg(unix)'.dependencies]
-jemallocator = "0.5"
+jemallocator.workspace = true

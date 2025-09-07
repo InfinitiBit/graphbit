@@ -1,39 +1,43 @@
 [dependencies]
-anyhow = "1.0"
-async-trait = "0.1"
-chrono = {version = "0.4", features = ["serde"]}
-docx-rs = "0.4"
-futures = "0.3"
-lazy_static = "1.4"
-lopdf = "0.32"
-petgraph = "0.6"
-rand = "0.8"
-regex = "1.10"
-reqwest = {version = "0.11", features = ["json"]}
-serde = {version = "1.0", features = ["derive"]}
-serde_json = "1.0"
-thiserror = "1.0"
-tokio = {version = "1.38", features = ["full"]}
-tracing = "0.1"
-tracing-subscriber = "0.3"
-uuid = {version = "1.8", features = ["v4", "v5", "serde"]}
-
-[dependencies.pyo3]
-features = ["extension-module"]
-optional = true
-version = "0.24.1"
+pyo3 = {workspace = true, optional = true}
+anyhow.workspace = true
+async-trait.workspace = true
+chrono.workspace = true
+docx-rs.workspace = true
+futures.workspace = true
+lazy_static.workspace = true
+lopdf.workspace = true
+petgraph.workspace = true
+rand.workspace = true
+regex.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+uuid.workspace = true
 
 [features]
 default = []
 python = ["pyo3"]
 
+[lints]
+workspace = true
+
 [package]
-authors = ["GraphBit Team"]
 description = "Core engine for GraphBit agentic workflow automation"
-edition = "2021"
 name = "graphbit-core"
-repository = "https://github.com/InfinitiBit/graphbit"
-version = "0.1.0"
+authors.workspace = true
+categories.workspace = true
+documentation.workspace = true
+edition.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
 
 [target.'cfg(unix)'.dependencies]
-jemallocator = "0.5"
+jemallocator.workspace = true

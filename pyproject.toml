@@ -62,6 +62,20 @@ profile = "black"
 skip_gitignore = true
 use_parentheses = true
 
+[tool.maturin]
+# PyO3 bindings configuration
+bindings = "pyo3"
+# Compatibility settings for PyPI distribution
+compatibility = "pypi"
+# Module configuration
+module-name = "graphbit"
+# Build profile for optimized releases
+profile = "release"
+# Skip auditwheel for root builds (problematic configuration)
+skip-auditwheel = true
+# Build optimizations
+strip = true
+
 [tool.mypy]
 check_untyped_defs = true
 disallow_incomplete_defs = true
@@ -82,7 +96,6 @@ warn_unused_ignores = true
 authors = ["GraphBit Team"]
 description = "GraphBit - Advanced workflow automation and AI agent orchestration library"
 homepage = "https://github.com/InfinitiBit/graphbit"
-license = "proprietary"
 name = "graphbit"
 package-mode = false
 readme = "README.md"
