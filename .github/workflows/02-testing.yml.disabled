@@ -1,0 +1,314 @@
+name: 02 - Testing
+
+on:
+  workflow_dispatch:
+    inputs:
+      triggered_by:
+        description: 'Workflow that triggered this run'
+        required: false
+        default: 'manual'
+        type: string
+      validation_run_id:
+        description: 'Run ID of the validation workflow'
+        required: false
+        type: string
+      skip_cache:
+        description: 'Skip cache and run fresh tests'
+        required: false
+        default: false
+        type: boolean
+  workflow_call:
+    inputs:
+      triggered_by:
+        description: 'Workflow that triggered this run'
+        required: false
+        default: 'manual'
+        type: string
+      validation_run_id:
+        description: 'Run ID of the validation workflow'
+        required: false
+        type: string
+      skip_cache:
+        description: 'Skip cache and run fresh tests'
+        required: false
+        default: false
+        type: boolean
+    outputs:
+      testing_status:
+        description: 'Overall testing status'
+        value: ${{ jobs.test-matrix.outputs.status }}
+      testing_artifacts:
+        description: 'Testing artifacts path'
+        value: ${{ jobs.test-matrix.outputs.artifacts }}
+
+permissions:
+  contents: read
+  actions: write
+  pull-requests: write
+  issues: write
+  id-token: write
+  attestations: write
+
+env:
+  CARGO_TERM_COLOR: always
+  PYTHONIOENCODING: utf-8
+  RUST_BACKTRACE: 1
+  TEST_REMOTE_URLS: true
+
+jobs:
+  prerequisites-check:
+    name: Check Prerequisites
+    runs-on: ubuntu-latest
+    outputs:
+      ready: ${{ steps.check.outputs.ready }}
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+
+    - name: Check if pipeline is ready for testing
+      id: check
+      run: |
+        echo "Checking if pipeline is ready for testing phase..."
+        
+        if python scripts/workflow-orchestrator.py check --phase testing; then
+          echo "ready=true" >> $GITHUB_OUTPUT
+          echo "Pipeline is ready for testing"
+        else
+          echo "ready=false" >> $GITHUB_OUTPUT
+          echo "Pipeline is NOT ready for testing"
+          echo "Prerequisites not met. Validation phase must complete successfully first."
+          exit 1
+        fi
+
+  test-matrix:
+    name: Test Suite
+    needs: prerequisites-check
+    if: needs.prerequisites-check.outputs.ready == 'true'
+    runs-on: ${{ matrix.os }}
+    outputs:
+      status: ${{ steps.test-summary.outputs.status }}
+      artifacts: ${{ steps.test-summary.outputs.artifacts }}
+      
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        exclude:
+          # Reduce matrix size for efficiency
+          - os: windows-latest
+            python-version: "3.9"
+          - os: macos-latest
+            python-version: "3.9"
+          - os: macos-latest
+            python-version: "3.10"
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: rustfmt, clippy
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Cache Rust dependencies
+      if: ${{ !inputs.skip_cache }}
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target/
+        key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-test-
+          ${{ runner.os }}-cargo-
+
+    - name: Cache Python dependencies
+      if: ${{ !inputs.skip_cache }}
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/pip
+          ~/.local/lib/python*/site-packages
+        key: ${{ runner.os }}-python${{ matrix.python-version }}-test-${{ hashFiles('**/requirements*.txt', '**/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-python${{ matrix.python-version }}-test-
+          ${{ runner.os }}-python${{ matrix.python-version }}-
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest pytest-cov pytest-xdist maturin
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        if [ -f python/requirements.txt ]; then pip install -r python/requirements.txt; fi
+
+    - name: Install Rust tools (Ubuntu only)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        cargo install cargo-tarpaulin || echo "cargo-tarpaulin already installed or failed to install"
+
+    - name: Initialize workflow orchestrator
+      if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
+      run: |
+        python scripts/workflow-orchestrator.py start --phase testing
+
+    - name: Run comprehensive tests
+      id: testing
+      run: |
+        echo "Starting testing phase on ${{ matrix.os }} with Python ${{ matrix.python-version }}..."
+        
+        # Run tests with our script
+        if python scripts/testing-runner.py --root . --platform ${{ matrix.os }}; then
+          echo "status=success" >> $GITHUB_OUTPUT
+          echo "Tests completed successfully on ${{ matrix.os }}"
+        else
+          echo "status=failure" >> $GITHUB_OUTPUT
+          echo "Tests failed on ${{ matrix.os }}"
+          exit 1
+        fi
+
+    - name: Upload test artifacts
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-artifacts-${{ matrix.os }}-py${{ matrix.python-version }}-${{ github.run_id }}
+        path: |
+          .github/artifacts/testing-report-*.json
+          target/coverage/
+          htmlcov/
+          coverage.xml
+          .coverage
+        retention-days: 30
+
+    - name: Upload coverage to Codecov (Ubuntu + Python 3.11 only)
+      if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./coverage.xml,./target/coverage/cobertura.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+
+  test-summary:
+    name: Test Summary
+    needs: test-matrix
+    if: always()
+    runs-on: ubuntu-latest
+    outputs:
+      status: ${{ steps.summary.outputs.status }}
+      artifacts: ${{ steps.summary.outputs.artifacts }}
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+
+    - name: Download all test artifacts
+      uses: actions/download-artifact@v4
+      with:
+        pattern: test-artifacts-*
+        path: ./test-results
+        merge-multiple: true
+
+    - name: Generate test summary
+      id: summary
+      run: |
+        echo "Generating test summary..."
+        
+        # Check if all matrix jobs succeeded
+        if [ "${{ needs.test-matrix.result }}" = "success" ]; then
+          echo "status=success" >> $GITHUB_OUTPUT
+          echo "All test matrix jobs completed successfully"
+          
+          # Mark phase as complete
+          python scripts/workflow-orchestrator.py complete --phase testing --success --artifacts "./test-results"
+        else
+          echo "status=failure" >> $GITHUB_OUTPUT
+          echo "Some test matrix jobs failed"
+          
+          # Mark phase as failed
+          python scripts/workflow-orchestrator.py complete --phase testing --error "Some test matrix jobs failed"
+        fi
+        
+        echo "artifacts=./test-results" >> $GITHUB_OUTPUT
+
+    - name: Generate testing summary
+      if: always()
+      run: |
+        echo "## 🧪 Testing Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "${{ steps.summary.outputs.status }}" = "success" ]; then
+          echo "✅ **All tests passed across all platforms!**" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ **Some tests failed**" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Testing Details" >> $GITHUB_STEP_SUMMARY
+        echo "- **Workflow**: 02-testing" >> $GITHUB_STEP_SUMMARY
+        echo "- **Status**: ${{ steps.summary.outputs.status }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Triggered by**: ${{ inputs.triggered_by || 'manual' }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Validation Run ID**: ${{ inputs.validation_run_id || 'N/A' }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Artifacts**: ${{ steps.summary.outputs.artifacts }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Run ID**: ${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
+        
+        # Show pipeline status
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Pipeline Status" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        python scripts/workflow-orchestrator.py status >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+
+  trigger-next-phase:
+    name: Trigger Build Phase
+    needs: test-summary
+    if: needs.test-summary.outputs.status == 'success' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Trigger build workflow
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const result = await github.rest.actions.createWorkflowDispatch({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            workflow_id: '03-build.yml',
+            ref: context.ref,
+            inputs: {
+              triggered_by: 'testing',
+              validation_run_id: '${{ inputs.validation_run_id }}',
+              testing_run_id: '${{ github.run_id }}'
+            }
+          });
+          
+          console.log('Triggered build workflow:', result.status);
+
+    - name: Update pipeline status
+      run: |
+        echo "Testing phase completed successfully"
+        echo "Next phase: Build"
+        echo "Triggered build workflow for ref: ${{ github.ref }}"
