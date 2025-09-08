@@ -22,6 +22,7 @@ impl Node {
         prompt: String,
         agent_id: Option<String>,
         output_name: Option<String>,
+        system_prompt: Option<String>,
     ) -> Result<Node> {
         // Validate required parameters
         validate_non_empty_string(&name, "name")?;
@@ -47,6 +48,14 @@ impl Node {
                 prompt_template: prompt,
             },
         );
+
+        // Store system prompt in metadata if provided
+        if let Some(system_prompt) = system_prompt {
+            node.config.insert(
+                "system_prompt".to_string(),
+                serde_json::Value::String(system_prompt),
+            );
+        }
 
         // Store output name in metadata if provided
         if let Some(output_name) = output_name {

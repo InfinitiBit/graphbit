@@ -24,13 +24,14 @@ pub struct Node {
 #[pymethods]
 impl Node {
     #[staticmethod]
-    #[pyo3(signature = (name, prompt, agent_id=None, output_name=None, tools=None))]
+    #[pyo3(signature = (name, prompt, agent_id=None, output_name=None, tools=None, system_prompt=None))]
     fn agent(
         name: String,
         prompt: String,
         agent_id: Option<String>,
         output_name: Option<String>,
         tools: Option<&Bound<'_, PyList>>,
+        system_prompt: Option<String>,
     ) -> PyResult<Self> {
         // Validate required parameters
         if name.trim().is_empty() {
@@ -69,6 +70,14 @@ impl Node {
             node.config.insert(
                 "output_name".to_string(),
                 serde_json::Value::String(output_name),
+            );
+        }
+
+        // Store system prompt in metadata if provided
+        if let Some(system_prompt) = system_prompt {
+            node.config.insert(
+                "system_prompt".to_string(),
+                serde_json::Value::String(system_prompt),
             );
         }
 
