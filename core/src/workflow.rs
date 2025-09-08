@@ -333,7 +333,11 @@ impl WorkflowExecutor {
                     // Find the node configuration for this agent to extract system_prompt
                     let mut system_prompt = String::new();
                     for node in workflow.graph.get_nodes().values() {
-                        if let NodeType::Agent { agent_id: node_agent_id, .. } = &node.node_type {
+                        if let NodeType::Agent {
+                            agent_id: node_agent_id,
+                            ..
+                        } = &node.node_type
+                        {
                             if node_agent_id == &agent_id {
                                 // Extract system_prompt from node config if available
                                 if let Some(prompt_value) = node.config.get("system_prompt") {
