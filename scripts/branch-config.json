@@ -1,0 +1,91 @@
+{
+  "feature/changelog-system": {
+    "name": "feature/changelog-system",
+    "type": "feature",
+    "description": "Automated changelog generation system",
+    "dependencies": [],
+    "test_requirements": [
+      "unit",
+      "integration",
+      "e2e",
+      "security",
+      "coverage"
+    ],
+    "reviewers": [
+      "tech-lead",
+      "senior-dev"
+    ],
+    "merge_criteria": [
+      "tests-pass",
+      "coverage-90",
+      "docs-updated",
+      "security-scan"
+    ]
+  },
+  "feature/version-management": {
+    "name": "feature/version-management",
+    "type": "feature",
+    "description": "Advanced version synchronization system",
+    "dependencies": [
+      "infra/build-system"
+    ],
+    "test_requirements": [
+      "unit",
+      "integration",
+      "cross-platform",
+      "security"
+    ],
+    "reviewers": [
+      "tech-lead",
+      "devops-lead"
+    ],
+    "merge_criteria": [
+      "tests-pass",
+      "coverage-95",
+      "security-scan",
+      "cross-platform-tested"
+    ]
+  },
+  "enhance/rust-optimization": {
+    "name": "enhance/rust-optimization",
+    "type": "enhance",
+    "description": "Cargo.toml and build system optimizations",
+    "dependencies": [
+      "infra/build-system"
+    ],
+    "test_requirements": [
+      "performance",
+      "regression",
+      "build"
+    ],
+    "reviewers": [
+      "rust-expert",
+      "performance-lead"
+    ],
+    "merge_criteria": [
+      "performance-improved",
+      "no-regression",
+      "build-time-reduced"
+    ]
+  },
+  "infra/build-system": {
+    "name": "infra/build-system",
+    "type": "infra",
+    "description": "Build system and tooling improvements",
+    "dependencies": [],
+    "test_requirements": [
+      "build",
+      "cross-platform",
+      "security"
+    ],
+    "reviewers": [
+      "devops-lead",
+      "tech-lead"
+    ],
+    "merge_criteria": [
+      "all-platforms-build",
+      "security-scan",
+      "performance-maintained"
+    ]
+  }
+}

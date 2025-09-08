@@ -1,0 +1,15 @@
+notifications:
+  email_notifications: false
+  github_status_checks: true
+  slack_webhook: null
+quality_gates:
+  allow_override: false
+  enforce_all: true
+  timeout_multiplier: 1.0
+workflow:
+  allow_parallel_development: true
+  auto_merge: false
+  integration_branch: develop
+  min_reviewers: 2
+  release_branch: main
+  require_reviews: true
