@@ -1,0 +1,971 @@
+name: Automated Release
+
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - 'README.md'
+      - 'docs/**'
+      - '.gitignore'
+      - 'LICENSE'
+  workflow_dispatch:
+    inputs:
+      force_release:
+        description: 'Force release even if no changes detected'
+        required: false
+        default: false
+        type: boolean
+      version_type:
+        description: 'Version bump type (major, minor, patch)'
+        required: false
+        default: 'auto'
+        type: choice
+        options:
+          - auto
+          - major
+          - minor
+          - patch
+
+permissions:
+  contents: write
+  actions: write
+  packages: write
+  pull-requests: write
+  issues: write
+  id-token: write
+  attestations: write
+
+env:
+  PYTHON_VERSION: '3.11'
+  CARGO_TERM_COLOR: always
+  PYTHONIOENCODING: utf-8
+  RUST_BACKTRACE: 1
+
+jobs:
+  analyze-and-version:
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.version_check.outputs.should_release }}
+      version_type: ${{ steps.version_check.outputs.version_type }}
+      new_version: ${{ steps.version_check.outputs.new_version }}
+      current_version: ${{ steps.version_check.outputs.current_version }}
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+        persist-credentials: true
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Configure Git
+      run: |
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+    - name: Install version management dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install packaging toml pyyaml
+
+    - name: Validate script dependencies
+      run: |
+        echo "Validating required scripts exist..."
+        if [ ! -f "scripts/verify-version-sync.py" ]; then
+          echo "ERROR: scripts/verify-version-sync.py not found"
+          exit 1
+        fi
+        if [ ! -f "scripts/generate-changelog.py" ]; then
+          echo "ERROR: scripts/generate-changelog.py not found"
+          exit 1
+        fi
+        echo "All required scripts found"
+
+    - name: Comprehensive Version Analysis and Bump Determination
+      id: version_check
+      run: |
+        echo "Running comprehensive version analysis..."
+
+        # Get current authoritative version using our enhanced script
+        echo "Getting current version..."
+        if ! CURRENT_VERSION=$(python -c "
+        import sys
+        sys.path.append('scripts')
+        try:
+            from verify_version_sync import AdvancedVersionManager
+            from pathlib import Path
+            manager = AdvancedVersionManager(Path('.'))
+            report = manager.generate_comprehensive_report()
+            print(report.authoritative_version)
+        except Exception as e:
+            print(f'Error: {e}', file=sys.stderr)
+            sys.exit(1)
+        "); then
+          echo "ERROR: Failed to get current version"
+          exit 1
+        fi
+
+        # Verify version synchronization before proceeding
+        echo "Checking version synchronization..."
+        if ! IS_SYNCED=$(python -c "
+        import sys
+        sys.path.append('scripts')
+        try:
+            from verify_version_sync import AdvancedVersionManager
+            from pathlib import Path
+            manager = AdvancedVersionManager(Path('.'))
+            report = manager.generate_comprehensive_report()
+            print('true' if report.is_synchronized else 'false')
+        except Exception as e:
+            print(f'Error: {e}', file=sys.stderr)
+            sys.exit(1)
+        "); then
+          echo "ERROR: Failed to check version synchronization"
+          exit 1
+        fi
+
+        if [ "$IS_SYNCED" != "true" ]; then
+          echo "CRITICAL: Version inconsistencies detected!"
+          echo "Cannot proceed with release until versions are synchronized."
+          python scripts/verify-version-sync.py || true
+          exit 1
+        fi
+
+        echo "Current authoritative version: $CURRENT_VERSION"
+        echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+        echo "Current version: $CURRENT_VERSION"
+
+        # Handle manual workflow dispatch
+        FORCE_RELEASE="${{ github.event.inputs.force_release }}"
+        MANUAL_VERSION_TYPE="${{ github.event.inputs.version_type }}"
+
+        # Get commits since last tag
+        LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+        if [ -z "$LAST_TAG" ]; then
+          echo "No previous tags found, analyzing all commits"
+          COMMITS=$(git log --oneline --max-count=50)
+        else
+          echo "Last tag: $LAST_TAG"
+          COMMITS=$(git log ${LAST_TAG}..HEAD --oneline)
+        fi
+
+        echo "Analyzing commits since $LAST_TAG:"
+        echo "$COMMITS"
+
+        # Determine version bump type based on commit messages or manual input
+        if [ "$MANUAL_VERSION_TYPE" != "auto" ] && [ "$MANUAL_VERSION_TYPE" != "" ]; then
+          VERSION_TYPE="$MANUAL_VERSION_TYPE"
+          echo "Using manual version type: $VERSION_TYPE"
+        else
+          VERSION_TYPE="none"
+
+          # Check for breaking changes (major version)
+          if echo "$COMMITS" | grep -qiE "(BREAKING CHANGE|breaking:|major:|!:)"; then
+            VERSION_TYPE="major"
+            echo "Found breaking changes, will bump major version"
+          # Check for new features (minor version)
+          elif echo "$COMMITS" | grep -qiE "(feat:|feature:|minor:|enhance:)"; then
+            VERSION_TYPE="minor"
+            echo "Found new features, will bump minor version"
+          # Check for bug fixes and other changes (patch version)
+          elif echo "$COMMITS" | grep -qiE "(fix:|patch:|chore:|docs:|style:|refactor:|perf:|test:|bugfix:)"; then
+            VERSION_TYPE="patch"
+            echo "Found fixes/maintenance, will bump patch version"
+          fi
+        fi
+
+        # Skip release if no relevant changes and not forced
+        if [ "$VERSION_TYPE" = "none" ] && [ "$FORCE_RELEASE" != "true" ]; then
+          echo "No version-relevant changes detected. Skipping release."
+          echo "Use workflow_dispatch with force_release=true to force a release."
+          echo "should_release=false" >> $GITHUB_OUTPUT
+          echo "version_type=none" >> $GITHUB_OUTPUT
+          echo "new_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          exit 0
+        elif [ "$VERSION_TYPE" = "none" ] && [ "$FORCE_RELEASE" = "true" ]; then
+          VERSION_TYPE="patch"
+          echo "Forcing patch release as requested"
+        fi
+
+        echo "Determined version bump type: $VERSION_TYPE"
+        echo "should_release=true" >> $GITHUB_OUTPUT
+        echo "version_type=$VERSION_TYPE" >> $GITHUB_OUTPUT
+
+        # Calculate new version using Python with error handling
+        echo "Calculating new version..."
+        if ! NEW_VERSION=$(python -c "
+        import sys
+        try:
+            version = '$CURRENT_VERSION'
+            if not version or '.' not in version:
+                raise ValueError(f'Invalid version format: {version}')
+
+            parts = version.split('.')
+            if len(parts) != 3:
+                raise ValueError(f'Version must have 3 parts: {version}')
+
+            major, minor, patch = map(int, parts)
+
+            if '$VERSION_TYPE' == 'major':
+                major += 1
+                minor = 0
+                patch = 0
+            elif '$VERSION_TYPE' == 'minor':
+                minor += 1
+                patch = 0
+            elif '$VERSION_TYPE' == 'patch':
+                patch += 1
+            else:
+                raise ValueError(f'Invalid version type: $VERSION_TYPE')
+
+            print(f'{major}.{minor}.{patch}')
+        except Exception as e:
+            print(f'Error calculating version: {e}', file=sys.stderr)
+            sys.exit(1)
+        "); then
+          echo " ERROR: Failed to calculate new version"
+          exit 1
+        fi
+
+        echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+        echo "New version will be: $NEW_VERSION"
+
+        # Use our enhanced version promotion system for atomic updates
+        echo " Promoting version to $NEW_VERSION using enhanced version management..."
+
+        if python scripts/verify-version-sync.py --promote-version "$NEW_VERSION"; then
+          echo " Successfully promoted all versions to $NEW_VERSION"
+
+          # Verify the promotion was successful with error handling
+          echo "Verifying version promotion..."
+          if ! UPDATED_VERSION=$(python -c "
+          import sys
+          sys.path.append('scripts')
+          try:
+              from verify_version_sync import AdvancedVersionManager
+              from pathlib import Path
+              manager = AdvancedVersionManager(Path('.'))
+              report = manager.generate_comprehensive_report()
+              print(report.authoritative_version)
+          except Exception as e:
+              print(f'Error: {e}', file=sys.stderr)
+              sys.exit(1)
+          "); then
+            echo " ERROR: Failed to verify version promotion"
+            exit 1
+          fi
+
+          if [ "$UPDATED_VERSION" != "$NEW_VERSION" ]; then
+            echo " ERROR: Version promotion failed! Expected $NEW_VERSION, got $UPDATED_VERSION"
+            exit 1
+          fi
+
+          # Final synchronization check with error handling
+          echo "Final synchronization check..."
+          if ! IS_SYNCED_AFTER=$(python -c "
+          import sys
+          sys.path.append('scripts')
+          try:
+              from verify_version_sync import AdvancedVersionManager
+              from pathlib import Path
+              manager = AdvancedVersionManager(Path('.'))
+              report = manager.generate_comprehensive_report()
+              print('true' if report.is_synchronized else 'false')
+          except Exception as e:
+              print(f'Error: {e}', file=sys.stderr)
+              sys.exit(1)
+          "); then
+            echo " ERROR: Failed to check final synchronization"
+            exit 1
+          fi
+
+          if [ "$IS_SYNCED_AFTER" != "true" ]; then
+            echo " ERROR: Versions are not synchronized after promotion!"
+            python scripts/verify-version-sync.py || true
+            exit 1
+          fi
+
+          echo " All versions successfully synchronized at $NEW_VERSION"
+        else
+          echo " ERROR: Version promotion failed!"
+          exit 1
+        fi
+
+        # The version promotion already includes changelog generation
+        echo " Version promotion completed with integrated changelog generation"
+
+    - name: Commit version changes
+      if: steps.version_check.outputs.should_release == 'true'
+      run: |
+        # Configure git with proper credentials
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+        # Add all version-related files (let git detect what changed)
+        git add -A
+
+        # Show what files were changed
+        echo " Files updated for version ${{ steps.version_check.outputs.new_version }}:"
+        git diff --cached --name-only || echo "No files in staging area"
+
+        # Verify we have changes to commit
+        if git diff --cached --quiet; then
+          echo "  No changes to commit - version files may already be up to date"
+          # This is not necessarily an error, continue with tagging
+        else
+          # Commit all changes with enhanced commit message
+          git commit -m "chore: bump version to ${{ steps.version_check.outputs.new_version }} [skip ci]" \
+                     -m "Updates all version references across the codebase:" \
+                     -m "- python/pyproject.toml: Python package version" \
+                     -m "- Cargo.toml: Rust workspace version" \
+                     -m "- pyproject.toml: Root Poetry version" \
+                     -m "- CHANGELOG.md: Add release entry" \
+                     -m "- Documentation version references" \
+                     -m "" \
+                     -m "This ensures version consistency across all components." \
+                     -m "" \
+                     -m "Release-Type: ${{ steps.version_check.outputs.version_type }}" \
+                     -m "Previous-Version: ${{ steps.version_check.outputs.current_version }}" \
+                     -m "New-Version: ${{ steps.version_check.outputs.new_version }}"
+
+          echo " Committed version changes"
+        fi
+
+        # Push changes to main branch
+        echo "Pushing changes to main branch..."
+        git push origin main || {
+          echo " Failed to push to main branch"
+          exit 1
+        }
+
+    - name: Create and push tag
+      if: steps.version_check.outputs.should_release == 'true'
+      run: |
+        NEW_VERSION="${{ steps.version_check.outputs.new_version }}"
+
+        # Check if tag already exists
+        if git tag -l "v$NEW_VERSION" | grep -q "v$NEW_VERSION"; then
+          echo "  Tag v$NEW_VERSION already exists, deleting and recreating"
+          git tag -d "v$NEW_VERSION" || true
+          git push origin ":refs/tags/v$NEW_VERSION" || true
+        fi
+
+        # Create annotated tag with detailed message
+        git tag -a "v$NEW_VERSION" -m "Release version $NEW_VERSION" \
+                                   -m "" \
+                                   -m "Release Type: ${{ steps.version_check.outputs.version_type }}" \
+                                   -m "Previous Version: ${{ steps.version_check.outputs.current_version }}" \
+                                   -m "Release Date: $(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+                                   -m "" \
+                                   -m "This release includes automated version synchronization across all components" \
+                                   -m "and comprehensive changelog generation."
+
+        # Push the tag
+        echo "Pushing tag v$NEW_VERSION..."
+        git push origin "v$NEW_VERSION" || {
+          echo " Failed to push tag v$NEW_VERSION"
+          exit 1
+        }
+
+        echo " Successfully created and pushed tag v$NEW_VERSION"
+
+  # Comprehensive testing before release (same as CI workflow)
+  test:
+    needs: analyze-and-version
+    if: needs.analyze-and-version.outputs.should_release == 'true'
+    name: Test on ${{ matrix.os }} with Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        exclude:
+          # Exclude Python 3.13 on Windows due to potential compatibility issues
+          - os: windows-latest
+            python-version: "3.13"
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        # Use main branch instead of tag since tag was just created
+        ref: main
+        fetch-depth: 0
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Set up Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        toolchain: stable
+        components: rustfmt, clippy
+
+    - name: Cache Rust dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+          python/target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-
+
+    - name: Cache Python dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/pip
+          ~/.local/share/virtualenvs
+        key: ${{ runner.os }}-python-${{ matrix.python-version }}-${{ hashFiles('**/pyproject.toml', '**/requirements*.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-python-${{ matrix.python-version }}-
+
+    - name: Install system dependencies (Ubuntu)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential pkg-config libssl-dev
+
+    - name: Create Python virtual environment
+      shell: bash
+      run: |
+        python -m venv venv
+        echo "Virtual environment created successfully"
+
+    - name: Install Python dependencies (Unix)
+      if: runner.os != 'Windows'
+      shell: bash
+      run: |
+        source venv/bin/activate
+        python -m pip install --upgrade pip setuptools wheel
+        pip install maturin pytest pytest-cov pytest-asyncio
+        echo "Python dependencies installed successfully"
+
+    - name: Install Python dependencies (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        .\venv\Scripts\Activate.ps1
+        python -m pip install --upgrade pip setuptools wheel
+        pip install maturin pytest pytest-cov pytest-asyncio
+        echo "Python dependencies installed successfully"
+
+    - name: Build Python extension (Unix)
+      if: runner.os != 'Windows'
+      shell: bash
+      run: |
+        source venv/bin/activate
+        cd python
+        echo "Building Python extension with maturin..."
+        maturin develop --release --verbose
+        cd ..
+        echo "Python extension built successfully"
+
+    - name: Build Python extension (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        .\venv\Scripts\Activate.ps1
+        cd python
+        echo "Building Python extension with maturin..."
+        maturin develop --release --verbose
+        cd ..
+        echo "Python extension built successfully"
+
+    - name: Run Rust tests
+      run: |
+        echo "Running Rust tests..."
+        cargo test --workspace --all-features --verbose
+        echo " Rust tests completed successfully"
+
+    - name: Run Python unit tests (Unix)
+      if: runner.os != 'Windows'
+      shell: bash
+      run: |
+        source venv/bin/activate
+        echo "Looking for Python tests..."
+
+        # Check multiple possible test locations
+        if [ -d "tests/python_unit_tests" ]; then
+          echo "Running tests in tests/python_unit_tests"
+          cd tests/python_unit_tests
+          pytest -v --tb=short
+          cd ../..
+        elif [ -d "tests" ]; then
+          echo "Running tests in tests directory"
+          pytest tests/ -v --tb=short
+        elif [ -d "python/tests" ]; then
+          echo "Running tests in python/tests directory"
+          pytest python/tests/ -v --tb=short
+        else
+          echo "No Python tests found, skipping"
+        fi
+        echo " Python tests completed"
+
+    - name: Run Python unit tests (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        .\venv\Scripts\Activate.ps1
+        echo "Looking for Python tests..."
+
+        # Check multiple possible test locations
+        if (Test-Path "tests/python_unit_tests") {
+          echo "Running tests in tests/python_unit_tests"
+          cd tests/python_unit_tests
+          pytest -v --tb=short
+          cd ../..
+        } elseif (Test-Path "tests") {
+          echo "Running tests in tests directory"
+          pytest tests/ -v --tb=short
+        } elseif (Test-Path "python/tests") {
+          echo "Running tests in python/tests directory"
+          pytest python/tests/ -v --tb=short
+        } else {
+          echo "No Python tests found, skipping"
+        }
+        echo " Python tests completed"
+
+    - name: Verify package functionality (Unix)
+      if: runner.os != 'Windows'
+      shell: bash
+      run: |
+        source venv/bin/activate
+        echo "Verifying package functionality..."
+        python -c "
+        try:
+            import graphbit
+            print(f'GraphBit version: {graphbit.version()}')
+            graphbit.init()
+            print('Package functionality verified')
+        except Exception as e:
+            print(f'Package verification failed: {e}')
+            import sys
+            sys.exit(1)
+        "
+
+    - name: Verify package functionality (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        .\venv\Scripts\Activate.ps1
+        echo "Verifying package functionality..."
+        python -c "
+        try:
+            import graphbit
+            print(f'GraphBit version: {graphbit.version()}')
+            graphbit.init()
+            print('Package functionality verified')
+        except Exception as e:
+            print(f'Package verification failed: {e}')
+            import sys
+            sys.exit(1)
+        "
+
+  # Lint and format check
+  lint:
+    needs: analyze-and-version
+    if: needs.analyze-and-version.outputs.should_release == 'true'
+    name: Lint and Format Check
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        # Use main branch instead of tag since tag was just created
+        ref: main
+        fetch-depth: 0
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Set up Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        toolchain: stable
+        components: rustfmt, clippy
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential pkg-config libssl-dev
+
+    - name: Check Rust formatting
+      run: |
+        echo "Checking Rust code formatting..."
+        cargo fmt --all -- --check
+        echo " Rust formatting check passed"
+
+    - name: Run Rust clippy
+      run: |
+        echo "Running Rust clippy analysis..."
+        cargo clippy --workspace --all-targets --all-features -- -D warnings
+        echo " Rust clippy analysis passed"
+
+  # Production wheel building (multi-architecture)
+  build-wheels:
+    needs: [analyze-and-version, test, lint]
+    if: needs.analyze-and-version.outputs.should_release == 'true'
+    name: Build wheels on ${{ matrix.platform.runner }}
+    runs-on: ${{ matrix.platform.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - runner: ubuntu-22.04
+            target: x86_64
+          - runner: ubuntu-22.04
+            target: aarch64
+          - runner: windows-latest
+            target: x64
+          - runner: macos-13
+            target: x86_64
+          - runner: macos-14
+            target: aarch64
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # Use main branch instead of tag since tag was just created
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          architecture: ${{ matrix.platform.target == 'x86' && 'x86' || 'x64' }}
+
+      - name: Install system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config libssl-dev
+
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.platform.target }}
+          args: --release --out dist --find-interpreter --verbose
+          sccache: 'true'
+          working-directory: python
+          manylinux: auto
+
+      - name: Verify wheel contents
+        shell: bash
+        run: |
+          echo "Built wheels:"
+          ls -la dist/
+
+          # Install wheel and test basic functionality
+          python -m pip install --find-links dist graphbit --force-reinstall
+          python -c "
+          import graphbit
+          print(f'Successfully installed GraphBit version: {graphbit.version()}')
+          graphbit.init()
+          print('Wheel verification successful')
+          "
+
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.platform.runner }}-${{ matrix.platform.target }}
+          path: dist/
+          retention-days: 7
+
+  # Build source distribution
+  build-sdist:
+    needs: [analyze-and-version, test, lint]
+    if: needs.analyze-and-version.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # Use main branch instead of tag since tag was just created
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config libssl-dev
+
+      - name: Build sdist
+        uses: PyO3/maturin-action@v1
+        with:
+          command: sdist
+          args: --out dist --verbose
+          working-directory: python
+
+      - name: Verify sdist contents
+        run: |
+          echo "Built source distribution:"
+          ls -la dist/
+
+          # Extract and verify sdist contents
+          cd dist
+          tar -tzf *.tar.gz | head -20
+          echo " Source distribution verification successful"
+
+      - name: Upload sdist
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-sdist
+          path: dist/
+          retention-days: 7
+
+  # Publish to PyPI with version validation
+  publish-pypi:
+    needs: [analyze-and-version, build-wheels, build-sdist]
+    if: needs.analyze-and-version.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      id-token: write
+      contents: write
+      attestations: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist-artifacts
+
+      - name: Flatten artifacts and verify
+        run: |
+          mkdir -p dist
+          echo "Flattening artifacts..."
+          find dist-artifacts -name "*.whl" -exec cp {} dist/ \;
+          find dist-artifacts -name "*.tar.gz" -exec cp {} dist/ \;
+
+          echo " Built packages:"
+          ls -la dist/
+
+          # Verify we have packages to upload
+          if [ -z "$(ls -A dist/)" ]; then
+            echo " ERROR: No packages found to upload"
+            exit 1
+          fi
+
+          # Count packages
+          WHEEL_COUNT=$(find dist/ -name "*.whl" | wc -l)
+          SDIST_COUNT=$(find dist/ -name "*.tar.gz" | wc -l)
+          echo "Found $WHEEL_COUNT wheel(s) and $SDIST_COUNT source distribution(s)"
+
+      - name: Set up Python for PyPI checks
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Check if version already exists on PyPI
+        id: check_version
+        run: |
+          VERSION=${{ needs.analyze-and-version.outputs.new_version }}
+          echo "Checking if graphbit version $VERSION exists on PyPI..."
+
+          # Install required tools
+          pip install --upgrade pip
+
+          # Check PyPI for existing version
+          if python -c "
+          import urllib.request
+          import json
+          try:
+              with urllib.request.urlopen('https://pypi.org/pypi/graphbit/json') as response:
+                  data = json.loads(response.read())
+                  versions = list(data['releases'].keys())
+                  if '$VERSION' in versions:
+                      print('exists=true')
+                  else:
+                      print('exists=false')
+          except Exception as e:
+              print('exists=false')  # Assume it doesn't exist if we can't check
+          " > version_check.txt; then
+            VERSION_EXISTS=$(cat version_check.txt)
+            echo "$VERSION_EXISTS" >> $GITHUB_OUTPUT
+
+            if [ "$VERSION_EXISTS" = "exists=true" ]; then
+              echo " Version $VERSION already exists on PyPI"
+            else
+              echo " Version $VERSION is new, proceeding with upload"
+            fi
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo " Assuming version $VERSION is new (couldn't verify)"
+          fi
+
+      - name: Generate artifact attestation
+        if: steps.check_version.outputs.exists != 'true'
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: 'dist/*'
+
+      - name: Publish to PyPI
+        if: steps.check_version.outputs.exists != 'true'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          skip-existing: true
+          verbose: true
+          print-hash: true
+
+      - name: Verify PyPI upload
+        if: steps.check_version.outputs.exists != 'true'
+        run: |
+          VERSION=${{ needs.analyze-and-version.outputs.new_version }}
+          echo "Waiting for PyPI to process the upload..."
+          sleep 30
+
+          # Try to install the newly uploaded package
+          echo "Verifying package is available on PyPI..."
+          if pip install "graphbit==$VERSION" --no-deps --dry-run; then
+            echo " Package successfully uploaded to PyPI"
+          else
+            echo " Package may still be processing on PyPI"
+          fi
+
+  create-release:
+    needs: [analyze-and-version, publish-pypi]
+    if: needs.analyze-and-version.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        # Use main branch instead of tag since tag was just created
+        ref: main
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Download all artifacts for release
+      uses: actions/download-artifact@v4
+      with:
+        path: release-artifacts
+
+    - name: Prepare release artifacts
+      run: |
+        echo " Preparing release artifacts..."
+        find release-artifacts -type f \( -name "*.whl" -o -name "*.tar.gz" \) -exec ls -la {} \;
+
+        # Create a flat directory for release files
+        mkdir -p release-files
+        find release-artifacts -name "*.whl" -exec cp {} release-files/ \;
+        find release-artifacts -name "*.tar.gz" -exec cp {} release-files/ \;
+
+        echo "Release files prepared:"
+        ls -la release-files/
+
+    - name: Generate enhanced changelog for GitHub release
+      id: changelog
+      run: |
+        echo " Generating enhanced changelog for GitHub release..."
+
+        # Install dependencies for changelog generation
+        python -m pip install --upgrade pip
+        pip install packaging toml pyyaml
+
+        # Check if changelog script exists and generate changelog
+        if [ -f "scripts/generate-changelog.py" ]; then
+          echo "Using advanced changelog generation..."
+          python scripts/generate-changelog.py \
+            --version "${{ needs.analyze-and-version.outputs.new_version }}" \
+            --preview > release_changelog.md || {
+            echo "Changelog generation failed, creating basic changelog"
+            echo "## Release v${{ needs.analyze-and-version.outputs.new_version }}" > release_changelog.md
+            echo "" >> release_changelog.md
+            echo "### Changes" >> release_changelog.md
+            echo "- Version bump to ${{ needs.analyze-and-version.outputs.new_version }}" >> release_changelog.md
+          }
+        else
+          echo "Creating basic changelog..."
+          echo "## Release v${{ needs.analyze-and-version.outputs.new_version }}" > release_changelog.md
+          echo "" >> release_changelog.md
+          echo "### Changes" >> release_changelog.md
+          echo "- Version bump to ${{ needs.analyze-and-version.outputs.new_version }}" >> release_changelog.md
+        fi
+
+        # Extract changelog content
+        CHANGELOG_CONTENT=$(cat release_changelog.md)
+
+        # Add installation and quick start sections
+        echo "" >> release_changelog.md
+        echo "### Installation" >> release_changelog.md
+        echo "" >> release_changelog.md
+        echo '```bash' >> release_changelog.md
+        echo "pip install graphbit=${{ needs.analyze-and-version.outputs.new_version }}" >> release_changelog.md
+        echo '```' >> release_changelog.md
+        echo "" >> release_changelog.md
+        echo "### Quick Start" >> release_changelog.md
+        echo "" >> release_changelog.md
+        echo '```python' >> release_changelog.md
+        echo "import graphbit" >> release_changelog.md
+        echo "graphbit.init()" >> release_changelog.md
+        echo "print(f'GraphBit version: {graphbit.version()}')" >> release_changelog.md
+        echo '```' >> release_changelog.md
+        echo "" >> release_changelog.md
+        echo "### Links" >> release_changelog.md
+        echo "" >> release_changelog.md
+        echo "- [Documentation](https://docs.graphbit.ai)" >> release_changelog.md
+        echo "- [GitHub Repository](https://github.com/InfinitiBit/graphbit)" >> release_changelog.md
+        echo "- [PyPI Package](https://pypi.org/project/graphbit/)" >> release_changelog.md
+        echo "- [Changelog](https://github.com/InfinitiBit/graphbit/blob/main/CHANGELOG.md)" >> release_changelog.md
+        echo "" >> release_changelog.md
+        echo "### Release Information" >> release_changelog.md
+        echo "" >> release_changelog.md
+        echo "- **Release Type**: ${{ needs.analyze-and-version.outputs.version_type }}" >> release_changelog.md
+        echo "- **Previous Version**: ${{ needs.analyze-and-version.outputs.current_version }}" >> release_changelog.md
+        echo "- **New Version**: ${{ needs.analyze-and-version.outputs.new_version }}" >> release_changelog.md
+        echo "- **Release Date**: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> release_changelog.md
+
+        # Read the complete changelog content
+        CHANGELOG_CONTENT=$(cat release_changelog.md)
+
+        # Use a different delimiter to avoid issues with special characters
+        echo "changelog<<CHANGELOG_EOF" >> $GITHUB_OUTPUT
+        echo "$CHANGELOG_CONTENT" >> $GITHUB_OUTPUT
+        echo "CHANGELOG_EOF" >> $GITHUB_OUTPUT
+
+        echo " Enhanced changelog generated for GitHub release"
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: v${{ needs.analyze-and-version.outputs.new_version }}
+        name: "Release v${{ needs.analyze-and-version.outputs.new_version }}"
+        body: ${{ steps.changelog.outputs.changelog }}
+        draft: false
+        prerelease: false
+        files: release-files/*
+        make_latest: true
+        generate_release_notes: true
+
+    - name: Update release status
+      run: |
+        echo " Release v${{ needs.analyze-and-version.outputs.new_version }} created successfully!"
+        echo " PyPI: https://pypi.org/project/graphbit/${{ needs.analyze-and-version.outputs.new_version }}/"
+        echo " GitHub: https://github.com/${{ github.repository }}/releases/tag/v${{ needs.analyze-and-version.outputs.new_version }}"

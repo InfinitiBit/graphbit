@@ -1,0 +1,670 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop, master ]
+    tags: [ '*' ]
+  pull_request:
+    branches: [ main, develop, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  # Additional permissions for release functionality
+  actions: write         # Required to trigger workflows
+  packages: write        # Required for package publishing
+  pull-requests: write   # Required for PR operations
+  issues: write          # Required for issue operations
+  # Enhanced security permissions
+  id-token: write        # Required for artifact attestation
+  attestations: write    # Required for build provenance
+
+env:
+  CARGO_TERM_COLOR: always
+  PYTHONIOENCODING: utf-8
+
+jobs:
+  version-check:
+    name: Version Consistency Check
+    runs-on: ubuntu-latest
+    outputs:
+      authoritative-version: ${{ steps.version-analysis.outputs.version }}
+      needs-promotion: ${{ steps.version-analysis.outputs.needs-promotion }}
+      is-synchronized: ${{ steps.version-analysis.outputs.is-synchronized }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Fetch all history for git tags
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install packaging
+
+    - name: Run Version Analysis
+      id: version-analysis
+      run: |
+        echo "🔍 Running comprehensive version analysis..."
+
+        # Run the version detection script
+        python scripts/verify-version-sync.py --detect-latest > version_report.txt 2>&1 || true
+
+        # Create a temporary Python script for version analysis
+        cat > version_analysis.py << 'EOF'
+        import sys
+        sys.path.append('scripts')
+        from verify_version_sync import AdvancedVersionManager
+        from pathlib import Path
+
+        manager = AdvancedVersionManager(Path('.'))
+        report = manager.generate_comprehensive_report()
+
+        print(f"version={report.authoritative_version}")
+        print(f"is-synchronized={'true' if report.is_synchronized else 'false'}")
+        print(f"needs-promotion={'true' if report.needs_promotion else 'false'}")
+        EOF
+
+        # Run version analysis
+        if python version_analysis.py > version_output.txt 2>&1; then
+          # Extract outputs
+          VERSION=$(grep "version=" version_output.txt | cut -d'=' -f2)
+          IS_SYNCED=$(grep "is-synchronized=" version_output.txt | cut -d'=' -f2)
+          NEEDS_PROMOTION=$(grep "needs-promotion=" version_output.txt | cut -d'=' -f2)
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "is-synchronized=$IS_SYNCED" >> $GITHUB_OUTPUT
+          echo "needs-promotion=$NEEDS_PROMOTION" >> $GITHUB_OUTPUT
+
+          echo "✅ Detected authoritative version: $VERSION"
+          echo "✅ Synchronized: $IS_SYNCED"
+          echo "✅ Needs promotion: $NEEDS_PROMOTION"
+        else
+          echo "❌ Version analysis failed"
+          cat version_output.txt
+          exit 1
+        fi
+
+    - name: Fail on Version Inconsistencies
+      if: steps.version-analysis.outputs.is-synchronized == 'false'
+      run: |
+        echo "🚨 VERSION INCONSISTENCIES DETECTED!"
+        echo "The build cannot proceed with inconsistent versions across the codebase."
+        echo ""
+        echo "📊 Full Version Report:"
+        python scripts/verify-version-sync.py
+        echo ""
+        echo "🔧 To fix this issue:"
+        echo "1. Run locally: python scripts/verify-version-sync.py --fix"
+        echo "2. Or promote to latest: python scripts/verify-version-sync.py --promote-version <VERSION>"
+        echo "3. Commit and push the changes"
+        exit 1
+
+    - name: Version Promotion Warning
+      if: steps.version-analysis.outputs.needs-promotion == 'true'
+      run: |
+        echo "⚠️  REMOTE VERSION IS HIGHER THAN LOCAL VERSION"
+        echo "Consider promoting local versions to match remote releases."
+        echo "This is not a failure, but may indicate the codebase is behind releases."
+        python scripts/verify-version-sync.py
+
+    - name: Validate Changelog
+      run: |
+        echo "📋 Validating CHANGELOG.md format and consistency..."
+
+        # Run comprehensive changelog validation
+        python scripts/validate-changelog.py --check-version-sync
+
+        echo "✅ Changelog validation completed"
+
+  test:
+    name: Test on ${{ matrix.os }} with Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    needs: version-check
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        
+    - name: Set up Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        toolchain: stable
+        components: rustfmt, clippy
+        
+    - name: Cache Rust dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+          python/target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-
+          
+    - name: Cache Python dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/pip
+          ~/.local/share/virtualenvs
+        key: ${{ runner.os }}-python-${{ matrix.python-version }}-${{ hashFiles('**/pyproject.toml', '**/requirements*.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-python-${{ matrix.python-version }}-
+          
+    - name: Debug Rust toolchain
+      run: |
+        rustc --version
+        cargo --version
+        rustup show
+        
+    - name: Create Python virtual environment
+      shell: bash
+      run: |
+        python -m venv venv
+        
+    - name: Activate virtual environment and install dependencies (Unix)
+      if: runner.os != 'Windows'
+      run: |
+        source venv/bin/activate
+        python -m pip install --upgrade pip
+        pip install maturin pytest pytest-cov pytest-asyncio
+        
+    - name: Activate virtual environment and install dependencies (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        .\venv\Scripts\Activate.ps1
+        python -m pip install --upgrade pip
+        pip install maturin pytest pytest-cov pytest-asyncio
+        
+    - name: Build Python extension (Unix)
+      if: runner.os != 'Windows'
+      run: |
+        source venv/bin/activate
+        cd python
+        maturin develop --release
+        cd ..
+        
+    - name: Build Python extension (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        .\venv\Scripts\Activate.ps1
+        cd python
+        maturin develop --release
+        cd ..
+        
+    - name: Run Rust tests
+      run: |
+        cargo test --workspace --all-features --verbose
+        
+    - name: Run Python unit tests (Unix)
+      if: runner.os != 'Windows'
+      run: |
+        source venv/bin/activate
+        if [ -d "tests/python_unit_tests" ]; then
+          cd tests/python_unit_tests
+          pytest -v --tb=short
+          cd ../..
+        fi
+        
+    - name: Run Python unit tests (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        .\venv\Scripts\Activate.ps1
+        if (Test-Path "tests/python_unit_tests") {
+          cd tests/python_unit_tests
+          pytest -v --tb=short
+          cd ../..
+        }
+        
+    - name: Run Python integration tests (Unix)
+      if: runner.os != 'Windows'
+      env:
+        # Skip tests requiring API keys in CI
+        SKIP_API_TESTS: "true"
+      run: |
+        source venv/bin/activate
+        if [ -d "tests/python_integration_tests" ]; then
+          cd tests/python_integration_tests
+          pytest -v --tb=short -m "not slow"
+          cd ../..
+        fi
+        
+    - name: Run Python integration tests (Windows)
+      if: runner.os == 'Windows'
+      env:
+        # Skip tests requiring API keys in CI
+        SKIP_API_TESTS: "true"
+      run: |
+        .\venv\Scripts\Activate.ps1
+        if (Test-Path "tests/python_integration_tests") {
+          cd tests/python_integration_tests
+          pytest -v --tb=short -m "not slow"
+          cd ../..
+        }
+        
+    - name: Verify package functionality (Unix)
+      if: runner.os != 'Windows'
+      run: |
+        source venv/bin/activate
+        python -c "
+        import graphbit
+        print(f'GraphBit version: {graphbit.version()}')
+        
+        # Test basic functionality
+        graphbit.init()
+        
+        # Test core classes can be imported
+        config = graphbit.LlmConfig
+        client = graphbit.LlmClient
+        workflow = graphbit.Workflow
+        node = graphbit.Node
+        
+        print('✓ All core classes imported successfully')
+        print('✓ Package functionality verified')
+        "
+        
+    - name: Verify package functionality (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        .\venv\Scripts\Activate.ps1
+        python -c "
+        import graphbit
+        print(f'GraphBit version: {graphbit.version()}')
+        
+        # Test basic functionality
+        graphbit.init()
+        
+        # Test core classes can be imported
+        config = graphbit.LlmConfig
+        client = graphbit.LlmClient
+        workflow = graphbit.Workflow
+        node = graphbit.Node
+        
+        print('✓ All core classes imported successfully')
+        print('✓ Package functionality verified')
+        "
+
+  lint:
+    name: Lint and Format Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+        
+    - name: Set up Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        toolchain: stable
+        components: rustfmt, clippy
+        
+    - name: Cache Rust dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+          python/target/
+        key: ${{ runner.os }}-cargo-lint-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-lint-
+          ${{ runner.os }}-cargo-
+          
+    - name: Install Python linting tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install black isort flake8 mypy
+        
+    - name: Check Rust formatting
+      run: cargo fmt --all -- --check
+      
+    - name: Run Rust clippy
+      run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+      
+    - name: Check Python formatting with black
+      run: |
+        if [ -d "python/src" ] || [ -d "tests" ]; then
+          black --check --diff python/ tests/ || true
+        fi
+        
+    - name: Check Python import sorting with isort
+      run: |
+        if [ -d "python/src" ] || [ -d "tests" ]; then
+          isort --check-only --diff python/ tests/ || true
+        fi
+        
+    - name: Run Python flake8 linting
+      run: |
+        if [ -d "python/src" ] || [ -d "tests" ]; then
+          flake8 python/ tests/ --max-line-length=200 --extend-ignore=E203,W503 || true
+        fi
+
+    - name: Verify version synchronization
+      run: |
+        echo "🔍 Verifying version synchronization across all components..."
+        python scripts/verify-version-sync.py
+        echo "✅ Version synchronization verified"
+
+  # Production wheel building jobs
+  linux:
+    runs-on: ${{ matrix.platform.runner }}
+    strategy:
+      matrix:
+        platform:
+          - runner: ubuntu-22.04
+            target: x86_64
+          - runner: ubuntu-22.04
+            target: x86
+          - runner: ubuntu-22.04
+            target: aarch64
+          - runner: ubuntu-22.04
+            target: armv7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.x
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.platform.target }}
+          args: --release --out dist --find-interpreter
+          sccache: ${{ !startsWith(github.ref, 'refs/tags/') }}
+          manylinux: auto
+          working-directory: python
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-linux-${{ matrix.platform.target }}
+          path: dist
+
+  musllinux:
+    runs-on: ${{ matrix.platform.runner }}
+    strategy:
+      matrix:
+        platform:
+          - runner: ubuntu-22.04
+            target: x86_64
+          - runner: ubuntu-22.04
+            target: x86
+          - runner: ubuntu-22.04
+            target: aarch64
+          - runner: ubuntu-22.04
+            target: armv7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.x
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.platform.target }}
+          args: --release --out dist --find-interpreter
+          sccache: ${{ !startsWith(github.ref, 'refs/tags/') }}
+          manylinux: musllinux_1_2
+          working-directory: python
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-musllinux-${{ matrix.platform.target }}
+          path: dist
+
+  windows:
+    runs-on: ${{ matrix.platform.runner }}
+    strategy:
+      matrix:
+        platform:
+          - runner: windows-latest
+            target: x64
+          - runner: windows-latest
+            target: x86
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.x
+          architecture: ${{ matrix.platform.target }}
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.platform.target }}
+          args: --release --out dist --find-interpreter
+          sccache: ${{ !startsWith(github.ref, 'refs/tags/') }}
+          working-directory: python
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-windows-${{ matrix.platform.target }}
+          path: dist
+
+  macos:
+    runs-on: ${{ matrix.platform.runner }}
+    strategy:
+      matrix:
+        platform:
+          - runner: macos-13
+            target: x86_64
+          - runner: macos-14
+            target: aarch64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.x
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.platform.target }}
+          args: --release --out dist --find-interpreter
+          sccache: ${{ !startsWith(github.ref, 'refs/tags/') }}
+          working-directory: python
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-macos-${{ matrix.platform.target }}
+          path: dist
+
+  sdist:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build sdist
+        uses: PyO3/maturin-action@v1
+        with:
+          command: sdist
+          args: --out dist
+          working-directory: python
+      - name: Upload sdist
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-sdist
+          path: dist
+
+  # Version validation and PyPI publishing
+  publish:
+    name: Publish to PyPI
+    runs-on: ubuntu-latest
+    if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
+    needs: [linux, musllinux, windows, macos, sdist]
+    environment: release
+    permissions:
+      # Use to sign the release artifacts
+      id-token: write
+      # Used to upload release artifacts
+      contents: write
+      # Used to generate artifact attestation
+      attestations: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist-artifacts
+
+      - name: Flatten artifacts
+        run: |
+          mkdir -p dist
+          find dist-artifacts -name "*.whl" -exec cp {} dist/ \;
+          find dist-artifacts -name "*.tar.gz" -exec cp {} dist/ \;
+          ls -la dist/
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+          else
+            # For manual dispatch, get version from pyproject.toml
+            VERSION=$(python -c "import tomllib; print(tomllib.load(open('python/pyproject.toml', 'rb'))['project']['version'])")
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Detected version: $VERSION"
+
+      - name: Check if version already exists on PyPI
+        id: check_version
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          echo "Checking if graphbit version $VERSION exists on PyPI..."
+
+          if pip index versions graphbit 2>/dev/null | grep -q "$VERSION"; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "⚠️ Version $VERSION already exists on PyPI"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "✅ Version $VERSION is new, proceeding with upload"
+          fi
+
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: 'dist/*'
+
+      - name: Publish to PyPI
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          skip-existing: true
+          verbose: true
+
+  # GitHub release creation with changelog
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    if: ${{ startsWith(github.ref, 'refs/tags/') }}
+    needs: [publish]
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Get commits since last tag
+          LAST_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
+          if [ -z "$LAST_TAG" ]; then
+            echo "No previous tags found, analyzing all commits"
+            COMMITS=$(git log --oneline HEAD~1)
+          else
+            echo "Last tag: $LAST_TAG"
+            COMMITS=$(git log ${LAST_TAG}..HEAD~1 --oneline)
+          fi
+
+          echo "Analyzing commits since $LAST_TAG:"
+          echo "$COMMITS"
+
+          # Build changelog
+          CHANGELOG="## Release v${{ steps.version.outputs.version }}\n\n"
+
+          # Categorize commits
+          BREAKING=$(echo "$COMMITS" | grep -iE "(BREAKING CHANGE|breaking:|major:)" || true)
+          FEATURES=$(echo "$COMMITS" | grep -iE "(feat:|feature:|minor:)" || true)
+          FIXES=$(echo "$COMMITS" | grep -iE "(fix:|patch:)" || true)
+          CHORES=$(echo "$COMMITS" | grep -iE "(chore:|docs:|style:|refactor:|perf:|test:)" || true)
+
+          if [ -n "$BREAKING" ]; then
+            CHANGELOG="${CHANGELOG}### 🚨 Breaking Changes\n$(echo "$BREAKING" | sed 's/^/- /')\n\n"
+          fi
+
+          if [ -n "$FEATURES" ]; then
+            CHANGELOG="${CHANGELOG}### ✨ New Features\n$(echo "$FEATURES" | sed 's/^/- /')\n\n"
+          fi
+
+          if [ -n "$FIXES" ]; then
+            CHANGELOG="${CHANGELOG}### 🐛 Bug Fixes\n$(echo "$FIXES" | sed 's/^/- /')\n\n"
+          fi
+
+          if [ -n "$CHORES" ]; then
+            CHANGELOG="${CHANGELOG}### 🔧 Maintenance\n$(echo "$CHORES" | sed 's/^/- /')\n\n"
+          fi
+
+          # Add installation instructions
+          CHANGELOG="${CHANGELOG}### 📦 Installation\n\n"
+          CHANGELOG="${CHANGELOG}\`\`\`bash\n"
+          CHANGELOG="${CHANGELOG}pip install graphbit==${{ steps.version.outputs.version }}\n"
+          CHANGELOG="${CHANGELOG}\`\`\`\n\n"
+
+          # Add usage example
+          CHANGELOG="${CHANGELOG}### 🚀 Quick Start\n\n"
+          CHANGELOG="${CHANGELOG}\`\`\`python\n"
+          CHANGELOG="${CHANGELOG}import graphbit\n"
+          CHANGELOG="${CHANGELOG}graphbit.init()\n"
+          CHANGELOG="${CHANGELOG}print(f'GraphBit version: {graphbit.version()}')\n"
+          CHANGELOG="${CHANGELOG}\`\`\`\n"
+
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: Release v${{ steps.version.outputs.version }}
+          body: ${{ steps.changelog.outputs.changelog }}
+          draft: false
+          prerelease: false
+          files: |
+            dist-artifacts/**/*.whl
+            dist-artifacts/**/*.tar.gz
