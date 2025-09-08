@@ -165,5 +165,5 @@ edition = "2021"
 homepage = "https://graphbit.ai"
 keywords = ["ai", "automation", "workflow", "agent", "llm"]
 repository = "https://github.com/InfinitiBit/graphbit"
-rust-version = "1.77"
-version = "0.1.0"
+rust-version = "1.70.0"
+version = "0.4.0"

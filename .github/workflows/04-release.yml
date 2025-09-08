@@ -1,0 +1,477 @@
+name: 04 - Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      triggered_by:
+        description: 'Workflow that triggered this run'
+        required: false
+        default: 'manual'
+        type: string
+      validation_run_id:
+        description: 'Run ID of the validation workflow'
+        required: false
+        type: string
+      testing_run_id:
+        description: 'Run ID of the testing workflow'
+        required: false
+        type: string
+      build_run_id:
+        description: 'Run ID of the build workflow'
+        required: false
+        type: string
+      force_release:
+        description: 'Force release even if no changes detected'
+        required: false
+        default: false
+        type: boolean
+      version_type:
+        description: 'Version bump type (major, minor, patch)'
+        required: false
+        default: 'auto'
+        type: choice
+        options:
+          - auto
+          - major
+          - minor
+          - patch
+  workflow_call:
+    inputs:
+      triggered_by:
+        description: 'Workflow that triggered this run'
+        required: false
+        default: 'manual'
+        type: string
+      validation_run_id:
+        description: 'Run ID of the validation workflow'
+        required: false
+        type: string
+      testing_run_id:
+        description: 'Run ID of the testing workflow'
+        required: false
+        type: string
+      build_run_id:
+        description: 'Run ID of the build workflow'
+        required: false
+        type: string
+      force_release:
+        description: 'Force release even if no changes detected'
+        required: false
+        default: false
+        type: boolean
+      version_type:
+        description: 'Version bump type (major, minor, patch)'
+        required: false
+        default: 'auto'
+        type: string
+    outputs:
+      release_status:
+        description: 'Overall release status'
+        value: ${{ jobs.release-summary.outputs.status }}
+      release_version:
+        description: 'Released version'
+        value: ${{ jobs.release-summary.outputs.version }}
+      release_url:
+        description: 'GitHub release URL'
+        value: ${{ jobs.release-summary.outputs.url }}
+
+permissions:
+  contents: write
+  actions: write
+  packages: write
+  pull-requests: write
+  issues: write
+  id-token: write
+  attestations: write
+
+env:
+  PYTHON_VERSION: '3.11'
+  CARGO_TERM_COLOR: always
+  PYTHONIOENCODING: utf-8
+  RUST_BACKTRACE: 1
+
+jobs:
+  prerequisites-check:
+    name: Check Prerequisites
+    runs-on: ubuntu-latest
+    outputs:
+      ready: ${{ steps.check.outputs.ready }}
+      should_release: ${{ steps.check.outputs.should_release }}
+      version_type: ${{ steps.check.outputs.version_type }}
+      new_version: ${{ steps.check.outputs.new_version }}
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install packaging
+
+    - name: Check if pipeline is ready for release
+      id: check
+      run: |
+        echo "Checking if pipeline is ready for release phase..."
+        
+        if python scripts/workflow-orchestrator.py check --phase release; then
+          echo "ready=true" >> $GITHUB_OUTPUT
+          echo "Pipeline is ready for release"
+        else
+          echo "ready=false" >> $GITHUB_OUTPUT
+          echo "Pipeline is NOT ready for release"
+          echo "Prerequisites not met. All previous phases must complete successfully first."
+          exit 1
+        fi
+        
+        # Check if we should release
+        if [ "${{ inputs.force_release }}" = "true" ]; then
+          echo "should_release=true" >> $GITHUB_OUTPUT
+          echo "Force release requested"
+        else
+          # Use existing version sync script to determine if release is needed
+          if python scripts/verify-version-sync.py --check-release-needed; then
+            echo "should_release=true" >> $GITHUB_OUTPUT
+            echo "Release is needed based on changes"
+          else
+            echo "should_release=false" >> $GITHUB_OUTPUT
+            echo "No release needed"
+          fi
+        fi
+        
+        # Determine version type
+        VERSION_TYPE="${{ inputs.version_type }}"
+        if [ "$VERSION_TYPE" = "auto" ] || [ -z "$VERSION_TYPE" ]; then
+          # Auto-detect version type based on commit messages
+          if git log --oneline $(git describe --tags --abbrev=0)..HEAD | grep -q "BREAKING CHANGE\|feat!"; then
+            VERSION_TYPE="major"
+          elif git log --oneline $(git describe --tags --abbrev=0)..HEAD | grep -q "feat"; then
+            VERSION_TYPE="minor"
+          else
+            VERSION_TYPE="patch"
+          fi
+        fi
+        
+        echo "version_type=$VERSION_TYPE" >> $GITHUB_OUTPUT
+        echo "Determined version type: $VERSION_TYPE"
+        
+        # Calculate new version
+        CURRENT_VERSION=$(python scripts/verify-version-sync.py --get-version)
+        if [ -z "$CURRENT_VERSION" ]; then
+          echo "Failed to get current version"
+          exit 1
+        fi
+        
+        NEW_VERSION=$(python -c "
+        import sys
+        version = '$CURRENT_VERSION'
+        parts = version.split('.')
+        major, minor, patch = map(int, parts)
+        
+        if '$VERSION_TYPE' == 'major':
+            major += 1
+            minor = 0
+            patch = 0
+        elif '$VERSION_TYPE' == 'minor':
+            minor += 1
+            patch = 0
+        elif '$VERSION_TYPE' == 'patch':
+            patch += 1
+        
+        print(f'{major}.{minor}.{patch}')
+        ")
+        
+        echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+        echo "New version will be: $NEW_VERSION"
+
+  release-process:
+    name: Release Process
+    needs: prerequisites-check
+    if: needs.prerequisites-check.outputs.ready == 'true' && needs.prerequisites-check.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+      tag: ${{ steps.release.outputs.tag }}
+      url: ${{ steps.release.outputs.url }}
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install packaging
+
+    - name: Download build artifacts
+      if: inputs.build_run_id
+      uses: actions/download-artifact@v4
+      with:
+        pattern: wheels-*
+        path: ./dist
+        merge-multiple: true
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        run-id: ${{ inputs.build_run_id }}
+
+    - name: Initialize workflow orchestrator
+      run: |
+        python scripts/workflow-orchestrator.py start --phase release
+
+    - name: Update version and create release
+      id: release
+      run: |
+        NEW_VERSION="${{ needs.prerequisites-check.outputs.new_version }}"
+        VERSION_TYPE="${{ needs.prerequisites-check.outputs.version_type }}"
+        
+        echo "Creating release for version $NEW_VERSION..."
+        
+        # Update version in all files
+        if python scripts/verify-version-sync.py --promote-version "$NEW_VERSION"; then
+          echo "Successfully updated version to $NEW_VERSION"
+        else
+          echo "Failed to update version"
+          exit 1
+        fi
+        
+        # Generate changelog
+        if python scripts/generate-changelog.py --version "$NEW_VERSION" --output release_changelog.md; then
+          echo "Generated changelog for $NEW_VERSION"
+        else
+          echo "Failed to generate changelog"
+          exit 1
+        fi
+        
+        # Configure git
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        
+        # Commit version changes
+        git add -A
+        if git diff --cached --quiet; then
+          echo "No changes to commit"
+        else
+          git commit -m "chore: bump version to $NEW_VERSION [skip ci]" \
+                     -m "Release-Type: $VERSION_TYPE" \
+                     -m "Previous-Version: $(git describe --tags --abbrev=0 2>/dev/null || echo 'none')" \
+                     -m "New-Version: $NEW_VERSION"
+          echo "Committed version changes"
+        fi
+        
+        # Create and push tag
+        git tag -a "v$NEW_VERSION" -m "Release version $NEW_VERSION" \
+                                   -m "Release-Type: $VERSION_TYPE" \
+                                   -m "Generated by automated release workflow"
+        
+        git push origin main
+        git push origin "v$NEW_VERSION"
+        
+        echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+        echo "tag=v$NEW_VERSION" >> $GITHUB_OUTPUT
+
+    - name: Create GitHub Release
+      id: github_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.release.outputs.tag }}
+        release_name: Release ${{ steps.release.outputs.version }}
+        body_path: release_changelog.md
+        draft: false
+        prerelease: false
+
+    - name: Upload release assets
+      if: steps.github_release.outputs.upload_url
+      run: |
+        # Upload wheels if they exist
+        if [ -d "./dist" ] && [ "$(ls -A ./dist/*.whl 2>/dev/null)" ]; then
+          for wheel in ./dist/*.whl; do
+            if [ -f "$wheel" ]; then
+              echo "Uploading $wheel..."
+              curl -X POST \
+                -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                -H "Content-Type: application/octet-stream" \
+                --data-binary @"$wheel" \
+                "${{ steps.github_release.outputs.upload_url }}?name=$(basename $wheel)"
+            fi
+          done
+        fi
+        
+        # Upload source distribution if it exists
+        if [ -d "./dist" ] && [ "$(ls -A ./dist/*.tar.gz 2>/dev/null)" ]; then
+          for sdist in ./dist/*.tar.gz; do
+            if [ -f "$sdist" ]; then
+              echo "Uploading $sdist..."
+              curl -X POST \
+                -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                -H "Content-Type: application/gzip" \
+                --data-binary @"$sdist" \
+                "${{ steps.github_release.outputs.upload_url }}?name=$(basename $sdist)"
+            fi
+          done
+        fi
+
+    - name: Complete release phase
+      run: |
+        echo "url=${{ steps.github_release.outputs.html_url }}" >> $GITHUB_OUTPUT
+        
+        # Mark phase as complete
+        python scripts/workflow-orchestrator.py complete --phase release --success \
+          --artifacts "tag=${{ steps.release.outputs.tag }},url=${{ steps.github_release.outputs.html_url }}"
+
+  publish-pypi:
+    name: Publish to PyPI
+    needs: [prerequisites-check, release-process]
+    if: needs.prerequisites-check.outputs.should_release == 'true' && needs.release-process.outputs.version
+    runs-on: ubuntu-latest
+    environment: pypi
+    
+    steps:
+    - name: Download build artifacts
+      if: inputs.build_run_id
+      uses: actions/download-artifact@v4
+      with:
+        pattern: wheels-*
+        path: ./dist
+        merge-multiple: true
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        run-id: ${{ inputs.build_run_id }}
+
+    - name: Publish to PyPI
+      if: env.PYPI_API_TOKEN
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        password: ${{ secrets.PYPI_API_TOKEN }}
+        packages-dir: dist/
+        verify-metadata: true
+        skip-existing: true
+      env:
+        PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+
+  release-summary:
+    name: Release Summary
+    needs: [prerequisites-check, release-process, publish-pypi]
+    if: always()
+    runs-on: ubuntu-latest
+    outputs:
+      status: ${{ steps.summary.outputs.status }}
+      version: ${{ steps.summary.outputs.version }}
+      url: ${{ steps.summary.outputs.url }}
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Generate release summary
+      id: summary
+      run: |
+        echo "Generating release summary..."
+        
+        if [ "${{ needs.prerequisites-check.outputs.should_release }}" != "true" ]; then
+          echo "status=skipped" >> $GITHUB_OUTPUT
+          echo "version=none" >> $GITHUB_OUTPUT
+          echo "url=none" >> $GITHUB_OUTPUT
+          echo "Release was skipped - no changes detected"
+        elif [ "${{ needs.release-process.result }}" = "success" ]; then
+          echo "status=success" >> $GITHUB_OUTPUT
+          echo "version=${{ needs.release-process.outputs.version }}" >> $GITHUB_OUTPUT
+          echo "url=${{ needs.release-process.outputs.url }}" >> $GITHUB_OUTPUT
+          echo "Release completed successfully"
+        else
+          echo "status=failure" >> $GITHUB_OUTPUT
+          echo "version=none" >> $GITHUB_OUTPUT
+          echo "url=none" >> $GITHUB_OUTPUT
+          echo "Release failed"
+        fi
+
+    - name: Generate release summary
+      if: always()
+      run: |
+        echo "## 🚀 Release Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "${{ steps.summary.outputs.status }}" = "success" ]; then
+          echo "✅ **Release completed successfully!**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🎉 **Version ${{ steps.summary.outputs.version }} has been released!**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📦 [View Release](${{ steps.summary.outputs.url }})" >> $GITHUB_STEP_SUMMARY
+        elif [ "${{ steps.summary.outputs.status }}" = "skipped" ]; then
+          echo "⏭️ **Release was skipped**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "No changes detected that require a release." >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ **Release failed**" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Release Details" >> $GITHUB_STEP_SUMMARY
+        echo "- **Workflow**: 04-release" >> $GITHUB_STEP_SUMMARY
+        echo "- **Status**: ${{ steps.summary.outputs.status }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Version**: ${{ steps.summary.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Triggered by**: ${{ inputs.triggered_by || 'manual' }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Version Type**: ${{ needs.prerequisites-check.outputs.version_type }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Force Release**: ${{ inputs.force_release }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Run ID**: ${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
+        
+        # Show pipeline status
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Final Pipeline Status" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        python scripts/workflow-orchestrator.py status >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+
+  trigger-next-phase:
+    name: Trigger Deployment Phase
+    needs: release-summary
+    if: needs.release-summary.outputs.status == 'success'
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Trigger deployment workflow
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const result = await github.rest.actions.createWorkflowDispatch({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            workflow_id: '05-deployment.yml',
+            ref: context.ref,
+            inputs: {
+              triggered_by: 'release',
+              release_version: '${{ needs.release-summary.outputs.version }}',
+              release_url: '${{ needs.release-summary.outputs.url }}'
+            }
+          });
+          
+          console.log('Triggered deployment workflow:', result.status);
+
+    - name: Update pipeline status
+      run: |
+        echo "Release phase completed successfully"
+        echo "Released version: ${{ needs.release-summary.outputs.version }}"
+        echo "Next phase: Deployment"
+        echo "Triggered deployment workflow"

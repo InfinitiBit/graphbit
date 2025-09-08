@@ -41,10 +41,10 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-graphbit-core = "0.1.0"
+graphbit-core = "0.4.0"
 
 # Optional features
-graphbit-core = { version = "0.1.0", features = ["python-bindings"] }
+graphbit-core = { version = "0.4.0", features = ["python-bindings"] }
 ```
 
 ### Features

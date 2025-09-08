@@ -1,6 +1,6 @@
 {
   "name": "graphbit",
-  "version": "0.1.0",
+  "version": "0.4.0",
   "description": "Production-grade TypeScript/JavaScript bindings for GraphBit agentic workflow automation",
   "main": "index.js",
   "types": "index.d.ts",
@@ -36,8 +36,7 @@
     "dev": "napi build --platform --release",
     "prepublishOnly": "napi prepublish -t npm",
     "test": "ava",
-    "universal": "napi universal",
-    "version": "napi version"
+    "universal": "napi universal"
   },
   "keywords": [
     "graphbit",
