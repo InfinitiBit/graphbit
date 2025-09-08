@@ -153,12 +153,11 @@ impl Agent {
 
     /// Build an LLM request from a message
     fn build_llm_request(&self, message: &AgentMessage) -> LlmRequest {
-        let mut request = LlmRequest::new("");
+        let mut messages = Vec::new();
 
         // Add system prompt if available
         if !self.config.system_prompt.is_empty() {
-            request =
-                request.with_message(crate::llm::LlmMessage::system(&self.config.system_prompt));
+            messages.push(crate::llm::LlmMessage::system(&self.config.system_prompt));
         }
 
         // Add the user message
@@ -189,7 +188,10 @@ impl Agent {
             }
         };
 
-        request = request.with_message(crate::llm::LlmMessage::user(content));
+        messages.push(crate::llm::LlmMessage::user(content));
+
+        // Create request with messages
+        let mut request = LlmRequest::with_messages(messages);
 
         // Apply configuration
         if let Some(max_tokens) = self.config.max_tokens {
