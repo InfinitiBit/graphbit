@@ -4,18 +4,7 @@ GraphBit is a high-performance AI agent workflow automation framework built with
 
 ## System Architecture
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    Python API Layer                        │
-├─────────────────────────────────────────────────────────────┤
-│                    PyO3 Bindings                          │
-├─────────────────────────────────────────────────────────────┤
-│                    Rust Core Engine                        │
-├─────────────────────────────────────────────────────────────┤
-│     LLM Providers     │     Storage      │    Telemetry   │
-│  OpenAI | Anthropic   │  Memory | Disk   │  Tracing | Logs │
-└─────────────────────────────────────────────────────────────┘
-```
+![GraphBit System Architecture](../assets/architecture-diagram.svg)
 
 ## Core Components
 
@@ -114,62 +103,11 @@ impl WorkflowExecutor {
 
 ### Workflow Execution Flow
 
-```
-Input Data
-    ↓
-┌─────────────────┐
-│  Workflow       │
-│  Validation     │
-└─────────────────┘
-    ↓
-┌─────────────────┐
-│  Execution      │
-│  Planning       │
-└─────────────────┘
-    ↓
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│  Node Execution │────│  LLM Provider   │────│  Response       │
-│  (Parallel/Seq) │    │  Integration    │    │  Processing     │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-    ↓
-┌─────────────────┐
-│  Result         │
-│  Aggregation    │
-└─────────────────┘
-    ↓
-Output Data
-```
+![Workflow Execution Flow](../assets/workflow-execution-flow.svg)
 
 ### Node Processing Pipeline
 
-```
-Node Input
-    ↓
-┌─────────────────┐
-│  Input          │
-│  Validation     │
-└─────────────────┘
-    ↓
-┌─────────────────┐
-│  Prompt         │
-│  Template       │
-│  Processing     │
-└─────────────────┘
-    ↓
-┌─────────────────┐
-│  LLM Request    │
-│  (with Circuit  │
-│   Breaker)      │
-└─────────────────┘
-    ↓
-┌─────────────────┐
-│  Response       │
-│  Processing &   │
-│  Validation     │
-└─────────────────┘
-    ↓
-Node Output
-```
+![Node Processing Pipeline](../assets/node-processing-pipeline.svg)
 
 ## Component Details
 

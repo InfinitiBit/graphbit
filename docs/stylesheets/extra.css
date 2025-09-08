@@ -1,0 +1,880 @@
+/* =====================================================
+   Navigation Tab Button Sizing - Make navigation tabs smaller
+   ===================================================== */
+
+/* Make navigation tab buttons smaller */
+.md-header__nav-row .md-tabs__link {
+  padding: 0.5rem 0.8rem !important;
+  font-size: 0.8rem !important;
+  height: 2.5rem !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+/* Adjust tab container height to match smaller buttons */
+.md-header__nav-row .md-tabs__list {
+  height: 2.5rem !important;
+}
+
+/* Ensure proper alignment with smaller tabs */
+.md-header__nav-row .md-header__inner {
+  min-height: 2.5rem !important;
+  max-height: 2.5rem !important;
+  height: 2.5rem !important;
+}
+
+/* =====================================================
+   GraphBit Docs – Quantum Violet Theme Enhancements
+   Primary (Quantum Violet): #6C4FF7
+   Light Variant:            #8A6EF9
+   Dark Variant:             #5A42D6
+   (Optional Accent Idea:    #FFB347 / #FFC861)  <-- not enabled; set --md-accent-fg-color if adopted
+   ===================================================== */
+
+/* Unified brand color tokens applied across schemes */
+:root,
+[data-md-color-scheme="default"],
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color: #6C4FF7;
+  --md-primary-fg-color--light: #8A6EF9;
+  --md-primary-fg-color--dark: #5A42D6;
+  /* Uncomment to introduce a distinct accent (ensure contrast): */
+  /* --md-accent-fg-color: #FFB347; */
+}
+
+/* Active navigation emphasis (left border + weight) */
+.md-nav__link--active, .md-nav__item .md-nav__link--active {
+  font-weight: 600;
+  border-left: 3px solid var(--md-primary-fg-color);
+  padding-left: calc(var(--md-spacing) - 3px);
+}
+
+/* Hover state for navigation links */
+.md-nav__link:hover {
+  color: var(--md-primary-fg-color--dark);
+}
+
+/* Primary buttons – rely on upstream styles, just refine hover */
+.md-button--primary:hover {
+  background-color: var(--md-primary-fg-color--dark);
+  border-color: var(--md-primary-fg-color--dark);
+}
+
+/* Text links: clearer affordance + accessible focus */
+.md-typeset a {
+  text-decoration: none;
+  position: relative;
+  transition: color .15s ease;
+}
+
+.md-typeset a:hover,
+.md-typeset a:focus-visible {
+  color: var(--md-primary-fg-color--dark);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Global focus ring (keyboard navigation) */
+:focus-visible {
+  outline: 2px solid var(--md-primary-fg-color--light);
+  outline-offset: 2px;
+}
+
+/* Improve contrast on inline code inside links */
+.md-typeset a code {
+  color: var(--md-primary-fg-color--dark);
+}
+
+/* Optional subtle underline animation (commented) */
+/* .md-typeset a::after {
+  content: "";
+  position: absolute;
+  left: 0; bottom: 0; height: 2px; width: 0;
+  background: var(--md-primary-fg-color--dark);
+  transition: width .2s ease;
+}
+ .md-typeset a:hover::after, .md-typeset a:focus-visible::after { width: 100%; } */
+
+/* Ensure colored selection harmonizes with brand */
+::selection {
+  background: var(--md-primary-fg-color--light);
+  color: #ffffff;
+}
+
+/* Dark scheme specific fine‑tune (optional slight desaturate) */
+[data-md-color-scheme="slate"] .md-nav__link--active {
+  border-left-color: var(--md-primary-fg-color--light);
+}
+
+/* =====================================================
+   Unified Header Implementation
+   ===================================================== */
+
+/* Header container - unified with two rows inside */
+.md-header {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 4;
+  background: linear-gradient(135deg, #4A2DB8 0%, #5A3BC4 15%, #6C4FF7 30%, #7A5BF0 45%, #8A6EF9 60%, #7A5BF0 75%, #6C4FF7 85%, #5A3BC4 95%, #3D1F8A 100%) !important;
+  box-shadow: none;
+  transition: transform 0.25s cubic-bezier(0.1, 0.7, 0.1, 1);
+}
+
+/* Unified header container - wraps both rows */
+.md-header__unified {
+  background: linear-gradient(135deg, #4A2DB8 0%, #5A3BC4 15%, #6C4FF7 30%, #7A5BF0 45%, #8A6EF9 60%, #7A5BF0 75%, #6C4FF7 85%, #5A3BC4 95%, #3D1F8A 100%) !important;
+  border: none !important;
+  box-shadow: none !important;
+  display: flex !important;
+  flex-direction: column !important;
+  transition: transform 0.25s cubic-bezier(0.1, 0.7, 0.1, 1);
+}
+
+/* Logo Header (Top Row) - inside unified container */
+.md-header__logo-row {
+  z-index: 6;
+  background: transparent !important;
+  border: none !important;
+  border-bottom: none !important;
+  box-shadow: none !important;
+  transition: transform 0.25s cubic-bezier(0.1, 0.7, 0.1, 1);
+}
+
+/* Navigation Header (Bottom Row) - inside unified container */
+.md-header__nav-row {
+  z-index: 5;
+  background: transparent !important;
+  border: none !important;
+  border-top: none !important;
+  box-shadow: none !important;
+  position: sticky;
+  top: 0;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+}
+
+/* Mobile hamburger menu button */
+.md-header__menu-button {
+  display: none;
+  margin-right: 0.5rem;
+  color: white;
+}
+
+/* Logo section layout */
+.md-header__logo-section {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  order: 1;
+}
+
+/* Logo styling */
+.md-header__logo-section .md-logo {
+  margin-right: 0.8rem;
+  padding: 0.4rem;
+}
+
+.md-header__logo-section .md-logo img {
+  height: 3rem;
+  width: auto;
+}
+
+/* Site title styling */
+.md-header__title {
+  flex: 1;
+  min-width: 0;
+}
+
+.md-header__title .md-header__topic {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: white;
+}
+
+/* Controls section (search and theme toggle) */
+.md-header__controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+  margin-right: 0;
+  order: 3;
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* Search container with theme toggle */
+.md-header__search-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  position: absolute !important;
+  right: 1rem !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  z-index: 10 !important;
+}
+
+
+
+/* Theme toggle positioning */
+.md-header__theme-toggle {
+  margin-left: 0.5rem;
+}
+
+/* Header inner layout for both rows */
+.md-header__logo-row .md-header__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1rem;
+  min-height: 3rem;
+  position: relative;
+}
+
+.md-header__nav-row .md-header__inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1rem;
+  min-height: 3rem;
+}
+
+/* Navigation tabs styling */
+.md-header__nav-row .md-tabs {
+  width: 100%;
+  margin: 0 !important;
+  padding: 0 !important;
+  height: 100%;
+  display: flex !important;
+  align-items: center;
+  justify-content: center !important;
+  background: transparent;
+  text-align: center !important;
+  position: relative;
+}
+
+/* Override Material theme navigation centering */
+.md-header__nav-row {
+  text-align: center !important;
+}
+
+.md-header__nav-row * {
+  text-align: center !important;
+}
+
+/* Force navigation to be centered */
+.md-header__nav-row .md-tabs__list {
+  position: relative !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+  display: flex !important;
+  list-style: none;
+  white-space: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  height: 100% !important;
+  align-items: center;
+  justify-content: center !important;
+  flex-wrap: nowrap;
+  text-align: center !important;
+  width: auto !important;
+  max-width: none !important;
+}
+
+.md-header__nav-row .md-tabs__list::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+/* Additional scrollbar hiding for different browsers */
+.md-header__nav-row .md-tabs__list {
+  -webkit-overflow-scrolling: touch;
+}
+
+.md-header__nav-row .md-tabs__list::-webkit-scrollbar-track {
+  display: none;
+}
+
+.md-header__nav-row .md-tabs__list::-webkit-scrollbar-thumb {
+  display: none;
+}
+
+.md-header__nav-row .md-tabs__item {
+  margin: 0;
+  padding: 0;
+  flex-shrink: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.md-header__nav-row .md-tabs__link {
+  display: flex;
+  align-items: center;
+  padding: 0.8rem 1rem;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.125s, background-color 0.125s;
+  border: none;
+  height: 100%;
+  white-space: nowrap;
+}
+
+.md-header__nav-row .md-tabs__link:hover,
+.md-header__nav-row .md-tabs__link:focus {
+  color: white;
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.md-header__nav-row .md-tabs__link--active {
+  color: white;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: none;
+}
+
+/* Ensure content doesn't overlap with fixed header */
+.md-main {
+  margin-top: 6rem; /* Adjust based on combined height of both header rows */
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 76.1875em) {
+  .md-header__logo-section .md-logo {
+    margin-right: 0.6rem;
+  }
+
+  .md-header__title .md-header__topic {
+    font-size: 1rem;
+  }
+
+  .md-header__nav-row .md-tabs__link {
+    padding: 0.6rem 0.8rem;
+    font-size: 0.85rem;
+  }
+
+  .md-header__nav-row .md-header__inner {
+    min-height: 2.8rem;
+    max-height: 2.8rem;
+    height: 2.8rem;
+  }
+
+  .md-main {
+    margin-top: 5.5rem;
+  }
+}
+
+/* Tablet responsive adjustments */
+@media screen and (max-width: 60em) {
+  /* Show hamburger menu on tablets */
+  .md-header__menu-button {
+    display: block;
+  }
+
+  /* Hide navigation tabs on tablets */
+  .md-header__nav-row {
+    display: none;
+  }
+
+  /* Adjust main content margin when nav is hidden */
+  .md-main {
+    margin-top: 3rem; /* Only logo header height */
+  }
+
+  .md-header--scrolled ~ .md-main {
+    margin-top: 3rem;
+  }
+
+  /* Adjust logo and title for tablet */
+  .md-header__logo-section .md-logo img {
+    height: 2.5rem;
+  }
+
+  .md-header__title .md-header__topic {
+    font-size: 0.95rem;
+  }
+}
+
+/* Mobile responsive adjustments */
+@media screen and (max-width: 44.9375em) {
+  /* Show hamburger menu on mobile */
+  .md-header__menu-button {
+    display: block;
+  }
+
+  /* Hide navigation tabs on mobile */
+  .md-header__nav-row {
+    display: none;
+  }
+
+  /* Mobile logo and title adjustments */
+  .md-header__logo-section .md-logo img {
+    height: 2.2rem;
+  }
+
+  .md-header__title .md-header__topic {
+    font-size: 0.9rem;
+  }
+
+  /* Adjust header controls for mobile */
+  .md-header__controls {
+    gap: 0.3rem;
+  }
+
+  .md-header__search-container {
+    gap: 0.3rem;
+  }
+
+  /* Adjust main content margin for mobile */
+  .md-main {
+    margin-top: 3rem; /* Only logo header height */
+  }
+
+  .md-header--scrolled ~ .md-main {
+    margin-top: 3rem;
+  }
+
+  /* Mobile header inner padding */
+  .md-header__logo-row .md-header__inner {
+    padding: 0 0.8rem;
+    min-height: 3rem;
+  }
+}
+
+/* Force header background color override */
+.md-header,
+.md-header__inner,
+.md-header__unified,
+.md-header__logo-row,
+.md-header__nav-row,
+.md-tabs,
+.md-tabs__list {
+  background: linear-gradient(135deg, #4A2DB8 0%, #5A3BC4 15%, #6C4FF7 30%, #7A5BF0 45%, #8A6EF9 60%, #7A5BF0 75%, #6C4FF7 85%, #5A3BC4 95%, #3D1F8A 100%) !important;
+  border: none !important;
+}
+
+/* Remove any potential borders or lines from header elements */
+.md-header *,
+.md-header__inner *,
+.md-header__unified *,
+.md-header__logo-row *,
+.md-header__nav-row *,
+.md-tabs *,
+.md-tabs__list *,
+.md-tabs__item *,
+.md-tabs__link,
+.md-header__button,
+.md-header__search,
+.md-header__search-container,
+.md-header__controls,
+.md-header__logo-section,
+.md-header__title {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-top: none !important;
+  border-bottom: none !important;
+}
+
+/* Force complete transparency and remove any visual separators */
+.md-header__logo-row,
+.md-header__nav-row,
+.md-header__logo-row *,
+.md-header__nav-row * {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  margin: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+/* Ensure no gaps between rows */
+.md-header__logo-row {
+  margin-bottom: 0 !important;
+  padding-bottom: 0 !important;
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+.md-header__nav-row {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+  margin-bottom: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+/* Completely eliminate any visual separation between rows */
+.md-header__unified > * {
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+/* Force seamless connection between rows */
+.md-header__logo-row + .md-header__nav-row {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+  border-top: none !important;
+}
+
+/* Additional specific overrides for Material theme defaults */
+.md-header__inner::before,
+.md-header__inner::after,
+.md-header__unified::before,
+.md-header__unified::after,
+.md-header__logo-row::before,
+.md-header__logo-row::after,
+.md-header__nav-row::before,
+.md-header__nav-row::after,
+.md-tabs::before,
+.md-tabs::after,
+.md-tabs__list::before,
+.md-tabs__list::after {
+  display: none !important;
+  content: none !important;
+}
+
+/* Force drawer navigation header background override */
+.md-nav__title,
+.md-nav__title[for="__drawer"],
+.md-nav--primary > .md-nav__title,
+.md-sidebar--primary .md-nav__title,
+.md-nav__title .md-nav__button,
+.md-nav__button {
+  background: linear-gradient(135deg, #4A2DB8 0%, #5A3BC4 15%, #6C4FF7 30%, #7A5BF0 45%, #8A6EF9 60%, #7A5BF0 75%, #6C4FF7 85%, #5A3BC4 95%, #3D1F8A 100%) !important;
+  color: white !important;
+}
+
+/* Mobile navigation drawer styles */
+@media screen and (max-width: 60em) {
+  /* Ensure drawer navigation is visible and styled properly */
+  .md-nav--primary {
+    background-color: var(--md-default-bg-color);
+  }
+
+  /* Fix drawer header/title background */
+  .md-nav--primary .md-nav__title,
+  .md-nav__title,
+  .md-nav__title[for="__drawer"] {
+    background: linear-gradient(135deg, #4A2DB8 0%, #5A3BC4 15%, #6C4FF7 30%, #7A5BF0 45%, #8A6EF9 60%, #7A5BF0 75%, #6C4FF7 85%, #5A3BC4 95%, #3D1F8A 100%) !important;
+    color: white !important;
+    font-weight: 600;
+  }
+
+  /* Fix back button area */
+  .md-nav__title .md-nav__button,
+  .md-nav__button {
+    color: white !important;
+  }
+
+  .md-nav--primary .md-nav__item {
+    border-bottom: 1px solid var(--md-default-fg-color--lightest);
+  }
+
+  .md-nav--primary .md-nav__link {
+    padding: 1rem;
+    font-size: 0.9rem;
+  }
+
+  .md-nav--primary .md-nav__link--active {
+    color: var(--md-primary-fg-color);
+    font-weight: 600;
+  }
+
+  /* Drawer overlay */
+  .md-overlay {
+    background-color: rgba(0, 0, 0, 0.6);
+  }
+
+  /* Additional drawer header overrides */
+  .md-sidebar--primary .md-sidebar__scrollwrap .md-nav--primary .md-nav__title {
+    background: linear-gradient(135deg, #4A2DB8 0%, #5A3BC4 15%, #6C4FF7 30%, #7A5BF0 45%, #8A6EF9 60%, #7A5BF0 75%, #6C4FF7 85%, #5A3BC4 95%, #3D1F8A 100%) !important;
+  }
+}
+
+/* =====================================================
+   Search Dropdown Visibility Improvements
+   ===================================================== */
+
+/* Search form container */
+.md-search__form {
+  background-color: transparent !important;
+  border-radius: 0.5rem !important;
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+/* Search input field styling */
+.md-search__input {
+  background-color: rgba(255, 255, 255, 0.15) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  border-radius: 0.5rem !important;
+  color: white !important;
+  padding: 0.5rem 3rem 0.5rem 2.5rem !important; /* Left padding for search icon, right padding for action icons */
+  font-size: 0.9rem !important;
+  transition: all 0.2s ease !important;
+  width: 100% !important;
+  min-width: 200px !important;
+}
+
+/* Search input placeholder text */
+.md-search__input::placeholder {
+  color: rgba(255, 255, 255, 0.7) !important;
+  opacity: 1 !important;
+}
+
+/* Search input focus state */
+.md-search__input:focus {
+  background-color: rgba(255, 255, 255, 0.25) !important;
+  border-color: rgba(255, 255, 255, 0.5) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Search icon positioning - left side of input */
+.md-search__icon[for="__search"] {
+  position: absolute !important;
+  left: 0.75rem !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  z-index: 2 !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+  pointer-events: none !important;
+}
+
+/* Search action icons container - right side of input */
+.md-search__options {
+  position: absolute !important;
+  right: 0.5rem !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.25rem !important;
+  z-index: 2 !important;
+}
+
+/* Individual action icons (share, close) */
+.md-search__icon:not([for="__search"]) {
+  color: rgba(255, 255, 255, 0.8) !important;
+  padding: 0.25rem !important;
+  border-radius: 0.25rem !important;
+  transition: all 0.15s ease !important;
+  cursor: pointer !important;
+}
+
+.md-search__icon:not([for="__search"]):hover {
+  color: white !important;
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Search output/dropdown container */
+.md-search__output {
+  background-color: var(--md-default-bg-color) !important;
+  border: 1px solid var(--md-default-fg-color--lightest) !important;
+  border-radius: 0.5rem !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  margin-top: 0.5rem !important;
+  max-height: 70vh !important;
+  overflow-y: auto !important;
+}
+
+/* Search results styling */
+.md-search-result {
+  border-bottom: 1px solid var(--md-default-fg-color--lightest) !important;
+}
+
+.md-search-result:last-child {
+  border-bottom: none !important;
+}
+
+/* Search result item styling */
+.md-search-result__item {
+  padding: 1rem !important;
+  transition: background-color 0.15s ease !important;
+}
+
+.md-search-result__item:hover,
+.md-search-result__item:focus {
+  background-color: var(--md-default-fg-color--lightest) !important;
+}
+
+/* Search result title */
+.md-search-result__title {
+  color: var(--md-primary-fg-color) !important;
+  font-weight: 600 !important;
+  margin-bottom: 0.25rem !important;
+}
+
+/* Search result text */
+.md-search-result__teaser {
+  color: var(--md-default-fg-color--light) !important;
+  font-size: 0.85rem !important;
+  line-height: 1.4 !important;
+}
+
+/* Search result highlight */
+.md-search-result mark {
+  background-color: var(--md-primary-fg-color--light) !important;
+  color: white !important;
+  padding: 0.1rem 0.2rem !important;
+  border-radius: 0.2rem !important;
+}
+
+/* General search icon styling (fallback) */
+.md-search__icon {
+  color: rgba(255, 255, 255, 0.8) !important;
+  transition: color 0.15s ease !important;
+}
+
+.md-search__icon:hover {
+  color: white !important;
+}
+
+/* Dark mode specific adjustments */
+[data-md-color-scheme="slate"] .md-search__output {
+  background-color: var(--md-default-bg-color) !important;
+  border-color: var(--md-default-fg-color--lightest) !important;
+}
+
+[data-md-color-scheme="slate"] .md-search-result__item:hover,
+[data-md-color-scheme="slate"] .md-search-result__item:focus {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Light mode specific adjustments */
+[data-md-color-scheme="default"] .md-search__output {
+  background-color: white !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+[data-md-color-scheme="default"] .md-search-result__item:hover,
+[data-md-color-scheme="default"] .md-search-result__item:focus {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Responsive search adjustments */
+@media screen and (max-width: 60em) {
+  .md-search__input {
+    font-size: 0.85rem !important;
+    padding: 0.4rem 2.8rem 0.4rem 2.2rem !important; /* Adjusted for smaller screens */
+    min-width: 180px !important;
+  }
+
+  .md-search__icon[for="__search"] {
+    left: 0.6rem !important;
+  }
+
+  .md-search__options {
+    right: 0.4rem !important;
+  }
+
+  .md-search__output {
+    max-height: 60vh !important;
+    margin-top: 0.3rem !important;
+  }
+}
+
+@media screen and (max-width: 44.9375em) {
+  .md-search__input {
+    font-size: 0.8rem !important;
+    padding: 0.35rem 2.5rem 0.35rem 2rem !important; /* Further adjusted for mobile */
+    min-width: 160px !important;
+  }
+
+  .md-search__icon[for="__search"] {
+    left: 0.5rem !important;
+  }
+
+  .md-search__options {
+    right: 0.3rem !important;
+    gap: 0.15rem !important;
+  }
+
+  .md-search__icon:not([for="__search"]) {
+    padding: 0.2rem !important;
+  }
+
+  .md-search__output {
+    max-height: 50vh !important;
+    border-radius: 0.3rem !important;
+  }
+
+  .md-search-result__item {
+    padding: 0.8rem !important;
+  }
+}
+
+/* =====================================================
+   Scroll Behavior Implementation
+   ===================================================== */
+
+/* Hide logo header on scroll down */
+.md-header--scrolled .md-header__logo-row {
+  transform: translateY(-100%);
+}
+
+/* Adjust navigation header position when logo header is hidden */
+.md-header--scrolled .md-header__nav-row {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+}
+
+/* Adjust main content margin when logo header is hidden */
+.md-header--scrolled ~ .md-main {
+  margin-top: 3rem; /* Height of just the navigation row */
+}
+
+/* Smooth transitions for scroll behavior */
+.md-header__logo-row,
+.md-header__nav-row {
+  transition: transform 0.25s cubic-bezier(0.1, 0.7, 0.1, 1);
+}
+
+/* Ensure navigation header stays visible and functional */
+.md-header--scrolled .md-header__nav-row .md-tabs {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Responsive scroll behavior adjustments */
+@media screen and (max-width: 76.1875em) {
+  .md-header--scrolled ~ .md-main {
+    margin-top: 2.8rem;
+  }
+}
+
+/* Tablet and mobile scroll behavior */
+@media screen and (max-width: 60em) {
+  .md-header--scrolled ~ .md-main {
+    margin-top: 3rem; /* Only logo header visible */
+  }
+}
+
+@media screen and (max-width: 44.9375em) {
+  .md-header--scrolled ~ .md-main {
+    margin-top: 3rem; /* Only logo header visible */
+  }
+}

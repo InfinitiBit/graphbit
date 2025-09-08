@@ -335,13 +335,11 @@ if __name__ == "__main__":
 
 ```python
 import asyncio
-from graphbit import init, LlmConfig, LlmClient
+from graphbit import LlmConfig, LlmClient
 import os
 
 async def process_large_document_collection():
     """Process large document collections asynchronously."""
-    
-    init()
     
     # Configure for high-throughput processing
     llm_config = LlmConfig.openai(

@@ -18,17 +18,7 @@ GraphBit is built around these core concepts:
 Before using GraphBit, you must initialize the library:
 
 ```python
-from graphbit import init, version, get_system_info, health_check
-
-# Basic initialization
-init()
-
-# With custom configuration
-init(
-    log_level="info",           # trace, debug, info, warn, error
-    enable_tracing=True,        # Enable detailed logging
-    debug=False                 # Debug mode
-)
+from graphbit import version, get_system_info, health_check
 
 # Check system status
 print(f"GraphBit version: {version()}")

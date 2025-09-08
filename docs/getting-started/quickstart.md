@@ -22,10 +22,7 @@ Create a new Python file `my_first_workflow.py`:
 ```python
 import os
 
-from graphbit import init, LlmConfig
-
-# Initialize GraphBit
-init()
+from graphbit import LlmConfig
 
 # Configure LLM (using OpenAI GPT-4)
 # GraphBit supports multiple providers: openai, anthropic, huggingface, ollama

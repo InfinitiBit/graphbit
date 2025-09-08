@@ -225,12 +225,11 @@ if __name__ == "__main__":
 ### Using Anthropic Claude
 
 ```python
-from graphbit import init, LlmConfig, Executor, Workflow, Node
+from graphbit import LlmConfig, Executor, Workflow, Node
 import os
 
 def create_anthropic_pipeline():
     """Create pipeline using Anthropic Claude."""
-    init()
     print("ANTHOPIC_API_KEY",os.getenv("ANTHROPIC_API_KEY"))
     
     # Configure for Anthropic
@@ -272,11 +271,10 @@ result = executor.execute(workflow)
 ### Using Local Ollama Models
 
 ```python
-from graphbit import init, LlmConfig, Executor, Workflow, Node
+from graphbit import LlmConfig, Executor, Workflow, Node
 
 def create_ollama_pipeline():
     """Create pipeline using local Ollama models."""
-    init()
     
     # Configure for Ollama (no API key needed)
     config = LlmConfig.ollama("llama3.2")
@@ -314,12 +312,11 @@ result = executor.execute(workflow)
 ### High-Performance Content Generation
 
 ```python
-from graphbit import init, LlmConfig, Executor
+from graphbit import LlmConfig, Executor
 import os
 
 def create_high_performance_pipeline():
     """Create optimized pipeline for high-throughput content generation."""
-    init()
     
     config = LlmConfig.openai(
         api_key=os.getenv("OPENAI_API_KEY"),
