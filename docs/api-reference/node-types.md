@@ -28,6 +28,9 @@ agent = Node.agent(
 - `name` (str): Human-readable node name
 - `prompt` (str): LLM prompt template with variable placeholders
 - `agent_id` (str, optional): Unique identifier for the agent. Auto-generated if not provided
+- `output_name` (str, optional): Custom name for the node's output
+- `tools` (List, optional): List of tools available to the agent
+- `system_prompt` (str, optional): System prompt that defines agent behavior and constraints
 
 ### Agent Node with Tool calling
 
@@ -42,6 +45,39 @@ agent = Node.agent(
 )
 ```
 
+### Agent Node with System Prompt
+
+```python
+from graphbit import Node
+
+# Agent with system prompt for behavior control
+analyzer = Node.agent(
+    name="Code Reviewer",
+    prompt=f"Review this code for issues: {code}",
+    agent_id="code_reviewer",
+    system_prompt="""You are an experienced software engineer and code reviewer.
+
+    Focus on:
+    - Security vulnerabilities
+    - Performance issues
+    - Code quality and best practices
+    - Potential bugs
+
+    Provide specific, actionable feedback with examples."""
+)
+
+# Agent with structured output format
+json_agent = Node.agent(
+    name="Sentiment Analyzer",
+    prompt=f"Analyze sentiment: {text}",
+    system_prompt="""Respond only in valid JSON format:
+    {
+        "sentiment": "positive|negative|neutral",
+        "confidence": 0.0-1.0,
+        "reasoning": "brief explanation"
+    }"""
+)
+```
 
 ### Agent Node Examples
 
