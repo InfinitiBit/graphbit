@@ -132,22 +132,22 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: ["3.10", "3.11", "3.12", "3.13"]
-        
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      
+
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
-        
+
     - name: Set up Rust
       uses: dtolnay/rust-toolchain@stable
       with:
         toolchain: stable
         components: rustfmt, clippy
-        
+
     - name: Cache Rust dependencies
       uses: actions/cache@v3
       with:
@@ -161,7 +161,7 @@ jobs:
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
         restore-keys: |
           ${{ runner.os }}-cargo-
-          
+
     - name: Cache Python dependencies
       uses: actions/cache@v3
       with:
@@ -171,32 +171,32 @@ jobs:
         key: ${{ runner.os }}-python-${{ matrix.python-version }}-${{ hashFiles('**/pyproject.toml', '**/requirements*.txt') }}
         restore-keys: |
           ${{ runner.os }}-python-${{ matrix.python-version }}-
-          
+
     - name: Debug Rust toolchain
       run: |
         rustc --version
         cargo --version
         rustup show
-        
+
     - name: Create Python virtual environment
       shell: bash
       run: |
         python -m venv venv
-        
+
     - name: Activate virtual environment and install dependencies (Unix)
       if: runner.os != 'Windows'
       run: |
         source venv/bin/activate
         python -m pip install --upgrade pip
         pip install maturin pytest pytest-cov pytest-asyncio
-        
+
     - name: Activate virtual environment and install dependencies (Windows)
       if: runner.os == 'Windows'
       run: |
         .\venv\Scripts\Activate.ps1
         python -m pip install --upgrade pip
         pip install maturin pytest pytest-cov pytest-asyncio
-        
+
     - name: Build Python extension (Unix)
       if: runner.os != 'Windows'
       run: |
@@ -204,7 +204,7 @@ jobs:
         cd python
         maturin develop --release
         cd ..
-        
+
     - name: Build Python extension (Windows)
       if: runner.os == 'Windows'
       run: |
@@ -212,11 +212,11 @@ jobs:
         cd python
         maturin develop --release
         cd ..
-        
+
     - name: Run Rust tests
       run: |
         cargo test --workspace --all-features --verbose
-        
+
     - name: Run Python unit tests (Unix)
       if: runner.os != 'Windows'
       run: |
@@ -226,7 +226,7 @@ jobs:
           pytest -v --tb=short
           cd ../..
         fi
-        
+
     - name: Run Python unit tests (Windows)
       if: runner.os == 'Windows'
       run: |
@@ -236,7 +236,7 @@ jobs:
           pytest -v --tb=short
           cd ../..
         }
-        
+
     - name: Run Python integration tests (Unix)
       if: runner.os != 'Windows'
       env:
@@ -249,7 +249,7 @@ jobs:
           pytest -v --tb=short -m "not slow"
           cd ../..
         fi
-        
+
     - name: Run Python integration tests (Windows)
       if: runner.os == 'Windows'
       env:
@@ -262,7 +262,7 @@ jobs:
           pytest -v --tb=short -m "not slow"
           cd ../..
         }
-        
+
     - name: Verify package functionality (Unix)
       if: runner.os != 'Windows'
       run: |
@@ -270,20 +270,20 @@ jobs:
         python -c "
         import graphbit
         print(f'GraphBit version: {graphbit.version()}')
-        
+
         # Test basic functionality
         graphbit.init()
-        
+
         # Test core classes can be imported
         config = graphbit.LlmConfig
         client = graphbit.LlmClient
         workflow = graphbit.Workflow
         node = graphbit.Node
-        
+
         print('✓ All core classes imported successfully')
         print('✓ Package functionality verified')
         "
-        
+
     - name: Verify package functionality (Windows)
       if: runner.os == 'Windows'
       run: |
@@ -291,16 +291,16 @@ jobs:
         python -c "
         import graphbit
         print(f'GraphBit version: {graphbit.version()}')
-        
+
         # Test basic functionality
         graphbit.init()
-        
+
         # Test core classes can be imported
         config = graphbit.LlmConfig
         client = graphbit.LlmClient
         workflow = graphbit.Workflow
         node = graphbit.Node
-        
+
         print('✓ All core classes imported successfully')
         print('✓ Package functionality verified')
         "
@@ -308,22 +308,22 @@ jobs:
   lint:
     name: Lint and Format Check
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      
+
     - name: Set up Python 3.11
       uses: actions/setup-python@v4
       with:
         python-version: "3.11"
-        
+
     - name: Set up Rust
       uses: dtolnay/rust-toolchain@stable
       with:
         toolchain: stable
         components: rustfmt, clippy
-        
+
     - name: Cache Rust dependencies
       uses: actions/cache@v3
       with:
@@ -338,30 +338,30 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-cargo-lint-
           ${{ runner.os }}-cargo-
-          
+
     - name: Install Python linting tools
       run: |
         python -m pip install --upgrade pip
         pip install black isort flake8 mypy
-        
+
     - name: Check Rust formatting
       run: cargo fmt --all -- --check
-      
+
     - name: Run Rust clippy
       run: cargo clippy --workspace --all-targets --all-features -- -D warnings
-      
+
     - name: Check Python formatting with black
       run: |
         if [ -d "python/src" ] || [ -d "tests" ]; then
           black --check --diff python/ tests/ || true
         fi
-        
+
     - name: Check Python import sorting with isort
       run: |
         if [ -d "python/src" ] || [ -d "tests" ]; then
           isort --check-only --diff python/ tests/ || true
         fi
-        
+
     - name: Run Python flake8 linting
       run: |
         if [ -d "python/src" ] || [ -d "tests" ]; then

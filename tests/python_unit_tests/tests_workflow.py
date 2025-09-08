@@ -1,9 +1,10 @@
 """Unit tests for workflow functionality."""
 
 import os
+
 import pytest
 
-from graphbit import Node, Workflow, Executor, LlmConfig
+from graphbit import Executor, LlmConfig, Node, Workflow
 
 
 def get_api_key(provider: str) -> str:

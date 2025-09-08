@@ -71,7 +71,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       ready: ${{ steps.check.outputs.ready }}
-      
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -85,7 +85,7 @@ jobs:
       id: check
       run: |
         echo "Checking if pipeline is ready for deployment phase..."
-        
+
         if python scripts/workflow-orchestrator.py check --phase deployment; then
           echo "ready=true" >> $GITHUB_OUTPUT
           echo "Pipeline is ready for deployment"
@@ -103,7 +103,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       verified: ${{ steps.verify.outputs.verified }}
-      
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -117,20 +117,20 @@ jobs:
       id: verify
       run: |
         RELEASE_VERSION="${{ inputs.release_version }}"
-        
+
         if [ -z "$RELEASE_VERSION" ]; then
           echo "No release version provided, skipping verification"
           echo "verified=true" >> $GITHUB_OUTPUT
           exit 0
         fi
-        
+
         echo "Verifying release $RELEASE_VERSION..."
-        
+
         # Check GitHub release
         if [ -n "${{ inputs.release_url }}" ]; then
           echo "✅ GitHub release URL provided: ${{ inputs.release_url }}"
         fi
-        
+
         # Check PyPI availability (with retry)
         echo "Checking PyPI availability..."
         for i in {1..5}; do
@@ -155,7 +155,7 @@ jobs:
             fi
           fi
         done
-        
+
         echo "verified=true" >> $GITHUB_OUTPUT
 
   documentation-deployment:
@@ -164,7 +164,7 @@ jobs:
     if: needs.prerequisites-check.outputs.ready == 'true'
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment || 'production' }}
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -182,10 +182,10 @@ jobs:
     - name: Build documentation
       run: |
         echo "Building documentation..."
-        
+
         # Build Rust documentation
         cargo doc --workspace --no-deps --document-private-items
-        
+
         # If there's a docs directory, build it too
         if [ -d "docs" ]; then
           echo "Building additional documentation..."
@@ -206,7 +206,7 @@ jobs:
     needs: [prerequisites-check, verify-release, documentation-deployment]
     if: needs.prerequisites-check.outputs.ready == 'true'
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -216,19 +216,19 @@ jobs:
         RELEASE_VERSION="${{ inputs.release_version }}"
         RELEASE_URL="${{ inputs.release_url }}"
         ENVIRONMENT="${{ inputs.environment || 'production' }}"
-        
+
         echo "Sending deployment notifications..."
         echo "Version: $RELEASE_VERSION"
         echo "Environment: $ENVIRONMENT"
         echo "Release URL: $RELEASE_URL"
-        
+
         # Here you could add integrations with:
         # - Slack notifications
         # - Discord webhooks
         # - Email notifications
         # - Monitoring systems
         # - etc.
-        
+
         echo "✅ Deployment notifications sent"
 
   deployment-verification:
@@ -238,7 +238,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       status: ${{ steps.verify.outputs.status }}
-      
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -256,50 +256,50 @@ jobs:
       id: verify
       run: |
         echo "Verifying deployment..."
-        
+
         RELEASE_VERSION="${{ inputs.release_version }}"
-        
+
         # Verify package installation
         if [ -n "$RELEASE_VERSION" ]; then
           echo "Testing package installation..."
-          
+
           # Create a temporary virtual environment
           python -m venv temp_venv
-          
+
           # Activate virtual environment (cross-platform)
           if [ -f "temp_venv/bin/activate" ]; then
             source temp_venv/bin/activate
           elif [ -f "temp_venv/Scripts/activate" ]; then
             source temp_venv/Scripts/activate
           fi
-          
+
           # Install the package
           pip install graphbit==$RELEASE_VERSION
-          
+
           # Test basic functionality
           python -c "
           import graphbit
           print(f'✅ Successfully imported GraphBit version: {graphbit.version()}')
-          
+
           # Test basic initialization
           graphbit.init()
           print('✅ GraphBit initialization successful')
           "
-          
+
           # Clean up
           deactivate 2>/dev/null || true
           rm -rf temp_venv
-          
+
           echo "✅ Package verification successful"
         fi
-        
+
         # Verify documentation deployment
         if [ "${{ github.ref }}" = "refs/heads/main" ]; then
           echo "✅ Documentation deployment completed"
         fi
-        
+
         echo "status=success" >> $GITHUB_OUTPUT
-        
+
         # Mark phase as complete
         python scripts/workflow-orchestrator.py complete --phase deployment --success \
           --artifacts "version=$RELEASE_VERSION,environment=${{ inputs.environment || 'production' }}"
@@ -312,7 +312,7 @@ jobs:
     outputs:
       status: ${{ steps.summary.outputs.status }}
       url: ${{ steps.summary.outputs.url }}
-      
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -326,7 +326,7 @@ jobs:
       id: summary
       run: |
         echo "Generating deployment summary..."
-        
+
         if [ "${{ needs.deployment-verification.result }}" = "success" ]; then
           echo "status=success" >> $GITHUB_OUTPUT
           echo "Deployment completed successfully"
@@ -334,7 +334,7 @@ jobs:
           echo "status=failure" >> $GITHUB_OUTPUT
           echo "Deployment failed or was skipped"
         fi
-        
+
         # Set deployment URL (GitHub Pages for documentation)
         if [ "${{ github.ref }}" = "refs/heads/main" ]; then
           REPO_NAME="${{ github.repository }}"
@@ -350,13 +350,13 @@ jobs:
       run: |
         echo "## 🚀 Deployment Results" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        
+
         if [ "${{ steps.summary.outputs.status }}" = "success" ]; then
           echo "✅ **Deployment completed successfully!**" >> $GITHUB_STEP_SUMMARY
         else
           echo "❌ **Deployment failed or was skipped**" >> $GITHUB_STEP_SUMMARY
         fi
-        
+
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### Deployment Details" >> $GITHUB_STEP_SUMMARY
         echo "- **Workflow**: 05-deployment" >> $GITHUB_STEP_SUMMARY
@@ -367,14 +367,14 @@ jobs:
         echo "- **Release URL**: ${{ inputs.release_url || 'N/A' }}" >> $GITHUB_STEP_SUMMARY
         echo "- **Documentation URL**: ${{ steps.summary.outputs.url || 'N/A' }}" >> $GITHUB_STEP_SUMMARY
         echo "- **Run ID**: ${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
-        
+
         # Show final pipeline status
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### 🎉 Complete Pipeline Status" >> $GITHUB_STEP_SUMMARY
         echo '```' >> $GITHUB_STEP_SUMMARY
         python scripts/workflow-orchestrator.py status >> $GITHUB_STEP_SUMMARY
         echo '```' >> $GITHUB_STEP_SUMMARY
-        
+
         if [ "${{ steps.summary.outputs.status }}" = "success" ]; then
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 🎊 Pipeline Complete!" >> $GITHUB_STEP_SUMMARY
@@ -394,7 +394,7 @@ jobs:
     needs: deployment-summary
     if: always()
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -408,11 +408,11 @@ jobs:
       run: |
         echo "=== FINAL PIPELINE STATUS ==="
         python scripts/workflow-orchestrator.py status
-        
+
         echo ""
         echo "Pipeline execution completed."
         echo "Status: ${{ needs.deployment-summary.outputs.status }}"
-        
+
         if [ "${{ needs.deployment-summary.outputs.status }}" = "success" ]; then
           echo "🎉 All phases completed successfully!"
         else

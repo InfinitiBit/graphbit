@@ -186,7 +186,6 @@ async fn test_workflow_complex_graph() {
     let _agent_id1 = AgentId::new();
     let _agent_id2 = AgentId::new();
 
-
     // Create start node
     let start_node = WorkflowNode::new(
         "Start",

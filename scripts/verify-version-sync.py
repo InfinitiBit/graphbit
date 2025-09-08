@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Advanced Version Synchronization and Detection Script
+"""Advanced Version Synchronization and Detection Script.
 
 This script provides comprehensive version management for GraphBit:
 - Detects authoritative version from multiple sources (local files, git tags, GitHub releases)
@@ -15,22 +14,24 @@ Usage:
     python scripts/verify-version-sync.py --promote-version 0.3.0  # Promote specific version
 """
 
+import argparse
 import json
 import re
-import sys
-import argparse
 import subprocess
-import urllib.request
+import sys
 import urllib.error
-from pathlib import Path
-from typing import Dict, List, Tuple, Optional, Set
+import urllib.request
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
+
 from packaging import version
 
 
 @dataclass
 class VersionReference:
     """Represents a version reference in a file."""
+
     file_path: str
     version: str
     pattern: str
@@ -42,6 +43,7 @@ class VersionReference:
 @dataclass
 class VersionReport:
     """Comprehensive report of version synchronization status."""
+
     master_versions: Dict[str, str]
     derived_versions: Dict[str, str]
     remote_versions: Dict[str, str]  # Git tags and GitHub releases
@@ -49,12 +51,13 @@ class VersionReport:
     authoritative_version: str
     is_synchronized: bool
     needs_promotion: bool = False
-    recommendations: List[str] = None
+    recommendations: Optional[List[str]] = None
 
 
 @dataclass
 class VersionSource:
     """Represents a version source with priority and detection metadata."""
+
     name: str
     version: str
     priority: int  # Higher number = higher priority
@@ -67,6 +70,11 @@ class AdvancedVersionManager:
     """Advanced version management with remote detection and conflict resolution."""
 
     def __init__(self, root_path: Path):
+        """Initialize the version manager.
+
+        Args:
+            root_path: Root path of the project
+        """
         self.root_path = root_path
         self.version_refs: List[VersionReference] = []
         self.remote_versions: Dict[str, str] = {}
@@ -78,21 +86,16 @@ class AdvancedVersionManager:
 
         # Get git tags
         try:
-            result = subprocess.run(
-                ["git", "tag", "--sort=-version:refname"],
-                capture_output=True,
-                text=True,
-                cwd=self.root_path
-            )
+            result = subprocess.run(["git", "tag", "--sort=-version:refname"], capture_output=True, text=True, cwd=self.root_path)
             if result.returncode == 0:
-                tags = [tag.strip() for tag in result.stdout.split('\n') if tag.strip()]
+                tags = [tag.strip() for tag in result.stdout.split("\n") if tag.strip()]
                 if tags:
                     # Get the latest tag
                     latest_tag = tags[0]
                     # Remove 'v' prefix if present
-                    clean_version = latest_tag.lstrip('v')
-                    remote_versions['git_latest_tag'] = clean_version
-                    remote_versions['git_all_tags'] = ', '.join(tags[:5])  # Top 5 tags
+                    clean_version = latest_tag.lstrip("v")
+                    remote_versions["git_latest_tag"] = clean_version
+                    remote_versions["git_all_tags"] = ", ".join(tags[:5])  # Top 5 tags
         except Exception as e:
             print(f"Warning: Could not fetch git tags: {e}")
 
@@ -101,16 +104,15 @@ class AdvancedVersionManager:
             url = f"https://api.github.com/repos/{self.github_repo}/releases/latest"
             with urllib.request.urlopen(url) as response:
                 data = json.loads(response.read().decode())
-                tag_name = data.get('tag_name', '')
-                clean_version = tag_name.lstrip('v')
-                remote_versions['github_latest_release'] = clean_version
+                tag_name = data.get("tag_name", "")
+                clean_version = tag_name.lstrip("v")
+                remote_versions["github_latest_release"] = clean_version
         except Exception as e:
             print(f"Warning: Could not fetch GitHub releases: {e}")
 
         return remote_versions
 
-    def determine_authoritative_version(self, local_versions: Dict[str, str],
-                                      remote_versions: Dict[str, str]) -> Tuple[str, List[str]]:
+    def determine_authoritative_version(self, local_versions: Dict[str, str], remote_versions: Dict[str, str]) -> Tuple[str, List[str]]:
         """Determine the authoritative version using priority-based resolution."""
         version_sources = []
         recommendations = []
@@ -122,34 +124,25 @@ class AdvancedVersionManager:
         # 4. Derived sources (if consistent): Priority 70
 
         # Check master source consistency
-        master_versions = {k: v for k, v in local_versions.items()
-                          if k in ['Cargo.toml (workspace)', 'python/pyproject.toml']}
+        master_versions = {k: v for k, v in local_versions.items() if k in ["Cargo.toml (workspace)", "python/pyproject.toml"]}
 
         if len(set(master_versions.values())) == 1:
             # Master sources are consistent
             master_version = list(master_versions.values())[0]
-            version_sources.append(VersionSource(
-                "master_sources", master_version, 100, "master"
-            ))
+            version_sources.append(VersionSource("master_sources", master_version, 100, "master"))
         else:
             # Master sources inconsistent - use highest version
             if master_versions:
                 highest_master = max(master_versions.values(), key=lambda v: version.parse(v))
-                version_sources.append(VersionSource(
-                    "master_sources_highest", highest_master, 95, "master"
-                ))
+                version_sources.append(VersionSource("master_sources_highest", highest_master, 95, "master"))
                 recommendations.append(f"⚠️  Master sources inconsistent. Promoting highest: {highest_master}")
 
         # Add remote sources
-        if 'github_latest_release' in remote_versions:
-            version_sources.append(VersionSource(
-                "github_release", remote_versions['github_latest_release'], 90, "remote"
-            ))
+        if "github_latest_release" in remote_versions:
+            version_sources.append(VersionSource("github_release", remote_versions["github_latest_release"], 90, "remote"))
 
-        if 'git_latest_tag' in remote_versions:
-            version_sources.append(VersionSource(
-                "git_tag", remote_versions['git_latest_tag'], 80, "remote"
-            ))
+        if "git_latest_tag" in remote_versions:
+            version_sources.append(VersionSource("git_tag", remote_versions["git_latest_tag"], 80, "remote"))
 
         # Determine authoritative version (highest priority, then highest version)
         if not version_sources:
@@ -160,15 +153,9 @@ class AdvancedVersionManager:
         authoritative = version_sources[0]
 
         # Check for version conflicts
-        remote_higher = False
         for source in version_sources[1:]:
-            if (source.source_type == "remote" and
-                version.parse(source.version) > version.parse(authoritative.version)):
-                remote_higher = True
-                recommendations.append(
-                    f"🚀 Remote version {source.version} is higher than local {authoritative.version}. "
-                    f"Consider updating local versions."
-                )
+            if source.source_type == "remote" and version.parse(source.version) > version.parse(authoritative.version):
+                recommendations.append(f"🚀 Remote version {source.version} is higher than local {authoritative.version}. " f"Consider updating local versions.")
                 break
 
         return authoritative.version, recommendations
@@ -176,55 +163,31 @@ class AdvancedVersionManager:
     def find_all_versions(self) -> List[VersionReference]:
         """Find all version references in the codebase."""
         refs = []
-        
+
         # 1. Cargo.toml workspace version (MASTER)
-        refs.extend(self._find_in_file(
-            "Cargo.toml",
-            r'\[workspace\.package\][\s\S]*?^version = "([^"]+)"',
-            is_master=True
-        ))
+        refs.extend(self._find_in_file("Cargo.toml", r'\[workspace\.package\][\s\S]*?^version = "([^"]+)"', is_master=True))
 
         # 2. Python pyproject.toml (MASTER)
-        refs.extend(self._find_in_file(
-            "python/pyproject.toml",
-            r'^version = "([^"]+)"',
-            is_master=True
-        ))
+        refs.extend(self._find_in_file("python/pyproject.toml", r'^version = "([^"]+)"', is_master=True))
 
         # 3. Root pyproject.toml (look for [tool.poetry] section)
-        refs.extend(self._find_in_file(
-            "pyproject.toml",
-            r'\[tool\.poetry\][\s\S]*?^version = "([^"]+)"'
-        ))
-        
+        refs.extend(self._find_in_file("pyproject.toml", r'\[tool\.poetry\][\s\S]*?^version = "([^"]+)"'))
+
         # 4. Node.js package.json
-        refs.extend(self._find_in_file(
-            "nodejs/package.json",
-            r'"version":\s*"([^"]+)"'
-        ))
-        
+        refs.extend(self._find_in_file("nodejs/package.json", r'"version":\s*"([^"]+)"'))
+
         # 5. Benchmarks __init__.py
-        refs.extend(self._find_in_file(
-            "benchmarks/frameworks/__init__.py",
-            r'__version__ = "([^"]+)"'
-        ))
-        
+        refs.extend(self._find_in_file("benchmarks/frameworks/__init__.py", r'__version__ = "([^"]+)"'))
+
         # 6. CHANGELOG.md (latest version - first occurrence only)
-        refs.extend(self._find_in_file(
-            "CHANGELOG.md",
-            r'## \[([^\]]+)\]',
-            first_only=True
-        ))
-        
+        refs.extend(self._find_in_file("CHANGELOG.md", r"## \[([^\]]+)\]", first_only=True))
+
         # 7. Core README.md
-        refs.extend(self._find_in_file(
-            "core/README.md",
-            r'graphbit-core = "([^"]+)"'
-        ))
-        
+        refs.extend(self._find_in_file("core/README.md", r'graphbit-core = "([^"]+)"'))
+
         self.version_refs = refs
         return refs
-    
+
     def _find_in_file(self, file_path: str, pattern: str, is_master: bool = False, first_only: bool = False) -> List[VersionReference]:
         """Find version references in a specific file."""
         full_path = self.root_path / file_path
@@ -233,7 +196,7 @@ class AdvancedVersionManager:
 
         refs = []
         try:
-            with open(full_path, 'r', encoding='utf-8') as f:
+            with open(full_path, "r", encoding="utf-8") as f:
                 content = f.read()
 
             # Use multiline matching for complex patterns
@@ -246,15 +209,9 @@ class AdvancedVersionManager:
                     version = match.group(0)
 
                 # Calculate line number
-                line_num = content[:match.start()].count('\n') + 1
+                line_num = content[: match.start()].count("\n") + 1
 
-                refs.append(VersionReference(
-                    file_path=file_path,
-                    version=version,
-                    pattern=pattern,
-                    line_number=line_num,
-                    is_master=is_master
-                ))
+                refs.append(VersionReference(file_path=file_path, version=version, pattern=pattern, line_number=line_num, is_master=is_master))
 
                 # If first_only is True, break after first match
                 if first_only:
@@ -268,7 +225,7 @@ class AdvancedVersionManager:
             print(f"⚠️  Error reading {file_path}: {e}")
 
         return refs
-    
+
     def generate_comprehensive_report(self) -> VersionReport:
         """Generate a comprehensive version synchronization report."""
         # Find all local versions
@@ -291,19 +248,14 @@ class AdvancedVersionManager:
         all_local_versions = {**master_versions, **derived_versions}
 
         # Determine authoritative version
-        authoritative_version, recommendations = self.determine_authoritative_version(
-            all_local_versions, remote_versions
-        )
+        authoritative_version, recommendations = self.determine_authoritative_version(all_local_versions, remote_versions)
 
         # Find inconsistencies
         inconsistencies = []
         for ref in self.version_refs:
-            if ref.version != authoritative_version:
+            if ref.version != authoritative_version and "CHANGELOG.md" not in ref.file_path:
                 # Skip CHANGELOG.md as it can have multiple versions
-                if "CHANGELOG.md" not in ref.file_path:
-                    inconsistencies.append((
-                        ref.file_path, ref.version, authoritative_version
-                    ))
+                inconsistencies.append((ref.file_path, ref.version, authoritative_version))
 
         # Determine if promotion is needed
         needs_promotion = False
@@ -311,11 +263,11 @@ class AdvancedVersionManager:
             # Filter out composite values like "v0.3.0, v0.2.0, v0.1.0"
             valid_remote_versions = []
             for v in remote_versions.values():
-                if v and ',' not in v:  # Skip composite values
+                if v and "," not in v:  # Skip composite values
                     try:
                         version.parse(v)  # Validate version format
                         valid_remote_versions.append(v)
-                    except:
+                    except Exception:
                         continue
 
             if valid_remote_versions:
@@ -331,7 +283,7 @@ class AdvancedVersionManager:
             authoritative_version=authoritative_version,
             is_synchronized=len(inconsistencies) == 0,
             needs_promotion=needs_promotion,
-            recommendations=recommendations or []
+            recommendations=recommendations or [],
         )
 
     def print_detailed_report(self, report: VersionReport):
@@ -343,31 +295,31 @@ class AdvancedVersionManager:
         print(f"\n🎯 AUTHORITATIVE VERSION: {report.authoritative_version}")
 
         if report.recommendations:
-            print(f"\n💡 RECOMMENDATIONS:")
+            print("\n💡 RECOMMENDATIONS:")
             for rec in report.recommendations:
                 print(f"   {rec}")
 
-        print(f"\n📊 MASTER SOURCES:")
+        print("\n📊 MASTER SOURCES:")
         for file_path, ver in report.master_versions.items():
             status = "✅" if ver == report.authoritative_version else "❌"
             print(f"   {status} {file_path}: {ver}")
 
-        print(f"\n🔗 DERIVED SOURCES:")
+        print("\n🔗 DERIVED SOURCES:")
         for file_path, ver in report.derived_versions.items():
             status = "✅" if ver == report.authoritative_version else "❌"
             print(f"   {status} {file_path}: {ver}")
 
         if report.remote_versions:
-            print(f"\n🌐 REMOTE SOURCES:")
+            print("\n🌐 REMOTE SOURCES:")
             for source, ver in report.remote_versions.items():
                 print(f"   📡 {source}: {ver}")
 
         if report.inconsistencies:
-            print(f"\n🚨 INCONSISTENCIES FOUND:")
+            print("\n🚨 INCONSISTENCIES FOUND:")
             for file_path, found_ver, expected_ver in report.inconsistencies:
                 print(f"   ❌ {file_path}: {found_ver} (expected {expected_ver})")
 
-        print(f"\n📈 SYNCHRONIZATION STATUS:")
+        print("\n📈 SYNCHRONIZATION STATUS:")
         if report.is_synchronized:
             print("   ✅ All versions are synchronized!")
         else:
@@ -377,7 +329,7 @@ class AdvancedVersionManager:
             print("   🚀 Version promotion recommended (remote version is higher)")
 
         print("=" * 60)
-    
+
     def promote_version(self, target_version: str) -> bool:
         """Promote a specific version across all files."""
         print(f"🚀 PROMOTING VERSION TO: {target_version}")
@@ -397,42 +349,32 @@ class AdvancedVersionManager:
         print("📝 Updating master sources...")
 
         # Cargo.toml workspace version
-        if self._update_file_version("Cargo.toml",
-                                   r'^version = "[^"]+"',
-                                   f'version = "{target_version}"'):
+        if self._update_file_version("Cargo.toml", r'^version = "[^"]+"', f'version = "{target_version}"'):
             files_updated.append("Cargo.toml")
-            print(f"   ✅ Updated Cargo.toml")
+            print("   ✅ Updated Cargo.toml")
 
         # Python pyproject.toml
-        if self._update_file_version("python/pyproject.toml",
-                                   r'version = "[^"]+"',
-                                   f'version = "{target_version}"'):
+        if self._update_file_version("python/pyproject.toml", r'version = "[^"]+"', f'version = "{target_version}"'):
             files_updated.append("python/pyproject.toml")
-            print(f"   ✅ Updated python/pyproject.toml")
+            print("   ✅ Updated python/pyproject.toml")
 
         # 2. Derived sources
         print("📝 Updating derived sources...")
 
         # Root pyproject.toml
-        if self._update_file_version("pyproject.toml",
-                                   r'^version = "[^"]+"',
-                                   f'version = "{target_version}"'):
+        if self._update_file_version("pyproject.toml", r'^version = "[^"]+"', f'version = "{target_version}"'):
             files_updated.append("pyproject.toml")
-            print(f"   ✅ Updated pyproject.toml")
+            print("   ✅ Updated pyproject.toml")
 
         # Node.js package.json
-        if self._update_file_version("nodejs/package.json",
-                                   r'"version":\s*"[^"]+"',
-                                   f'"version": "{target_version}"'):
+        if self._update_file_version("nodejs/package.json", r'"version":\s*"[^"]+"', f'"version": "{target_version}"'):
             files_updated.append("nodejs/package.json")
-            print(f"   ✅ Updated nodejs/package.json")
+            print("   ✅ Updated nodejs/package.json")
 
         # Benchmarks __init__.py
-        if self._update_file_version("benchmarks/frameworks/__init__.py",
-                                   r'__version__ = "[^"]+"',
-                                   f'__version__ = "{target_version}"'):
+        if self._update_file_version("benchmarks/frameworks/__init__.py", r'__version__ = "[^"]+"', f'__version__ = "{target_version}"'):
             files_updated.append("benchmarks/frameworks/__init__.py")
-            print(f"   ✅ Updated benchmarks/frameworks/__init__.py")
+            print("   ✅ Updated benchmarks/frameworks/__init__.py")
 
         # README files
         readme_files = ["README.md", "core/README.md", "python/README.md"]
@@ -453,9 +395,9 @@ class AdvancedVersionManager:
             for file_path in files_updated:
                 print(f"   • {file_path}")
 
-            print(f"\n💡 Next steps:")
-            print(f"   1. Review the changes: git diff")
-            print(f"   2. Test the build: make test")
+            print("\n💡 Next steps:")
+            print("   1. Review the changes: git diff")
+            print("   2. Test the build: make test")
             print(f"   3. Commit changes: git add . && git commit -m 'chore: bump version to {target_version}'")
             print(f"   4. Create release: git tag v{target_version} && git push --tags")
 
@@ -468,10 +410,8 @@ class AdvancedVersionManager:
         try:
             # Import and use the changelog generator
             import subprocess
-            result = subprocess.run([
-                "python", "scripts/generate-changelog.py",
-                "--version", target_version
-            ], capture_output=True, text=True, cwd=self.root_path)
+
+            result = subprocess.run(["python", "scripts/generate-changelog.py", "--version", target_version], capture_output=True, text=True, cwd=self.root_path)
 
             if result.returncode == 0:
                 print(f"✅ Successfully generated changelog entry for {target_version}")
@@ -489,34 +429,28 @@ class AdvancedVersionManager:
         if not self.master_version:
             print("❌ Cannot fix versions without a master version")
             return False
-        
+
         print(f"🔧 Fixing all versions to {self.master_version}")
-        
+
         # Update each file
         files_updated = []
-        
+
         # 1. Root pyproject.toml
-        if self._update_file_version("pyproject.toml", 
-                                   r'(\[tool\.poetry\][\s\S]*?)version = "[^"]+"',
-                                   rf'\1version = "{self.master_version}"'):
+        if self._update_file_version("pyproject.toml", r'(\[tool\.poetry\][\s\S]*?)version = "[^"]+"', rf'\1version = "{self.master_version}"'):
             files_updated.append("pyproject.toml")
-        
+
         # 2. Node.js package.json
         if self._update_json_version("nodejs/package.json"):
             files_updated.append("nodejs/package.json")
-        
+
         # 3. Benchmarks __init__.py
-        if self._update_file_version("benchmarks/frameworks/__init__.py",
-                                   r'__version__ = "[^"]+"',
-                                   f'__version__ = "{self.master_version}"'):
+        if self._update_file_version("benchmarks/frameworks/__init__.py", r'__version__ = "[^"]+"', f'__version__ = "{self.master_version}"'):
             files_updated.append("benchmarks/frameworks/__init__.py")
-        
+
         # 4. Core README.md
-        if self._update_file_version("core/README.md",
-                                   r'graphbit-core = "[^"]+"',
-                                   f'graphbit-core = "{self.master_version}"'):
+        if self._update_file_version("core/README.md", r'graphbit-core = "[^"]+"', f'graphbit-core = "{self.master_version}"'):
             files_updated.append("core/README.md")
-        
+
         if files_updated:
             print(f"✅ Updated {len(files_updated)} files:")
             for file in files_updated:
@@ -525,50 +459,50 @@ class AdvancedVersionManager:
         else:
             print("ℹ️  No files needed updating")
             return False
-    
+
     def _update_file_version(self, file_path: str, pattern: str, replacement: str) -> bool:
         """Update version in a text file."""
         full_path = self.root_path / file_path
         if not full_path.exists():
             return False
-        
+
         try:
-            with open(full_path, 'r', encoding='utf-8') as f:
+            with open(full_path, "r", encoding="utf-8") as f:
                 content = f.read()
-            
+
             new_content = re.sub(pattern, replacement, content, flags=re.MULTILINE)
-            
+
             if new_content != content:
-                with open(full_path, 'w', encoding='utf-8') as f:
+                with open(full_path, "w", encoding="utf-8") as f:
                     f.write(new_content)
                 return True
-                
+
         except Exception as e:
             print(f"⚠️  Error updating {file_path}: {e}")
-            
+
         return False
-    
+
     def _update_json_version(self, file_path: str) -> bool:
         """Update version in a JSON file."""
         full_path = self.root_path / file_path
         if not full_path.exists():
             return False
-        
+
         try:
-            with open(full_path, 'r', encoding='utf-8') as f:
+            with open(full_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            
-            if data.get('version') != self.master_version:
-                data['version'] = self.master_version
-                
-                with open(full_path, 'w', encoding='utf-8') as f:
+
+            if data.get("version") != self.master_version:
+                data["version"] = self.master_version
+
+                with open(full_path, "w", encoding="utf-8") as f:
                     json.dump(data, f, indent=2)
-                    f.write('\n')  # Add trailing newline
+                    f.write("\n")  # Add trailing newline
                 return True
-                
+
         except Exception as e:
             print(f"⚠️  Error updating {file_path}: {e}")
-            
+
         return False
 
     def _update_readme_version(self, file_path: str, target_version: str) -> bool:
@@ -578,7 +512,7 @@ class AdvancedVersionManager:
             return False
 
         try:
-            with open(full_path, 'r', encoding='utf-8') as f:
+            with open(full_path, "r", encoding="utf-8") as f:
                 content = f.read()
 
             original_content = content
@@ -592,16 +526,16 @@ class AdvancedVersionManager:
                 # version = "0.1.0"
                 (r'version = "[^"]+"', f'version = "{target_version}"'),
                 # [0.1.0]
-                (r'\[[0-9]+\.[0-9]+\.[0-9]+[^\]]*\]', f'[{target_version}]'),
+                (r"\[[0-9]+\.[0-9]+\.[0-9]+[^\]]*\]", f"[{target_version}]"),
                 # v0.1.0
-                (r'v[0-9]+\.[0-9]+\.[0-9]+[^\s]*', f'v{target_version}'),
+                (r"v[0-9]+\.[0-9]+\.[0-9]+[^\s]*", f"v{target_version}"),
             ]
 
             for pattern, replacement in patterns:
                 content = re.sub(pattern, replacement, content)
 
             if content != original_content:
-                with open(full_path, 'w', encoding='utf-8') as f:
+                with open(full_path, "w", encoding="utf-8") as f:
                     f.write(content)
                 return True
 
@@ -612,6 +546,7 @@ class AdvancedVersionManager:
 
 
 def main():
+    """Run the version synchronization script."""
     parser = argparse.ArgumentParser(
         description="Advanced GraphBit Version Management System",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -621,18 +556,13 @@ Examples:
   python scripts/verify-version-sync.py --fix              # Auto-fix discrepancies
   python scripts/verify-version-sync.py --detect-latest    # Detect latest authoritative version
   python scripts/verify-version-sync.py --promote-version 0.3.0  # Promote specific version
-        """
+        """,
     )
-    parser.add_argument("--fix", action="store_true",
-                       help="Automatically fix version discrepancies")
-    parser.add_argument("--detect-latest", action="store_true",
-                       help="Detect and report the latest authoritative version")
-    parser.add_argument("--promote-version", type=str,
-                       help="Promote a specific version across all files")
-    parser.add_argument("--generate-changelog", type=str,
-                       help="Generate changelog entry for specified version")
-    parser.add_argument("--root", type=Path, default=Path.cwd(),
-                       help="Root directory of the project")
+    parser.add_argument("--fix", action="store_true", help="Automatically fix version discrepancies")
+    parser.add_argument("--detect-latest", action="store_true", help="Detect and report the latest authoritative version")
+    parser.add_argument("--promote-version", type=str, help="Promote a specific version across all files")
+    parser.add_argument("--generate-changelog", type=str, help="Generate changelog entry for specified version")
+    parser.add_argument("--root", type=Path, default=Path.cwd(), help="Root directory of the project")
 
     args = parser.parse_args()
 
@@ -665,11 +595,11 @@ Examples:
             # Find the highest valid remote version
             valid_remote_versions = []
             for v in report.remote_versions.values():
-                if v and ',' not in v:
+                if v and "," not in v:
                     try:
                         version.parse(v)
                         valid_remote_versions.append(v)
-                    except:
+                    except Exception:
                         continue
 
             if valid_remote_versions:
@@ -679,7 +609,7 @@ Examples:
         sys.exit(0)
 
     if args.fix and not report.is_synchronized:
-        print(f"\n🔧 FIXING INCONSISTENCIES...")
+        print("\n🔧 FIXING INCONSISTENCIES...")
         success = manager.promote_version(report.authoritative_version)
         sys.exit(0 if success else 1)
 
@@ -687,7 +617,7 @@ Examples:
     if report.is_synchronized:
         print(f"\n🎉 SUCCESS: All versions are synchronized at {report.authoritative_version}!")
         if report.needs_promotion:
-            print(f"💡 Note: Remote versions are higher. Consider updating with --promote-version")
+            print("💡 Note: Remote versions are higher. Consider updating with --promote-version")
         sys.exit(0)
     else:
         print(f"\n⚠️  ISSUES FOUND: {len(report.inconsistencies)} version inconsistencies detected")

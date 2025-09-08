@@ -61,7 +61,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       ready: ${{ steps.check.outputs.ready }}
-      
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -75,7 +75,7 @@ jobs:
       id: check
       run: |
         echo "Checking if pipeline is ready for testing phase..."
-        
+
         if python scripts/workflow-orchestrator.py check --phase testing; then
           echo "ready=true" >> $GITHUB_OUTPUT
           echo "Pipeline is ready for testing"
@@ -94,7 +94,7 @@ jobs:
     outputs:
       status: ${{ steps.test-summary.outputs.status }}
       artifacts: ${{ steps.test-summary.outputs.artifacts }}
-      
+
     strategy:
       fail-fast: false
       matrix:
@@ -108,7 +108,7 @@ jobs:
             python-version: "3.9"
           - os: macos-latest
             python-version: "3.10"
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -171,7 +171,7 @@ jobs:
       id: testing
       run: |
         echo "Starting testing phase on ${{ matrix.os }} with Python ${{ matrix.python-version }}..."
-        
+
         # Run tests with our script
         if python scripts/testing-runner.py --root . --platform ${{ matrix.os }}; then
           echo "status=success" >> $GITHUB_OUTPUT
@@ -212,7 +212,7 @@ jobs:
     outputs:
       status: ${{ steps.summary.outputs.status }}
       artifacts: ${{ steps.summary.outputs.artifacts }}
-      
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -233,22 +233,22 @@ jobs:
       id: summary
       run: |
         echo "Generating test summary..."
-        
+
         # Check if all matrix jobs succeeded
         if [ "${{ needs.test-matrix.result }}" = "success" ]; then
           echo "status=success" >> $GITHUB_OUTPUT
           echo "All test matrix jobs completed successfully"
-          
+
           # Mark phase as complete
           python scripts/workflow-orchestrator.py complete --phase testing --success --artifacts "./test-results"
         else
           echo "status=failure" >> $GITHUB_OUTPUT
           echo "Some test matrix jobs failed"
-          
+
           # Mark phase as failed
           python scripts/workflow-orchestrator.py complete --phase testing --error "Some test matrix jobs failed"
         fi
-        
+
         echo "artifacts=./test-results" >> $GITHUB_OUTPUT
 
     - name: Generate testing summary
@@ -256,13 +256,13 @@ jobs:
       run: |
         echo "## 🧪 Testing Results" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        
+
         if [ "${{ steps.summary.outputs.status }}" = "success" ]; then
           echo "✅ **All tests passed across all platforms!**" >> $GITHUB_STEP_SUMMARY
         else
           echo "❌ **Some tests failed**" >> $GITHUB_STEP_SUMMARY
         fi
-        
+
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### Testing Details" >> $GITHUB_STEP_SUMMARY
         echo "- **Workflow**: 02-testing" >> $GITHUB_STEP_SUMMARY
@@ -271,7 +271,7 @@ jobs:
         echo "- **Validation Run ID**: ${{ inputs.validation_run_id || 'N/A' }}" >> $GITHUB_STEP_SUMMARY
         echo "- **Artifacts**: ${{ steps.summary.outputs.artifacts }}" >> $GITHUB_STEP_SUMMARY
         echo "- **Run ID**: ${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
-        
+
         # Show pipeline status
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### Pipeline Status" >> $GITHUB_STEP_SUMMARY
@@ -284,7 +284,7 @@ jobs:
     needs: test-summary
     if: needs.test-summary.outputs.status == 'success' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -304,7 +304,7 @@ jobs:
               testing_run_id: '${{ github.run_id }}'
             }
           });
-          
+
           console.log('Triggered build workflow:', result.status);
 
     - name: Update pipeline status

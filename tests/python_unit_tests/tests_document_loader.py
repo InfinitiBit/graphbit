@@ -1,9 +1,10 @@
 """Unit tests for document loading functionality."""
 
 import tempfile
+
 import pytest
 
-from graphbit import DocumentLoaderConfig, DocumentLoader
+from graphbit import DocumentLoader, DocumentLoaderConfig
 
 
 class TestDocumentLoaderConfig:

@@ -126,7 +126,7 @@ impl OpenAiProvider {
             .into_iter()
             .next()
             .ok_or_else(|| GraphBitError::llm_provider("openai", "No choices in response"))?;
-            
+
         let mut content = choice.message.content;
         if content.trim().is_empty()
             && !choice

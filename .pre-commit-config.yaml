@@ -70,6 +70,7 @@ repos:
     additional_dependencies:
     - types-requests
     - types-python-dateutil
+    - types-PyYAML
 
   # Python Security Checks
 - repo: https://github.com/pycqa/bandit

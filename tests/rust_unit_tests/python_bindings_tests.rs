@@ -83,7 +83,7 @@ async fn test_workflow_executor() {
 
     let executor = WorkflowExecutor::new();
     let result = executor.execute(workflow).await;
-    
+
     // Empty workflows may fail execution, which is expected behavior
     // Let's check what the actual result is
     match result {
@@ -110,7 +110,7 @@ async fn test_workflow_integration() {
 
     let executor = WorkflowExecutor::new();
     let result = executor.execute(workflow).await;
-    
+
     // Empty workflows may fail execution, which is expected behavior
     match result {
         Ok(context) => {

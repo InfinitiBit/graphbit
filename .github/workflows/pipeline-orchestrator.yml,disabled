@@ -74,7 +74,7 @@ jobs:
     outputs:
       start_phase: ${{ steps.init.outputs.start_phase }}
       pipeline_id: ${{ steps.init.outputs.pipeline_id }}
-      
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -89,22 +89,22 @@ jobs:
       run: |
         START_PHASE="${{ inputs.start_phase || 'validation' }}"
         PIPELINE_ID="${{ github.run_id }}"
-        
+
         echo "start_phase=$START_PHASE" >> $GITHUB_OUTPUT
         echo "pipeline_id=$PIPELINE_ID" >> $GITHUB_OUTPUT
-        
+
         echo "🚀 Initializing GraphBit CI/CD Pipeline"
         echo "Pipeline ID: $PIPELINE_ID"
         echo "Starting Phase: $START_PHASE"
         echo "Trigger: ${{ github.event_name }}"
         echo "Ref: ${{ github.ref }}"
-        
+
         # Reset pipeline state if starting from validation
         if [ "$START_PHASE" = "validation" ]; then
           python scripts/workflow-orchestrator.py reset
           echo "Pipeline state reset"
         fi
-        
+
         # Show current pipeline status
         echo "Current pipeline status:"
         python scripts/workflow-orchestrator.py status
@@ -190,7 +190,7 @@ jobs:
     needs: [initialize-pipeline, validation-phase, testing-phase, build-phase, release-phase, deployment-phase]
     if: always()
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -208,7 +208,7 @@ jobs:
         echo "Trigger: ${{ github.event_name }}"
         echo "Ref: ${{ github.ref }}"
         echo ""
-        
+
         echo "Phase Results:"
         echo "- Validation: ${{ needs.validation-phase.result || 'skipped' }}"
         echo "- Testing: ${{ needs.testing-phase.result || 'skipped' }}"
@@ -216,13 +216,13 @@ jobs:
         echo "- Release: ${{ needs.release-phase.result || 'skipped' }}"
         echo "- Deployment: ${{ needs.deployment-phase.result || 'skipped' }}"
         echo ""
-        
+
         # Show final pipeline status
         python scripts/workflow-orchestrator.py status
-        
+
         # Determine overall pipeline status
         OVERALL_STATUS="success"
-        
+
         if [ "${{ needs.validation-phase.result }}" = "failure" ] || \
            [ "${{ needs.testing-phase.result }}" = "failure" ] || \
            [ "${{ needs.build-phase.result }}" = "failure" ] || \
@@ -230,10 +230,10 @@ jobs:
            [ "${{ needs.deployment-phase.result }}" = "failure" ]; then
           OVERALL_STATUS="failure"
         fi
-        
+
         echo ""
         echo "Overall Pipeline Status: $OVERALL_STATUS"
-        
+
         if [ "$OVERALL_STATUS" = "success" ]; then
           echo "🎉 Pipeline completed successfully!"
         else
@@ -250,11 +250,11 @@ jobs:
         echo "**Trigger**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
         echo "**Branch/Ref**: ${{ github.ref }}" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        
+
         echo "### Phase Results" >> $GITHUB_STEP_SUMMARY
         echo "| Phase | Status | Details |" >> $GITHUB_STEP_SUMMARY
         echo "|-------|--------|---------|" >> $GITHUB_STEP_SUMMARY
-        
+
         # Validation
         if [ "${{ needs.validation-phase.result }}" = "success" ]; then
           echo "| 🔍 Validation | ✅ Success | Code quality checks passed |" >> $GITHUB_STEP_SUMMARY
@@ -263,7 +263,7 @@ jobs:
         else
           echo "| 🔍 Validation | ⏭️ Skipped | Phase was skipped |" >> $GITHUB_STEP_SUMMARY
         fi
-        
+
         # Testing
         if [ "${{ needs.testing-phase.result }}" = "success" ]; then
           echo "| 🧪 Testing | ✅ Success | All tests passed |" >> $GITHUB_STEP_SUMMARY
@@ -272,7 +272,7 @@ jobs:
         else
           echo "| 🧪 Testing | ⏭️ Skipped | Phase was skipped |" >> $GITHUB_STEP_SUMMARY
         fi
-        
+
         # Build
         if [ "${{ needs.build-phase.result }}" = "success" ]; then
           echo "| 🔨 Build | ✅ Success | Artifacts built successfully |" >> $GITHUB_STEP_SUMMARY
@@ -281,7 +281,7 @@ jobs:
         else
           echo "| 🔨 Build | ⏭️ Skipped | Phase was skipped |" >> $GITHUB_STEP_SUMMARY
         fi
-        
+
         # Release
         if [ "${{ needs.release-phase.result }}" = "success" ]; then
           VERSION="${{ needs.release-phase.outputs.release_version || 'N/A' }}"
@@ -291,7 +291,7 @@ jobs:
         else
           echo "| 🚀 Release | ⏭️ Skipped | Phase was skipped |" >> $GITHUB_STEP_SUMMARY
         fi
-        
+
         # Deployment
         if [ "${{ needs.deployment-phase.result }}" = "success" ]; then
           echo "| 🌐 Deployment | ✅ Success | Deployment completed |" >> $GITHUB_STEP_SUMMARY
@@ -300,9 +300,9 @@ jobs:
         else
           echo "| 🌐 Deployment | ⏭️ Skipped | Phase was skipped |" >> $GITHUB_STEP_SUMMARY
         fi
-        
+
         echo "" >> $GITHUB_STEP_SUMMARY
-        
+
         # Overall status
         if [ "${{ needs.validation-phase.result }}" != "failure" ] && \
            [ "${{ needs.testing-phase.result }}" != "failure" ] && \
@@ -312,7 +312,7 @@ jobs:
           echo "### 🎉 Pipeline Completed Successfully!" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "All phases completed without failures." >> $GITHUB_STEP_SUMMARY
-          
+
           if [ -n "${{ needs.release-phase.outputs.release_version }}" ]; then
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "🚀 **GraphBit ${{ needs.release-phase.outputs.release_version }} is now live!**" >> $GITHUB_STEP_SUMMARY

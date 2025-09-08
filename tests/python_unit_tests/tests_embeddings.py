@@ -4,7 +4,7 @@ import os
 
 import pytest
 
-from graphbit import EmbeddingConfig, EmbeddingClient
+from graphbit import EmbeddingClient, EmbeddingConfig
 
 
 def get_api_key(provider: str) -> str:

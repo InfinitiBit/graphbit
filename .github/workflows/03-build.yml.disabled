@@ -67,7 +67,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       ready: ${{ steps.check.outputs.ready }}
-      
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -81,7 +81,7 @@ jobs:
       id: check
       run: |
         echo "Checking if pipeline is ready for build phase..."
-        
+
         if python scripts/workflow-orchestrator.py check --phase build; then
           echo "ready=true" >> $GITHUB_OUTPUT
           echo "Pipeline is ready for build"
@@ -97,7 +97,7 @@ jobs:
     needs: prerequisites-check
     if: needs.prerequisites-check.outputs.ready == 'true'
     runs-on: ${{ matrix.os }}
-    
+
     strategy:
       fail-fast: false
       matrix:
@@ -114,7 +114,7 @@ jobs:
           - os: macos-latest
             target: aarch64-apple-darwin
             platform: macos-arm64
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -171,7 +171,7 @@ jobs:
       id: building
       run: |
         echo "Starting build phase on ${{ matrix.platform }} for ${{ matrix.target }}..."
-        
+
         # Run build with our script
         if python scripts/build-runner.py --root . --platform ${{ matrix.platform }} --target ${{ matrix.target }}; then
           echo "status=success" >> $GITHUB_OUTPUT
@@ -221,7 +221,7 @@ jobs:
     outputs:
       status: ${{ steps.summary.outputs.status }}
       artifacts: ${{ steps.summary.outputs.artifacts }}
-      
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -242,43 +242,43 @@ jobs:
       id: summary
       run: |
         echo "Generating build summary..."
-        
+
         # Check if all matrix jobs succeeded
         if [ "${{ needs.build-matrix.result }}" = "success" ]; then
           echo "status=success" >> $GITHUB_OUTPUT
           echo "All build matrix jobs completed successfully"
-          
+
           # List built artifacts
           echo "Built artifacts:"
           find ./build-results -type f -name "*.whl" -o -name "*.tar.gz" -o -name "libgraphbit*" | head -20
-          
+
           # Mark phase as complete
           python scripts/workflow-orchestrator.py complete --phase build --success --artifacts "./build-results"
         else
           echo "status=failure" >> $GITHUB_OUTPUT
           echo "Some build matrix jobs failed"
-          
+
           # Mark phase as failed
           python scripts/workflow-orchestrator.py complete --phase build --error "Some build matrix jobs failed"
         fi
-        
+
         echo "artifacts=./build-results" >> $GITHUB_OUTPUT
 
     - name: Verify build artifacts
       if: steps.summary.outputs.status == 'success'
       run: |
         echo "Verifying build artifacts..."
-        
+
         # Check for expected artifacts
         wheel_count=$(find ./build-results -name "*.whl" | wc -l)
         sdist_count=$(find ./build-results -name "*.tar.gz" | wc -l)
         lib_count=$(find ./build-results -name "libgraphbit*" | wc -l)
-        
+
         echo "Found artifacts:"
         echo "  - Wheels: $wheel_count"
         echo "  - Source distributions: $sdist_count"
         echo "  - Libraries: $lib_count"
-        
+
         if [ $wheel_count -eq 0 ] && [ $sdist_count -eq 0 ] && [ $lib_count -eq 0 ]; then
           echo "❌ No artifacts found!"
           exit 1
@@ -291,13 +291,13 @@ jobs:
       run: |
         echo "## 🔨 Build Results" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        
+
         if [ "${{ steps.summary.outputs.status }}" = "success" ]; then
           echo "✅ **All builds completed successfully!**" >> $GITHUB_STEP_SUMMARY
         else
           echo "❌ **Some builds failed**" >> $GITHUB_STEP_SUMMARY
         fi
-        
+
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### Build Details" >> $GITHUB_STEP_SUMMARY
         echo "- **Workflow**: 03-build" >> $GITHUB_STEP_SUMMARY
@@ -307,7 +307,7 @@ jobs:
         echo "- **Testing Run ID**: ${{ inputs.testing_run_id || 'N/A' }}" >> $GITHUB_STEP_SUMMARY
         echo "- **Artifacts**: ${{ steps.summary.outputs.artifacts }}" >> $GITHUB_STEP_SUMMARY
         echo "- **Run ID**: ${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
-        
+
         # Show artifact summary
         if [ "${{ steps.summary.outputs.status }}" = "success" ]; then
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -316,7 +316,7 @@ jobs:
           find ./build-results -type f \( -name "*.whl" -o -name "*.tar.gz" -o -name "libgraphbit*" \) -exec basename {} \; | sort >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
         fi
-        
+
         # Show pipeline status
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### Pipeline Status" >> $GITHUB_STEP_SUMMARY
@@ -329,7 +329,7 @@ jobs:
     needs: build-summary
     if: needs.build-summary.outputs.status == 'success' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -350,7 +350,7 @@ jobs:
               build_run_id: '${{ github.run_id }}'
             }
           });
-          
+
           console.log('Triggered release workflow:', result.status);
 
     - name: Update pipeline status
