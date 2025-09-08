@@ -1,0 +1,328 @@
+name: Pipeline Orchestrator
+
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - 'README.md'
+      - 'docs/**'
+      - '.gitignore'
+      - 'LICENSE'
+  workflow_dispatch:
+    inputs:
+      start_phase:
+        description: 'Phase to start from'
+        required: false
+        default: 'validation'
+        type: choice
+        options:
+          - validation
+          - testing
+          - build
+          - release
+          - deployment
+      force_release:
+        description: 'Force release even if no changes detected'
+        required: false
+        default: false
+        type: boolean
+      version_type:
+        description: 'Version bump type (for release phase)'
+        required: false
+        default: 'auto'
+        type: choice
+        options:
+          - auto
+          - major
+          - minor
+          - patch
+      skip_cache:
+        description: 'Skip cache for all phases'
+        required: false
+        default: false
+        type: boolean
+      environment:
+        description: 'Deployment environment'
+        required: false
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+          - development
+
+permissions:
+  contents: write
+  actions: write
+  packages: write
+  pull-requests: write
+  issues: write
+  id-token: write
+  attestations: write
+  deployments: write
+
+env:
+  PYTHON_VERSION: '3.11'
+  CARGO_TERM_COLOR: always
+  PYTHONIOENCODING: utf-8
+  RUST_BACKTRACE: 1
+
+jobs:
+  initialize-pipeline:
+    name: Initialize Pipeline
+    runs-on: ubuntu-latest
+    outputs:
+      start_phase: ${{ steps.init.outputs.start_phase }}
+      pipeline_id: ${{ steps.init.outputs.pipeline_id }}
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Initialize pipeline
+      id: init
+      run: |
+        START_PHASE="${{ inputs.start_phase || 'validation' }}"
+        PIPELINE_ID="${{ github.run_id }}"
+        
+        echo "start_phase=$START_PHASE" >> $GITHUB_OUTPUT
+        echo "pipeline_id=$PIPELINE_ID" >> $GITHUB_OUTPUT
+        
+        echo "🚀 Initializing GraphBit CI/CD Pipeline"
+        echo "Pipeline ID: $PIPELINE_ID"
+        echo "Starting Phase: $START_PHASE"
+        echo "Trigger: ${{ github.event_name }}"
+        echo "Ref: ${{ github.ref }}"
+        
+        # Reset pipeline state if starting from validation
+        if [ "$START_PHASE" = "validation" ]; then
+          python scripts/workflow-orchestrator.py reset
+          echo "Pipeline state reset"
+        fi
+        
+        # Show current pipeline status
+        echo "Current pipeline status:"
+        python scripts/workflow-orchestrator.py status
+
+    - name: Generate pipeline summary
+      run: |
+        echo "## 🚀 GraphBit CI/CD Pipeline Started" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Pipeline ID**: ${{ steps.init.outputs.pipeline_id }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Starting Phase**: ${{ steps.init.outputs.start_phase }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Trigger**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Branch/Ref**: ${{ github.ref }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Pipeline Phases" >> $GITHUB_STEP_SUMMARY
+        echo "1. 🔍 **Validation** - Code quality, linting, security checks" >> $GITHUB_STEP_SUMMARY
+        echo "2. 🧪 **Testing** - Unit tests, integration tests, coverage" >> $GITHUB_STEP_SUMMARY
+        echo "3. 🔨 **Build** - Multi-platform artifact generation" >> $GITHUB_STEP_SUMMARY
+        echo "4. 🚀 **Release** - Version management, GitHub release, PyPI" >> $GITHUB_STEP_SUMMARY
+        echo "5. 🌐 **Deployment** - Documentation, notifications, verification" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Each phase will only execute if the previous phases completed successfully." >> $GITHUB_STEP_SUMMARY
+
+  validation-phase:
+    name: Validation Phase
+    needs: initialize-pipeline
+    if: needs.initialize-pipeline.outputs.start_phase == 'validation' || needs.initialize-pipeline.outputs.start_phase == 'testing' || needs.initialize-pipeline.outputs.start_phase == 'build' || needs.initialize-pipeline.outputs.start_phase == 'release' || needs.initialize-pipeline.outputs.start_phase == 'deployment'
+    uses: ./.github/workflows/01-validation.yml
+    with:
+      skip_cache: ${{ inputs.skip_cache || false }}
+    secrets: inherit
+
+  testing-phase:
+    name: Testing Phase
+    needs: [initialize-pipeline, validation-phase]
+    if: always() && (needs.validation-phase.outputs.validation_status == 'success' || needs.initialize-pipeline.outputs.start_phase == 'testing' || needs.initialize-pipeline.outputs.start_phase == 'build' || needs.initialize-pipeline.outputs.start_phase == 'release' || needs.initialize-pipeline.outputs.start_phase == 'deployment')
+    uses: ./.github/workflows/02-testing.yml
+    with:
+      triggered_by: 'pipeline-orchestrator'
+      validation_run_id: ${{ needs.validation-phase.result == 'success' && github.run_id || '' }}
+      skip_cache: ${{ inputs.skip_cache || false }}
+    secrets: inherit
+
+  build-phase:
+    name: Build Phase
+    needs: [initialize-pipeline, validation-phase, testing-phase]
+    if: always() && (needs.testing-phase.outputs.testing_status == 'success' || needs.initialize-pipeline.outputs.start_phase == 'build' || needs.initialize-pipeline.outputs.start_phase == 'release' || needs.initialize-pipeline.outputs.start_phase == 'deployment')
+    uses: ./.github/workflows/03-build.yml
+    with:
+      triggered_by: 'pipeline-orchestrator'
+      validation_run_id: ${{ needs.validation-phase.result == 'success' && github.run_id || '' }}
+      testing_run_id: ${{ needs.testing-phase.result == 'success' && github.run_id || '' }}
+      skip_cache: ${{ inputs.skip_cache || false }}
+    secrets: inherit
+
+  release-phase:
+    name: Release Phase
+    needs: [initialize-pipeline, validation-phase, testing-phase, build-phase]
+    if: always() && github.ref == 'refs/heads/main' && (needs.build-phase.outputs.build_status == 'success' || needs.initialize-pipeline.outputs.start_phase == 'release' || needs.initialize-pipeline.outputs.start_phase == 'deployment')
+    uses: ./.github/workflows/04-release.yml
+    with:
+      triggered_by: 'pipeline-orchestrator'
+      validation_run_id: ${{ needs.validation-phase.result == 'success' && github.run_id || '' }}
+      testing_run_id: ${{ needs.testing-phase.result == 'success' && github.run_id || '' }}
+      build_run_id: ${{ needs.build-phase.result == 'success' && github.run_id || '' }}
+      force_release: ${{ inputs.force_release || false }}
+      version_type: ${{ inputs.version_type || 'auto' }}
+    secrets: inherit
+
+  deployment-phase:
+    name: Deployment Phase
+    needs: [initialize-pipeline, validation-phase, testing-phase, build-phase, release-phase]
+    if: always() && (needs.release-phase.outputs.release_status == 'success' || needs.initialize-pipeline.outputs.start_phase == 'deployment')
+    uses: ./.github/workflows/05-deployment.yml
+    with:
+      triggered_by: 'pipeline-orchestrator'
+      release_version: ${{ needs.release-phase.outputs.release_version || '' }}
+      release_url: ${{ needs.release-phase.outputs.release_url || '' }}
+      environment: ${{ inputs.environment || 'production' }}
+    secrets: inherit
+
+  pipeline-summary:
+    name: Pipeline Summary
+    needs: [initialize-pipeline, validation-phase, testing-phase, build-phase, release-phase, deployment-phase]
+    if: always()
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Generate final pipeline summary
+      run: |
+        echo "=== GRAPHBIT CI/CD PIPELINE SUMMARY ==="
+        echo "Pipeline ID: ${{ needs.initialize-pipeline.outputs.pipeline_id }}"
+        echo "Started Phase: ${{ needs.initialize-pipeline.outputs.start_phase }}"
+        echo "Trigger: ${{ github.event_name }}"
+        echo "Ref: ${{ github.ref }}"
+        echo ""
+        
+        echo "Phase Results:"
+        echo "- Validation: ${{ needs.validation-phase.result || 'skipped' }}"
+        echo "- Testing: ${{ needs.testing-phase.result || 'skipped' }}"
+        echo "- Build: ${{ needs.build-phase.result || 'skipped' }}"
+        echo "- Release: ${{ needs.release-phase.result || 'skipped' }}"
+        echo "- Deployment: ${{ needs.deployment-phase.result || 'skipped' }}"
+        echo ""
+        
+        # Show final pipeline status
+        python scripts/workflow-orchestrator.py status
+        
+        # Determine overall pipeline status
+        OVERALL_STATUS="success"
+        
+        if [ "${{ needs.validation-phase.result }}" = "failure" ] || \
+           [ "${{ needs.testing-phase.result }}" = "failure" ] || \
+           [ "${{ needs.build-phase.result }}" = "failure" ] || \
+           [ "${{ needs.release-phase.result }}" = "failure" ] || \
+           [ "${{ needs.deployment-phase.result }}" = "failure" ]; then
+          OVERALL_STATUS="failure"
+        fi
+        
+        echo ""
+        echo "Overall Pipeline Status: $OVERALL_STATUS"
+        
+        if [ "$OVERALL_STATUS" = "success" ]; then
+          echo "🎉 Pipeline completed successfully!"
+        else
+          echo "⚠️ Pipeline completed with failures."
+        fi
+
+    - name: Generate final summary
+      if: always()
+      run: |
+        echo "## 📊 Final Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Pipeline ID**: ${{ needs.initialize-pipeline.outputs.pipeline_id }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Started Phase**: ${{ needs.initialize-pipeline.outputs.start_phase }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Trigger**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Branch/Ref**: ${{ github.ref }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        echo "### Phase Results" >> $GITHUB_STEP_SUMMARY
+        echo "| Phase | Status | Details |" >> $GITHUB_STEP_SUMMARY
+        echo "|-------|--------|---------|" >> $GITHUB_STEP_SUMMARY
+        
+        # Validation
+        if [ "${{ needs.validation-phase.result }}" = "success" ]; then
+          echo "| 🔍 Validation | ✅ Success | Code quality checks passed |" >> $GITHUB_STEP_SUMMARY
+        elif [ "${{ needs.validation-phase.result }}" = "failure" ]; then
+          echo "| 🔍 Validation | ❌ Failed | Code quality checks failed |" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "| 🔍 Validation | ⏭️ Skipped | Phase was skipped |" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        # Testing
+        if [ "${{ needs.testing-phase.result }}" = "success" ]; then
+          echo "| 🧪 Testing | ✅ Success | All tests passed |" >> $GITHUB_STEP_SUMMARY
+        elif [ "${{ needs.testing-phase.result }}" = "failure" ]; then
+          echo "| 🧪 Testing | ❌ Failed | Some tests failed |" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "| 🧪 Testing | ⏭️ Skipped | Phase was skipped |" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        # Build
+        if [ "${{ needs.build-phase.result }}" = "success" ]; then
+          echo "| 🔨 Build | ✅ Success | Artifacts built successfully |" >> $GITHUB_STEP_SUMMARY
+        elif [ "${{ needs.build-phase.result }}" = "failure" ]; then
+          echo "| 🔨 Build | ❌ Failed | Build failed |" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "| 🔨 Build | ⏭️ Skipped | Phase was skipped |" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        # Release
+        if [ "${{ needs.release-phase.result }}" = "success" ]; then
+          VERSION="${{ needs.release-phase.outputs.release_version || 'N/A' }}"
+          echo "| 🚀 Release | ✅ Success | Version $VERSION released |" >> $GITHUB_STEP_SUMMARY
+        elif [ "${{ needs.release-phase.result }}" = "failure" ]; then
+          echo "| 🚀 Release | ❌ Failed | Release failed |" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "| 🚀 Release | ⏭️ Skipped | Phase was skipped |" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        # Deployment
+        if [ "${{ needs.deployment-phase.result }}" = "success" ]; then
+          echo "| 🌐 Deployment | ✅ Success | Deployment completed |" >> $GITHUB_STEP_SUMMARY
+        elif [ "${{ needs.deployment-phase.result }}" = "failure" ]; then
+          echo "| 🌐 Deployment | ❌ Failed | Deployment failed |" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "| 🌐 Deployment | ⏭️ Skipped | Phase was skipped |" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Overall status
+        if [ "${{ needs.validation-phase.result }}" != "failure" ] && \
+           [ "${{ needs.testing-phase.result }}" != "failure" ] && \
+           [ "${{ needs.build-phase.result }}" != "failure" ] && \
+           [ "${{ needs.release-phase.result }}" != "failure" ] && \
+           [ "${{ needs.deployment-phase.result }}" != "failure" ]; then
+          echo "### 🎉 Pipeline Completed Successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "All phases completed without failures." >> $GITHUB_STEP_SUMMARY
+          
+          if [ -n "${{ needs.release-phase.outputs.release_version }}" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "🚀 **GraphBit ${{ needs.release-phase.outputs.release_version }} is now live!**" >> $GITHUB_STEP_SUMMARY
+            if [ -n "${{ needs.release-phase.outputs.release_url }}" ]; then
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "📦 [View Release](${{ needs.release-phase.outputs.release_url }})" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
+        else
+          echo "### ⚠️ Pipeline Completed with Issues" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Some phases failed or were skipped. Please review the logs above." >> $GITHUB_STEP_SUMMARY
+        fi
