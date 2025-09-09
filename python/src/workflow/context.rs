@@ -1,7 +1,6 @@
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyString};
+use pyo3::types::PyDict;
 use serde_json::Value as JsonValue;
-use std::collections::HashMap;
 
 #[pyclass]
 #[derive(Clone)]

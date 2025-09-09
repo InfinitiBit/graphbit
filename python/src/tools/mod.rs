@@ -8,10 +8,10 @@
 //! - Comprehensive error handling and validation
 //! - Thread-safe tool registry
 
-pub mod decorator;
-pub mod executor;
-pub mod registry;
-pub mod result;
+pub(crate) mod decorator;
+pub(crate) mod executor;
+pub(crate) mod registry;
+pub(crate) mod result;
 
 pub use decorator::ToolDecorator;
 pub use executor::ToolExecutor;

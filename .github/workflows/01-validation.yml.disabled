@@ -48,7 +48,7 @@ jobs:
     outputs:
       status: ${{ steps.validation.outputs.status }}
       artifacts: ${{ steps.validation.outputs.artifacts }}
-      
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -110,23 +110,23 @@ jobs:
       id: validation
       run: |
         echo "Starting validation phase..."
-        
+
         # Run validation with our script
         if python scripts/validation-runner.py --root . ; then
           echo "status=success" >> $GITHUB_OUTPUT
           echo "Validation completed successfully"
-          
+
           # Mark phase as complete
           python scripts/workflow-orchestrator.py complete --phase validation --success
         else
           echo "status=failure" >> $GITHUB_OUTPUT
           echo "Validation failed"
-          
+
           # Mark phase as failed
           python scripts/workflow-orchestrator.py complete --phase validation --error "Validation checks failed"
           exit 1
         fi
-        
+
         # Set artifacts output
         echo "artifacts=.github/artifacts" >> $GITHUB_OUTPUT
 
@@ -145,20 +145,20 @@ jobs:
       run: |
         echo "## 🔍 Validation Results" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        
+
         if [ "${{ steps.validation.outputs.status }}" = "success" ]; then
           echo "✅ **All validation checks passed!**" >> $GITHUB_STEP_SUMMARY
         else
           echo "❌ **Validation checks failed**" >> $GITHUB_STEP_SUMMARY
         fi
-        
+
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### Validation Details" >> $GITHUB_STEP_SUMMARY
         echo "- **Workflow**: 01-validation" >> $GITHUB_STEP_SUMMARY
         echo "- **Status**: ${{ steps.validation.outputs.status }}" >> $GITHUB_STEP_SUMMARY
         echo "- **Artifacts**: ${{ steps.validation.outputs.artifacts }}" >> $GITHUB_STEP_SUMMARY
         echo "- **Run ID**: ${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
-        
+
         # Show pipeline status
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### Pipeline Status" >> $GITHUB_STEP_SUMMARY
@@ -173,22 +173,22 @@ jobs:
         script: |
           const status = '${{ steps.validation.outputs.status }}';
           const runId = '${{ github.run_id }}';
-          
+
           const statusIcon = status === 'success' ? '✅' : '❌';
           const statusText = status === 'success' ? 'PASSED' : 'FAILED';
-          
+
           const body = `## ${statusIcon} Validation ${statusText}
-          
+
           **Workflow**: 01-validation
           **Status**: ${status}
           **Run ID**: ${runId}
-          
-          ${status === 'success' 
-            ? 'All validation checks passed! ✨' 
+
+          ${status === 'success'
+            ? 'All validation checks passed! ✨'
             : 'Some validation checks failed. Please review the logs and fix any issues.'}
-          
+
           [View detailed results](https://github.com/${{ github.repository }}/actions/runs/${runId})`;
-          
+
           github.rest.issues.createComment({
             issue_number: context.issue.number,
             owner: context.repo.owner,
@@ -201,7 +201,7 @@ jobs:
     needs: validation
     if: needs.validation.outputs.status == 'success' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -220,7 +220,7 @@ jobs:
               validation_run_id: '${{ github.run_id }}'
             }
           });
-          
+
           console.log('Triggered testing workflow:', result.status);
 
     - name: Update pipeline status

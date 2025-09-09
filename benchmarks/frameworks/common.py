@@ -1,5 +1,6 @@
 """Common utilities and data structures for benchmarking frameworks."""
 
+import ctypes
 import gc
 import logging
 import os
@@ -8,14 +9,14 @@ import shutil
 import sys
 import time
 import tracemalloc
-import psutil
-import ctypes
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+
+import psutil
 
 # Configure logging
 # Standard LLM Configuration Constants
@@ -30,6 +31,7 @@ class LLMProvider(Enum):
     OPENAI = "openai"
     ANTHROPIC = "anthropic"
     OLLAMA = "ollama"
+
 
 @dataclass
 class LLMConfig:
@@ -46,12 +48,14 @@ class LLMConfig:
     # Provider-specific configurations
     extra_params: Dict[str, Any] = field(default_factory=dict)
 
+
 # Provider-specific model presets
 PROVIDER_MODELS = {
     LLMProvider.OPENAI: ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo", "o1-preview", "o1-mini"],
     LLMProvider.ANTHROPIC: ["claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022", "claude-3-opus-20240229", "claude-3-sonnet-20240229", "claude-3-haiku-20240307"],
-    LLMProvider.OLLAMA: ["llama3.2", "llama3.1", "codellama", "mistral", "phi3", "qwen2.5"]
+    LLMProvider.OLLAMA: ["llama3.2", "llama3.1", "codellama", "mistral", "phi3", "qwen2.5"],
 }
+
 
 class BenchmarkLogger:
     """Utility class for logging benchmark LLM outputs to files."""

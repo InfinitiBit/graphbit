@@ -17,42 +17,43 @@ import os
 import sys
 import time
 import traceback
-import click
-import matplotlib.pyplot as plt
-import numpy as np
-import seaborn as sns
 from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+
+import click
+import matplotlib.pyplot as plt
+import numpy as np
+import seaborn as sns
+from frameworks.common import (
+    DEFAULT_MAX_TOKENS,
+    DEFAULT_MODEL,
+    DEFAULT_TEMPERATURE,
+    BaseBenchmark,
+    BenchmarkMetrics,
+    BenchmarkScenario,
+    FrameworkType,
+    LLMConfig,
+    LLMProvider,
+    create_llm_config_from_args,
+    get_provider_models,
+    parse_core_list,
+    set_memory_binding,
+    set_process_affinity,
+)
 from frameworks.crewai_benchmark import CrewAIBenchmark
 from frameworks.graphbit_benchmark import GraphBitBenchmark
 from frameworks.langchain_benchmark import LangChainBenchmark
 from frameworks.langgraph_benchmark import LangGraphBenchmark
 from frameworks.llamaindex_benchmark import LlamaIndexBenchmark
 from frameworks.pydantic_ai_benchmark import PydanticAIBenchmark
-from frameworks.common import (
-        DEFAULT_MAX_TOKENS,
-        DEFAULT_MODEL,
-        DEFAULT_TEMPERATURE,
-        BaseBenchmark,
-        BenchmarkMetrics,
-        BenchmarkScenario,
-        FrameworkType,
-        LLMConfig,
-        LLMProvider,
-        create_llm_config_from_args,
-        get_provider_models,
-        parse_core_list,
-        set_memory_binding,
-        set_process_affinity,
-    )
 
 if sys.platform == "win32" or sys.platform == "darwin":
 
     def sched_getaffinity(pid=0):
         """Fallback for macOS and Windows to get CPU affinity."""
-        return set(range(os.cpu_count() or 4))  
+        return set(range(os.cpu_count() or 4))
 
 else:
     from os import sched_getaffinity
@@ -121,7 +122,7 @@ class ComprehensiveBenchmarkRunner:
         Path(log_dir).mkdir(exist_ok=True)
         Path(results_dir).mkdir(exist_ok=True)
 
-        # Set up plotting style using visualization libraries 
+        # Set up plotting style using visualization libraries
         plt.style.use("seaborn-v0_8-darkgrid")
         sns.set_palette("husl")
 

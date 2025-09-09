@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 
 import pytest
 
-from graphbit import LlmConfig, LlmClient
+from graphbit import LlmClient, LlmConfig
 
 
 def get_api_key(provider: str) -> str:

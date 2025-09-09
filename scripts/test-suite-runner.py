@@ -12,15 +12,16 @@ import os
 import subprocess
 import sys
 import time
-from datetime import datetime
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
 
 class TestSuite(Enum):
     """Available test suites."""
+
     VALIDATION = "validation"
     INTEGRATION = "integration"
     WORKFLOW = "workflow"
@@ -31,6 +32,7 @@ class TestSuite(Enum):
 @dataclass
 class TestSuiteResult:
     """Result of a test suite execution."""
+
     suite: TestSuite
     passed: bool
     duration: float
@@ -40,24 +42,24 @@ class TestSuiteResult:
 
 class TestSuiteRunner:
     """Orchestrates comprehensive testing of the modular workflow system."""
-    
+
     def __init__(self, root_path: Path, github_token: Optional[str] = None):
         self.root_path = root_path
         self.github_token = github_token
         self.results: List[TestSuiteResult] = []
         self.test_artifacts_dir = root_path / ".github" / "test-suite-artifacts"
-        
+
         # Ensure test artifacts directory exists
         self.test_artifacts_dir.mkdir(parents=True, exist_ok=True)
-        
+
         # Detect repository info
         self.repo_owner, self.repo_name = self._detect_repository_info()
-    
+
     def run_test_suite(self, suite: TestSuite) -> bool:
         """Run specified test suite."""
         print(f"Starting Test Suite: {suite.value.upper()}")
         print("=" * 60)
-        
+
         if suite == TestSuite.ALL:
             return self._run_all_test_suites()
         elif suite == TestSuite.VALIDATION:
@@ -74,12 +76,7 @@ class TestSuiteRunner:
 
     def _run_all_test_suites(self) -> bool:
         """Run all test suites in order."""
-        suites_to_run = [
-            TestSuite.VALIDATION,
-            TestSuite.INTEGRATION,
-            TestSuite.WORKFLOW,
-            TestSuite.LEGACY_MIGRATION
-        ]
+        suites_to_run = [TestSuite.VALIDATION, TestSuite.INTEGRATION, TestSuite.WORKFLOW, TestSuite.LEGACY_MIGRATION]
 
         all_passed = True
 
@@ -90,12 +87,7 @@ class TestSuiteRunner:
             passed = self._run_single_suite(suite)
             duration = time.time() - start_time
 
-            result = TestSuiteResult(
-                suite=suite,
-                passed=passed,
-                duration=duration,
-                details={}
-            )
+            result = TestSuiteResult(suite=suite, passed=passed, duration=duration, details={})
 
             self.results.append(result)
 
@@ -105,10 +97,10 @@ class TestSuiteRunner:
             if not passed:
                 all_passed = False
                 print(f"[WARN] {suite.value} tests failed - continuing with remaining suites")
-        
+
         self._generate_comprehensive_report()
         return all_passed
-    
+
     def _run_single_suite(self, suite: TestSuite) -> bool:
         """Run a single test suite."""
         if suite == TestSuite.VALIDATION:
@@ -121,7 +113,7 @@ class TestSuiteRunner:
             return self._run_legacy_migration_tests()
         else:
             return False
-    
+
     def _run_validation_tests(self) -> bool:
         """Run workflow system validation tests."""
         print("Running Workflow System Validation...")
@@ -131,25 +123,19 @@ class TestSuiteRunner:
         if not validator_script.exists():
             print("[ERROR] Workflow validator script not found")
             return False
-        
+
         try:
-            result = subprocess.run(
-                [sys.executable, str(validator_script), "--root", str(self.root_path)],
-                capture_output=True,
-                text=True,
-                cwd=self.root_path,
-                timeout=300
-            )
-            
+            result = subprocess.run([sys.executable, str(validator_script), "--root", str(self.root_path)], capture_output=True, text=True, cwd=self.root_path, timeout=300)
+
             print("Validation Output:")
             print(result.stdout)
-            
+
             if result.stderr:
                 print("Validation Errors:")
                 print(result.stderr)
-            
+
             return result.returncode == 0
-            
+
         except subprocess.TimeoutExpired:
             print("[ERROR] Validation tests timed out")
             return False
@@ -174,31 +160,25 @@ class TestSuiteRunner:
         if not self.github_token:
             print("[WARN] No GitHub token provided - skipping API-dependent integration tests")
             return True
-        
+
         try:
             result = subprocess.run(
-                [
-                    sys.executable, str(integration_script),
-                    "--repo-owner", self.repo_owner,
-                    "--repo-name", self.repo_name,
-                    "--github-token", self.github_token,
-                    "--root", str(self.root_path)
-                ],
+                [sys.executable, str(integration_script), "--repo-owner", self.repo_owner, "--repo-name", self.repo_name, "--github-token", self.github_token, "--root", str(self.root_path)],
                 capture_output=True,
                 text=True,
                 cwd=self.root_path,
-                timeout=600
+                timeout=600,
             )
-            
+
             print("Integration Test Output:")
             print(result.stdout)
-            
+
             if result.stderr:
                 print("Integration Test Errors:")
                 print(result.stderr)
-            
+
             return result.returncode == 0
-            
+
         except subprocess.TimeoutExpired:
             print("[ERROR] Integration tests timed out")
             return False
@@ -223,31 +203,25 @@ class TestSuiteRunner:
         if not self.github_token:
             print("[WARN] No GitHub token provided - skipping API-dependent workflow tests")
             return True
-        
+
         try:
             result = subprocess.run(
-                [
-                    sys.executable, str(workflow_tester_script),
-                    "--repo-owner", self.repo_owner,
-                    "--repo-name", self.repo_name,
-                    "--github-token", self.github_token,
-                    "--root", str(self.root_path)
-                ],
+                [sys.executable, str(workflow_tester_script), "--repo-owner", self.repo_owner, "--repo-name", self.repo_name, "--github-token", self.github_token, "--root", str(self.root_path)],
                 capture_output=True,
                 text=True,
                 cwd=self.root_path,
-                timeout=900
+                timeout=900,
             )
-            
+
             print("Workflow Test Output:")
             print(result.stdout)
-            
+
             if result.stderr:
                 print("Workflow Test Errors:")
                 print(result.stderr)
-            
+
             return result.returncode == 0
-            
+
         except subprocess.TimeoutExpired:
             print("[ERROR] Workflow tests timed out")
             return False
@@ -264,47 +238,35 @@ class TestSuiteRunner:
         if not migration_script.exists():
             print("[ERROR] Legacy migrator script not found")
             return False
-        
+
         try:
             # Run migration in dry-run mode
-            result = subprocess.run(
-                [sys.executable, str(migration_script), "--root", str(self.root_path), "--dry-run"],
-                capture_output=True,
-                text=True,
-                cwd=self.root_path,
-                timeout=300
-            )
-            
+            result = subprocess.run([sys.executable, str(migration_script), "--root", str(self.root_path), "--dry-run"], capture_output=True, text=True, cwd=self.root_path, timeout=300)
+
             print("Migration Test Output:")
             print(result.stdout)
-            
+
             if result.stderr:
                 print("Migration Test Errors:")
                 print(result.stderr)
-            
+
             return result.returncode == 0
-            
+
         except subprocess.TimeoutExpired:
             print("[ERROR] Migration tests timed out")
             return False
         except Exception as e:
             print(f"[ERROR] Migration tests failed: {e}")
             return False
-    
+
     def _detect_repository_info(self) -> Tuple[Optional[str], Optional[str]]:
         """Detect repository owner and name from git remote."""
         try:
-            result = subprocess.run(
-                ["git", "remote", "get-url", "origin"],
-                capture_output=True,
-                text=True,
-                cwd=self.root_path,
-                timeout=30
-            )
-            
+            result = subprocess.run(["git", "remote", "get-url", "origin"], capture_output=True, text=True, cwd=self.root_path, timeout=30)
+
             if result.returncode == 0:
                 repo_url = result.stdout.strip()
-                
+
                 # Parse GitHub URL
                 if "github.com" in repo_url:
                     # Handle both HTTPS and SSH URLs
@@ -314,22 +276,22 @@ class TestSuiteRunner:
                         parts = repo_url.replace("git@github.com:", "").replace(".git", "").split("/")
                     else:
                         return None, None
-                    
+
                     if len(parts) >= 2:
                         return parts[0], parts[1]
-            
+
             return None, None
-            
+
         except Exception:
             return None, None
-    
+
     def _generate_comprehensive_report(self):
         """Generate comprehensive test report."""
         passed_count = sum(1 for r in self.results if r.passed)
         failed_count = sum(1 for r in self.results if not r.passed)
         total_count = len(self.results)
         total_duration = sum(r.duration for r in self.results)
-        
+
         print("\n" + "=" * 80)
         print("COMPREHENSIVE TEST SUITE REPORT")
         print("=" * 80)
@@ -339,7 +301,7 @@ class TestSuiteRunner:
         print(f"Failed: {failed_count}")
         print(f"Success Rate: {(passed_count/total_count)*100:.1f}%" if total_count > 0 else "N/A")
         print(f"Total Duration: {total_duration:.2f}s")
-        
+
         # Show individual suite results
         print(f"\n[TEST SUITE RESULTS]:")
         for result in self.results:
@@ -368,14 +330,14 @@ class TestSuiteRunner:
             print("2. Fix identified issues")
             print("3. Re-run test suites")
             print("4. Ensure all tests pass before deployment")
-        
+
         # Save detailed report
         self._save_comprehensive_report()
-    
+
     def _save_comprehensive_report(self):
         """Save detailed test suite report."""
         report_file = self.test_artifacts_dir / f"test-suite-report-{datetime.now().strftime('%Y%m%d-%H%M%S')}.json"
-        
+
         report_data = {
             "timestamp": datetime.now().isoformat(),
             "repository": f"{self.repo_owner}/{self.repo_name}" if self.repo_owner else "unknown",
@@ -384,23 +346,14 @@ class TestSuiteRunner:
                 "passed_suites": sum(1 for r in self.results if r.passed),
                 "failed_suites": sum(1 for r in self.results if not r.passed),
                 "success_rate": (sum(1 for r in self.results if r.passed) / len(self.results)) * 100 if self.results else 0,
-                "total_duration": sum(r.duration for r in self.results)
+                "total_duration": sum(r.duration for r in self.results),
             },
-            "results": [
-                {
-                    "suite": r.suite.value,
-                    "passed": r.passed,
-                    "duration": r.duration,
-                    "details": r.details,
-                    "error_message": r.error_message
-                }
-                for r in self.results
-            ]
+            "results": [{"suite": r.suite.value, "passed": r.passed, "duration": r.duration, "details": r.details, "error_message": r.error_message} for r in self.results],
         }
-        
-        with open(report_file, 'w') as f:
+
+        with open(report_file, "w") as f:
             json.dump(report_data, f, indent=2)
-        
+
         print(f"\nDetailed test suite report saved to: {report_file}")
 
 
@@ -421,37 +374,24 @@ Examples:
   python test-suite-runner.py --suite all
   python test-suite-runner.py --suite validation --root /path/to/project
   python test-suite-runner.py --suite workflow --github-token $GITHUB_TOKEN
-        """
+        """,
     )
-    
-    parser.add_argument(
-        '--suite',
-        choices=[s.value for s in TestSuite],
-        default='all',
-        help='Test suite to run'
-    )
-    
-    parser.add_argument(
-        '--root',
-        type=Path,
-        default=Path.cwd(),
-        help='Root directory of the project'
-    )
-    
-    parser.add_argument(
-        '--github-token',
-        help='GitHub API token (or set GITHUB_TOKEN env var)'
-    )
-    
+
+    parser.add_argument("--suite", choices=[s.value for s in TestSuite], default="all", help="Test suite to run")
+
+    parser.add_argument("--root", type=Path, default=Path.cwd(), help="Root directory of the project")
+
+    parser.add_argument("--github-token", help="GitHub API token (or set GITHUB_TOKEN env var)")
+
     args = parser.parse_args()
-    
+
     # Get GitHub token
-    github_token = args.github_token or os.environ.get('GITHUB_TOKEN')
-    
+    github_token = args.github_token or os.environ.get("GITHUB_TOKEN")
+
     runner = TestSuiteRunner(args.root, github_token)
     suite = TestSuite(args.suite)
     success = runner.run_test_suite(suite)
-    
+
     sys.exit(0 if success else 1)
 
 

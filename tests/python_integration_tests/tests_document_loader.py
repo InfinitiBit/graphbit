@@ -89,8 +89,8 @@ class TestDocumentLoader:
         assert document.source == text_file
         assert document.document_type == "txt"
         # Normalize line endings for cross-platform compatibility
-        expected_content = text_content.replace('\r\n', '\n').replace('\r', '\n')
-        actual_content = document.content.replace('\r\n', '\n').replace('\r', '\n')
+        expected_content = text_content.replace("\r\n", "\n").replace("\r", "\n")
+        actual_content = document.content.replace("\r\n", "\n").replace("\r", "\n")
         assert actual_content == expected_content
         assert document.file_size > 0
         assert document.extracted_at > 0

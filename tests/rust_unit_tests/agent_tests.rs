@@ -182,15 +182,17 @@ async fn test_agent_error_handling() {
         AgentMessage::new(AgentId::new(), None, MessageContent::Text("".to_string()));
     let mut context = WorkflowContext::new(WorkflowId::new());
     let result = agent.process_message(empty_message, &mut context).await;
-    
+
     // The agent currently processes empty messages successfully, so we check for success
     // If error handling for empty messages is added later, this test should be updated
     assert!(result.is_ok());
-    
+
     // Verify the response content is not empty (agent should respond to empty input)
     let response = result.unwrap();
     match response.content {
-        MessageContent::Text(text) => assert!(!text.is_empty(), "Agent should respond to empty input"),
+        MessageContent::Text(text) => {
+            assert!(!text.is_empty(), "Agent should respond to empty input")
+        }
         _ => panic!("Expected text response"),
     }
 }

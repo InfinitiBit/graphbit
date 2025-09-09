@@ -6,9 +6,9 @@ from typing import Any, Dict, List, Optional
 
 from llama_index.core import Settings, VectorStoreIndex
 from llama_index.core.schema import Document
-from llama_index.llms.openai import OpenAI
 from llama_index.llms.anthropic import Anthropic
 from llama_index.llms.ollama import Ollama
+from llama_index.llms.openai import OpenAI
 
 from .common import (
     COMPLEX_WORKFLOW_STEPS,

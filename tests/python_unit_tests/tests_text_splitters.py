@@ -2,7 +2,7 @@
 
 import pytest  # noqa: F401
 
-from graphbit import TextSplitterConfig, CharacterSplitter, TokenSplitter, SentenceSplitter, RecursiveSplitter, TextChunk, TextSplitter
+from graphbit import CharacterSplitter, RecursiveSplitter, SentenceSplitter, TextChunk, TextSplitter, TextSplitterConfig, TokenSplitter
 
 
 class TestTextSplitterConfig:
