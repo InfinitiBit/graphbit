@@ -17,14 +17,18 @@ Usage:
 """
 
 import argparse
+import logging
 import re
-import subprocess
+import shutil
+import subprocess  # nosec B404: import of 'subprocess'
 import sys
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
+
+logger = logging.getLogger(__name__)
 
 # Fix Windows console encoding issues
 if sys.platform == "win32":
@@ -122,7 +126,7 @@ class AdvancedChangelogGenerator:
             else:
                 cmd = ["git", "log", "--oneline", "--format=%H|%s|%an|%ad", "--date=short", "-20"]
 
-            result = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=self.root_path)
+            result = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=self.root_path, shell=False)  # nosec
             if result.returncode != 0:
                 print(f"Warning: Could not get git commits: {result.stderr}")
                 return []
@@ -410,11 +414,14 @@ class AdvancedChangelogGenerator:
     def get_latest_tag(self) -> Optional[str]:
         """Get the latest git tag."""
         try:
-            result = subprocess.run(["git", "describe", "--tags", "--abbrev=0"], capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=self.root_path)
+            git_path = shutil.which("git")
+            if not git_path:
+                raise FileNotFoundError("git executable not found in PATH")
+            result = subprocess.run([git_path, "describe", "--tags", "--abbrev=0"], capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=self.root_path, shell=False)  # nosec
             if result.returncode == 0:
                 return result.stdout.strip()
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"Warning: Could not get latest tag: {e}")
         return None
 
 

@@ -94,4 +94,3 @@ https://github.com/emlid/docstheme/blob/1751d103431ce3cefd29745114e8706606418940
 ```
 `, `purple`, `deep purple`, `indigo`, `blue`, `light blue`, `cyan`, `teal`, `green`, `light green`, `lime`, `yellow`, `amber`, `orange`, `deep orange`, `brown`, `grey
 ```
-

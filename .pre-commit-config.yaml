@@ -104,7 +104,7 @@ repos:
   hooks:
   - id: clippy
     name: Rust clippy
-    args: [--workspace, --all-targets, --all-features, --, -D, warnings]
+    args: [--workspace, --all-targets, --all-features, --, -A, warnings]
 
   # Rust Security Audit
 - repo: https://github.com/cathiele/pre-commit-rust

@@ -26,10 +26,10 @@
       <feDropShadow dx="2" dy="4" stdDeviation="3" flood-color="rgba(0,0,0,0.3)"/>
     </filter>
   </defs>
-  
+
   <!-- Connecting line (matches blocks gradient) -->
   <line x1="200" y1="120" x2="900" y2="120" stroke="url(#blockLineGradient)" stroke-width="3" stroke-linecap="round" opacity="0.95"/>
-  
+
   <!-- Rust Core Layer (left, lightest) -->
   <rect x="50" y="65" width="300" height="110" rx="16" ry="16"
         fill="url(#rustGradient)" stroke="#8A6EF9" stroke-width="2" filter="url(#dropShadow)"/>
@@ -39,7 +39,7 @@
   <text x="200" y="140" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="rgba(255,255,255,0.92)">
     Workflow engine, agents, LLM providers
   </text>
-  
+
   <!-- Orchestration Layer (center, medium) -->
   <rect x="400" y="65" width="300" height="110" rx="16" ry="16"
         fill="url(#cliGradient)" stroke="#6C4FF7" stroke-width="2" filter="url(#dropShadow)"/>
@@ -49,7 +49,7 @@
   <text x="550" y="140" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="rgba(255,255,255,0.92)">
     Project management and execution
   </text>
-  
+
   <!-- Python API Layer (right, darkest) -->
   <rect x="750" y="65" width="300" height="110" rx="16" ry="16"
         fill="url(#pythonGradient)" stroke="#4A35B8" stroke-width="2" filter="url(#dropShadow)"/>

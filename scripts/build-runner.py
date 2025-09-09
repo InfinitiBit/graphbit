@@ -6,7 +6,8 @@ for multiple platforms and architectures.
 """
 
 import argparse
-import subprocess
+import shutil
+import subprocess  # nosec B404: import of 'subprocess'
 import sys
 import time
 from dataclasses import dataclass
@@ -100,7 +101,10 @@ class BuildRunner:
     def _build_rust_library(self) -> Tuple[bool, List[str], str, Optional[str]]:
         """Build Rust library."""
         try:
-            result = subprocess.run(["cargo", "build", "--workspace", "--release"], capture_output=True, text=True, cwd=self.root_path, timeout=900)
+            cargo_path = shutil.which("cargo")
+            if not cargo_path:
+                raise FileNotFoundError("cargo executable not found in PATH")
+            result = subprocess.run([cargo_path, "build", "--workspace", "--release"], capture_output=True, text=True, cwd=self.root_path, timeout=900, shell=False)  # nosec
 
             artifacts = []
             if result.returncode == 0:
@@ -122,7 +126,10 @@ class BuildRunner:
         """Build Python extension."""
         try:
             # Install maturin if not available
-            install_result = subprocess.run(["python", "-m", "pip", "install", "maturin"], capture_output=True, text=True, cwd=self.root_path, timeout=300)
+            python_path = shutil.which("python")
+            if not python_path:
+                raise FileNotFoundError("python executable not found in PATH")
+            install_result = subprocess.run([python_path, "-m", "pip", "install", "maturin"], capture_output=True, text=True, cwd=self.root_path, timeout=300, shell=False)  # nosec
 
             if install_result.returncode != 0:
                 return False, [], install_result.stdout, f"Failed to install maturin: {install_result.stderr}"
@@ -132,7 +139,10 @@ class BuildRunner:
             if not python_dir.exists():
                 return True, [], "No Python directory found, skipping Python extension build", None
 
-            result = subprocess.run(["maturin", "build", "--release", "--out", "../dist"], capture_output=True, text=True, cwd=python_dir, timeout=900)
+            maturin_path = shutil.which("maturin")
+            if not maturin_path:
+                raise FileNotFoundError("maturin executable not found in PATH")
+            result = subprocess.run([maturin_path, "build", "--release", "--out", "../dist"], capture_output=True, text=True, cwd=python_dir, timeout=900, shell=False)  # nosec
 
             artifacts = []
             if result.returncode == 0:
@@ -156,7 +166,10 @@ class BuildRunner:
                 return True, [], "No Python directory found, skipping wheel build", None
 
             # Use maturin to build wheels
-            result = subprocess.run(["maturin", "build", "--release", "--out", "../dist", "--find-interpreter"], capture_output=True, text=True, cwd=python_dir, timeout=1200)
+            maturin_path = shutil.which("maturin")
+            if not maturin_path:
+                raise FileNotFoundError("maturin executable not found in PATH")
+            result = subprocess.run([maturin_path, "build", "--release", "--out", "../dist", "--find-interpreter"], capture_output=True, text=True, cwd=python_dir, timeout=1200, shell=False)  # nosec
 
             artifacts = []
             if result.returncode == 0:
@@ -180,7 +193,10 @@ class BuildRunner:
                 return True, [], "No Python directory found, skipping source distribution", None
 
             # Build source distribution
-            result = subprocess.run(["maturin", "sdist", "--out", "../dist"], capture_output=True, text=True, cwd=python_dir, timeout=300)
+            maturin_path = shutil.which("maturin")
+            if not maturin_path:
+                raise FileNotFoundError("maturin executable not found in PATH")
+            result = subprocess.run([maturin_path, "sdist", "--out", "../dist"], capture_output=True, text=True, cwd=python_dir, timeout=300, shell=False)  # nosec
 
             artifacts = []
             if result.returncode == 0:
@@ -199,7 +215,10 @@ class BuildRunner:
     def _build_documentation(self) -> Tuple[bool, List[str], str, Optional[str]]:
         """Build documentation."""
         try:
-            result = subprocess.run(["cargo", "doc", "--workspace", "--no-deps"], capture_output=True, text=True, cwd=self.root_path, timeout=600)
+            cargo_path = shutil.which("cargo")
+            if not cargo_path:
+                raise FileNotFoundError("cargo executable not found in PATH")
+            result = subprocess.run([cargo_path, "doc", "--workspace", "--no-deps"], capture_output=True, text=True, cwd=self.root_path, timeout=600, shell=False)  # nosec
 
             artifacts = []
             if result.returncode == 0:
@@ -232,11 +251,18 @@ class BuildRunner:
                     if item.suffix == ".whl":
                         try:
                             # Try to install and test the wheel
-                            test_result = subprocess.run(["python", "-m", "pip", "install", "--force-reinstall", "--no-deps", str(item)], capture_output=True, text=True, timeout=120)
+                            python_path = shutil.which("python")
+                            if not python_path:
+                                raise FileNotFoundError("python executable not found in PATH")
+                            test_result = subprocess.run(
+                                [python_path, "-m", "pip", "install", "--force-reinstall", "--no-deps", str(item)], capture_output=True, text=True, timeout=120, shell=False
+                            )  # nosec
 
                             if test_result.returncode == 0:
                                 # Try to import the package
-                                import_result = subprocess.run(["python", "-c", 'import graphbit; print(f"GraphBit version: {graphbit.version()}")'], capture_output=True, text=True, timeout=30)
+                                import_result = subprocess.run(
+                                    [python_path, "-c", 'import graphbit; print(f"GraphBit version: {graphbit.version()}")'], capture_output=True, text=True, timeout=30, shell=False
+                                )  # nosec
 
                                 if import_result.returncode == 0:
                                     verified_artifacts.append(str(item))

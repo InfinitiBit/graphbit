@@ -7,8 +7,9 @@ to the new modular workflow system, ensuring no functionality is lost.
 
 import argparse
 import json
+import logging
 import shutil
-import subprocess
+import subprocess  # nosec B404: import of 'subprocess'
 import sys
 from dataclasses import dataclass
 from datetime import datetime
@@ -16,6 +17,8 @@ from pathlib import Path
 from typing import List, Optional
 
 import yaml
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -217,7 +220,7 @@ class LegacyMigrator:
 
                 # Test script execution
                 try:
-                    result = subprocess.run([sys.executable, str(script_path), "--help"], capture_output=True, text=True, cwd=self.root_path, timeout=30)
+                    result = subprocess.run([sys.executable, str(script_path), "--help"], capture_output=True, text=True, cwd=self.root_path, timeout=30, shell=False)  # nosec
 
                     if result.returncode == 0:
                         print(f"   [PASS] {script_name} - Functional")
@@ -259,7 +262,10 @@ class LegacyMigrator:
 
             # Get repository info from git
             try:
-                repo_info = subprocess.run(["git", "remote", "get-url", "origin"], capture_output=True, text=True, cwd=self.root_path, timeout=30)
+                git_path = shutil.which("git")
+                if not git_path:
+                    raise FileNotFoundError("git executable not found in PATH")
+                repo_info = subprocess.run([git_path, "remote", "get-url", "origin"], capture_output=True, text=True, cwd=self.root_path, timeout=30, shell=False)  # nosec
 
                 if repo_info.returncode == 0:
                     # Parse repo owner and name from URL
@@ -276,7 +282,7 @@ class LegacyMigrator:
                             print("   [TEST] Running basic workflow validation...")
 
                             # Just validate that the tester can run
-                            test_result = subprocess.run([sys.executable, str(tester_script), "--help"], capture_output=True, text=True, cwd=self.root_path, timeout=30)
+                            test_result = subprocess.run([sys.executable, str(tester_script), "--help"], capture_output=True, text=True, cwd=self.root_path, timeout=30, shell=False)  # nosec
 
                             if test_result.returncode == 0:
                                 print("   [PASS] Workflow tester functional")
@@ -285,8 +291,8 @@ class LegacyMigrator:
                                 print("   [FAIL] Workflow tester not functional")
                                 return False
 
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Failed to get repository info: {e}")
 
             print("   [WARN] Could not determine repository info, skipping workflow tests")
             return True

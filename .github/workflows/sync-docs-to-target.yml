@@ -2,10 +2,10 @@ name: Sync docs/ to InfinitiBit/graphbit-docs
 
 on:
   push:
-    branches: [ main ]          # change if your source default branch is different
+    branches: [main]            # change if your source default branch is different
     paths:
-      - 'docs/**'               # only run when docs/ changes
-      - '.github/workflows/sync-docs-to-target.yml'
+    - docs/**                   # only run when docs/ changes
+    - .github/workflows/sync-docs-to-target.yml
   workflow_dispatch: {}          # allow manual runs if you want
 
 jobs:
@@ -17,59 +17,59 @@ jobs:
     permissions:
       contents: read            # Required to checkout source repository
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v4.3.0  # Pin to specific version for reproducibility
-        with:
-          fetch-depth: 0
+    - name: Checkout source
+      uses: actions/checkout@v4.3.0    # Pin to specific version for reproducibility
+      with:
+        fetch-depth: 0
 
-      - name: Ensure rsync is available
-        run: sudo apt-get update && sudo apt-get install -y rsync
+    - name: Ensure rsync is available
+      run: sudo apt-get update && sudo apt-get install -y rsync
 
-      - name: Configure git
-        run: |
-          git config --global user.name  "sync-bot"
-          git config --global user.email "sync-bot@users.noreply.github.com"
-          # ensure our PAT is used (not the checkout token header)
-          git config --global --unset-all http.https://github.com/.extraheader || true
+    - name: Configure git
+      run: |
+        git config --global user.name  "sync-bot"
+        git config --global user.email "sync-bot@users.noreply.github.com"
+        # ensure our PAT is used (not the checkout token header)
+        git config --global --unset-all http.https://github.com/.extraheader || true
 
-      - name: Clone target repo
-        env:
-          GH_PAT: ${{ secrets.TARGET_REPO_TOKEN }}
-        run: |
-          if [ -z "$GH_PAT" ]; then
-            echo "Error: TARGET_REPO_TOKEN secret is not configured"
-            exit 1
-          fi
+    - name: Clone target repo
+      env:
+        GH_PAT: ${{ secrets.TARGET_REPO_TOKEN }}
+      run: |
+        if [ -z "$GH_PAT" ]; then
+          echo "Error: TARGET_REPO_TOKEN secret is not configured"
+          exit 1
+        fi
 
-          echo "Cloning target repository: ${{ env.TARGET_REPO }}"
-          git clone --depth 1 https://${GH_PAT}@github.com/${{ env.TARGET_REPO }}.git target
-          cd target
-          git checkout ${{ env.TARGET_BRANCH }} || git checkout -b ${{ env.TARGET_BRANCH }}
-          cd ..
+        echo "Cloning target repository: ${{ env.TARGET_REPO }}"
+        git clone --depth 1 https://${GH_PAT}@github.com/${{ env.TARGET_REPO }}.git target
+        cd target
+        git checkout ${{ env.TARGET_BRANCH }} || git checkout -b ${{ env.TARGET_BRANCH }}
+        cd ..
 
-      - name: Copy docs/ (one-way sync; delete removed files)
-        run: |
-          echo "Syncing docs/ directory to target repository"
-          mkdir -p target/docs
-          rsync -av --delete --exclude ".git" docs/ target/docs/
-          echo "Sync completed successfully"
+    - name: Copy docs/ (one-way sync; delete removed files)
+      run: |
+        echo "Syncing docs/ directory to target repository"
+        mkdir -p target/docs
+        rsync -av --delete --exclude ".git" docs/ target/docs/
+        echo "Sync completed successfully"
 
-      - name: Commit & push if changed
-        working-directory: target
-        env:
-          GH_PAT: ${{ secrets.TARGET_REPO_TOKEN }}
-        run: |
-          if [ -z "$GH_PAT" ]; then
-            echo "Error: TARGET_REPO_TOKEN secret is not configured"
-            exit 1
-          fi
+    - name: Commit & push if changed
+      working-directory: target
+      env:
+        GH_PAT: ${{ secrets.TARGET_REPO_TOKEN }}
+      run: |
+        if [ -z "$GH_PAT" ]; then
+          echo "Error: TARGET_REPO_TOKEN secret is not configured"
+          exit 1
+        fi
 
-          if [ -n "$(git status --porcelain)" ]; then
-            echo "Changes detected, committing and pushing..."
-            git add -A
-            git commit -m "chore(sync): ${GITHUB_REPOSITORY}@${GITHUB_SHA::7} → docs/"
-            git push https://${GH_PAT}@github.com/${{ env.TARGET_REPO }}.git HEAD:${{ env.TARGET_BRANCH }}
-            echo "Successfully pushed changes to ${{ env.TARGET_REPO }}"
-          else
-            echo "No changes to commit."
-          fi
+        if [ -n "$(git status --porcelain)" ]; then
+          echo "Changes detected, committing and pushing..."
+          git add -A
+          git commit -m "chore(sync): ${GITHUB_REPOSITORY}@${GITHUB_SHA::7} → docs/"
+          git push https://${GH_PAT}@github.com/${{ env.TARGET_REPO }}.git HEAD:${{ env.TARGET_BRANCH }}
+          echo "Successfully pushed changes to ${{ env.TARGET_REPO }}"
+        else
+          echo "No changes to commit."
+        fi

@@ -7,14 +7,18 @@ ensuring all components are ready for production use.
 
 import argparse
 import json
+import logging
 import os
-import subprocess
+import shutil
+import subprocess  # nosec B404: import of 'subprocess'
 import sys
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from typing import List, Optional
+
+logger = logging.getLogger(__name__)
 
 
 class ReadinessLevel(Enum):
@@ -223,7 +227,7 @@ class DeploymentReadinessChecker:
 
             # Test script execution
             try:
-                result = subprocess.run([sys.executable, str(script_path), "--help"], capture_output=True, text=True, cwd=self.root_path, timeout=30)
+                result = subprocess.run([sys.executable, str(script_path), "--help"], capture_output=True, text=True, cwd=self.root_path, timeout=30, shell=False)  # nosec
 
                 if result.returncode == 0:
                     working_scripts.append(script)
@@ -379,7 +383,10 @@ class DeploymentReadinessChecker:
 
         # Check git configuration
         try:
-            result = subprocess.run(["git", "remote", "get-url", "origin"], capture_output=True, text=True, cwd=self.root_path, timeout=30)
+            git_path = shutil.which("git")
+            if not git_path:
+                raise FileNotFoundError("git executable not found in PATH")
+            result = subprocess.run([git_path, "remote", "get-url", "origin"], capture_output=True, text=True, cwd=self.root_path, timeout=30, shell=False)  # nosec
 
             if result.returncode == 0 and "github.com" in result.stdout:
                 self.checks.append(
@@ -426,8 +433,8 @@ class DeploymentReadinessChecker:
                     if "token:" in content and "secrets." not in content:
                         security_issues.append(f"Potential hardcoded token in {workflow_file}")
 
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning(f"Failed to read {workflow_file}: {e}")
 
         if security_issues:
             self.checks.append(

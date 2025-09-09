@@ -6,7 +6,8 @@ and other pre-testing validation steps.
 """
 
 import argparse
-import subprocess
+import shutil
+import subprocess  # nosec B404: import of 'subprocess'
 import sys
 import time
 from dataclasses import dataclass
@@ -90,7 +91,10 @@ class ValidationRunner:
     def _check_rust_formatting(self) -> Tuple[bool, str, Optional[str]]:
         """Check Rust code formatting."""
         try:
-            result = subprocess.run(["cargo", "fmt", "--all", "--", "--check"], capture_output=True, text=True, cwd=self.root_path, timeout=120)
+            cargo_path = shutil.which("cargo")
+            if not cargo_path:
+                raise FileNotFoundError("cargo executable not found in PATH")
+            result = subprocess.run([cargo_path, "fmt", "--all", "--", "--check"], capture_output=True, text=True, cwd=self.root_path, timeout=120, shell=False)  # nosec
 
             return result.returncode == 0, result.stdout, result.stderr if result.returncode != 0 else None
 
@@ -102,7 +106,12 @@ class ValidationRunner:
     def _check_rust_linting(self) -> Tuple[bool, str, Optional[str]]:
         """Check Rust code with clippy."""
         try:
-            result = subprocess.run(["cargo", "clippy", "--workspace", "--all-targets", "--all-features", "--", "-D", "warnings"], capture_output=True, text=True, cwd=self.root_path, timeout=300)
+            cargo_path = shutil.which("cargo")
+            if not cargo_path:
+                raise FileNotFoundError("cargo executable not found in PATH")
+            result = subprocess.run(
+                [cargo_path, "clippy", "--workspace", "--all-targets", "--all-features", "--", "-D", "warnings"], capture_output=True, text=True, cwd=self.root_path, timeout=300, shell=False
+            )  # nosec
 
             return result.returncode == 0, result.stdout, result.stderr if result.returncode != 0 else None
 
@@ -115,7 +124,10 @@ class ValidationRunner:
         """Check Python code formatting."""
         try:
             # Check if black is available
-            result = subprocess.run(["python", "-m", "black", "--check", "--diff", "python/", "scripts/"], capture_output=True, text=True, cwd=self.root_path, timeout=120)
+            python_path = shutil.which("python")
+            if not python_path:
+                raise FileNotFoundError("python executable not found in PATH")
+            result = subprocess.run([python_path, "-m", "black", "--check", "--diff", "python/", "scripts/"], capture_output=True, text=True, cwd=self.root_path, timeout=120, shell=False)  # nosec
 
             return result.returncode == 0, result.stdout, result.stderr if result.returncode != 0 else None
 
@@ -131,7 +143,10 @@ class ValidationRunner:
         """Check Python code with flake8 or similar."""
         try:
             # Try flake8 first
-            result = subprocess.run(["python", "-m", "flake8", "python/", "scripts/"], capture_output=True, text=True, cwd=self.root_path, timeout=120)
+            python_path = shutil.which("python")
+            if not python_path:
+                raise FileNotFoundError("python executable not found in PATH")
+            result = subprocess.run([python_path, "-m", "flake8", "python/", "scripts/"], capture_output=True, text=True, cwd=self.root_path, timeout=120, shell=False)  # nosec
 
             return result.returncode == 0, result.stdout, result.stderr if result.returncode != 0 else None
 
@@ -140,7 +155,10 @@ class ValidationRunner:
         except FileNotFoundError:
             # If flake8 is not available, try pylint or skip
             try:
-                result = subprocess.run(["python", "-m", "pylint", "python/", "scripts/"], capture_output=True, text=True, cwd=self.root_path, timeout=180)
+                python_path = shutil.which("python")
+                if not python_path:
+                    raise FileNotFoundError("python executable not found in PATH")
+                result = subprocess.run([python_path, "-m", "pylint", "python/", "scripts/"], capture_output=True, text=True, cwd=self.root_path, timeout=180, shell=False)  # nosec
 
                 # Pylint returns non-zero for warnings, so we're more lenient
                 return result.returncode < 16, result.stdout, result.stderr if result.returncode >= 16 else None
@@ -154,7 +172,10 @@ class ValidationRunner:
         """Run security scans."""
         try:
             # Check for common security issues in dependencies
-            result = subprocess.run(["cargo", "audit"], capture_output=True, text=True, cwd=self.root_path, timeout=180)
+            cargo_path = shutil.which("cargo")
+            if not cargo_path:
+                raise FileNotFoundError("cargo executable not found in PATH")
+            result = subprocess.run([cargo_path, "audit"], capture_output=True, text=True, cwd=self.root_path, timeout=180, shell=False)  # nosec
 
             # cargo audit returns non-zero for vulnerabilities
             if result.returncode != 0:
@@ -174,7 +195,10 @@ class ValidationRunner:
         """Check dependency consistency."""
         try:
             # Check Cargo.lock is up to date
-            result = subprocess.run(["cargo", "check", "--locked"], capture_output=True, text=True, cwd=self.root_path, timeout=300)
+            cargo_path = shutil.which("cargo")
+            if not cargo_path:
+                raise FileNotFoundError("cargo executable not found in PATH")
+            result = subprocess.run([cargo_path, "check", "--locked"], capture_output=True, text=True, cwd=self.root_path, timeout=300, shell=False)  # nosec
 
             return result.returncode == 0, result.stdout, result.stderr if result.returncode != 0 else None
 
@@ -190,7 +214,10 @@ class ValidationRunner:
             version_script = self.root_path / "scripts" / "verify-version-sync.py"
 
             if version_script.exists():
-                result = subprocess.run(["python", str(version_script)], capture_output=True, text=True, cwd=self.root_path, timeout=60)
+                python_path = shutil.which("python")
+                if not python_path:
+                    raise FileNotFoundError("python executable not found in PATH")
+                result = subprocess.run([python_path, str(version_script)], capture_output=True, text=True, cwd=self.root_path, timeout=60, shell=False)  # nosec
 
                 return result.returncode == 0, result.stdout, result.stderr if result.returncode != 0 else None
             else:
@@ -205,7 +232,10 @@ class ValidationRunner:
         """Check documentation builds successfully."""
         try:
             # Try to build documentation
-            result = subprocess.run(["cargo", "doc", "--no-deps", "--workspace"], capture_output=True, text=True, cwd=self.root_path, timeout=300)
+            cargo_path = shutil.which("cargo")
+            if not cargo_path:
+                raise FileNotFoundError("cargo executable not found in PATH")
+            result = subprocess.run([cargo_path, "doc", "--no-deps", "--workspace"], capture_output=True, text=True, cwd=self.root_path, timeout=300, shell=False)  # nosec
 
             return result.returncode == 0, result.stdout, result.stderr if result.returncode != 0 else None
 

@@ -16,16 +16,19 @@ Usage:
 
 import argparse
 import json
+import logging
 import re
-import subprocess
+import shutil
+import subprocess  # nosec B404: import of 'subprocess'
 import sys
-import urllib.error
-import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Tuple
 
+import requests
 from packaging import version
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -86,7 +89,10 @@ class AdvancedVersionManager:
 
         # Get git tags
         try:
-            result = subprocess.run(["git", "tag", "--sort=-version:refname"], capture_output=True, text=True, cwd=self.root_path)
+            git_path = shutil.which("git")
+            if not git_path:
+                raise FileNotFoundError("git executable not found in PATH")
+            result = subprocess.run([git_path, "tag", "--sort=-version:refname"], capture_output=True, text=True, cwd=self.root_path, shell=False)  # nosec
             if result.returncode == 0:
                 tags = [tag.strip() for tag in result.stdout.split("\n") if tag.strip()]
                 if tags:
@@ -102,11 +108,12 @@ class AdvancedVersionManager:
         # Get GitHub releases
         try:
             url = f"https://api.github.com/repos/{self.github_repo}/releases/latest"
-            with urllib.request.urlopen(url) as response:
-                data = json.loads(response.read().decode())
-                tag_name = data.get("tag_name", "")
-                clean_version = tag_name.lstrip("v")
-                remote_versions["github_latest_release"] = clean_version
+            response = requests.get(url, timeout=30)
+            response.raise_for_status()  # Raise an exception for bad status codes
+            data = response.json()
+            tag_name = data.get("tag_name", "")
+            clean_version = tag_name.lstrip("v")
+            remote_versions["github_latest_release"] = clean_version
         except Exception as e:
             print(f"Warning: Could not fetch GitHub releases: {e}")
 
@@ -155,7 +162,6 @@ class AdvancedVersionManager:
         # Check for version conflicts
         for source in version_sources[1:]:
             if source.source_type == "remote" and version.parse(source.version) > version.parse(authoritative.version):
-                remote_higher = True
                 recommendations.append(f"🚀 Remote version {source.version} is higher than local {authoritative.version}. " f"Consider updating local versions.")
                 break
 
@@ -251,10 +257,8 @@ class AdvancedVersionManager:
         # Find inconsistencies
         inconsistencies = []
         for ref in self.version_refs:
-            if ref.version != authoritative_version and "CHANGELOG.md" not in ref.file_path:
-                # Skip CHANGELOG.md as it can have multiple versions
-                if "CHANGELOG.md" not in ref.file_path:
-                    inconsistencies.append((ref.file_path, ref.version, authoritative_version))
+            if ref.version != authoritative_version and "CHANGELOG.md" not in ref.file_path and "CHANGELOG.md" not in ref.file_path:
+                inconsistencies.append((ref.file_path, ref.version, authoritative_version))
 
         # Determine if promotion is needed
         needs_promotion = False
@@ -266,8 +270,8 @@ class AdvancedVersionManager:
                     try:
                         version.parse(v)  # Validate version format
                         valid_remote_versions.append(v)
-                    except Exception:
-                        continue
+                    except Exception as e:
+                        logger.warning(f"Invalid remote version format: {v}. Error: {e}")
 
             if valid_remote_versions:
                 latest_remote = max(valid_remote_versions, key=lambda x: version.parse(x))
@@ -403,9 +407,12 @@ class AdvancedVersionManager:
 
         try:
             # Import and use the changelog generator
-            import subprocess
+            import subprocess  # nosec B404: import of 'subprocess'
 
-            result = subprocess.run(["python", "scripts/generate-changelog.py", "--version", target_version], capture_output=True, text=True, cwd=self.root_path)
+            python_path = shutil.which("python")
+            if not python_path:
+                raise FileNotFoundError("python executable not found in PATH")
+            result = subprocess.run([python_path, "scripts/generate-changelog.py", "--version", target_version], capture_output=True, text=True, cwd=self.root_path, shell=False)  # nosec
 
             if result.returncode == 0:
                 print(f"✅ Successfully generated changelog entry for {target_version}")
@@ -589,8 +596,8 @@ Examples:
                     try:
                         version.parse(v)
                         valid_remote_versions.append(v)
-                    except Exception:
-                        continue
+                    except Exception as e:
+                        logger.warning(f"Invalid remote version format: {v}. Error: {e}")
 
             if valid_remote_versions:
                 latest_remote = max(valid_remote_versions, key=lambda x: version.parse(x))

@@ -8,7 +8,8 @@ providing a single entry point for comprehensive validation.
 import argparse
 import json
 import os
-import subprocess
+import shutil
+import subprocess  # nosec B404: import of 'subprocess'
 import sys
 import time
 from dataclasses import dataclass
@@ -130,7 +131,7 @@ class TestSuiteRunner:
             return False
 
         try:
-            result = subprocess.run([sys.executable, str(validator_script), "--root", str(self.root_path)], capture_output=True, text=True, cwd=self.root_path, timeout=300)
+            result = subprocess.run([sys.executable, str(validator_script), "--root", str(self.root_path)], capture_output=True, text=True, cwd=self.root_path, timeout=300, shell=False)  # nosec
 
             print("Validation Output:")
             print(result.stdout)
@@ -173,7 +174,8 @@ class TestSuiteRunner:
                 text=True,
                 cwd=self.root_path,
                 timeout=600,
-            )
+                shell=False,
+            )  # nosec
 
             print("Integration Test Output:")
             print(result.stdout)
@@ -216,7 +218,8 @@ class TestSuiteRunner:
                 text=True,
                 cwd=self.root_path,
                 timeout=900,
-            )
+                shell=False,
+            )  # nosec
 
             print("Workflow Test Output:")
             print(result.stdout)
@@ -246,7 +249,9 @@ class TestSuiteRunner:
 
         try:
             # Run migration in dry-run mode
-            result = subprocess.run([sys.executable, str(migration_script), "--root", str(self.root_path), "--dry-run"], capture_output=True, text=True, cwd=self.root_path, timeout=300)
+            result = subprocess.run(
+                [sys.executable, str(migration_script), "--root", str(self.root_path), "--dry-run"], capture_output=True, text=True, cwd=self.root_path, timeout=300, shell=False
+            )  # nosec
 
             print("Migration Test Output:")
             print(result.stdout)
@@ -267,7 +272,10 @@ class TestSuiteRunner:
     def _detect_repository_info(self) -> Tuple[Optional[str], Optional[str]]:
         """Detect repository owner and name from git remote."""
         try:
-            result = subprocess.run(["git", "remote", "get-url", "origin"], capture_output=True, text=True, cwd=self.root_path, timeout=30)
+            git_path = shutil.which("git")
+            if not git_path:
+                raise FileNotFoundError("git executable not found in PATH")
+            result = subprocess.run([git_path, "remote", "get-url", "origin"], capture_output=True, text=True, cwd=self.root_path, timeout=30, shell=False)  # nosec
 
             if result.returncode == 0:
                 repo_url = result.stdout.strip()

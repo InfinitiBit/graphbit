@@ -7,8 +7,10 @@ ensuring all components are properly configured and functional.
 
 import argparse
 import json
+import logging
 import os
-import subprocess
+import shutil
+import subprocess  # nosec B404: import of 'subprocess'
 import sys
 from dataclasses import dataclass
 from datetime import datetime
@@ -17,6 +19,8 @@ from pathlib import Path
 from typing import List, Optional
 
 import yaml
+
+logger = logging.getLogger(__name__)
 
 
 class ValidationLevel(Enum):
@@ -270,7 +274,7 @@ class WorkflowValidator:
 
             # Test basic script execution
             try:
-                result = subprocess.run([sys.executable, str(script_path), "--help"], capture_output=True, text=True, cwd=self.root_path, timeout=30)
+                result = subprocess.run([sys.executable, str(script_path), "--help"], capture_output=True, text=True, cwd=self.root_path, timeout=30, shell=False)  # nosec
 
                 if result.returncode != 0:
                     self.issues.append(
@@ -311,7 +315,10 @@ class WorkflowValidator:
 
         # Check if git is available
         try:
-            result = subprocess.run(["git", "--version"], capture_output=True, text=True, timeout=10)
+            git_path = shutil.which("git")
+            if not git_path:
+                raise FileNotFoundError("git executable not found in PATH")
+            result = subprocess.run([git_path, "--version"], capture_output=True, text=True, timeout=10, shell=False)  # nosec
 
             if result.returncode != 0:
                 self.issues.append(
@@ -427,8 +434,8 @@ class WorkflowValidator:
                                 )
                                 break
 
-            except Exception:
-                pass  # Skip if file can't be read
+            except Exception as e:
+                logger.warning(f"Failed to read {workflow_file}: {e}")
 
         # Check permissions are not overly broad
         for workflow_file in self.expected_workflows.keys():
@@ -455,8 +462,8 @@ class WorkflowValidator:
                         )
                     )
 
-            except Exception:
-                pass  # Skip if file can't be parsed
+            except Exception as e:
+                logger.warning(f"Failed to read {workflow_file}: {e}")
 
     def _generate_validation_report(self):
         """Generate comprehensive validation report."""

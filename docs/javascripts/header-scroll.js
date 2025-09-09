@@ -28,7 +28,7 @@
 
     scrollTimer = setTimeout(() => {
       const currentScrollTop = window.pageYOffset || document.documentElement.scrollTop;
-      
+
       // Determine scroll direction and position
       const isScrollingDown = currentScrollTop > lastScrollTop;
       const hasScrolledPastThreshold = currentScrollTop > SCROLL_THRESHOLD;
@@ -56,7 +56,7 @@
 
     // Handle page navigation (for SPA-like behavior in Material)
     document.addEventListener('DOMContentLoaded', handleScroll);
-    
+
     // Handle instant navigation if enabled
     if (typeof app !== 'undefined' && app.location$) {
       app.location$.subscribe(handleScroll);
