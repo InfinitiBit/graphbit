@@ -1,175 +1,170 @@
-# GraphBit Development Makefile (Modular Version)
-# ===============================================
-# Main Makefile that orchestrates all development tasks
-# Uses modular sub-Makefiles for better organization and maintainability
+# GraphBit Development Makefile - Comprehensive Build & Test System
+# ==================================================================
+# This Makefile provides comprehensive build, test, and environment management
+# for the GraphBit project, supporting both Rust and Python components with
+# cross-platform compatibility (Windows PowerShell and Unix-like systems).
 
-# Include all modular Makefiles
-include makefiles/config.mk
-include makefiles/platform.mk
-include makefiles/validation.mk
-include makefiles/rust.mk
-include makefiles/python.mk
-include makefiles/common.mk
+# Load environment variables from .env if present
+ifneq (,$(wildcard .env))
+	export $(shell sed 's/=.*//' .env)
+endif
 
-# Main targets that provide unified interface
-.PHONY: help test tests test-all test-coverage test-quick
-.PHONY: test-rust test-rust-unit test-rust-integration
-.PHONY: test-python test-python-unit test-python-integration
-.PHONY: lint lint-rust lint-python format format-rust format-python
-.PHONY: build build-dev build-release clean clean-all
-.PHONY: install install-dev install-quick install-force
-.PHONY: docs docs-serve security pre-commit examples benchmark
-.PHONY: all-checks ci release-check quick quick-python
-.PHONY: init check-env create-env validate-all validate-quick
+# Default environment type (can be overridden by .env)
+ENV_TYPE ?= poetry
 
-# ===============================================
-# MAIN INTERFACE TARGETS
-# ===============================================
-# These targets provide a unified interface and maintain backward compatibility
+# Detect shell/platform type for cross-platform support
+ifeq ($(OS),Windows_NT)
+	SHELL_TYPE := windows
+	DETECTED_OS := Windows
+	POETRY_CHECK := where poetry >nul 2>&1
+	VENV_ACTIVATE := .venv\Scripts\activate.bat
+	ENV_VAR_SET := set
+	PATH_SEP := ;
+	NULL_DEVICE := NUL
+else
+	SHELL_TYPE := unix
+	DETECTED_OS := $(shell uname -s)
+	POETRY_CHECK := command -v poetry >/dev/null 2>&1
+	VENV_ACTIVATE := .venv/bin/activate
+	ENV_VAR_SET := export
+	PATH_SEP := :
+	NULL_DEVICE := /dev/null
+endif
 
-# Default target
-.DEFAULT_GOAL := help
+# Python environment activation command based on ENV_TYPE and platform
+ifeq ($(ENV_TYPE),conda)
+	ifeq ($(SHELL_TYPE),windows)
+		PYTHON_ENV := conda activate graphbit &&
+		PYTHON_CMD := conda run -n graphbit python
+	else
+		PYTHON_ENV := conda activate graphbit &&
+		PYTHON_CMD := conda run -n graphbit python
+	endif
+else ifeq ($(ENV_TYPE),venv)
+	ifeq ($(SHELL_TYPE),windows)
+		PYTHON_ENV := call $(VENV_ACTIVATE) &&
+		PYTHON_CMD := python
+	else
+		PYTHON_ENV := . $(VENV_ACTIVATE) &&
+		PYTHON_CMD := python
+	endif
+else ifeq ($(ENV_TYPE),poetry)
+	PYTHON_ENV := poetry run
+	PYTHON_CMD := poetry run python
+else
+	# Default fallback to conda
+	ifeq ($(SHELL_TYPE),windows)
+		PYTHON_ENV := conda activate graphbit &&
+		PYTHON_CMD := conda run -n graphbit python
+	else
+		PYTHON_ENV := conda activate graphbit &&
+		PYTHON_CMD := conda run -n graphbit python
+	endif
+endif
+
+# Test environment variables for cross-platform support
+ifeq ($(SHELL_TYPE),windows)
+	TEST_ENV_VARS := powershell -Command "$$env:TEST_REMOTE_URLS='true';"
+	COVERAGE_CONFIG :=
+else
+	TEST_ENV_VARS := TEST_REMOTE_URLS=true
+	COVERAGE_CONFIG := --cov-config=/dev/null
+endif
+
+# Define all phony targets
+.PHONY: help install clean test test-rust test-python lint lint-rust lint-python \
+        format format-rust format-python build docs dev-setup all-checks ci \
+        secrets secrets-audit secrets-baseline secrets-update \
+        build-perf install-perf test-perf benchmark-perf \
+        quick quick-python pre-commit-install pre-commit-run pre-commit-update pre-commit-clean \
+        examples watch-test watch-check release-check typos lint-fix format-check test-integration test-coverage \
+        create-env create-conda-env create-venv-env check-env check-poetry check-venv init \
+        install-poetry install-maturin verify-environment
+
+# ==================================================================
+# HELP & INFORMATION
+# ==================================================================
 
 help: ## Show this help message with all available targets
-	$(call print_header,"$(EMOJI_ROCKET) GraphBit Development Commands")
+	@echo "GraphBit Development Makefile - Comprehensive Build & Test System"
+	@echo "=================================================================="
 	@echo ""
-	@echo "$(COLOR_BOLD)$(COLOR_GREEN)🚀 Quick Start:$(COLOR_RESET)"
-	@echo "  $(COLOR_CYAN)make install$(COLOR_RESET)    - Complete setup (Poetry, dependencies, Cargo build, Maturin)"
-	@echo "  $(COLOR_CYAN)make test$(COLOR_RESET)       - Run all tests (Rust + Python)"
-	@echo "  $(COLOR_CYAN)make validate-all$(COLOR_RESET) - Validate all paths and tools"
+	@echo "Detected Environment:"
+	@echo "  Platform: $(DETECTED_OS)"
+	@echo "  Shell Type: $(SHELL_TYPE)"
+	@echo "  Environment Type: $(ENV_TYPE)"
+	@echo "  Python Command: $(PYTHON_CMD)"
 	@echo ""
-	@echo "$(COLOR_BOLD)$(COLOR_BLUE)📋 Main Categories:$(COLOR_RESET)"
-	@echo "  $(COLOR_YELLOW)Testing:$(COLOR_RESET)     test, test-rust, test-python, test-coverage"
-	@echo "  $(COLOR_YELLOW)Building:$(COLOR_RESET)    build, build-dev, build-release"
-	@echo "  $(COLOR_YELLOW)Quality:$(COLOR_RESET)     lint, format, security, all-checks"
-	@echo "  $(COLOR_YELLOW)Setup:$(COLOR_RESET)       install, install-dev, validate-all"
+	@echo "Available Commands:"
 	@echo ""
-	@echo "$(COLOR_BOLD)$(COLOR_MAGENTA)🔧 Environment Variables:$(COLOR_RESET)"
-	@echo "  $(COLOR_CYAN)ENV_TYPE$(COLOR_RESET):      Environment type (poetry, conda, venv) [current: $(ENV_TYPE)]"
-	@echo "  $(COLOR_CYAN)OPENAI_API_KEY$(COLOR_RESET): Required for LLM-based tasks and Python tests"
+ifeq ($(SHELL_TYPE),windows)
+	@powershell -Command "Get-Content Makefile | Select-String '^[a-zA-Z0-9_-]+:.*## .*' | ForEach-Object { $$parts = $$_.Line -split ':.*?## '; Write-Host ('  {0,-25} {1}' -f $$parts[0], $$parts[1]) }"
+else
+	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-25s\033[0m %s\n", $$1, $$2}'
+endif
 	@echo ""
-	@echo "$(COLOR_BOLD)$(COLOR_GREEN)💡 Detailed Help:$(COLOR_RESET)"
-	@echo "  $(COLOR_CYAN)make help-rust$(COLOR_RESET)   - Show Rust-specific commands"
-	@echo "  $(COLOR_CYAN)make help-python$(COLOR_RESET) - Show Python-specific commands"
-	@echo "  $(COLOR_CYAN)make help-all$(COLOR_RESET)    - Show all available commands"
+	@echo "Environment Variables:"
+	@echo "  ENV_TYPE: Environment type (poetry, conda, venv) [current: $(ENV_TYPE)]"
+	@echo "  OPENAI_API_KEY: Required for LLM-based tests and examples"
+	@echo "  TEST_REMOTE_URLS: Enable remote URL testing [default: true]"
 	@echo ""
-	@echo "$(COLOR_BOLD)$(COLOR_GREEN)🎯 Pro Tip:$(COLOR_RESET) Run '$(COLOR_CYAN)make install$(COLOR_RESET)' first, then '$(COLOR_CYAN)make test$(COLOR_RESET)' to verify everything works!"
+	@echo "Quick Start:"
+	@echo "  make install    # Install all dependencies and build components"
+	@echo "  make test       # Run comprehensive test suites"
+	@echo "  make clean      # Clean all build artifacts"
 
-help-all: ## Show all available commands from all Makefiles
-	$(call print_header,"$(EMOJI_INFO) All Available Commands")
-	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) makefiles/*.mk | \
-		sort | \
-		awk 'BEGIN {FS = ":.*?## "}; {printf "  $(COLOR_CYAN)%-30s$(COLOR_RESET) %s\n", $$1, $$2}'
+# ==================================================================
+# ENVIRONMENT SETUP & VERIFICATION
+# ==================================================================
 
-help-rust: ## Show Rust-specific commands
-	@echo "Rust Commands"
-	@echo "================================================"
-	@echo "  rust-test-coverage        - Run all Rust tests with coverage reporting"
-	@echo "  rust-test-quick           - Run Rust tests without coverage (faster)"
-	@echo "  rust-test-unit            - Run only Rust unit tests with coverage"
-	@echo "  rust-test-integration     - Run only Rust integration tests with coverage"
-	@echo "  rust-build                - Build Rust workspace in debug mode"
-	@echo "  rust-build-release        - Build Rust workspace in release mode"
-	@echo "  rust-clean                - Clean Rust build artifacts"
-	@echo "  rust-clippy               - Run Clippy linter on Rust code"
-	@echo "  rust-format               - Format Rust code"
-	@echo "  rust-format-check         - Check Rust code formatting"
+check-poetry: ## Check if Poetry is installed and install if missing
+	@echo "Checking Poetry installation..."
+ifeq ($(SHELL_TYPE),windows)
+	@powershell -Command "if (!(Get-Command poetry -ErrorAction SilentlyContinue)) { \
+		Write-Host 'Poetry not found. Installing Poetry...'; \
+		(Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | python -; \
+		Write-Host 'Poetry installed successfully!'; \
+	} else { \
+		Write-Host 'Poetry is already installed.'; \
+	}"
+else
+	@if ! $(POETRY_CHECK); then \
+		echo "Poetry not found. Installing Poetry..."; \
+		curl -sSL https://install.python-poetry.org | python3 -; \
+		echo "Poetry installed successfully!"; \
+		echo "Please restart your shell or run: source ~/.bashrc"; \
+	else \
+		echo "Poetry is already installed."; \
+	fi
+endif
 
-help-python: ## Show Python-specific commands
-	@echo "Python Commands"
-	@echo "================================================"
-	@echo "  python-test-coverage      - Run all Python tests with coverage reporting"
-	@echo "  python-test-quick         - Run Python tests without coverage (faster)"
-	@echo "  python-test-unit          - Run only Python unit tests with coverage"
-	@echo "  python-test-integration   - Run only Python integration tests with coverage"
-	@echo "  python-install            - Install Python dependencies"
-	@echo "  python-install-dev        - Install Python development dependencies"
-	@echo "  python-build              - Build Python package"
-	@echo "  python-clean              - Clean Python build artifacts and cache"
-	@echo "  python-lint               - Run Python linting (flake8 + mypy)"
-	@echo "  python-format             - Format Python code with black and isort"
+check-venv: ## Check if virtual environment is activated
+	@echo "Checking virtual environment status..."
+ifeq ($(ENV_TYPE),conda)
+	@echo "Using conda environment: graphbit"
+	@conda info --envs | grep -q "^graphbit " || { \
+		echo "Conda environment 'graphbit' not found. Run 'make create-conda-env' first."; \
+		exit 1; \
+	}
+else ifeq ($(ENV_TYPE),venv)
+	@if [ -z "$$VIRTUAL_ENV" ]; then \
+		echo "No virtual environment detected."; \
+		echo "Please activate your virtual environment or run 'make create-venv-env'."; \
+		exit 1; \
+	else \
+		echo "Virtual environment active: $$VIRTUAL_ENV"; \
+	fi
+else ifeq ($(ENV_TYPE),poetry)
+	@echo "Using Poetry for dependency management."
+else
+	@echo "Unknown ENV_TYPE: $(ENV_TYPE). Please set ENV_TYPE to poetry, conda, or venv."
+	@exit 1
+endif
 
-# ===============================================
-# UNIFIED TEST INTERFACE
-# ===============================================
-# These targets provide backward compatibility and unified access
+verify-environment: check-poetry check-venv ## Verify all environment prerequisites
+	@echo "Environment verification completed successfully!"
 
-# Main test targets
-test: ## Run comprehensive test suite for both Rust and Python components
-	$(call print_header,"$(EMOJI_TEST) Starting Comprehensive Test Suite")
-	@$(MAKE) rust-test-coverage
-	@$(MAKE) python-test-coverage
-	$(call format_test_results)
-	$(call print_success,"$(EMOJI_SUCCESS) All tests completed successfully!")
-
-tests: test ## Alias for 'test' command
-
-test-all: validate-test-env ## Run comprehensive test suite with full validation
-	$(call print_header,"$(EMOJI_TEST) Starting Comprehensive Test Suite with Validation")
-	@$(MAKE) validate-installation
-	@$(MAKE) rust-test-coverage
-	@$(MAKE) python-test-coverage
-	$(call format_test_results)
-	$(call print_success,"$(EMOJI_SUCCESS) All comprehensive tests completed successfully!")
-
-test-coverage: ## Run tests with coverage reporting for both languages
-	$(call print_header,"$(EMOJI_TEST) Running Tests with Coverage Reporting")
-	@$(MAKE) rust-test-coverage
-	@$(MAKE) python-test-coverage
-	$(call format_test_results)
-	$(call print_success,"$(EMOJI_SUCCESS) Coverage reports generated!")
-
-test-quick: ## Quick test run without coverage (for development iteration)
-	$(call print_header,"$(EMOJI_TEST) Running Quick Test Suite")
-	@$(MAKE) rust-test-quick
-	@$(MAKE) python-test-quick
-	$(call format_test_results)
-	$(call print_success,"$(EMOJI_SUCCESS) Quick tests completed successfully!")
-
-# Language-specific test aliases (backward compatibility)
-test-rust: rust-test-coverage ## Run all Rust tests with coverage
-test-rust-unit: rust-test-unit ## Run only Rust unit tests
-test-rust-integration: rust-test-integration ## Run only Rust integration tests
-
-test-python: python-test-coverage ## Run all Python tests with coverage
-test-python-unit: python-test-unit ## Run only Python unit tests
-test-python-integration: python-test-integration ## Run only Python integration tests
-
-# ===============================================
-# UNIFIED BUILD AND DEVELOPMENT INTERFACE
-# ===============================================
-
-# Linting and formatting (unified interface)
-lint: ## Run linting for both Rust and Python
-	$(call print_header,"$(EMOJI_INFO) Running Linting for All Components")
-	@$(MAKE) rust-lint
-	@$(MAKE) python-lint
-	$(call print_success,"$(MSG_SUCCESS)")
-
-lint-rust: rust-clippy ## Run Rust linting
-lint-python: python-lint ## Run Python linting
-
-format: ## Format code for both Rust and Python
-	$(call print_header,"$(EMOJI_INFO) Formatting All Code")
-	@$(MAKE) rust-format
-	@$(MAKE) python-format
-	$(call print_success,"$(MSG_SUCCESS)")
-
-format-rust: rust-format ## Format Rust code
-format-python: python-format ## Format Python code
-
-format-check: ## Check code formatting for both languages
-	$(call print_header,"$(EMOJI_INFO) Checking Code Formatting")
-	@$(MAKE) rust-format-check
-	@$(MAKE) python-format-check
-	$(call print_success,"$(MSG_SUCCESS)")
-
-# ===============================================
-# INTERACTIVE SETUP AND INITIALIZATION
-# ===============================================
-
-check-env: ## Ask interactively if .env is missing (with defaults)
-	$(call print_header,"$(EMOJI_INFO) Environment Configuration Setup")
+check-env: ## Interactive setup for .env file if missing
 	@if [ ! -f .env ]; then \
 		echo "$(EMOJI_INFO) .env not found. Let's set it up interactively."; \
 		read -p "Choose ENV_TYPE (poetry/conda/venv) [poetry]: " ENV_TYPE_INPUT; \
@@ -178,154 +173,330 @@ check-env: ## Ask interactively if .env is missing (with defaults)
 		API_KEY_INPUT=$${API_KEY_INPUT:-sk-xxxxx}; \
 		echo "ENV_TYPE=$$ENV_TYPE_INPUT" > .env; \
 		echo "OPENAI_API_KEY=$$API_KEY_INPUT" >> .env; \
-		echo "$(EMOJI_SUCCESS) .env created with defaults."; \
+		echo ".env created with defaults."; \
 	else \
 		echo "$(EMOJI_SUCCESS) .env already exists."; \
 	fi
 
-init: check-env create-conda-env install-dev ## One-click first-time project setup
-	$(call print_success,"$(EMOJI_SUCCESS) Project environment initialized completely!")
+# ==================================================================
+# ENVIRONMENT CREATION
+# ==================================================================
 
-create-env: create-conda-env ## Create environment based on ENV_TYPE (alias)
+create-env: ## Create environment based on ENV_TYPE
+ifeq ($(ENV_TYPE),conda)
+	$(MAKE) create-conda-env
+else ifeq ($(ENV_TYPE),venv)
+	$(MAKE) create-venv-env
+else ifeq ($(ENV_TYPE),poetry)
+	@echo "Using Poetry for dependency management - no separate environment needed."
+else
+	@echo "Unknown ENV_TYPE: $(ENV_TYPE). Defaulting to conda."
+	$(MAKE) create-conda-env
+endif
 
-# ===============================================
-# COMPREHENSIVE QUALITY CHECKS AND CI
-# ===============================================
+create-conda-env: ## Create conda environment if it doesn't exist
+	@echo "Checking if conda environment 'graphbit' exists..."
+	@conda info --envs | grep -q "^graphbit " || { \
+		echo "Creating conda environment 'graphbit' with Python 3.11..."; \
+		conda create -n graphbit python=3.11 -y; \
+		echo "Conda environment 'graphbit' created successfully!"; \
+	}
 
-all-checks: format-check lint test security ## Run all quality checks (CI-ready)
-	$(call print_header,"$(EMOJI_SUCCESS) All Quality Checks")
-	$(call print_success,"$(EMOJI_SUCCESS) All checks passed! Ready for CI/CD.")
+create-venv-env: ## Create Python virtual environment if it doesn't exist
+	@echo "Checking if virtual environment exists..."
+	@if [ ! -d ".venv" ]; then \
+		echo "Creating Python virtual environment..."; \
+		python -m venv .venv; \
+		echo "Virtual environment created successfully!"; \
+		echo "Please activate it with: source .venv/bin/activate (Unix) or .venv\\Scripts\\activate.bat (Windows)"; \
+	else \
+		echo "Virtual environment already exists."; \
+	fi
 
-ci: clean all-checks ## Complete CI pipeline
-	$(call print_header,"$(EMOJI_ROCKET) CI Pipeline")
-	$(call print_success,"$(EMOJI_SUCCESS) CI pipeline completed successfully!")
+init: check-env create-env install ## Complete first-time project setup
+	@echo "Project environment initialized completely!"
 
-release-check: all-checks docs ## Pre-release validation
-	$(call print_header,"$(EMOJI_INFO) Release Validation")
-	@cargo publish --dry-run
-	@$(PYTHON_ENV) poetry check
-	$(call print_success,"$(EMOJI_SUCCESS) Release validation completed!")
+# ==================================================================
+# INSTALLATION & DEPENDENCY MANAGEMENT
+# ==================================================================
 
-# Quick development checks
-quick: rust-quick-checks ## Quick Rust checks for development
-quick-python: python-quick-checks ## Quick Python checks for development
+install: verify-environment install-rust-deps install-python-deps build-python-bindings ## Install all dependencies and build components
+	@echo "All dependencies installed and components built successfully!"
 
-# Pre-commit integration
-pre-commit-install: ## Install pre-commit hooks
-	$(call print_header,"$(EMOJI_INFO) Installing Pre-commit Hooks")
-	@$(PYTHON_ENV) pre-commit install
-	@$(PYTHON_ENV) pre-commit install --hook-type commit-msg
-	@$(PYTHON_ENV) pre-commit install --hook-type pre-push
-	$(call print_success,"$(MSG_SUCCESS)")
+install-rust-deps: ## Install Rust dependencies
+	@echo "Installing Rust dependencies..."
+	cargo fetch
+	@echo "Rust dependencies installed."
 
-pre-commit-run: pre-commit ## Run pre-commit hooks on all files (alias)
+install-python-deps: ## Install Python dependencies using Poetry
+	@echo "Installing Python dependencies..."
+ifeq ($(ENV_TYPE),poetry)
+	poetry install --with dev,benchmarks
+else ifeq ($(ENV_TYPE),conda)
+	conda run -n graphbit pip install poetry
+	conda run -n graphbit poetry install --with dev,benchmarks
+else ifeq ($(ENV_TYPE),venv)
+	$(PYTHON_ENV) pip install poetry
+	$(PYTHON_ENV) poetry install --with dev,benchmarks
+endif
+	@echo "Python dependencies installed."
 
-pre-commit-update: ## Update pre-commit hooks
-	$(call print_header,"$(EMOJI_INFO) Updating Pre-commit Hooks")
-	@$(PYTHON_ENV) pre-commit autoupdate
-	$(call print_success,"$(MSG_SUCCESS)")
+build-python-bindings: ## Build Python bindings using maturin (excludes nodejs)
+	@echo "Building Python bindings..."
+	cargo build --package graphbit-core --package graphbit-python
+ifeq ($(ENV_TYPE),poetry)
+	poetry run maturin develop --release --manifest-path python/Cargo.toml
+else ifeq ($(ENV_TYPE),conda)
+	conda run -n graphbit maturin develop --release --manifest-path python/Cargo.toml
+else ifeq ($(ENV_TYPE),venv)
+	$(PYTHON_ENV) maturin develop --release --manifest-path python/Cargo.toml
+endif
+	@echo "Python bindings built and installed successfully."
 
-pre-commit-clean: ## Clean pre-commit cache
-	$(call print_header,"$(EMOJI_CLEAN) Cleaning Pre-commit Cache")
-	@$(PYTHON_ENV) pre-commit clean
-	$(call print_success,"$(MSG_SUCCESS)")
+clean: ## Clean all build artifacts and temporary files
+	@echo "Cleaning build artifacts..."
+	cargo clean
+ifeq ($(SHELL_TYPE),windows)
+	@powershell -Command "Get-ChildItem -Path . -Recurse -Name '__pycache__' | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
+	@powershell -Command "Get-ChildItem -Path . -Recurse -Name '*.pyc' | Remove-Item -Force -ErrorAction SilentlyContinue"
+	@powershell -Command "Get-ChildItem -Path . -Recurse -Name '*.egg-info' | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
+else
+	@find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+	@find . -type f -name "*.pyc" -delete 2>/dev/null || true
+	@find . -type d -name "*.egg-info" -exec rm -rf {} + 2>/dev/null || true
+endif
+	@echo "Build artifacts cleaned."
 
-# ===============================================
-# DEBUG AND UTILITIES
-# ===============================================
+# ==================================================================
+# COMPREHENSIVE TESTING SYSTEM
+# ==================================================================
 
-debug-env: ## Show environment configuration
-	@echo "ENV_TYPE: $(ENV_TYPE)"
-	@echo "SHELL_TYPE: $(SHELL_TYPE)"
-	@echo "PYTHON_ENV: $(PYTHON_ENV)"
-	@echo "PYTEST_CMD: $(PYTEST_CMD)"
+test: test-rust test-python ## Run comprehensive test suites for both Rust and Python
+	@echo "All tests completed successfully!"
 
-# ===============================================
-# ADDITIONAL UTILITIES AND LEGACY SUPPORT
-# ===============================================
+test-rust: ## Run Rust tests using cargo llvm-cov with HTML output (excludes nodejs)
+	@echo "Running Rust tests with coverage..."
+	cargo llvm-cov --package graphbit-core --package graphbit --html --output-dir target/llvm-cov \
+		--ignore-filename-regex '.*/(tests?|benches?|core/src/llm|python/src|nodejs)/.*'
+	@echo "Rust tests completed. Coverage report: target/llvm-cov/index.html"
 
-# Secrets and security scanning
-secrets-audit: ## Audit secrets baseline
-	$(call print_header,"$(EMOJI_INFO) Auditing Secrets")
-	@$(PYTHON_ENV) detect-secrets scan --baseline .secrets.baseline
-	@$(PYTHON_ENV) detect-secrets audit .secrets.baseline
-	$(call print_success,"$(MSG_SUCCESS)")
+test-python: build-python-bindings ## Run Python tests using pytest with comprehensive coverage
+	@echo "Running Python tests with coverage..."
+ifeq ($(SHELL_TYPE),windows)
+	@powershell -Command "if (-not $$env:OPENAI_API_KEY) { Write-Host 'Warning: OPENAI_API_KEY not set. Some tests may be skipped.' }"
+	@powershell -Command "$$env:TEST_REMOTE_URLS='true'; poetry run pytest --import-mode=importlib -v --tb=short --strict-markers --durations=10 --cov=graphbit --cov-report=term-missing --cov-report=html:target/coverage/python --cov-report=xml:target/coverage/python.xml"
+else
+	@if [ -z "$$OPENAI_API_KEY" ]; then \
+		echo "Warning: OPENAI_API_KEY not set. Some tests may be skipped."; \
+	fi
+	$(TEST_ENV_VARS) $(PYTHON_ENV) pytest \
+		--import-mode=importlib \
+		-v \
+		--tb=short \
+		--strict-markers \
+		--durations=10 \
+		--cov=graphbit \
+		--cov-report=term-missing \
+		--cov-report=html:target/coverage/python \
+		--cov-report=xml:target/coverage/python.xml \
+		$(COVERAGE_CONFIG)
+endif
+	@echo "Python tests completed. Coverage report: target/coverage/python/index.html"
+
+test-coverage: test-rust test-python ## Run comprehensive coverage analysis for both Rust and Python
+	@echo "Coverage analysis completed!"
+	@echo "Rust coverage: target/llvm-cov/index.html"
+	@echo "Python coverage: target/coverage/python/index.html"
+
+# ==================================================================
+# CODE QUALITY & FORMATTING
+# ==================================================================
+
+lint: lint-rust lint-python ## Run all linting checks
+
+lint-rust: ## Run Rust linting with clippy
+	@echo "Running Rust linting..."
+	cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+lint-python: ## Run Python linting with flake8 and mypy
+	@echo "Running Python linting..."
+	$(PYTHON_ENV) flake8 graphbit/ tests/ benchmarks/
+	$(PYTHON_ENV) mypy graphbit/ --ignore-missing-imports
+
+lint-fix: ## Auto-fix linting issues where possible
+	@echo "Auto-fixing linting issues..."
+	cargo clippy --workspace --all-targets --all-features --fix --allow-staged --allow-dirty
+	$(PYTHON_ENV) isort graphbit/ tests/ benchmarks/
+
+format: format-rust format-python ## Format all code
+
+format-rust: ## Format Rust code
+	@echo "Formatting Rust code..."
+	cargo fmt --all
+
+format-python: ## Format Python code
+	@echo "Formatting Python code..."
+	$(PYTHON_ENV) black graphbit/ tests/ benchmarks/
+	$(PYTHON_ENV) isort graphbit/ tests/ benchmarks/
+
+format-check: ## Check code formatting without making changes
+	@echo "Checking code formatting..."
+	cargo fmt --all -- --check
+	$(PYTHON_ENV) black --check graphbit/ tests/ benchmarks/
+	$(PYTHON_ENV) isort --check-only graphbit/ tests/ benchmarks/
+
+# ==================================================================
+# BUILD SYSTEM
+# ==================================================================
+
+build: ## Build all components in release mode
+	@echo "Building all components..."
+	cargo build --workspace --release
+	$(PYTHON_ENV) poetry build
+	@echo "Build completed successfully!"
+
+build-dev: ## Build components in development mode (excludes nodejs)
+	@echo "Building components in development mode..."
+	cargo build --package graphbit-core --package graphbit-python
+ifeq ($(ENV_TYPE),poetry)
+	poetry run maturin develop --manifest-path python/Cargo.toml
+else ifeq ($(ENV_TYPE),conda)
+	conda run -n graphbit maturin develop --manifest-path python/Cargo.toml
+else ifeq ($(ENV_TYPE),venv)
+	$(PYTHON_ENV) maturin develop --manifest-path python/Cargo.toml
+endif
+	@echo "Development build completed!"
+
+# ==================================================================
+# DOCUMENTATION & SECURITY
+# ==================================================================
+
+docs: ## Generate documentation
+	@echo "Generating documentation..."
+	cargo doc --workspace --no-deps --open
+	$(PYTHON_ENV) cd docs && make html
+
+docs-serve: ## Serve documentation locally
+	@echo "Serving documentation on http://localhost:8000"
+	$(PYTHON_ENV) cd docs && python -m http.server 8000
+
+security: ## Run security audits
+	@echo "Running security audits..."
+	cargo audit
+	$(PYTHON_ENV) safety check
+	$(PYTHON_ENV) bandit -r graphbit/
+	$(MAKE) secrets
+
+secrets: ## Scan for secrets in codebase
+	$(PYTHON_ENV) detect-secrets scan --baseline .secrets.baseline
+
+secrets-audit: ## Audit detected secrets
+	$(PYTHON_ENV) detect-secrets scan --baseline .secrets.baseline
+	$(PYTHON_ENV) detect-secrets audit .secrets.baseline
 
 secrets-baseline: ## Create new secrets baseline
-	$(call print_header,"$(EMOJI_INFO) Creating Secrets Baseline")
-	@$(PYTHON_ENV) detect-secrets scan > .secrets.baseline
-	$(call print_success,"$(MSG_SUCCESS)")
+	$(PYTHON_ENV) detect-secrets scan > .secrets.baseline
 
 secrets-update: ## Update secrets configuration
-	@echo "$(EMOJI_INFO) Edit .secrets.baseline to update detect-secrets configuration"
-	@echo "$(EMOJI_INFO) See: https://github.com/Yelp/detect-secrets"
+	@echo "Edit .secrets.baseline to update detect-secrets configuration"
+	@echo "See: https://github.com/Yelp/detect-secrets"
 
 typos: ## Check for typos in codebase
-	$(call print_header,"$(EMOJI_INFO) Checking for Typos")
-	@typos
-	$(call print_success,"$(MSG_SUCCESS)")
+	typos
 
-# Development watch modes (legacy aliases)
-watch-test: rust-watch-test ## Watch for changes and run Rust tests
-watch-check: rust-watch-check ## Watch for changes and run Rust check + clippy
+# ==================================================================
+# BENCHMARKING & PERFORMANCE
+# ==================================================================
 
-# Performance and benchmarking
+bench: ## Run benchmarks
+	@echo "Running benchmarks..."
+	cargo bench
+	@if [ -z "$$OPENAI_API_KEY" ]; then \
+		echo "Warning: OPENAI_API_KEY not set. Some benchmarks may be skipped."; \
+	fi
+	$(PYTHON_ENV) python -m benchmarks.run_benchmarks
+
 build-perf: ## Build with performance optimizations
-	$(call print_header,"$(EMOJI_BUILD) Building with Performance Optimizations")
-	@conda run -n $(PROJECT_NAME) cargo build --release --features performance
-	@conda run -n $(PROJECT_NAME) maturin develop --release
-	$(call print_success,"$(MSG_SUCCESS)")
+	@echo "Building GraphBit with performance optimizations..."
+	cargo build --release --features performance
+	$(PYTHON_ENV) maturin develop --release
 
 install-perf: build-perf ## Install with performance optimizations
-	$(call print_header,"$(EMOJI_ROCKET) Installing with Performance Optimizations")
-	@conda run -n $(PROJECT_NAME) pip install -e python/
-	$(call print_success,"$(MSG_SUCCESS)")
+	@echo "Installing GraphBit with performance optimizations..."
+	$(PYTHON_ENV) pip install -e python/
 
 test-perf: build-perf ## Run performance tests
-	$(call print_header,"$(EMOJI_TEST) Running Performance Tests")
-	@conda run -n $(PROJECT_NAME) python performance_test.py
-	$(call print_success,"$(MSG_SUCCESS)")
+	@echo "Running performance tests..."
+	$(PYTHON_CMD) performance_test.py
 
-benchmark-perf: build-perf ## Run comprehensive performance benchmarks
-	$(call print_header,"$(EMOJI_TEST) Running Comprehensive Benchmarks")
-	@conda run -n $(PROJECT_NAME) python $(BENCHMARKS_SRC)/run_comprehensive_benchmark.py
-	$(call print_success,"$(MSG_SUCCESS)")
+benchmark-perf: build-perf ## Run comprehensive benchmarks
+	@echo "Running comprehensive benchmarks..."
+	$(PYTHON_CMD) benchmarks/run_comprehensive_benchmark.py
 
-# Legacy aliases for backward compatibility
-dev-setup: install-dev ## Legacy alias for install-dev
-lint-fix: rust-clippy-fix python-format ## Legacy alias for auto-fixing
-test-integration: test-all ## Legacy alias for comprehensive tests
+# ==================================================================
+# PRE-COMMIT HOOKS & DEVELOPMENT TOOLS
+# ==================================================================
 
-# Note: All other targets are now defined in the included makefiles:
-# - makefiles/config.mk     - Configuration and variables
-# - makefiles/platform.mk   - Cross-platform compatibility
-# - makefiles/validation.mk - Path and environment validation
-# - makefiles/rust.mk       - Rust-specific targets
-# - makefiles/python.mk     - Python-specific targets
-# - makefiles/common.mk     - Common utilities and installation
+pre-commit-install: ## Install pre-commit hooks
+	@echo "Installing pre-commit hooks..."
+	$(PYTHON_ENV) pre-commit install
+	$(PYTHON_ENV) pre-commit install --hook-type commit-msg
+	$(PYTHON_ENV) pre-commit install --hook-type pre-push
 
+pre-commit-run: ## Run pre-commit hooks on all files
+	$(PYTHON_ENV) pre-commit run --all-files
 
-# ===============================================
-# DOCUMENTATION AND FINAL NOTES
-# ===============================================
+pre-commit-update: ## Update pre-commit hooks
+	$(PYTHON_ENV) pre-commit autoupdate
 
-# All targets are now defined in the included makefiles:
-# - makefiles/config.mk     - Configuration and variables
-# - makefiles/platform.mk   - Cross-platform compatibility
-# - makefiles/validation.mk - Path and environment validation
-# - makefiles/rust.mk       - Rust-specific targets
-# - makefiles/python.mk     - Python-specific targets
-# - makefiles/common.mk     - Common utilities and installation
+pre-commit-clean: ## Clean pre-commit cache
+	$(PYTHON_ENV) pre-commit clean
 
-# The modular structure provides:
-# ✅ Better organization and maintainability
-# ✅ Cross-platform compatibility (Windows/Unix)
-# ✅ Centralized configuration management
-# ✅ Proper path validation and error handling
-# ✅ Backward compatibility with existing commands
-# ✅ Enhanced developer experience with colored output and emojis
+# ==================================================================
+# CI/CD & RELEASE MANAGEMENT
+# ==================================================================
 
-# For detailed help on specific components:
-# make help-rust    - Show Rust-specific commands
-# make help-python  - Show Python-specific commands
-# make help-all     - Show all available commands
+all-checks: format-check lint test secrets ## Run all quality checks
+	@echo "All checks passed successfully!"
+
+ci: clean all-checks ## Run complete CI pipeline
+	@echo "CI pipeline completed successfully!"
+
+release-check: all-checks docs ## Check readiness for release
+	@echo "Checking release readiness..."
+	cargo publish --dry-run
+	$(PYTHON_ENV) poetry check
+	@echo "Release check completed!"
+
+# ==================================================================
+# QUICK DEVELOPMENT COMMANDS
+# ==================================================================
+
+quick: format-rust lint-rust test-rust ## Quick Rust development cycle
+
+quick-python: format-python lint-python test-python ## Quick Python development cycle
+
+dev-setup: verify-environment install pre-commit-install ## Complete development environment setup
+	@echo "Development environment setup completed!"
+
+# ==================================================================
+# EXAMPLES & DEVELOPMENT TOOLS
+# ==================================================================
+
+examples: ## Run example workflows
+	@if [ -z "$$OPENAI_API_KEY" ]; then \
+		echo "Warning: OPENAI_API_KEY not set. Examples may not work properly."; \
+	fi
+	$(PYTHON_ENV) python examples/basic_workflow.py
+
+watch-test: ## Watch for changes and run tests automatically
+	cargo watch -x "test --workspace"
+
+watch-check: ## Watch for changes and run checks automatically
+	cargo watch -x "check --workspace" -x "clippy --workspace"
+
+# ==================================================================
+# UTILITY TARGETS
+# ==================================================================
+
+.DEFAULT_GOAL := help
