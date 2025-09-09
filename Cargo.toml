@@ -78,8 +78,7 @@ jemallocator.workspace = true
 [workspace]
 members = [
   "core",
-  "python",
-  "nodejs"
+  "python"
 ]
 resolver = "2"
 
@@ -98,10 +97,6 @@ jemallocator = "0.5"
 # Utilities
 lazy_static = "1.4"
 lopdf = "0.32"
-# Node.js bindings
-napi = {version = "2.16", default-features = false, features = ["napi8", "tokio_rt", "serde-json"]}
-napi-build = "2.1"
-napi-derive = "2.16"
 num_cpus = "1.16"
 # Graph and algorithms
 petgraph = "0.6"

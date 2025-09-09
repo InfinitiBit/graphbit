@@ -23,7 +23,7 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 from packaging import version
 
@@ -155,6 +155,7 @@ class AdvancedVersionManager:
         # Check for version conflicts
         for source in version_sources[1:]:
             if source.source_type == "remote" and version.parse(source.version) > version.parse(authoritative.version):
+                remote_higher = True
                 recommendations.append(f"🚀 Remote version {source.version} is higher than local {authoritative.version}. " f"Consider updating local versions.")
                 break
 
@@ -173,10 +174,7 @@ class AdvancedVersionManager:
         # 3. Root pyproject.toml (look for [tool.poetry] section)
         refs.extend(self._find_in_file("pyproject.toml", r'\[tool\.poetry\][\s\S]*?^version = "([^"]+)"'))
 
-        # 4. Node.js package.json
-        refs.extend(self._find_in_file("nodejs/package.json", r'"version":\s*"([^"]+)"'))
-
-        # 5. Benchmarks __init__.py
+        # 4. Benchmarks __init__.py
         refs.extend(self._find_in_file("benchmarks/frameworks/__init__.py", r'__version__ = "([^"]+)"'))
 
         # 6. CHANGELOG.md (latest version - first occurrence only)
@@ -255,7 +253,8 @@ class AdvancedVersionManager:
         for ref in self.version_refs:
             if ref.version != authoritative_version and "CHANGELOG.md" not in ref.file_path:
                 # Skip CHANGELOG.md as it can have multiple versions
-                inconsistencies.append((ref.file_path, ref.version, authoritative_version))
+                if "CHANGELOG.md" not in ref.file_path:
+                    inconsistencies.append((ref.file_path, ref.version, authoritative_version))
 
         # Determine if promotion is needed
         needs_promotion = False
@@ -366,11 +365,6 @@ class AdvancedVersionManager:
             files_updated.append("pyproject.toml")
             print("   ✅ Updated pyproject.toml")
 
-        # Node.js package.json
-        if self._update_file_version("nodejs/package.json", r'"version":\s*"[^"]+"', f'"version": "{target_version}"'):
-            files_updated.append("nodejs/package.json")
-            print("   ✅ Updated nodejs/package.json")
-
         # Benchmarks __init__.py
         if self._update_file_version("benchmarks/frameworks/__init__.py", r'__version__ = "[^"]+"', f'__version__ = "{target_version}"'):
             files_updated.append("benchmarks/frameworks/__init__.py")
@@ -438,10 +432,6 @@ class AdvancedVersionManager:
         # 1. Root pyproject.toml
         if self._update_file_version("pyproject.toml", r'(\[tool\.poetry\][\s\S]*?)version = "[^"]+"', rf'\1version = "{self.master_version}"'):
             files_updated.append("pyproject.toml")
-
-        # 2. Node.js package.json
-        if self._update_json_version("nodejs/package.json"):
-            files_updated.append("nodejs/package.json")
 
         # 3. Benchmarks __init__.py
         if self._update_file_version("benchmarks/frameworks/__init__.py", r'__version__ = "[^"]+"', f'__version__ = "{self.master_version}"'):

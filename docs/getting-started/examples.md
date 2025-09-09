@@ -338,6 +338,6 @@ workflow_validation_example()
 Once you're comfortable with these examples:
 
 - Explore [Core Concepts](../user-guide/concepts.md)
-- Learn about [Advanced Features](../advanced/dynamic-graphs.md)
+- Learn about [Dynamic Graph Generation](../user-guide/dynamics-graph.md)
 - Check out [Complete Examples](../examples/content-generation.md)
 - Read the [API Reference](../api-reference/python-api.md) 

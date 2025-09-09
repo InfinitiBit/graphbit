@@ -232,7 +232,7 @@ This example shows how GraphBit can handle complex data processing tasks with re
 ### Batch Data Processing
 
 ```python
-from graphbit import init, LlmConfig, Executor, Workflow, Node
+from graphbit import LlmConfig, Executor, Workflow, Node
 import os
 import asyncio
 

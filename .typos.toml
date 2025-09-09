@@ -37,8 +37,6 @@ extend-exclude = [
   "*.lock",
   "target/",
   ".git/",
-  "*.min.js",
-  "*.min.css",
   "Cargo.lock",
   "benchmarks/"
 ]

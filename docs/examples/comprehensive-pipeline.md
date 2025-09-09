@@ -14,7 +14,7 @@ We'll build an intelligent document analysis and recommendation system that:
 ## Complete System Implementation
 
 ```python
-from graphbit import init, LlmConfig, EmbeddingConfig, EmbeddingClient, Executor, Workflow, Node, get_system_info, health_check
+from graphbit import LlmConfig, EmbeddingConfig, EmbeddingClient, Executor, Workflow, Node, get_system_info, health_check
 import os
 import json
 import asyncio

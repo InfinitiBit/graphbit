@@ -2,7 +2,7 @@
 
 Welcome to the GraphBit project! We're excited that you're interested in contributing to our high-performance AI agent workflow framework.
 
-> **Note**: This document provides a quick overview for documentation purposes. For complete development setup and detailed contributing guidelines, please see the main [CONTRIBUTING.md](../../CONTRIBUTING.md) file in the project root.
+> **Note**: This document provides a comprehensive guide for contributing to GraphBit documentation and development.
 
 ## Quick Start for Contributors
 
@@ -54,7 +54,7 @@ graphbit/
 - Fix typos and improve clarity
 
 ### 🧹 Code Contributions
-- Follow coding standards (see main CONTRIBUTING.md)
+- Follow coding standards and best practices
 - Write tests for new features
 - Ensure all quality checks pass
 
@@ -147,7 +147,7 @@ When contributing code:
 
 ## Getting Help
 
-- **Documentation**: Check the [docs](../README.md) first
+- **Documentation**: Check the documentation first
 - **GitHub Issues**: Search existing issues
 - **Discussions**: Ask questions in GitHub discussions
 - **Discord**: Join our community Discord (if available)
@@ -163,13 +163,13 @@ Contributors are recognized in:
 
 Ready to contribute? Here are some good first steps:
 
-1. **Read** the full [CONTRIBUTING.md](../../CONTRIBUTING.md)
-2. **Browse** the [good first issue](https://github.com/InfinitiBit/graphbit/labels/good%20first%20issue) label
-3. **Join** our community discussions
-4. **Start** with documentation improvements or small bug fixes
+1. **Browse** the [good first issue](https://github.com/InfinitiBit/graphbit/labels/good%20first%20issue) label
+2. **Join** our community discussions
+3. **Start** with documentation improvements or small bug fixes
+4. **Review** the development guides in this documentation
 
 Thank you for contributing to GraphBit! 🚀
 
 ---
 
-For complete development setup instructions, coding standards, and detailed guidelines, please refer to the main [CONTRIBUTING.md](../../CONTRIBUTING.md) file. 
+For complete development setup instructions, coding standards, and detailed guidelines, please refer to the development guides in this documentation.

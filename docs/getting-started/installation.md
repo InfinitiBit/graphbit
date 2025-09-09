@@ -51,10 +51,7 @@ Test your installation with this simple script:
 ```python
 import os
 
-from graphbit import init, version, get_system_info, health_check, LlmConfig
-
-# Initialize GraphBit
-init()
+from graphbit import version, get_system_info, health_check, LlmConfig
 
 # Test basic functionality
 print(f"GraphBit version: {version()}")
