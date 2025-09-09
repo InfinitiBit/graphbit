@@ -241,7 +241,7 @@ else ifeq ($(ENV_TYPE),venv)
 endif
 	@echo "Python dependencies installed."
 
-build-python-bindings: ## Build Python bindings using maturin (excludes nodejs)
+build-python-bindings: ## Build Python bindings using maturin
 	@echo "Building Python bindings..."
 	cargo build --package graphbit-core --package graphbit-python
 ifeq ($(ENV_TYPE),poetry)
@@ -274,10 +274,10 @@ endif
 test: test-rust test-python ## Run comprehensive test suites for both Rust and Python
 	@echo "All tests completed successfully!"
 
-test-rust: ## Run Rust tests using cargo llvm-cov with HTML output (excludes nodejs)
+test-rust: ## Run Rust tests using cargo llvm-cov with HTML output
 	@echo "Running Rust tests with coverage..."
 	cargo llvm-cov --package graphbit-core --package graphbit --html --output-dir target/llvm-cov \
-		--ignore-filename-regex '.*/(tests?|benches?|core/src/llm|python/src|nodejs)/.*'
+		--ignore-filename-regex '.*/(tests?|benches?|core/src/llm|python/src)/.*'
 	@echo "Rust tests completed. Coverage report: target/llvm-cov/index.html"
 
 test-python: build-python-bindings ## Run Python tests using pytest with comprehensive coverage
@@ -355,7 +355,7 @@ build: ## Build all components in release mode
 	$(PYTHON_ENV) poetry build
 	@echo "Build completed successfully!"
 
-build-dev: ## Build components in development mode (excludes nodejs)
+build-dev: ## Build components in development mode
 	@echo "Building components in development mode..."
 	cargo build --package graphbit-core --package graphbit-python
 ifeq ($(ENV_TYPE),poetry)

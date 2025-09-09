@@ -99,7 +99,6 @@ exclude = [
   "**/*.pyc",
   "**/*.pyo",
   "**/.pytest_cache/**/*",
-  "**/node_modules/**/*",
   "**/.DS_Store",
   "**/.git/**/*"
 ]

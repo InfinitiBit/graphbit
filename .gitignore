@@ -77,10 +77,6 @@ logs/
 *.log.*
 *.out
 *.err
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-lerna-debug.log*
 
 # Runtime data
 pids/
@@ -164,16 +160,6 @@ benchmark_results.png
 */benchmark_results.*
 
 # Package manager locks (keep poetry.lock commented out as it was)
-node_modules/
-npm-debug.log
-yarn-error.log
-.pnpm-debug.log*
-.yarn/cache
-.yarn/unplugged
-.yarn/build-state.yml
-.yarn/install-state.gz
-
-*.node
 
 # OS generated files
 .DS_Store*

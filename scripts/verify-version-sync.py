@@ -197,13 +197,7 @@ class AdvancedVersionManager:
             r'\[tool\.poetry\][\s\S]*?^version = "([^"]+)"'
         ))
         
-        # 4. Node.js package.json
-        refs.extend(self._find_in_file(
-            "nodejs/package.json",
-            r'"version":\s*"([^"]+)"'
-        ))
-        
-        # 5. Benchmarks __init__.py
+        # 4. Benchmarks __init__.py
         refs.extend(self._find_in_file(
             "benchmarks/frameworks/__init__.py",
             r'__version__ = "([^"]+)"'
@@ -420,12 +414,7 @@ class AdvancedVersionManager:
             files_updated.append("pyproject.toml")
             print(f"   ✅ Updated pyproject.toml")
 
-        # Node.js package.json
-        if self._update_file_version("nodejs/package.json",
-                                   r'"version":\s*"[^"]+"',
-                                   f'"version": "{target_version}"'):
-            files_updated.append("nodejs/package.json")
-            print(f"   ✅ Updated nodejs/package.json")
+
 
         # Benchmarks __init__.py
         if self._update_file_version("benchmarks/frameworks/__init__.py",
@@ -501,9 +490,7 @@ class AdvancedVersionManager:
                                    rf'\1version = "{self.master_version}"'):
             files_updated.append("pyproject.toml")
         
-        # 2. Node.js package.json
-        if self._update_json_version("nodejs/package.json"):
-            files_updated.append("nodejs/package.json")
+
         
         # 3. Benchmarks __init__.py
         if self._update_file_version("benchmarks/frameworks/__init__.py",
