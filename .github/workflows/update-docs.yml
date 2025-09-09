@@ -6,7 +6,7 @@ on:
     paths:
     - docs/**                   
     - .github/workflows/update-docs.yml
-  workflow_dispatch: {}          # allow manual runs if you want
+  workflow_dispatch: {}          # allow manual runs
 
 jobs:
   sync-docs-to-target:
