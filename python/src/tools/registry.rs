@@ -11,7 +11,7 @@ use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 /// Metadata for a registered tool
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ToolMetadata {
+pub(crate) struct ToolMetadata {
     pub name: String,
     pub description: String,
     pub parameters_schema: serde_json::Value,
@@ -23,7 +23,7 @@ pub struct ToolMetadata {
 }
 
 impl ToolMetadata {
-    pub fn new(
+    pub(crate) fn new(
         name: String,
         description: String,
         parameters_schema: serde_json::Value,
@@ -46,7 +46,7 @@ impl ToolMetadata {
         }
     }
 
-    pub fn record_call(&mut self, duration_ms: u64) {
+    pub(crate) fn record_call(&mut self, duration_ms: u64) {
         self.call_count += 1;
         self.total_duration_ms += duration_ms;
         self.last_called_at = Some(
@@ -57,7 +57,7 @@ impl ToolMetadata {
         );
     }
 
-    pub fn average_duration_ms(&self) -> f64 {
+    pub(crate) fn average_duration_ms(&self) -> f64 {
         if self.call_count == 0 {
             0.0
         } else {

@@ -12,7 +12,7 @@ use std::sync::{Arc, Mutex, OnceLock};
 static GLOBAL_REGISTRY: OnceLock<Arc<Mutex<ToolRegistry>>> = OnceLock::new();
 
 /// Get or create the global tool registry
-pub fn get_global_registry() -> Arc<Mutex<ToolRegistry>> {
+pub(crate) fn get_global_registry() -> Arc<Mutex<ToolRegistry>> {
     GLOBAL_REGISTRY
         .get_or_init(|| Arc::new(Mutex::new(ToolRegistry::new())))
         .clone()
@@ -239,7 +239,7 @@ fn map_python_type_to_json_schema(type_str: &str) -> &'static str {
 /// Convenience function to create a tool decorator
 #[pyfunction]
 #[pyo3(signature = (description=None, name=None, return_type=None))]
-pub fn tool(
+pub(crate) fn tool(
     description: Option<String>,
     name: Option<String>,
     return_type: Option<String>,
@@ -261,14 +261,14 @@ pub fn tool(
 
 /// Get the global tool registry
 #[pyfunction]
-pub fn get_tool_registry() -> PyResult<ToolRegistry> {
+pub(crate) fn get_tool_registry() -> PyResult<ToolRegistry> {
     // Create a proxy registry that delegates to the global registry
     Ok(ToolRegistry::new_global_proxy())
 }
 
 /// Clear all registered tools
 #[pyfunction]
-pub fn clear_tools() -> PyResult<()> {
+pub(crate) fn clear_tools() -> PyResult<()> {
     let registry = get_global_registry();
     let _registry_guard = registry.lock().map_err(|e| {
         PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(

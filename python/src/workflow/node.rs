@@ -24,13 +24,14 @@ pub struct Node {
 #[pymethods]
 impl Node {
     #[staticmethod]
-    #[pyo3(signature = (name, prompt, agent_id=None, output_name=None, tools=None))]
+    #[pyo3(signature = (name, prompt, agent_id=None, output_name=None, tools=None, system_prompt=None))]
     fn agent(
         name: String,
         prompt: String,
         agent_id: Option<String>,
         output_name: Option<String>,
         tools: Option<&Bound<'_, PyList>>,
+        system_prompt: Option<String>,
     ) -> PyResult<Self> {
         // Validate required parameters
         if name.trim().is_empty() {
@@ -69,6 +70,14 @@ impl Node {
             node.config.insert(
                 "output_name".to_string(),
                 serde_json::Value::String(output_name),
+            );
+        }
+
+        // Store system prompt in metadata if provided
+        if let Some(system_prompt) = system_prompt {
+            node.config.insert(
+                "system_prompt".to_string(),
+                serde_json::Value::String(system_prompt),
             );
         }
 
@@ -536,12 +545,12 @@ fn extract_parameters_section_numpy(docstring: &str) -> Option<String> {
 
         if in_params_section {
             // Check if we've reached another section
-            if (trimmed == "Returns"
+            if trimmed == "Returns"
                 || trimmed == "Returns:"
                 || trimmed == "Raises"
                 || trimmed == "Raises:"
                 || trimmed == "Examples"
-                || trimmed == "Examples:")
+                || trimmed == "Examples:"
             {
                 break;
             }
@@ -629,7 +638,11 @@ fn json_to_python_value(value: &serde_json::Value, py: Python<'_>) -> PyResult<P
 
 /// Execute a tool from the registry by name with given arguments
 #[pyfunction]
-pub fn execute_tool(py: Python<'_>, tool_name: String, args: Vec<PyObject>) -> PyResult<PyObject> {
+pub(crate) fn execute_tool(
+    py: Python<'_>,
+    tool_name: String,
+    args: Vec<PyObject>,
+) -> PyResult<PyObject> {
     TOOL_REGISTRY.with(|registry| {
         let registry = registry.borrow();
         if let Some(tool_func) = registry.get(&tool_name) {
@@ -647,7 +660,7 @@ pub fn execute_tool(py: Python<'_>, tool_name: String, args: Vec<PyObject>) -> P
 
 /// Get all registered tool names
 #[pyfunction]
-pub fn get_registered_tools(_py: Python<'_>) -> PyResult<Vec<String>> {
+pub(crate) fn get_registered_tools(_py: Python<'_>) -> PyResult<Vec<String>> {
     TOOL_REGISTRY.with(|registry| {
         let registry = registry.borrow();
         Ok(registry.keys().cloned().collect())
@@ -656,7 +669,7 @@ pub fn get_registered_tools(_py: Python<'_>) -> PyResult<Vec<String>> {
 
 /// Bridge function to sync tools from global registry to thread-local registry
 #[pyfunction]
-pub fn sync_global_tools_to_workflow(py: Python<'_>) -> PyResult<()> {
+pub(crate) fn sync_global_tools_to_workflow(py: Python<'_>) -> PyResult<()> {
     use crate::tools::decorator::get_global_registry;
 
     // Get tools from the global registry
@@ -770,7 +783,7 @@ fn execute_tool_from_global_registry(
 
 /// Execute tool calls from workflow
 #[pyfunction]
-pub fn execute_workflow_tool_calls(
+pub(crate) fn execute_workflow_tool_calls(
     py: Python<'_>,
     tool_calls_json: String,
     node_tools: Vec<String>,
@@ -874,7 +887,7 @@ pub fn execute_workflow_tool_calls(
 
 /// Tool execution bridge for workflow integration
 #[pyfunction]
-pub fn execute_production_tool_calls(
+pub(crate) fn execute_production_tool_calls(
     py: Python<'_>,
     tool_calls_json: String,
     node_tools: Vec<String>,

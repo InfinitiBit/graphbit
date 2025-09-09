@@ -330,13 +330,38 @@ impl WorkflowExecutor {
 
                 // If agent doesn't exist, create and register a default agent
                 if !agent_exists {
+                    // Find the node configuration for this agent to extract system_prompt
+                    let mut system_prompt = String::new();
+                    for node in workflow.graph.get_nodes().values() {
+                        if let NodeType::Agent {
+                            agent_id: node_agent_id,
+                            ..
+                        } = &node.node_type
+                        {
+                            if node_agent_id == &agent_id {
+                                // Extract system_prompt from node config if available
+                                if let Some(prompt_value) = node.config.get("system_prompt") {
+                                    if let Some(prompt_str) = prompt_value.as_str() {
+                                        system_prompt = prompt_str.to_string();
+                                    }
+                                }
+                                break;
+                            }
+                        }
+                    }
+
                     // Create default agent configuration for this workflow
-                    let default_config = crate::agents::AgentConfig::new(
+                    let mut default_config = crate::agents::AgentConfig::new(
                         format!("Agent_{}", agent_id_str),
                         "Auto-generated agent for workflow execution",
                         self.default_llm_config.clone().unwrap_or_default(),
                     )
                     .with_id(agent_id.clone());
+
+                    // Set system prompt if found in node configuration
+                    if !system_prompt.is_empty() {
+                        default_config = default_config.with_system_prompt(system_prompt);
+                    }
 
                     // Try to create agent - if it fails due to config issues, fail the workflow
                     match crate::agents::Agent::new(default_config).await {

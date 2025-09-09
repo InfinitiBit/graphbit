@@ -91,12 +91,19 @@ workflow = Workflow("Analysis Pipeline")
 smart_agent = Node.agent(
     name="Smart Agent",
     prompt="What's the weather in Paris and calculate 15 + 27?",
+    system_prompt="You are an assistant skilled in weather lookup and math calculations. Use tools to answer queries accurately.",
     tools=[get_weather, calculate]
 )
 
 processor = Node.agent(
     name = "Data Processor",
-    prompt = "Process the results obtained from Smart Agent."
+    prompt = "Process the results obtained from Smart Agent.",
+    system_prompt="""You process and organize results from other agents.
+
+    - Summarize and clarify key points
+    - Structure your output for easy reading
+    - Focus on actionable insights
+    """
 )
 
 # Connect and execute

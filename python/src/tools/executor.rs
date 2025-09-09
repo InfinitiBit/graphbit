@@ -670,21 +670,42 @@ impl ToolExecutor {
     fn python_to_json_value(&self, value: &Bound<'_, PyAny>) -> PyResult<Value> {
         if value.is_none() {
             Ok(Value::Null)
-        } else if let Ok(s) = value.extract::<String>() {
-            Ok(Value::String(s))
+        } else if let Ok(b) = value.extract::<bool>() {
+            // Check bool before other numeric types to avoid bool->int conversion
+            Ok(Value::Bool(b))
         } else if let Ok(i) = value.extract::<i64>() {
             Ok(Value::Number(serde_json::Number::from(i)))
         } else if let Ok(f) = value.extract::<f64>() {
             if let Some(num) = serde_json::Number::from_f64(f) {
                 Ok(Value::Number(num))
             } else {
-                Ok(Value::Null)
+                Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                    "Invalid floating point number",
+                ))
             }
-        } else if let Ok(b) = value.extract::<bool>() {
-            Ok(Value::Bool(b))
+        } else if let Ok(s) = value.extract::<String>() {
+            Ok(Value::String(s))
+        } else if let Ok(list) = value.downcast::<pyo3::types::PyList>() {
+            // Handle Python lists -> JSON arrays
+            let mut vec = Vec::new();
+            for item in list.iter() {
+                vec.push(self.python_to_json_value(&item)?);
+            }
+            Ok(Value::Array(vec))
+        } else if let Ok(dict) = value.downcast::<pyo3::types::PyDict>() {
+            // Handle Python dictionaries -> JSON objects
+            let mut map = serde_json::Map::new();
+            for (key, val) in dict.iter() {
+                let key_str: String = key.extract()?;
+                let json_value = self.python_to_json_value(&val)?;
+                map.insert(key_str, json_value);
+            }
+            Ok(Value::Object(map))
         } else {
-            // Fallback to string representation
-            Ok(Value::String(value.to_string()))
+            // Return error instead of fallback to string representation
+            Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
+                "Unsupported type for JSON conversion",
+            ))
         }
     }
 }

@@ -633,7 +633,7 @@ impl Executor {
                                 );
 
                                 // Get LLM provider from node configuration and make final call
-                                if let graphbit_core::graph::NodeType::Agent { agent_id, .. } =
+                                if let graphbit_core::graph::NodeType::Agent { .. } =
                                     &node.node_type
                                 {
                                     // Create a simple LLM request for the final response

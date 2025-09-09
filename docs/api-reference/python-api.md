@@ -1051,16 +1051,19 @@ Factory class for creating different types of workflow nodes.
 
 #### Static Methods
 
-##### `Node.agent(name, prompt, agent_id=None)`
+##### `Node.agent(name, prompt, agent_id=None, output_name=None, tools=None, system_prompt=None)`
 Create an AI agent node.
 
 ```python
 from graphbit import Node
 
 agent = Node.agent(
-    name="Content Analyzer",
-    prompt=f"Analyze the sentiment of: {input}",
-    agent_id="analyzer"  # Optional, auto-generated if not provided
+    name="Weather Analyzer",
+    prompt=f"Analyze the weather of: {input}",
+    agent_id="analyzer",  # Optional, auto-generated if not provided
+    output_name="weather_report",  # Optional, custom output name
+    tools=[get_weather],  # Optional, list of tools available to the agent
+    system_prompt="You are a helpful assistant."  # Optional, system prompt that defines agent behavior and constraints
 )
 ```
 
@@ -1068,38 +1071,9 @@ agent = Node.agent(
 - `name` (str): Human-readable node name
 - `prompt` (str): LLM prompt template with variables
 - `agent_id` (str, optional): Unique agent identifier. Auto-generated if not provided
-
-**Returns**: `Node` instance
-
-##### `Node.transform(name, transformation)`
-Create a data transformation node.
-
-```python
-transformer = Node.transform(
-    name="Uppercase",
-    transformation="uppercase"
-)
-```
-
-**Parameters**:
-- `name` (str): Node name
-- `transformation` (str): Transformation type
-
-**Returns**: `Node` instance
-
-##### `Node.condition(name, expression)`
-Create a condition node for branching logic.
-
-```python
-condition = Node.condition(
-    name="Quality Check",
-    expression="quality_score > 0.8"
-)
-```
-
-**Parameters**:
-- `name` (str): Node name
-- `expression` (str): Boolean expression to evaluate
+- `output_name` (str, optional): Custom name for the node's output
+- `tools` (List, optional): List of tools available to the agent
+- `system_prompt` (str, optional): System prompt that defines agent behavior and constraints
 
 **Returns**: `Node` instance
 
