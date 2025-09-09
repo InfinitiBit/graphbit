@@ -97,7 +97,6 @@ jemallocator = "0.5"
 # Utilities
 lazy_static = "1.4"
 lopdf = "0.32"
-
 num_cpus = "1.16"
 # Graph and algorithms
 petgraph = "0.6"
