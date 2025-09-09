@@ -2,11 +2,11 @@ name: Sync docs/ to InfinitiBit/graphbit-docs
 
 on:
   push:
-    branches: [ main ]          # change if your source default branch is different
+    branches: [ main ]          
     paths:
-      - 'docs/**'               # only run when docs/ changes
+      - 'docs/**'               
       - '.github/workflows/sync-docs-to-target.yml'
-  workflow_dispatch: {}          # allow manual runs if you want
+  workflow_dispatch: {}          
 
 jobs:
   sync:
@@ -15,10 +15,10 @@ jobs:
       TARGET_REPO: InfinitiBit/graphbit-docs
       TARGET_BRANCH: main
     permissions:
-      contents: read            # Required to checkout source repository
+      contents: read            
     steps:
       - name: Checkout source
-        uses: actions/checkout@v4.3.0  # Pin to specific version for reproducibility
+        uses: actions/checkout@v4.3.0
         with:
           fetch-depth: 0
 
@@ -29,7 +29,6 @@ jobs:
         run: |
           git config --global user.name  "sync-bot"
           git config --global user.email "sync-bot@users.noreply.github.com"
-          # ensure our PAT is used (not the checkout token header)
           git config --global --unset-all http.https://github.com/.extraheader || true
 
       - name: Clone target repo
@@ -54,6 +53,29 @@ jobs:
           rsync -av --delete --exclude ".git" docs/ target/docs/
           echo "Sync completed successfully"
 
+      - name: List changed files in docs/
+        id: file_changes
+        working-directory: target
+        run: |
+          git status --porcelain | grep '^.[AMDR]' | awk '{print $2}' | grep '^docs/' > ../docs_changes.txt || true
+          echo "### 📂 Files changed in docs/" > ../docs_changes_summary.md
+          echo "" >> ../docs_changes_summary.md
+          if [ -s ../docs_changes.txt ]; then
+            while read file; do
+              status=$(git status --porcelain "$file" | awk '{print $1}')
+              case "$status" in
+                A*) label="**Added**" ;;
+                M*) label="**Modified**" ;;
+                D*) label="**Deleted**" ;;
+                R*) label="**Renamed**" ;;
+                *) label="**Other**" ;;
+              esac
+              echo "- $label: \`$file\`" >> ../docs_changes_summary.md
+            done < ../docs_changes.txt
+          else
+            echo "_No files changed in docs/._" >> ../docs_changes_summary.md
+          fi
+
       - name: Commit & push if changed
         working-directory: target
         env:
@@ -73,3 +95,23 @@ jobs:
           else
             echo "No changes to commit."
           fi
+
+      - name: Write combined summary to Actions UI
+        run: |
+          cat docs_changes_summary.md > summary.md
+          echo "" >> summary.md
+          echo "## 📄 Documentation Sync Summary" >> summary.md
+          echo "" >> summary.md
+          echo "**Source repository:** [$GITHUB_REPOSITORY](https://github.com/$GITHUB_REPOSITORY)" >> summary.md
+          echo "**Source commit:** [${GITHUB_SHA::7}](https://github.com/$GITHUB_REPOSITORY/commit/$GITHUB_SHA)" >> summary.md
+          echo "**Target repository:** [${{ env.TARGET_REPO }}](https://github.com/${{ env.TARGET_REPO }})" >> summary.md
+          echo "**Target branch:** \`${{ env.TARGET_BRANCH }}\`" >> summary.md
+          echo "" >> summary.md
+          echo "### 📝 Actions Performed" >> summary.md
+          echo "- Synced all files from \`docs/\` to target repo" >> summary.md
+          echo "- Deleted files in target that were removed from source" >> summary.md
+          echo "- Committed and pushed if changes were detected" >> summary.md
+          echo "- Triggered by: **${{ github.actor }}**" >> summary.md
+          echo "" >> summary.md
+          echo "_Check workflow logs for details and the commit in the target repo for the updated docs._" >> summary.md
+          cat summary.md >> $GITHUB_STEP_SUMMARY
