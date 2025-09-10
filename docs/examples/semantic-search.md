@@ -532,54 +532,6 @@ executor, workflow = create_semantic_analysis_workflow()
 result = executor.execute(workflow)
 ```
 
-### HuggingFace Integration
-
-```python
-from graphbit import init, EmbeddingConfig, EmbeddingClient
-import os
-
-def create_huggingface_search_system():
-    """Create search system using HuggingFace embeddings."""
-    
-    init()
-    
-    # Configure HuggingFace embeddings
-    embedding_config = EmbeddingConfig.huggingface(
-        api_key=os.getenv("HUGGINGFACE_API_KEY"),
-        model="intfloat/multilingual-e5-large"
-    )
-    
-    embedding_client = EmbeddingClient(embedding_config)
-    
-    # Test embedding generation
-    test_texts = [
-        "Machine learning algorithms",
-        "Natural language processing",
-        "Computer vision applications"
-    ]
-    
-    try:
-        embeddings = embedding_client.embed_many(test_texts)
-        print(f"Generated {len(embeddings)} embeddings with HuggingFace")
-        
-        # Calculate similarities
-        for i in range(len(embeddings)):
-            for j in range(i + 1, len(embeddings)):
-                similarity = EmbeddingClient.similarity(
-                    embeddings[i], 
-                    embeddings[j]
-                )
-                print(f"'{test_texts[i]}' <-> '{test_texts[j]}': {similarity:.3f}")
-    
-    except Exception as e:
-        print(f"HuggingFace embedding failed: {e}")
-    
-    return embedding_client
-
-# Usage (requires HUGGINGFACE_API_KEY)
-# client = create_huggingface_search_system()
-```
-
 ## System Monitoring and Health
 
 ```python
@@ -649,7 +601,7 @@ system_healthy = monitor_semantic_search_system()
 - **Multiple Providers**: Flexibility to use different LLM providers
 
 ### Flexibility
-- **Multi-Provider Support**: OpenAI, Anthropic, Ollama, HuggingFace
+- **Multi-Provider Support**: OpenAI, Anthropic, Ollama
 - **Workflow Integration**: Combine with GraphBit's workflow system
 - **Custom Analysis**: Tailored semantic analysis pipelines
 

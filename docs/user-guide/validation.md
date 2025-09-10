@@ -353,23 +353,6 @@ def validate_embedding_configuration():
             print("✅ OpenAI embedding configuration valid")
         else:
             validation_result["warnings"].append("OpenAI embedding returned empty result")
-        
-        # Test HuggingFace embeddings
-        try:
-            hf_config = EmbeddingConfig.huggingface(
-                model="intfloat/multilingual-e5-large"
-            )
-            
-            hf_client = EmbeddingClient(hf_config)
-            hf_embedding = hf_client.embed("Test embedding")
-            
-            if hf_embedding and len(hf_embedding) > 0:
-                print("✅ HuggingFace embedding configuration valid")
-            else:
-                validation_result["warnings"].append("HuggingFace embedding returned empty result")
-                
-        except Exception as e:
-            validation_result["warnings"].append(f"HuggingFace embeddings not available: {e}")
     
     except Exception as e:
         validation_result["is_valid"] = False

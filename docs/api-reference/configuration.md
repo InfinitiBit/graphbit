@@ -285,18 +285,6 @@ embed_config = EmbeddingConfig.openai(
 embed_config = EmbeddingConfig.openai("your-api-key")
 ```
 
-### HuggingFace Embeddings
-
-```python
-from graphbit import EmbeddingConfig
-
-# HuggingFace embeddings configuration
-embed_config = EmbeddingConfig.huggingface(
-    api_key="your-hf-token",
-    model="sentence-transformers/all-MiniLM-L6-v2"
-)
-```
-
 ### Embeddings Client
 
 ```python
@@ -326,9 +314,6 @@ export OPENAI_API_KEY="your-openai-api-key"
 
 # Anthropic
 export ANTHROPIC_API_KEY="your-anthropic-api-key"
-
-# HuggingFace
-export HUGGINGFACE_API_KEY="your-huggingface-token"
 ```
 
 ### GraphBit-Specific Environment Variables

@@ -15,14 +15,12 @@ This directory contains comprehensive integration tests for the GraphBit Python 
 
 ### 2. Embedding Integration Tests (`tests_embeddings.py`)
 - **OpenAI Embeddings**: Configuration, single/multiple text embedding, dimensions, consistency
-- **HuggingFace Embeddings**: Configuration, text embedding, API integration
 - **Utility Functions**: Cosine similarity, embedding requests/responses
 - **Cross-Provider Comparison**: Semantic similarity across different providers
 
 ### 2. LLM Integration Tests (`tests_llm.py`)
 - **OpenAI Models**: GPT-4, GPT-3.5 configuration and workflow execution
 - **Anthropic Models**: Claude model configuration and integration
-- **HuggingFace Models**: Open-source model integration
 - **Configuration**: Retry policies, circuit breakers, pool configurations
 - **Agent Capabilities**: Predefined and custom capabilities
 - **Cross-Provider**: Multi-provider workflow validation
@@ -63,7 +61,7 @@ This directory contains comprehensive integration tests for the GraphBit Python 
 - **Health Checks**: Component health monitoring, system diagnostics
 
 ### 8. Validation Tests (`tests_validation.py`)
-- **API Key Validation**: Comprehensive testing across all providers (OpenAI, Anthropic, HuggingFace)
+- **API Key Validation**: Comprehensive testing across all providers (OpenAI, Anthropic)
 - **Workflow Structure Validation**: Circular dependency detection, invalid connections, orphaned nodes
 - **Parameter Validation**: LLM parameters, executor settings, batch operations
 - **Node Validation**: Agent, condition, and transform node parameter validation
@@ -111,8 +109,7 @@ Set environment variables for full test coverage:
 
 ```bash
 export OPENAI_API_KEY="your-openai-api-key"
-export ANTHROPIC_API_KEY="your-anthropic-api-key"  
-export HUGGINGFACE_API_KEY="your-huggingface-api-key"
+export ANTHROPIC_API_KEY="your-anthropic-api-key"
 ```
 
 **Note**: Tests will skip API-dependent functionality if keys are not provided.
@@ -249,7 +246,6 @@ GraphBit Python Integration Test Suite
 API Key Status:
   OPENAI_API_KEY: ✓ Available
   ANTHROPIC_API_KEY: ✗ Not set
-  HUGGINGFACE_API_KEY: ✗ Not set
 
 ============================================================
 INTEGRATION TEST SUMMARY

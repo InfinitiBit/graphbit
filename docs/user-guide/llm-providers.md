@@ -9,7 +9,6 @@ GraphBit supports these LLM providers:
 - **Anthropic** - Claude models including Claude-4-Sonnet
 - **Perplexity** - Real-time search-enabled models including Sonar models
 - **DeepSeek** - High-performance models including DeepSeek-Chat, DeepSeek-Coder, and DeepSeek-Reasoner
-- **HuggingFace** - Access to thousands of models via HuggingFace Inference API
 - **Ollama** - Local model execution with various open-source models
 
 ## Configuration
@@ -169,63 +168,6 @@ coding_config = LlmConfig.deepseek(
 reasoning_config = LlmConfig.deepseek(
     api_key=os.getenv("DEEPSEEK_API_KEY"),
     model="deepseek-reasoner"  # For complex reasoning tasks
-)
-```
-
-### HuggingFace Configuration
-
-Configure HuggingFace provider to access thousands of models via the Inference API:
-
-```python
-# Basic HuggingFace configuration
-config = LlmConfig.huggingface(
-    api_key=os.getenv("HUGGINGFACE_API_KEY"),
-    model="microsoft/DialoGPT-medium"  # Optional - defaults to microsoft/DialoGPT-medium
-)
-
-print(f"Provider: {config.provider()}")  # "huggingface"
-print(f"Model: {config.model()}")        # "microsoft/DialoGPT-medium"
-
-# Custom endpoint configuration
-custom_config = LlmConfig.huggingface(
-    api_key=os.getenv("HUGGINGFACE_API_KEY"),
-    model="mistralai/Mistral-7B-Instruct-v0.1",
-    base_url="https://my-custom-endpoint.huggingface.co"  # Optional custom endpoint
-)
-```
-
-#### Popular HuggingFace Models
-
-| Model | Best For | Size | Performance |
-|-------|----------|------|-------------|
-| `microsoft/DialoGPT-medium` | Conversational AI, chat | 345M | Fast, good dialogue |
-| `mistralai/Mistral-7B-Instruct-v0.1` | General instruction following | 7B | High quality, versatile |
-| `microsoft/CodeBERT-base` | Code understanding | 125M | Specialized for code |
-| `facebook/blenderbot-400M-distill` | Conversational AI | 400M | Balanced dialogue |
-| `huggingface/CodeBERTa-small-v1` | Code generation | 84M | Fast code tasks |
-| `microsoft/DialoGPT-large` | Advanced dialogue | 762M | Higher quality chat |
-
-```python
-# Model selection for different use cases
-dialogue_config = LlmConfig.huggingface(
-    api_key=os.getenv("HUGGINGFACE_API_KEY"),
-    model="microsoft/DialoGPT-large"  # For high-quality dialogue
-)
-
-instruction_config = LlmConfig.huggingface(
-    api_key=os.getenv("HUGGINGFACE_API_KEY"),
-    model="mistralai/Mistral-7B-Instruct-v0.1"  # For instruction following
-)
-
-code_config = LlmConfig.huggingface(
-    api_key=os.getenv("HUGGINGFACE_API_KEY"),
-    model="microsoft/CodeBERT-base"  # For code-related tasks
-)
-
-# Fast and lightweight option
-lightweight_config = LlmConfig.huggingface(
-    api_key=os.getenv("HUGGINGFACE_API_KEY"),
-    model="microsoft/DialoGPT-medium"  # Balanced performance
 )
 ```
 

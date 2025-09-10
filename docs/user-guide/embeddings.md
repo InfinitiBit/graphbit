@@ -5,7 +5,7 @@ GraphBit provides vector embedding capabilities for semantic search, similarity 
 ## Overview
 
 GraphBit's embedding system supports:
-- **Multiple Providers** - OpenAI and HuggingFace embedding models
+- **Provider** - OpenAI embedding models
 - **Unified Interface** - Consistent API across all providers
 - **Batch Processing** - Efficient processing of multiple texts
 - **Similarity Calculations** - Built-in cosine similarity functions
@@ -28,21 +28,6 @@ embedding_config = EmbeddingConfig.openai(
 )
 
 print(f"Provider: OpenAI")
-print(f"Model: {embedding_config.model}")
-```
-
-### HuggingFace Configuration
-
-Configure HuggingFace embedding provider:
-
-```python
-# HuggingFace configuration
-embedding_config = EmbeddingConfig.huggingface(
-    api_key=os.getenv("HUGGINGFACE_API_KEY"),
-    model="sentence-transformers/all-MiniLM-L6-v2"
-)
-
-print(f"Provider: HuggingFace")
 print(f"Model: {embedding_config.model}")
 ```
 
