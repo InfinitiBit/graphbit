@@ -46,12 +46,22 @@ Designed to run **multi-agent workflows in parallel**, Graphbit persists memory 
 ##  Quick Start
 
 ### Installation
+Install Rust
+- **Linux/macOS**: 
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh && source $HOME/.cargo/env`
+```  
+- **Windows**: Download & run [rustup-init.exe](https://win.rustup.rs/x86_64)  
+
 Set up poetry environment, then install dependencies
 ```bash
 poetry install --no-root
 ```
 Build Python bindings
 ```bash
+git clone https://github.com/InfinitiBit/graphbit.git
+cd graphbit/
+cargo build --release
 cd python/
 cargo clean
 maturin develop
