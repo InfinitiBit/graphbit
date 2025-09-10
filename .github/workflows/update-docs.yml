@@ -2,9 +2,9 @@ name: Sync docs/ to InfinitiBit/graphbit-docs
 
 on:
   push:
-    branches: [ main ]            
+    branches: [main]
     paths:
-    - docs/**                   
+    - docs/**
     - .github/workflows/update-docs.yml
   workflow_dispatch: {}          # allow manual runs
 
