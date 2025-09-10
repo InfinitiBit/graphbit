@@ -272,12 +272,6 @@ config = graphbit.EmbeddingConfig.openai(
     api_key="your-key",
     model="text-embedding-3-small"  # default
 )
-
-# HuggingFace embeddings
-config = graphbit.EmbeddingConfig.huggingface(
-    api_key="your-key",
-    model="sentence-transformers/all-MiniLM-L6-v2"
-)
 ```
 
 ### Client Usage

@@ -28,6 +28,7 @@ agent = Node.agent(
 - `name` (str): Human-readable node name
 - `prompt` (str): LLM prompt template with variable placeholders
 - `agent_id` (str, optional): Unique identifier for the agent. Auto-generated if not provided
+- `llm_config` (obj, optional): Custom LLM configuration for the node
 - `output_name` (str, optional): Custom name for the node's output
 - `tools` (List, optional): List of tools available to the agent
 - `system_prompt` (str, optional): System prompt that defines agent behavior and constraints
@@ -76,6 +77,31 @@ json_agent = Node.agent(
         "confidence": 0.0-1.0,
         "reasoning": "brief explanation"
     }"""
+)
+```
+
+### Agent Node with llm_config
+
+```python
+from graphbit import LlmConfig, Node
+
+# Configure LLM providers
+openai_config = LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4o-mini")
+anthropic_config = LlmConfig.anthropic(os.getenv("ANTHROPIC_API_KEY"), "claude-sonnet-4-20250514")
+
+# Agent with system prompt for behavior control
+analyzer = Node.agent(
+    name="Code Reviewer",
+    prompt=f"Review this code for issues: {code}",
+    agent_id="code_reviewer",
+    llm_config=anthropic_config  # Use Anthropic
+)
+
+# Agent with structured output format
+json_agent = Node.agent(
+    name="Sentiment Analyzer",
+    prompt=f"Analyze sentiment: {text}",
+    llm_config=openai_config  # Use Openai
 )
 ```
 

@@ -2,18 +2,20 @@ name: Sync docs/ to InfinitiBit/graphbit-docs
 
 on:
   push:
-    branches: [main]            # change if your source default branch is different
+    branches: [ main ]            
     paths:
-    - docs/**                   # only run when docs/ changes
-    - .github/workflows/sync-docs-to-target.yml
-  workflow_dispatch: {}          # allow manual runs if you want
+    - docs/**                   
+    - .github/workflows/update-docs.yml
+  workflow_dispatch: {}          # allow manual runs
 
 jobs:
-  sync:
-    runs-on: ubuntu-latest
+  sync-docs-to-target:
+    name: Sync docs/ to InfinitiBit/graphbit-docs
+    runs-on: ubuntu-22.04   # Pin to specific version for reproducibility
     env:
       TARGET_REPO: InfinitiBit/graphbit-docs
       TARGET_BRANCH: main
+      GH_PAT: ${{ secrets.TARGET_REPO_TOKEN }}
     permissions:
       contents: read            # Required to checkout source repository
     steps:
@@ -22,19 +24,13 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Ensure rsync is available
-      run: sudo apt-get update && sudo apt-get install -y rsync
-
     - name: Configure git
       run: |
         git config --global user.name  "sync-bot"
         git config --global user.email "sync-bot@users.noreply.github.com"
-        # ensure our PAT is used (not the checkout token header)
         git config --global --unset-all http.https://github.com/.extraheader || true
 
     - name: Clone target repo
-      env:
-        GH_PAT: ${{ secrets.TARGET_REPO_TOKEN }}
       run: |
         if [ -z "$GH_PAT" ]; then
           echo "Error: TARGET_REPO_TOKEN secret is not configured"
@@ -56,8 +52,6 @@ jobs:
 
     - name: Commit & push if changed
       working-directory: target
-      env:
-        GH_PAT: ${{ secrets.TARGET_REPO_TOKEN }}
       run: |
         if [ -z "$GH_PAT" ]; then
           echo "Error: TARGET_REPO_TOKEN secret is not configured"

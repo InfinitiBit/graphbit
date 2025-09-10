@@ -276,12 +276,6 @@ embedding_config = EmbeddingConfig.openai(
     api_key="your-openai-key",
     model="text-embedding-3-small"  # Optional
 )
-
-# HuggingFace embeddings  
-hf_embedding_config = EmbeddingConfig.huggingface(
-    api_key="your-hf-key",
-    model="sentence-transformers/all-MiniLM-L6-v2"
-)
 ```
 
 ### Using Embeddings

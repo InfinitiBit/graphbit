@@ -429,7 +429,6 @@
 ## [0.2.0-alpha] – 2025-06-28
 
 - Ollama Python support added
-- Hugging Face Python binding added
 - LangGraph integrated into benchmark framework
 - CrewAI benchmark scenarios optimized for performance and reliability
 - Performance optimizations

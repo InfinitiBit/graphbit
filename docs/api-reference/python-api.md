@@ -173,26 +173,6 @@ config = LlmConfig.deepseek("your-deepseek-api-key")  # Uses default model "deep
 
 **Returns**: `LlmConfig` instance
 
-##### `LlmConfig.huggingface(api_key, model=None, base_url=None)`
-Create HuggingFace provider configuration.
-
-```python
-config = LlmConfig.huggingface("your-huggingface-api-key", "microsoft/DialoGPT-medium")
-
-# With default model
-config = LlmConfig.huggingface("your-huggingface-api-key")  # Uses default model "microsoft/DialoGPT-medium"
-
-# With custom endpoint
-config = LlmConfig.huggingface("your-huggingface-api-key", "mistralai/Mistral-7B-Instruct-v0.1", "https://my-endpoint.huggingface.co")
-```
-
-**Parameters**:
-- `api_key` (str): HuggingFace API key
-- `model` (str, optional): Model name. Default: "microsoft/DialoGPT-medium"
-- `base_url` (str, optional): Custom API endpoint. Default: HuggingFace Inference API
-
-**Returns**: `LlmConfig` instance
-
 ##### `LlmConfig.ollama(model=None)`
 Create Ollama provider configuration.
 
@@ -971,17 +951,6 @@ config = EmbeddingConfig.openai("your-openai-api-key")  # Uses default model "te
 **Parameters**:
 - `api_key` (str): OpenAI API key
 - `model` (str, optional): Model name. Default: "text-embedding-3-small"
-
-##### `EmbeddingConfig.huggingface(api_key, model)`
-Create HuggingFace embeddings configuration.
-
-```python
-config = EmbeddingConfig.huggingface("your-huggingface-api-key", "sentence-transformers/all-MiniLM-L6-v2")
-```
-
-**Parameters**:
-- `api_key` (str): HuggingFace API token
-- `model` (str): Model name from HuggingFace hub
 
 ### `EmbeddingClient`
 

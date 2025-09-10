@@ -39,24 +39,27 @@ Designed to run **multi-agent workflows in parallel**, Graphbit persists memory 
 - **Tool Selection** - LLMs intelligently select tools based on descriptions
 - **Type Safety** - Strong typing throughout the execution pipeline
 - **Reliability** - Circuit breakers, retry policies, and error handling
-- **Multi-LLM Support** - OpenAI, Anthropic, Ollama, HuggingFace
+- **Multi-LLM Support** - OpenAI, Anthropic, Ollama
 - **Resource Management** - Concurrency controls and memory optimization
 - **Observability** - Built-in metrics and execution tracing
 
 ##  Quick Start
 
 ### Installation
+Set up poetry environment, then install dependencies
 ```bash
-pip install graphbit
+poetry install --no-root
+```
+Build Python bindings
+```bash
+cd python/
+cargo clean
+maturin develop
 ```
 
 ### Environment Setup
 First, set up your API keys:
 ```bash
-# Copy the example environment file
-cp .env.example .env
-
-# Or set directly
 export OPENAI_API_KEY=your_openai_api_key_here
 export ANTHROPIC_API_KEY=your_anthropic_api_key_here
 ```
