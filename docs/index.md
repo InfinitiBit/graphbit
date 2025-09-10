@@ -39,6 +39,7 @@ Welcome to the comprehensive documentation for **GraphBit** - a high-performance
 
 ### 🚀 Getting Started
 - [Installation Guide](getting-started/installation.md) - Install GraphBit on your system
+- [Dependency Installation](getting-started/dependency-installation.md) - Install dependencies for different scenarios
 - [Quick Start Tutorial](getting-started/quickstart.md) - Build your first workflow in 5 minutes
 - [Basic Examples](getting-started/examples.md) - Simple examples to get you started
 
