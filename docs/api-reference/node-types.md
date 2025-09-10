@@ -5,8 +5,6 @@ GraphBit workflows are built using different types of nodes, each serving a spec
 ## Node Type Categories
 
 1. **Agent Nodes** - AI-powered processing nodes
-2. **Condition Nodes** - Decision and branching logic
-3. **Transform Nodes** - Data transformation and processing
 
 ## Agent Nodes
 
@@ -197,208 +195,6 @@ research_assistant = Node.agent(
 )
 ```
 
-## Condition Nodes
-
-Condition nodes enable branching logic and decision-making in workflows.
-
-### Basic Condition Node
-
-```python
-from graphbit import Node
-
-condition = Node.condition(
-    name="Quality Gate",
-    expression="quality_score > 0.8"
-)
-```
-
-**Parameters:**
-- `name` (str): Node name
-- `expression` (str): Boolean expression to evaluate
-
-### Condition Expressions
-
-Condition nodes support various comparison operators:
-
-#### Numeric Comparisons
-```python
-# Greater than
-high_score = Node.condition(
-    name="High Score Check", 
-    expression="score > 80"
-)
-
-# Range checks
-valid_range = Node.condition(
-    name="Range Validator", 
-    expression="value >= 10 && value <= 100"
-)
-
-# Multiple conditions
-complex_check = Node.condition(
-    name="Complex Check", 
-    expression="(score > 75 && confidence > 0.8) || priority == 'high'"
-)
-```
-
-#### String Comparisons
-```python
-# Equality
-status_check = Node.condition(
-    name="Status Check", 
-    expression="status == 'approved'"
-)
-
-# Contains check
-content_check = Node.condition(
-    name="Content Check", 
-    expression="content.contains('urgent')"
-)
-```
-
-#### Boolean Logic
-```python
-# AND conditions
-approval_gate = Node.condition(
-    name="Approval Gate", 
-    expression="technical_approved == true && business_approved == true"
-)
-
-# OR conditions  
-priority_check = Node.condition(
-    name="Priority Check", 
-    expression="priority == 'high' || severity == 'critical'"
-)
-```
-
-### Condition Node Examples
-
-#### Quality Assurance
-```python
-qa_gate = Node.condition(
-    name="QA Gate",
-    expression="quality_rating >= 8 && error_count == 0"
-)
-```
-
-#### Content Moderation
-```python
-content_filter = Node.condition(
-    name="Content Filter", 
-    expression="toxicity_score < 0.1 && sentiment != 'very_negative'"
-)
-```
-
-#### Business Rules
-```python
-business_rule = Node.condition(
-    name="Business Rule",
-    expression="budget_remaining > cost && approval_level >= required_level"
-)
-```
-
-#### Threshold Checking
-```python
-performance_threshold = Node.condition(
-    name="Performance Threshold",
-    expression="response_time < 1000 && error_rate < 0.01"
-)
-```
-
-#### Data Validation
-```python
-data_validator = Node.condition(
-    name="Data Validator",
-    expression="data_completeness > 0.95 && data_accuracy > 0.9"
-)
-```
-
-## Transform Nodes
-
-Transform nodes perform data processing and format conversions.
-
-### Basic Transform Node
-
-```python
-from graphbit import Node
-
-transformer = Node.transform(
-    name="Text Transformer",
-    transformation="uppercase"
-)
-```
-
-**Parameters:**
-- `name` (str): Node name
-- `transformation` (str): Transformation type
-
-### Available Transformations
-
-#### Text Transformations
-```python
-# Convert to uppercase
-upper = Node.transform(
-    name="Uppercase Converter", 
-    transformation="uppercase"
-)
-
-# Convert to lowercase  
-lower = Node.transform(
-    name="Lowercase Converter", 
-    transformation="lowercase"
-)
-```
-
-#### Data Extraction
-```python
-# Extract JSON from text
-json_extractor = Node.transform(
-    name="JSON Extractor", 
-    transformation="json_extract"
-)
-```
-
-#### Text Processing
-```python
-# Split text
-text_splitter = Node.transform(
-    name="Text Splitter", 
-    transformation="split"
-)
-
-# Join text
-text_joiner = Node.transform(
-    name="Text Joiner", 
-    transformation="join"
-)
-```
-
-### Transform Node Examples
-
-#### Data Cleaning Pipeline
-```python
-# Clean and format text
-text_cleaner = Node.transform(
-    name="Text Cleaner", 
-    transformation="lowercase"
-)
-
-# Normalize data format
-data_normalizer = Node.transform(
-    name="Data Normalizer",
-    transformation="uppercase"
-)
-```
-
-#### Format Conversion
-```python
-# Convert response to structured format
-formatter = Node.transform(
-    name="Response Formatter",
-    transformation="lowercase"
-)
-```
-
 ## Node Connection Patterns
 
 ### Sequential Connections
@@ -417,24 +213,6 @@ node3_id = workflow.add_node(output_formatter)
 # Connect sequentially
 workflow.connect(node1_id, node2_id)
 workflow.connect(node2_id, node3_id)
-```
-
-### Conditional Connections
-Use condition nodes for branching:
-
-```python
-workflow = Workflow("Conditional Pipeline")
-
-# Add nodes
-analyzer_id = workflow.add_node(analyzer)
-condition_id = workflow.add_node(quality_condition)
-success_path_id = workflow.add_node(success_handler)
-failure_path_id = workflow.add_node(failure_handler)
-
-# Connect with conditions
-workflow.connect(analyzer_id, condition_id)
-workflow.connect(condition_id, success_path_id)  # Connect to success path
-workflow.connect(condition_id, failure_path_id)  # Connect to failure path
 ```
 
 ### Parallel Processing
@@ -463,43 +241,6 @@ workflow.connect(processor3_id, aggregator_id)
 
 ## Advanced Node Patterns
 
-### Validation Chain
-```python
-from graphbit import Node, Workflow
-
-def create_validation_chain():
-    workflow = Workflow("Validation Chain")
-    
-    # Input validator
-    input_validator = Node.condition(
-        name="Input Validator", 
-        expression="input_valid == true"
-    )
-    
-    # Content processor
-    processor = Node.agent(
-        name="Content Processor",
-        prompt=f"Process this validated content: {input}",
-        agent_id="processor"
-    )
-    
-    # Output validator
-    output_validator = Node.condition(
-        name="Output Validator", 
-        expression="output_quality > 0.7"
-    )
-    
-    # Connect validation chain
-    input_id = workflow.add_node(input_validator)
-    proc_id = workflow.add_node(processor)
-    output_id = workflow.add_node(output_validator)
-    
-    workflow.connect(input_id, proc_id)
-    workflow.connect(proc_id, output_id)
-    
-    return workflow
-```
-
 ### Error Handling Pattern
 ```python
 from graphbit import Node, Workflow
@@ -512,12 +253,6 @@ def create_error_handling_workflow():
         name="Main Processor",
         prompt=f"Process: {input}",
         agent_id="main"
-    )
-    
-    # Error detector
-    error_detector = Node.condition(
-        name="Error Detector", 
-        expression="error_occurred == false"
     )
     
     # Error handler
@@ -536,13 +271,11 @@ def create_error_handling_workflow():
     
     # Build error handling flow
     main_id = workflow.add_node(main_processor)
-    detector_id = workflow.add_node(error_detector)
     error_id = workflow.add_node(error_handler)
     success_id = workflow.add_node(success_handler)
     
-    workflow.connect(main_id, detector_id)
-    workflow.connect(detector_id, error_id)   # Error path
-    workflow.connect(detector_id, success_id) # Success path
+    workflow.connect(main_id, error_id)     # Error path
+    workflow.connect(error_id, success_id) # Success path
     
     return workflow
 ```
@@ -561,34 +294,18 @@ def create_analysis_pipeline():
         agent_id="initial_analyzer"
     )
     
-    # Step 2: Quality check
-    quality_check = Node.condition(
-        name="Quality Check",
-        expression="initial_quality > 0.6"
-    )
-    
-    # Step 3: Deep analysis (if quality is good)
+    # Step 2: Deep analysis (if quality is good)
     deep_analyzer = Node.agent(
         name="Deep Analyzer",
         prompt=f"Perform deep analysis of: {analyzed_content}",
         agent_id="deep_analyzer"
     )
     
-    # Step 4: Final formatter
-    formatter = Node.transform(
-        name="Result Formatter",
-        transformation="uppercase"
-    )
-    
     # Connect the pipeline
     initial_id = workflow.add_node(initial_analyzer)
-    quality_id = workflow.add_node(quality_check)
     deep_id = workflow.add_node(deep_analyzer)
-    format_id = workflow.add_node(formatter)
     
-    workflow.connect(initial_id, quality_id)
-    workflow.connect(quality_id, deep_id)
-    workflow.connect(deep_id, format_id)
+    workflow.connect(initial_id, deep_id)
     
     return workflow
 ```
@@ -643,22 +360,14 @@ everything_processor = Node.agent(
 )
 ```
 
-### 3. Appropriate Node Types
-Choose the right node type for each task:
+### 3. Node Types
 
 - **Agent Nodes**: AI/LLM processing tasks
-- **Condition Nodes**: Decision making and branching
-- **Transform Nodes**: Data format conversion
 
 ### 4. Error Handling
 Include appropriate error handling and validation:
 
 ```python
-# Validation before processing
-validator = Node.condition(
-    name="Input Validator", 
-    expression="data_valid == true"
-)
 
 # Error recovery
 error_handler = Node.agent(

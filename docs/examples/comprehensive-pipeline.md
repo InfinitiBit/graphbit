@@ -59,7 +59,7 @@ class IntelligentDocumentPipeline:
         if anthropic_api_key:
             self.llm_configs['anthropic'] = LlmConfig.anthropic(
                 anthropic_api_key, 
-                "claude-3-5-haiku-20241022"
+                "claude-sonnet-4-20250514"
             )
         
         # Configure embeddings

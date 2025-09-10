@@ -14,15 +14,16 @@ When experiencing issues, work through this checklist:
 
 2. **Basic Health Check**
    ```python
-   import graphbit
-   graphbit.init(debug=True)
-   health = graphbit.health_check()
+   from graphbit import init, health_check, get_system_info
+   
+   init(debug=True)
+   health = health_check()
    print(f"System healthy: {health['overall_healthy']}")
    ```
 
 3. **Runtime Verification**
    ```python
-   info = graphbit.get_system_info()
+   info = get_system_info()
    print(f"Runtime initialized: {info['runtime_initialized']}")
    print(f"Worker threads: {info['runtime_worker_threads']}")
    ```
@@ -54,17 +55,17 @@ python -c "import sys; print(sys.path)"
 #### Problem: Initialization Errors
 
 ```python
-# Error during graphbit.init()
-import graphbit
+# Error during init()
+from graphbit import init, get_system_info
 try:
-    graphbit.init(debug=True, log_level="debug")
+    init(debug=True, log_level="debug")
     print("Initialization successful")
 except Exception as e:
     print(f"Initialization failed: {e}")
     
     # Get system info to diagnose
     try:
-        info = graphbit.get_system_info()
+        info = get_system_info()
         print(f"System info: {info}")
     except:
         print("Cannot get system info - core issue")
@@ -80,13 +81,15 @@ except Exception as e:
 #### Problem: Configuration Errors
 
 ```python
-import graphbit
-graphbit.init(debug=True)
+from graphbit import init, LlmConfig, LlmClient
+
+# Ensure debug mode is enabled
+init(debug=True)
 
 try:
     # Test OpenAI configuration
-    config = graphbit.LlmConfig.openai(api_key="test-key")
-    client = graphbit.LlmClient(config, debug=True)
+    config = LlmConfig.openai(api_key="test-key")
+    client = LlmClient(config, debug=True)
     print("Client created successfully")
 except ValueError as e:
     print(f"Configuration error: {e}")
@@ -97,11 +100,11 @@ except Exception as e:
 #### Problem: API Request Failures
 
 ```python
-import graphbit
 import os
+from graphbit import init, LlmConfig, LlmClient
 
 # Ensure debug mode is enabled
-graphbit.init(debug=True, log_level="debug")
+init(debug=True, log_level="debug")
 
 # Check API key
 api_key = os.getenv("OPENAI_API_KEY")
@@ -109,8 +112,8 @@ if not api_key:
     print("ERROR: OPENAI_API_KEY not set")
     exit(1)
 
-config = graphbit.LlmConfig.openai(api_key=api_key)
-client = graphbit.LlmClient(config, debug=True)
+config = LlmConfig.openai(api_key=api_key)
+client = LlmClient(config, debug=True)
 
 try:
     # Test basic completion
@@ -148,14 +151,16 @@ client.reset_stats()
 #### Problem: Executor Configuration
 
 ```python
-import graphbit
-graphbit.init(debug=True)
+from graphbit import init, LlmConfig, Executor
 
-config = graphbit.LlmConfig.openai(api_key=os.getenv("OPENAI_API_KEY"))
+# Ensure debug mode is enabled
+init(debug=True)
+
+config = LlmConfig.openai(api_key=os.getenv("OPENAI_API_KEY"))
 
 try:
     # Test different executor modes
-    executor = graphbit.Executor(config, debug=True)
+    executor = Executor(config, debug=True)
     print(f"Executor mode: {executor.get_execution_mode()}")
     
     # Check executor statistics
@@ -170,8 +175,9 @@ except Exception as e:
 
 ```python
 # Configure shorter timeout for testing
-executor = graphbit.Executor.new_low_latency(
+executor = Executor(
     config, 
+    lightweight_mode=True,
     timeout_seconds=10,  # Very short timeout
     debug=True
 )
@@ -192,11 +198,13 @@ except TimeoutError as e:
 #### Problem: Memory Issues
 
 ```python
-import graphbit
-graphbit.init(debug=True)
+from graphbit import init, health_check
+
+# Ensure debug mode is enabled
+init(debug=True)
 
 # Check memory health
-health = graphbit.health_check()
+health = health_check()
 print(f"Memory healthy: {health['memory_healthy']}")
 print(f"Available memory: {health['available_memory_mb']}MB")
 
@@ -212,13 +220,13 @@ print(f"Memory usage: {process.memory_info().rss / 1024 / 1024:.1f}MB")
 
 ```python
 # Check runtime configuration
-info = graphbit.get_system_info()
+info = get_system_info()
 print(f"Worker threads: {info['runtime_worker_threads']}")
 print(f"Max blocking threads: {info['runtime_max_blocking_threads']}")
 print(f"CPU count: {info['cpu_count']}")
 
 # Configure custom runtime if needed
-graphbit.configure_runtime(
+configure_runtime(
     worker_threads=4,
     max_blocking_threads=16,
     thread_stack_size_mb=2
@@ -303,7 +311,7 @@ curl -H "Authorization: Bearer $OPENAI_API_KEY" \
 curl -H "x-api-key: $ANTHROPIC_API_KEY" \
      -H "anthropic-version: 2023-06-01" \
      https://api.anthropic.com/v1/messages \
-     -d '{"model":"claude-3-haiku-20240307","max_tokens":10,"messages":[{"role":"user","content":"test"}]}'
+     -d '{"model":"claude-sonnet-4-20250514","max_tokens":10,"messages":[{"role":"user","content":"test"}]}'
 ```
 
 ### 2. Network Issues
@@ -319,11 +327,13 @@ except Exception as e:
     print(f"Network issue: {e}")
 
 # Test with GraphBit client
-import graphbit
-graphbit.init(debug=True)
+from graphbit import init, LlmConfig, LlmClient
 
-config = graphbit.LlmConfig.openai(api_key=os.getenv("OPENAI_API_KEY"))
-client = graphbit.LlmClient(config, debug=True)
+# Ensure debug mode is enabled
+init(debug=True)
+
+config = LlmConfig.openai(api_key=os.getenv("OPENAI_API_KEY"))
+client = LlmClient(config, debug=True)
 
 try:
     # Warmup to test connectivity
@@ -339,8 +349,9 @@ except Exception as e:
 
 ```python
 # Maximum debugging information
-import graphbit
-graphbit.init(
+from graphbit import init
+
+init(
     debug=True,
     log_level="trace",  # Most verbose
     enable_tracing=True
@@ -364,7 +375,7 @@ python your_script.py
 
 ```python
 import logging
-import graphbit
+from graphbit import init 
 
 # Configure Python logging
 logging.basicConfig(
@@ -373,7 +384,7 @@ logging.basicConfig(
 )
 
 # Initialize GraphBit with debug
-graphbit.init(debug=True, log_level="debug")
+init(debug=True, log_level="debug")
 
 # Your operations will now have detailed logs
 ```
@@ -398,13 +409,13 @@ mprof plot
 
 ```python
 import tracemalloc
-import graphbit
+from graphbit import init
 
 # Start memory tracing
 tracemalloc.start()
 
 # Your GraphBit operations
-graphbit.init()
+init()
 # ... perform operations ...
 
 # Check memory usage
@@ -418,11 +429,13 @@ tracemalloc.stop()
 
 ```python
 import time
-import graphbit
+from graphbit import init, LlmConfig, LlmClient
 
-graphbit.init(debug=True)
-config = graphbit.LlmConfig.openai(api_key=os.getenv("OPENAI_API_KEY"))
-client = graphbit.LlmClient(config, debug=True)
+# Ensure debug mode is enabled
+init(debug=True)
+
+config = LlmConfig.openai(api_key=os.getenv("OPENAI_API_KEY"))
+client = LlmClient(config, debug=True)
 
 # Monitor operation timing
 start_time = time.time()
@@ -496,10 +509,10 @@ When debugging fails:
 1. **Collect Information:**
    ```bash
    # System information
-   python -c "import graphbit; graphbit.init(); print(graphbit.get_system_info())"
+   python -c "from graphbit import get_system_info; print(get_system_info())"
    
    # Health check
-   python -c "import graphbit; graphbit.init(); print(graphbit.health_check())"
+   python -c "from graphbit import health_check; print(health_check())"
    
    # Environment
    env | grep -E "(RUST_|GRAPHBIT_|OPENAI_|ANTHROPIC_)"
@@ -507,13 +520,14 @@ When debugging fails:
 
 2. **Create Minimal Reproduction:**
    ```python
-   import graphbit
    import os
-   
+   from graphbit import init, LlmConfig, LlmClient
+
    # Minimal failing example
-   graphbit.init(debug=True)
-   config = graphbit.LlmConfig.openai(api_key=os.getenv("OPENAI_API_KEY"))
-   client = graphbit.LlmClient(config, debug=True)
+   init(debug=True)
+   
+   config = LlmConfig.openai(api_key=os.getenv("OPENAI_API_KEY"))
+   client = LlmClient(config, debug=True)
    
    try:
        response = client.complete("test", max_tokens=5)

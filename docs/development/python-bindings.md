@@ -52,22 +52,19 @@ python/src/
 The main library provides global initialization and system management:
 
 ```python
-import graphbit
-
-# Initialize with default settings
-graphbit.init()
+from graphbit import init, get_system_info, health_check, version
 
 # Initialize with custom configuration
-graphbit.init(
+init(
     log_level="info",
     enable_tracing=True,
     debug=False
 )
 
 # System information
-info = graphbit.get_system_info()
-health = graphbit.health_check()
-version = graphbit.version()
+info = get_system_info()
+health = health_check()
+version = version()
 ```
 
 #### Key Functions
@@ -131,20 +128,22 @@ pub enum PythonBindingError {
 ### Configuration
 
 ```python
+from graphbit import LlmConfig
+
 # OpenAI configuration
-config = graphbit.LlmConfig.openai(
+config = LlmConfig.openai(
     api_key="your-key",
     model="gpt-4o-mini"  # default
 )
 
 # Anthropic configuration
-config = graphbit.LlmConfig.anthropic(
+config = LlmConfig.anthropic(
     api_key="your-key", 
-    model="claude-3-5-sonnet-20241022"  # default
+    model="claude-sonnet-4-20250514"  # default
 )
 
 # Ollama configuration (local)
-config = graphbit.LlmConfig.ollama(
+config = LlmConfig.ollama(
     model="llama3.2"  # default
 )
 ```
@@ -152,8 +151,10 @@ config = graphbit.LlmConfig.ollama(
 ### Client Usage
 
 ```python
+from graphbit import LlmClient
+
 # Create client with resilience features
-client = graphbit.LlmClient(config, debug=False)
+client = LlmClient(config, debug=False)
 
 # Synchronous completion
 response = client.complete(
@@ -200,27 +201,23 @@ async for chunk in client.complete_stream(
 ### Executor Configuration
 
 ```python
+from graphbit import Executor
+
 # Basic executor
-executor = graphbit.Executor(llm_config)
+executor = Executor(llm_config)
 
 # High-throughput executor
-executor = graphbit.Executor.new_high_throughput(
+executor = Executor(
     llm_config,
     timeout_seconds=300,
     debug=False
 )
 
 # Low-latency executor  
-executor = graphbit.Executor.new_low_latency(
+executor = Executor(
     llm_config,
+    lightweight_mode=True,
     timeout_seconds=30,
-    debug=False
-)
-
-# Memory-optimized executor
-executor = graphbit.Executor.new_memory_optimized(
-    llm_config,
-    timeout_seconds=180,
     debug=False
 )
 ```
@@ -237,12 +234,7 @@ executor = graphbit.Executor.new_memory_optimized(
    - Fewer retries
    - Quick response prioritization
 
-3. **MemoryOptimized**: Resource-constrained environments
-   - Lower concurrency
-   - Smaller memory footprint
-   - Efficient resource usage
-
-4. **Balanced**: General-purpose configuration
+3. **Balanced**: General-purpose configuration
    - Default settings
    - Good balance of performance and resources
 
@@ -267,8 +259,10 @@ print(f"Average duration: {stats['average_duration_ms']}ms")
 ### Configuration
 
 ```python
+from graphbit import EmbeddingConfig
+
 # OpenAI embeddings
-config = graphbit.EmbeddingConfig.openai(
+config = EmbeddingConfig.openai(
     api_key="your-key",
     model="text-embedding-3-small"  # default
 )
@@ -277,7 +271,9 @@ config = graphbit.EmbeddingConfig.openai(
 ### Client Usage
 
 ```python
-client = graphbit.EmbeddingClient(config)
+from graphbit import EmbeddingClient
+
+client = EmbeddingClient(config)
 
 # Single text embedding
 embedding = await client.embed_text("Hello, world!")
@@ -315,13 +311,15 @@ embedding = await client.embed_document(
 ### Monitoring
 
 ```python
+from graphbit import get_system_info, health_check
+
 # System information
-info = graphbit.get_system_info()
+info = get_system_info()
 print(f"Worker threads: {info['runtime_worker_threads']}")
 print(f"Memory allocator: {info['memory_allocator']}")
 
 # Health check
-health = graphbit.health_check()
+health = health_check()
 print(f"Overall healthy: {health['overall_healthy']}")
 print(f"Available memory: {health['available_memory_mb']}MB")
 
@@ -354,27 +352,28 @@ except ValueError as e:
 ### Resource Management
 
 ```python
-# Initialize once per application
-graphbit.init()
+from graphbit import LlmClient, shutdown
 
 # Reuse clients
-client = graphbit.LlmClient(config)
+client = LlmClient(config)
 
 # Graceful shutdown
-graphbit.shutdown()
+shutdown()
 ```
 
 ### Debugging
 
 ```python
+from graphbit import init, LlmClient, health_check
+
 # Enable debug mode
-graphbit.init(debug=True, log_level="debug")
+init(debug=True, log_level="debug")
 
 # Create client with debug output
-client = graphbit.LlmClient(config, debug=True)
+client = LlmClient(config, debug=True)
 
 # Check system health
-health = graphbit.health_check()
+health = health_check()
 if not health['overall_healthy']:
     print("System issues detected!")
 ```
@@ -383,7 +382,7 @@ if not health['overall_healthy']:
 
 ### Initialization
 
-1. Call `graphbit.init()` once at application startup
+1. Call `init()` once at application startup
 2. Configure logging level appropriately for environment
 3. Use debug mode only during development
 
@@ -412,24 +411,24 @@ if not health['overall_healthy']:
 
 Key changes in the Python bindings:
 
-1. **Initialization**: Now requires explicit `graphbit.init()`
-2. **Error Types**: More specific exception types
-3. **Async Support**: Full async/await compatibility
-4. **Configuration**: Simplified configuration objects
-5. **Metrics**: Built-in statistics and monitoring
+1. **Error Types**: More specific exception types
+2. **Async Support**: Full async/await compatibility
+3. **Configuration**: Simplified configuration objects
+4. **Metrics**: Built-in statistics and monitoring
 
 ### Upgrading Code
 
 ```python
 # Old way (v0.0.x)
-import graphbit
-client = graphbit.LlmClient("openai", api_key="key")
+from graphbit import LlmClient
+
+client = LlmClient("openai", api_key="key")
 
 # New way (v0.1.x)  
-import graphbit
-graphbit.init()
-config = graphbit.LlmConfig.openai(api_key="key")
-client = graphbit.LlmClient(config)
+from graphbit import LlmConfig, LlmClient
+
+config = LlmConfig.openai(api_key="key")
+client = LlmClient(config)
 ```
 
 This comprehensive Python binding provides a robust, production-ready interface to GraphBit's core functionality while maintaining excellent performance and reliability characteristics. 

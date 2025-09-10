@@ -443,7 +443,7 @@ def execute_with_different_providers(agents, workflow_factory):
     """Execute same workflow with different providers"""
     
     # OpenAI execution
-    openai_config = graphbit.LlmConfig.openai(
+    openai_config = LlmConfig.openai(
         api_key=os.getenv("OPENAI_API_KEY"),
         model="gpt-4o-mini"
     )

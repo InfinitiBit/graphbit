@@ -33,7 +33,7 @@ if not api_key:
 config = LlmConfig.openai(api_key, "gpt-4o-mini")
 
 # Alternative configurations:
-# config = LlmConfig.anthropic(os.getenv("ANTHROPIC_API_KEY"), "claude-3-5-sonnet-20241022")
+# config = LlmConfig.anthropic(os.getenv("ANTHROPIC_API_KEY"), "claude-sonnet-4-20250514")
 # config = LlmConfig.ollama("llama3.2")  # Local model, no API key needed
 ```
 
@@ -255,7 +255,7 @@ openai_config = LlmConfig.openai(
 # Anthropic Configuration
 anthropic_config = LlmConfig.anthropic(
     os.getenv("ANTHROPIC_API_KEY"),
-    "claude-3-5-sonnet-20241022"
+    "claude-sonnet-4-20250514"
 )
 
 # Ollama Configuration (local)
@@ -283,7 +283,7 @@ def run_with_provider(config):
 
 # Test different providers
 if __name__ == "__main__":
-    graphbit.init()
+    init()
     
     if os.getenv("OPENAI_API_KEY"):
         run_with_provider(openai_config)

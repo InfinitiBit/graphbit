@@ -363,7 +363,7 @@ async def benchmark_llm_providers():
         ),
         "anthropic_claude": LlmConfig.anthropic(
             api_key=os.getenv("ANTHROPIC_API_KEY"),
-            model="claude-3-5-haiku-20241022"
+            model="claude-sonnet-4-20250514"
         ),
         "ollama_llama": LlmConfig.ollama(model="llama3.2")
     }

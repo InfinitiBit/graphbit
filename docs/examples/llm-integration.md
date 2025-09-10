@@ -46,7 +46,7 @@ class AdvancedLLMSystem:
         if os.getenv("ANTHROPIC_API_KEY"):
             anthropic_config = LlmConfig.anthropic(
                 api_key=os.getenv("ANTHROPIC_API_KEY"),
-                model="claude-3-5-haiku-20241022"
+                model="claude-sonnet-4-20250514"
             )
             self.clients['anthropic'] = LlmClient(anthropic_config, debug=True)
             print("Anthropic client initialized")
@@ -476,7 +476,7 @@ def monitor_llm_system_health():
     
     providers_to_test = [
         ('OpenAI', lambda: LlmConfig.openai(os.getenv("OPENAI_API_KEY", "test"), "gpt-4o-mini")),
-        ('Anthropic', lambda: LlmConfig.anthropic(os.getenv("ANTHROPIC_API_KEY", "test"), "claude-3-5-haiku-20241022")),
+        ('Anthropic', lambda: LlmConfig.anthropic(os.getenv("ANTHROPIC_API_KEY", "test"), "claude-sonnet-4-20250514")),
         ('Ollama', lambda: LlmConfig.ollama("llama3.2"))
     ]
     
@@ -620,7 +620,7 @@ def quick_anthropic_example():
     # Configure Anthropic
     config = LlmConfig.anthropic(
         api_key=os.getenv("ANTHROPIC_API_KEY"),
-        model="claude-3-5-haiku-20241022"
+        model="claude-sonnet-4-20250514"
     )
     client = LlmClient(config)
     
@@ -664,7 +664,7 @@ def setup_production_llm_config():
     if os.getenv("ANTHROPIC_API_KEY"):
         providers.append(('anthropic', LlmConfig.anthropic(
             os.getenv("ANTHROPIC_API_KEY"),
-            "claude-3-5-haiku-20241022"
+            "claude-sonnet-4-20250514"
         )))
     
     # Add local fallback

@@ -59,7 +59,7 @@ Welcome to the comprehensive documentation for **GraphBit** - a high-performance
 ### 🔧 API Reference
 - [Python API](api-reference/python-api.md) - Complete Python API documentation
 - [Configuration Options](api-reference/configuration.md) - All configuration parameters
-- [Node Types](api-reference/node-types.md) - Agent, condition, transform, and delay nodes
+- [Node Types](api-reference/node-types.md) - Agent nodes
 
 ### 🔗 Connectors & Integrations
 - [AWS Boto3](connector/aws_boto3.md) - Amazon Web Services integration

@@ -9,7 +9,7 @@ GraphBit is built around these core concepts:
 1. **Library Initialization** - Setting up the GraphBit environment
 2. **LLM Providers** - Configuring language model clients
 3. **Workflows** - Directed graphs that define the execution flow
-4. **Nodes** - Individual processing units (agents, conditions, transforms)
+4. **Nodes** - Individual processing units 
 5. **Executors** - Engines that run workflows with different performance characteristics
 6. **Embeddings** - Vector embeddings for semantic operations
 
@@ -61,7 +61,7 @@ openai_config = LlmConfig.openai(
 # Anthropic
 anthropic_config = LlmConfig.anthropic(
     api_key="your-anthropic-key", 
-    model="claude-3-5-sonnet-20241022"  # Optional, defaults to claude-3-5-sonnet
+    model="claude-sonnet-4-20250514"  # Optional, defaults to claude-sonnet-4-20250514
 )
 
 # DeepSeek

@@ -411,7 +411,7 @@ def create_multi_provider_system():
         'anthropic': LlmClient(
             LlmConfig.anthropic(
                 api_key=os.getenv("ANTHROPIC_API_KEY"),
-                model="claude-3-5-haiku-20241022"
+                model="claude-sonnet-4-20250514"
             )
         ) if os.getenv("ANTHROPIC_API_KEY") else None,
         'ollama': LlmClient(

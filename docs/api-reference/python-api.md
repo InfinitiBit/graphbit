@@ -140,15 +140,15 @@ config = LlmConfig.openai("your-openai-api-key")  # Uses default model "gpt-4o-m
 Create Anthropic provider configuration.
 
 ```python
-config = LlmConfig.anthropic("your-anthropic-api-key", "claude-3-5-sonnet-20241022")
+config = LlmConfig.anthropic("your-anthropic-api-key", "claude-sonnet-4-20250514")
 
 # With default model
-config = LlmConfig.anthropic("your-anthropic-api-key")  # Uses default model "claude-3-5-sonnet-20241022"
+config = LlmConfig.anthropic("your-anthropic-api-key")  # Uses default model "claude-sonnet-4-20250514"
 ```
 
 **Parameters**:
 - `api_key` (str): Anthropic API key
-- `model` (str, optional): Model name. Default: "claude-3-5-sonnet-20241022"
+- `model` (str, optional): Model name. Default: "claude-sonnet-4-20250514"
 
 **Returns**: `LlmConfig` instance
 
@@ -201,7 +201,7 @@ provider = config.provider()  # "openai", "anthropic", "ollama"
 Get the model name.
 
 ```python
-model = config.model()  # "gpt-4o-mini", "claude-3-5-sonnet-20241022", etc.
+model = config.model()  # "gpt-4o-mini", "claude-sonnet-4-20250514", etc.
 ```
 
 ---
@@ -597,7 +597,6 @@ except Exception as e:
 ```
 
 ---
-
 
 ## Text Splitting
 
@@ -1205,27 +1204,6 @@ executor = Executor(
 - `timeout_seconds` (int, optional): Execution timeout (1-3600 seconds)
 - `debug` (bool, optional): Enable debug mode
 
-##### `Executor.new_high_throughput(llm_config, timeout_seconds=None, debug=None)` (static)
-Create executor optimized for high throughput.
-
-```python
-executor = Executor.new_high_throughput(llm_config)
-```
-
-##### `Executor.new_low_latency(llm_config, timeout_seconds=None, debug=None)` (static)
-Create executor optimized for low latency.
-
-```python
-executor = Executor.new_low_latency(llm_config, timeout_seconds=30)
-```
-
-##### `Executor.new_memory_optimized(llm_config, timeout_seconds=None, debug=None)` (static)
-Create executor optimized for memory usage.
-
-```python
-executor = Executor.new_memory_optimized(llm_config)
-```
-
 #### Configuration Methods
 
 ##### `configure(timeout_seconds=None, max_retries=None, enable_metrics=None, debug=None)`
@@ -1402,7 +1380,7 @@ chat_result = asyncio.run(chat())
 from graphbit import Executor
 
 # Create high-throughput executor
-executor = Executor.new_high_throughput(
+executor = Executor(
     llm_config, 
     timeout_seconds=600,
     debug=False

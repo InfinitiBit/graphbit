@@ -300,7 +300,7 @@ def validate_llm_configuration(config):
             try:
                 anthropic_config = LlmConfig.anthropic(
                     api_key=os.getenv("ANTHROPIC_API_KEY"),
-                    model="claude-3-5-haiku-20241022"
+                    model="claude-sonnet-4-20250514"
                 )
                 
                 client = LlmClient(anthropic_config)

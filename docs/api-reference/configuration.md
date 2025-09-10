@@ -69,7 +69,7 @@ from graphbit import LlmConfig
 # Basic Anthropic configuration
 llm_config = LlmConfig.anthropic(
     api_key="your-anthropic-key",
-    model="claude-3-5-sonnet-20241022"  # Optional, defaults to claude-3-5-sonnet-20241022
+    model="claude-sonnet-4-20250514"  # Optional, defaults to claude-sonnet-4-20250514
 )
 
 # With default model
@@ -206,7 +206,7 @@ executor = Executor(
 
 ```python
 # Optimized for high throughput
-executor = Executor.new_high_throughput(
+executor = Executor(
     llm_config,
     timeout_seconds=600,       # Optional timeout override
     debug=False                # Optional debug mode
@@ -217,20 +217,10 @@ executor = Executor.new_high_throughput(
 
 ```python
 # Optimized for low latency
-executor = Executor.new_low_latency(
+executor = Executor(
     llm_config,
+    lightweight_mode=True,    # Enable lightweight mode
     timeout_seconds=30,        # Shorter timeout for low latency
-    debug=False
-)
-```
-
-#### Memory Optimized Executor
-
-```python
-# Optimized for memory usage
-executor = Executor.new_memory_optimized(
-    llm_config,
-    timeout_seconds=300,
     debug=False
 )
 ```
@@ -390,8 +380,9 @@ def create_dev_config():
     )
     
     # Low-latency executor for development
-    executor = Executor.new_low_latency(
+    executor = Executor(
         config, 
+        lightweight_mode=True,
         timeout_seconds=60,
         debug=True
     )
@@ -418,7 +409,7 @@ def create_prod_config():
     )
     
     # High-throughput executor for production
-    executor = Executor.new_high_throughput(
+    executor = Executor(
         config,
         timeout_seconds=300,
         debug=False
@@ -429,38 +420,6 @@ def create_prod_config():
         timeout_seconds=300,
         max_retries=3,
         enable_metrics=True,
-        debug=False
-    )
-    
-    return executor
-```
-
-### High-Volume Configuration
-
-```python
-import os
-from graphbit import init, LlmConfig, Executor, configure_runtime
-
-def create_high_volume_config():
-    """Configuration for high-volume processing."""
-    
-    # Configure runtime for high throughput
-    configure_runtime(
-        worker_threads=16,
-        max_blocking_threads=32
-    )
-    init(debug=False)
-    
-    # Fast, cost-effective model
-    config = LlmConfig.openai(
-        api_key=os.getenv("OPENAI_API_KEY"),
-        model="gpt-4o-mini"
-    )
-    
-    # Memory-optimized executor
-    executor = Executor.new_memory_optimized(
-        config,
-        timeout_seconds=180,
         debug=False
     )
     
@@ -481,8 +440,9 @@ def create_local_config():
     config = LlmConfig.ollama("llama3.2")
     
     # Low-latency for quick iteration
-    executor = Executor.new_low_latency(
+    executor = Executor(
         config,
+        lightweight_mode=True,
         timeout_seconds=180,  # Longer timeout for local inference
         debug=True
     )
@@ -673,7 +633,7 @@ def robust_config_creation():
     try:
         # Primary configuration
         config = LlmConfig.openai(os.getenv("OPENAI_API_KEY"))
-        executor = Executor.new_high_throughput(config)
+        executor = Executor(config)
         
         # Test configuration
         if test_configuration(config):
@@ -688,7 +648,7 @@ def robust_config_creation():
             # Fallback to local Ollama
             print("Falling back to local Ollama...")
             fallback_config = LlmConfig.ollama()
-            fallback_executor = Executor.new_low_latency(fallback_config)
+            fallback_executor = Executor(fallback_config)
             
             if test_configuration(fallback_config):
                 return fallback_executor
@@ -743,7 +703,7 @@ from graphbit import get_system_info
 # Check runtime status
 info = get_system_info()
 if not info['runtime_initialized']:
-    print("Runtime not initialized - call graphbit.init()")
+    print("Runtime not initialized - call init()")
 else:
     print(f"Runtime initialized with {info['runtime_worker_threads']} workers")
 ```
