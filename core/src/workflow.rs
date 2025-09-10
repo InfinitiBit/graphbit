@@ -264,6 +264,47 @@ impl WorkflowExecutor {
         self.concurrency_manager.get_stats().await
     }
 
+    /// Resolve LLM configuration for a node with hierarchical priority
+    /// Priority: Node-level config > Executor-level config > Default
+    fn resolve_llm_config_for_node(
+        &self,
+        node_config: &std::collections::HashMap<String, serde_json::Value>,
+    ) -> crate::llm::LlmConfig {
+        // 1. Check for node-level LLM config first (highest priority)
+        if let Some(node_llm_config) = node_config.get("llm_config") {
+            if let Ok(config) =
+                serde_json::from_value::<crate::llm::LlmConfig>(node_llm_config.clone())
+            {
+                tracing::debug!(
+                    "Using node-level LLM configuration: {:?}",
+                    config.provider_name()
+                );
+                return config;
+            } else {
+                tracing::warn!(
+                    "Failed to deserialize node-level LLM config, falling back to executor config"
+                );
+            }
+        }
+
+        // 2. Fall back to executor-level config (medium priority)
+        if let Some(executor_config) = &self.default_llm_config {
+            tracing::debug!(
+                "Using executor-level LLM configuration: {:?}",
+                executor_config.provider_name()
+            );
+            return executor_config.clone();
+        }
+
+        // 3. Use default configuration (lowest priority)
+        let default_config = crate::llm::LlmConfig::default();
+        tracing::debug!(
+            "Using default LLM configuration: {:?}",
+            default_config.provider_name()
+        );
+        default_config
+    }
+
     /// Get or create circuit breaker for an agent
     async fn get_circuit_breaker(&self, agent_id: &crate::types::AgentId) -> CircuitBreaker {
         // Try to read first (more efficient for existing breakers)
@@ -330,8 +371,11 @@ impl WorkflowExecutor {
 
                 // If agent doesn't exist, create and register a default agent
                 if !agent_exists {
-                    // Find the node configuration for this agent to extract system_prompt
+                    // Find the node configuration for this agent to extract system_prompt and LLM config
                     let mut system_prompt = String::new();
+                    let mut resolved_llm_config =
+                        self.default_llm_config.clone().unwrap_or_default();
+
                     for node in workflow.graph.get_nodes().values() {
                         if let NodeType::Agent {
                             agent_id: node_agent_id,
@@ -345,6 +389,11 @@ impl WorkflowExecutor {
                                         system_prompt = prompt_str.to_string();
                                     }
                                 }
+
+                                // Resolve LLM configuration with hierarchical priority:
+                                // 1. Node-level config > 2. Executor-level config > 3. Default
+                                resolved_llm_config =
+                                    self.resolve_llm_config_for_node(&node.config);
                                 break;
                             }
                         }
@@ -354,7 +403,7 @@ impl WorkflowExecutor {
                     let mut default_config = crate::agents::AgentConfig::new(
                         format!("Agent_{}", agent_id_str),
                         "Auto-generated agent for workflow execution",
-                        self.default_llm_config.clone().unwrap_or_default(),
+                        resolved_llm_config,
                     )
                     .with_id(agent_id.clone());
 

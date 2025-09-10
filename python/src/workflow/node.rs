@@ -1,5 +1,6 @@
 //! Workflow node for GraphBit Python bindings
 
+use crate::llm::LlmConfig;
 use crate::tools::ToolExecutor;
 use graphbit_core::{
     graph::{NodeType, WorkflowNode},
@@ -24,7 +25,7 @@ pub struct Node {
 #[pymethods]
 impl Node {
     #[staticmethod]
-    #[pyo3(signature = (name, prompt, agent_id=None, output_name=None, tools=None, system_prompt=None))]
+    #[pyo3(signature = (name, prompt, agent_id=None, output_name=None, tools=None, system_prompt=None, llm_config=None))]
     fn agent(
         name: String,
         prompt: String,
@@ -32,6 +33,7 @@ impl Node {
         output_name: Option<String>,
         tools: Option<&Bound<'_, PyList>>,
         system_prompt: Option<String>,
+        llm_config: Option<LlmConfig>,
     ) -> PyResult<Self> {
         // Validate required parameters
         if name.trim().is_empty() {
@@ -79,6 +81,21 @@ impl Node {
                 "system_prompt".to_string(),
                 serde_json::Value::String(system_prompt),
             );
+        }
+
+        // Store LLM config in metadata if provided
+        if let Some(llm_config) = llm_config {
+            match serde_json::to_value(&llm_config.inner) {
+                Ok(config_value) => {
+                    node.config.insert("llm_config".to_string(), config_value);
+                }
+                Err(e) => {
+                    return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                        "Failed to serialize LLM config: {}",
+                        e
+                    )));
+                }
+            }
         }
 
         // Store tools in metadata if provided
