@@ -56,14 +56,6 @@ impl ToolMetadata {
                 .as_millis() as u64,
         );
     }
-
-    pub(crate) fn average_duration_ms(&self) -> f64 {
-        if self.call_count == 0 {
-            0.0
-        } else {
-            self.total_duration_ms as f64 / self.call_count as f64
-        }
-    }
 }
 
 /// Thread-safe registry for managing tools

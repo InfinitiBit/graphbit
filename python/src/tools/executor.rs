@@ -636,24 +636,31 @@ impl ToolExecutor {
     fn json_value_to_python(&self, value: &Value, py: Python<'_>) -> PyResult<PyObject> {
         match value {
             Value::Null => Ok(py.None()),
-            Value::Bool(b) => Ok(b.to_object(py)),
+            Value::Bool(b) => {
+                let py_bool = b.into_pyobject(py)?;
+                Ok(
+                    <pyo3::Bound<'_, pyo3::types::PyBool> as Clone>::clone(&py_bool)
+                        .into_any()
+                        .unbind(),
+                )
+            }
             Value::Number(n) => {
                 if let Some(i) = n.as_i64() {
-                    Ok(i.to_object(py))
+                    Ok(i.into_pyobject(py)?.into_any().unbind())
                 } else if let Some(f) = n.as_f64() {
-                    Ok(f.to_object(py))
+                    Ok(f.into_pyobject(py)?.into_any().unbind())
                 } else {
                     Ok(py.None())
                 }
             }
-            Value::String(s) => Ok(s.to_object(py)),
+            Value::String(s) => Ok(s.into_pyobject(py)?.into_any().unbind()),
             Value::Array(arr) => {
                 let py_list = PyList::empty(py);
                 for item in arr {
                     let py_item = self.json_value_to_python(item, py)?;
                     py_list.append(py_item)?;
                 }
-                Ok(py_list.to_object(py))
+                Ok(py_list.into_pyobject(py)?.into_any().unbind())
             }
             Value::Object(obj) => {
                 let py_dict = PyDict::new(py);
@@ -661,7 +668,7 @@ impl ToolExecutor {
                     let py_val = self.json_value_to_python(val, py)?;
                     py_dict.set_item(key, py_val)?;
                 }
-                Ok(py_dict.to_object(py))
+                Ok(py_dict.into_pyobject(py)?.into_any().unbind())
             }
         }
     }
