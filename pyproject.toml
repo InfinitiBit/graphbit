@@ -171,6 +171,7 @@ benchmark = [
   "langgraph",
   "llama-index",
   "llama-index-llms-anthropic",
+  "llama-index-llms-ollama",
   "llama-index-cli",
   "crewai",
   "pydantic-ai"
@@ -198,6 +199,7 @@ full = [
   "langgraph",
   "llama-index",
   "llama-index-llms-anthropic",
+  "llama-index-llms-ollama",
   "llama-index-cli",
   "crewai",
   "pydantic-ai",
