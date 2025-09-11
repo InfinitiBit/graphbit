@@ -105,11 +105,6 @@ impl GraphBitRuntime {
         &self.runtime
     }
 
-    /// Get runtime configuration
-    pub(crate) fn config(&self) -> &RuntimeConfig {
-        &self.config
-    }
-
     /// Get runtime uptime
     pub(crate) fn uptime(&self) -> Duration {
         self.created_at.elapsed()

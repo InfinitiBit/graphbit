@@ -44,8 +44,6 @@ pub(crate) struct ExecutionConfig {
     pub enable_metrics: bool,
     /// Enable execution tracing
     pub enable_tracing: bool,
-    /// Maximum concurrent operations
-    pub max_concurrency: Option<usize>,
 }
 
 impl Default for ExecutionConfig {
@@ -56,7 +54,6 @@ impl Default for ExecutionConfig {
             max_retries: 3,
             enable_metrics: true,
             enable_tracing: false, // Default to false to reduce debug output
-            max_concurrency: Some(num_cpus::get() * 2),
         }
     }
 }
@@ -160,8 +157,7 @@ impl Executor {
     ) -> PyResult<Self> {
         let mut config = ExecutionConfig {
             mode: ExecutionMode::HighThroughput,
-            max_concurrency: Some(num_cpus::get() * 4), // Higher concurrency
-            enable_tracing: debug.unwrap_or(false),     // Default to false
+            enable_tracing: debug.unwrap_or(false), // Default to false
             ..Default::default()
         };
 
@@ -227,8 +223,7 @@ impl Executor {
     ) -> PyResult<Self> {
         let mut config = ExecutionConfig {
             mode: ExecutionMode::MemoryOptimized,
-            max_concurrency: Some(2), // Lower concurrency to save memory
-            enable_metrics: false,    // Disable metrics to save memory
+            enable_metrics: false, // Disable metrics to save memory
             enable_tracing: debug.unwrap_or(false), // Default to false
             ..Default::default()
         };

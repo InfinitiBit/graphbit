@@ -330,24 +330,31 @@ impl PyDocumentLoader {
 fn serde_json_to_py_object(py: Python<'_>, value: &serde_json::Value) -> PyResult<PyObject> {
     match value {
         serde_json::Value::Null => Ok(py.None()),
-        serde_json::Value::Bool(b) => Ok(b.into_py(py)),
+        serde_json::Value::Bool(b) => {
+            let py_bool = b.into_pyobject(py)?;
+            Ok(
+                <pyo3::Bound<'_, pyo3::types::PyBool> as Clone>::clone(&py_bool)
+                    .into_any()
+                    .unbind(),
+            )
+        }
         serde_json::Value::Number(n) => {
             if let Some(i) = n.as_i64() {
-                Ok(i.into_py(py))
+                Ok(i.into_pyobject(py)?.into_any().unbind())
             } else if let Some(f) = n.as_f64() {
-                Ok(f.into_py(py))
+                Ok(f.into_pyobject(py)?.into_any().unbind())
             } else {
-                Ok(n.to_string().into_py(py))
+                Ok(n.to_string().into_pyobject(py)?.into_any().unbind())
             }
         }
-        serde_json::Value::String(s) => Ok(s.into_py(py)),
+        serde_json::Value::String(s) => Ok(s.into_pyobject(py)?.into_any().unbind()),
         serde_json::Value::Array(arr) => {
             let py_list = pyo3::types::PyList::empty(py);
             for item in arr {
                 let py_item = serde_json_to_py_object(py, item)?;
                 py_list.append(py_item)?;
             }
-            Ok(py_list.into_py(py))
+            Ok(py_list.into_any().unbind())
         }
         serde_json::Value::Object(obj) => {
             let py_dict = PyDict::new(py);
@@ -355,7 +362,7 @@ fn serde_json_to_py_object(py: Python<'_>, value: &serde_json::Value) -> PyResul
                 let py_val = serde_json_to_py_object(py, val)?;
                 py_dict.set_item(key, py_val)?;
             }
-            Ok(py_dict.into_py(py))
+            Ok(py_dict.into_any().unbind())
         }
     }
 }

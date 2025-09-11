@@ -17,8 +17,7 @@ pub(crate) enum PythonBindingError {
         message: String,
         field: Option<String>,
     },
-    /// Runtime error with operation context
-    Runtime { message: String, operation: String },
+
     /// Network error with retry information
     Network { message: String, retry_count: u32 },
     /// Authentication error with provider context
@@ -43,11 +42,6 @@ pub(crate) enum PythonBindingError {
         operation: String,
         duration_ms: u64,
     },
-    /// Resource exhaustion error
-    ResourceExhausted {
-        message: String,
-        resource_type: String,
-    },
 }
 
 impl fmt::Display for PythonBindingError {
@@ -61,9 +55,7 @@ impl fmt::Display for PythonBindingError {
                     write!(f, "Configuration error: {}", message)
                 }
             }
-            PythonBindingError::Runtime { message, operation } => {
-                write!(f, "Runtime error during '{}': {}", operation, message)
-            }
+
             PythonBindingError::Network {
                 message,
                 retry_count,
@@ -116,12 +108,6 @@ impl fmt::Display for PythonBindingError {
                     "Timeout in '{}' after {}ms: {}",
                     operation, duration_ms, message
                 )
-            }
-            PythonBindingError::ResourceExhausted {
-                message,
-                resource_type,
-            } => {
-                write!(f, "Resource exhausted ({}): {}", resource_type, message)
             }
         }
     }
@@ -183,9 +169,7 @@ pub(crate) fn python_error_to_py_err(error: PythonBindingError) -> PyErr {
         PythonBindingError::Timeout { .. } => {
             PyErr::new::<pyo3::exceptions::PyTimeoutError, _>(error.to_string())
         }
-        PythonBindingError::ResourceExhausted { .. } => {
-            PyErr::new::<pyo3::exceptions::PyMemoryError, _>(error.to_string())
-        }
+
         _ => PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(error.to_string()),
     }
 }
@@ -212,15 +196,6 @@ pub(crate) fn to_py_runtime_error<E: std::fmt::Display>(error: E) -> PyErr {
     } else {
         PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(error_msg)
     }
-}
-
-/// Create configuration error with field context
-pub(crate) fn config_error(field: &str, message: &str) -> PyErr {
-    let error = PythonBindingError::Configuration {
-        message: message.to_string(),
-        field: Some(field.to_string()),
-    };
-    python_error_to_py_err(error)
 }
 
 /// Create validation error with field and value context

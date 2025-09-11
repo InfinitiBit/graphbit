@@ -70,7 +70,7 @@ impl ToolDecorator {
             Some(&locals),
         )?;
 
-        Ok(decorator.to_object(py))
+        Ok(decorator.into_pyobject(py)?.into_any().unbind())
     }
 
     /// Get the tool registry
@@ -107,7 +107,7 @@ impl ToolDecorator {
         // Extract function schema
         let func_bound = func.bind(py);
         let params_schema = extract_function_schema(&func_bound, py)?;
-        drop(func_bound); // Release the borrow
+        let _ = func_bound; // Release the borrow
 
         let registry_guard = self.registry.lock().map_err(|e| {
             PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
@@ -238,17 +238,8 @@ fn map_python_type_to_json_schema(type_str: &str) -> &'static str {
 
 /// Convenience function to create a tool decorator
 #[pyfunction]
-#[pyo3(signature = (description=None, name=None, return_type=None))]
-pub(crate) fn tool(
-    description: Option<String>,
-    name: Option<String>,
-    return_type: Option<String>,
-    py: Python<'_>,
-) -> PyResult<PyObject> {
-    // Create a simple decorator function that registers tools
-    let desc = description.unwrap_or_else(|| "Tool function".to_string());
-    let ret_type = return_type.unwrap_or_else(|| "Any".to_string());
-
+#[pyo3(signature = (_description=None))]
+pub(crate) fn tool(_description: Option<String>, py: Python<'_>) -> PyResult<PyObject> {
     // Create a Python function that will act as the decorator
     let decorator_func = py.eval(
         c"lambda func: func", // For now, just return the function as-is
@@ -256,7 +247,7 @@ pub(crate) fn tool(
         None,
     )?;
 
-    Ok(decorator_func.to_object(py))
+    Ok(decorator_func.into_pyobject(py)?.into_any().unbind())
 }
 
 /// Get the global tool registry
