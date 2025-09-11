@@ -28,6 +28,7 @@ pub struct AgentId(pub Uuid);
 impl AgentId {
     /// Create a new random agent ID
     #[inline]
+    #[must_use]
     pub fn new() -> Self {
         Self(Uuid::new_v4())
     }
@@ -50,6 +51,7 @@ impl AgentId {
 
     /// Get the underlying UUID
     #[inline]
+    #[must_use]
     pub fn as_uuid(&self) -> &Uuid {
         &self.0
     }
@@ -76,6 +78,7 @@ pub struct WorkflowId(pub Uuid);
 impl WorkflowId {
     /// Create a new random workflow ID
     #[inline]
+    #[must_use]
     pub fn new() -> Self {
         Self(Uuid::new_v4())
     }
@@ -87,6 +90,7 @@ impl WorkflowId {
 
     /// Get the underlying UUID
     #[inline]
+    #[must_use]
     pub fn as_uuid(&self) -> &Uuid {
         &self.0
     }
@@ -113,6 +117,7 @@ pub struct NodeId(pub Uuid);
 impl NodeId {
     /// Create a new random node ID
     #[inline]
+    #[must_use]
     pub fn new() -> Self {
         Self(Uuid::new_v4())
     }
@@ -135,6 +140,7 @@ impl NodeId {
 
     /// Get the underlying UUID
     #[inline]
+    #[must_use]
     pub fn as_uuid(&self) -> &Uuid {
         &self.0
     }
@@ -173,6 +179,7 @@ pub struct AgentMessage {
 
 impl AgentMessage {
     /// Create a new agent message
+    #[must_use]
     pub fn new(sender: AgentId, recipient: Option<AgentId>, content: MessageContent) -> Self {
         Self {
             id: Uuid::new_v4(),
@@ -185,6 +192,7 @@ impl AgentMessage {
     }
 
     /// Add metadata to the message
+    #[must_use]
     pub fn with_metadata(mut self, key: String, value: serde_json::Value) -> Self {
         self.metadata.insert(key, value);
         self
@@ -260,6 +268,7 @@ pub struct WorkflowContext {
 
 impl WorkflowContext {
     /// Create a new workflow context
+    #[must_use]
     pub fn new(workflow_id: WorkflowId) -> Self {
         Self {
             workflow_id,
@@ -281,6 +290,7 @@ impl WorkflowContext {
 
     /// Get a variable from the context
     #[inline]
+    #[must_use]
     pub fn get_variable(&self, key: &str) -> Option<&serde_json::Value> {
         self.variables.get(key)
     }
@@ -313,11 +323,13 @@ impl WorkflowContext {
 
     /// Get execution statistics
     #[inline]
+    #[must_use]
     pub fn get_stats(&self) -> Option<&WorkflowExecutionStats> {
         self.stats.as_ref()
     }
 
     /// Calculate and return execution duration in milliseconds
+    #[must_use]
     pub fn execution_duration_ms(&self) -> Option<u64> {
         if let Some(completed_at) = self.completed_at {
             let duration = completed_at.signed_duration_since(self.started_at);
@@ -343,11 +355,13 @@ impl WorkflowContext {
 
     /// Get a node's output from the context
     #[inline]
+    #[must_use]
     pub fn get_node_output(&self, node_id: &str) -> Option<&serde_json::Value> {
         self.node_outputs.get(node_id)
     }
 
     /// Get a nested value from a node's output using dot notation
+    #[must_use]
     pub fn get_nested_output(&self, reference: &str) -> Option<&serde_json::Value> {
         let parts: Vec<&str> = reference.split('.').collect();
         if parts.is_empty() {
@@ -414,6 +428,7 @@ pub enum WorkflowState {
 impl WorkflowState {
     /// Check if the workflow is in a terminal state
     #[inline]
+    #[must_use]
     pub fn is_terminal(&self) -> bool {
         matches!(
             self,
@@ -423,12 +438,14 @@ impl WorkflowState {
 
     /// Check if the workflow is currently running
     #[inline]
+    #[must_use]
     pub fn is_running(&self) -> bool {
         matches!(self, WorkflowState::Running { .. })
     }
 
     /// Check if the workflow is paused
     #[inline]
+    #[must_use]
     pub fn is_paused(&self) -> bool {
         matches!(self, WorkflowState::Paused { .. })
     }
@@ -474,6 +491,7 @@ pub struct NodeExecutionResult {
 
 impl NodeExecutionResult {
     /// Create a successful execution result
+    #[must_use]
     pub fn success(output: serde_json::Value, node_id: NodeId) -> Self {
         Self {
             success: true,
@@ -489,6 +507,7 @@ impl NodeExecutionResult {
     }
 
     /// Create a failed execution result
+    #[must_use]
     pub fn failure(error: String, node_id: NodeId) -> Self {
         Self {
             success: false,
@@ -504,18 +523,21 @@ impl NodeExecutionResult {
     }
 
     /// Add metadata to the result
+    #[must_use]
     pub fn with_metadata(mut self, key: String, value: serde_json::Value) -> Self {
         self.metadata.insert(key, value);
         self
     }
 
     /// Set execution duration
+    #[must_use]
     pub fn with_duration(mut self, duration_ms: u64) -> Self {
         self.duration_ms = duration_ms;
         self
     }
 
     /// Set retry count
+    #[must_use]
     pub fn with_retry_count(mut self, retry_count: u32) -> Self {
         self.retry_count = retry_count;
         self
@@ -523,6 +545,7 @@ impl NodeExecutionResult {
 
     /// Mark the result as completed
     #[inline]
+    #[must_use]
     pub fn mark_completed(mut self) -> Self {
         self.completed_at = Some(chrono::Utc::now());
         self
@@ -605,6 +628,7 @@ impl Default for RetryConfig {
 
 impl RetryConfig {
     /// Create a new retry configuration
+    #[must_use]
     pub fn new(max_attempts: u32) -> Self {
         Self {
             max_attempts,
@@ -622,6 +646,7 @@ impl RetryConfig {
     }
 
     /// Configure exponential backoff
+    #[must_use]
     pub fn with_exponential_backoff(
         mut self,
         initial_delay_ms: u64,
@@ -636,6 +661,7 @@ impl RetryConfig {
 
     /// Set jitter factor
     #[inline]
+    #[must_use]
     pub fn with_jitter(mut self, jitter_factor: f64) -> Self {
         self.jitter_factor = jitter_factor.clamp(0.0, 1.0);
         self
@@ -643,12 +669,14 @@ impl RetryConfig {
 
     /// Set retryable error types
     #[inline]
+    #[must_use]
     pub fn with_retryable_errors(mut self, errors: Vec<RetryableErrorType>) -> Self {
         self.retryable_errors = errors;
         self
     }
 
     /// Calculate delay for a given attempt with exponential backoff and jitter
+    #[must_use]
     pub fn calculate_delay(&self, attempt: u32) -> u64 {
         if attempt == 0 {
             return 0;
@@ -673,6 +701,7 @@ impl RetryConfig {
 
     /// Check if an error should trigger a retry
     #[inline]
+    #[must_use]
     pub fn should_retry(&self, error: &crate::errors::GraphBitError, attempt: u32) -> bool {
         if attempt >= self.max_attempts {
             return false;
@@ -706,6 +735,7 @@ pub enum RetryableErrorType {
 
 impl RetryableErrorType {
     /// Determine retry type from error
+    #[must_use]
     pub fn from_error(error: &crate::errors::GraphBitError) -> Self {
         // Simple error type classification based on error message
         let error_str = error.to_string().to_lowercase();
@@ -785,6 +815,7 @@ pub struct CircuitBreaker {
 
 impl CircuitBreaker {
     /// Create a new circuit breaker
+    #[must_use]
     pub fn new(config: CircuitBreakerConfig) -> Self {
         Self {
             config,
@@ -796,6 +827,7 @@ impl CircuitBreaker {
     }
 
     /// Check if a request should be allowed
+    #[must_use]
     pub fn should_allow_request(&mut self) -> bool {
         match self.state {
             CircuitBreakerState::Closed => true,
@@ -893,6 +925,7 @@ impl Default for ConcurrencyConfig {
 
 impl ConcurrencyConfig {
     /// Create a high-throughput configuration
+    #[must_use]
     pub fn high_throughput() -> Self {
         let mut node_type_limits = HashMap::with_capacity(8);
         node_type_limits.insert("agent".to_string(), 50);
@@ -908,6 +941,7 @@ impl ConcurrencyConfig {
     }
 
     /// Create a low-latency configuration
+    #[must_use]
     pub fn low_latency() -> Self {
         let mut node_type_limits = HashMap::with_capacity(8);
         node_type_limits.insert("agent".to_string(), 10);
@@ -923,6 +957,7 @@ impl ConcurrencyConfig {
     }
 
     /// Create a memory-optimized configuration
+    #[must_use]
     pub fn memory_optimized() -> Self {
         let mut node_type_limits = HashMap::with_capacity(8);
         node_type_limits.insert("agent".to_string(), 5);
@@ -938,6 +973,7 @@ impl ConcurrencyConfig {
     }
 
     /// Get concurrency limit for a specific node type
+    #[must_use]
     pub fn get_node_type_limit(&self, node_type: &str) -> usize {
         self.node_type_limits
             .get(node_type)
@@ -968,6 +1004,7 @@ struct NodeTypeConcurrency {
 
 impl ConcurrencyManager {
     /// Create a new enhanced concurrency manager
+    #[must_use]
     pub fn new(config: ConcurrencyConfig) -> Self {
         let mut node_type_limits = HashMap::with_capacity(config.node_type_limits.len() + 4);
 
@@ -1103,6 +1140,7 @@ pub struct TaskInfo {
 
 impl TaskInfo {
     /// Create task info for an agent node
+    #[must_use]
     pub fn agent_task(_agent_id: AgentId, task_id: NodeId) -> Self {
         Self {
             node_type: "agent".to_string(),
@@ -1111,6 +1149,7 @@ impl TaskInfo {
     }
 
     /// Create task info for an HTTP request node
+    #[must_use]
     pub fn http_task(task_id: NodeId) -> Self {
         Self {
             node_type: "http_request".to_string(),
@@ -1119,6 +1158,7 @@ impl TaskInfo {
     }
 
     /// Create task info for a transform node
+    #[must_use]
     pub fn transform_task(task_id: NodeId) -> Self {
         Self {
             node_type: "transform".to_string(),
@@ -1127,6 +1167,7 @@ impl TaskInfo {
     }
 
     /// Create task info for a condition node
+    #[must_use]
     pub fn condition_task(task_id: NodeId) -> Self {
         Self {
             node_type: "condition".to_string(),
@@ -1135,6 +1176,7 @@ impl TaskInfo {
     }
 
     /// Create task info for a delay node
+    #[must_use]
     pub fn delay_task(task_id: NodeId, _duration_ms: u64) -> Self {
         Self {
             node_type: "delay".to_string(),
@@ -1143,6 +1185,7 @@ impl TaskInfo {
     }
 
     /// Create task info from a node type - optimized helper
+    #[must_use]
     pub fn from_node_type(node_type: &crate::graph::NodeType, task_id: &NodeId) -> Self {
         use crate::graph::NodeType;
         let type_str = match node_type {
@@ -1212,6 +1255,7 @@ impl ConcurrencyStats {
     }
 
     /// Get utilization percentage (0.0-100.0)
+    #[must_use]
     pub fn get_utilization(&self, max_capacity: usize) -> f64 {
         if max_capacity > 0 {
             (self.current_active_tasks as f64 / max_capacity as f64) * 100.0

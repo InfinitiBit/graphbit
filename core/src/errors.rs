@@ -212,6 +212,7 @@ impl GraphBitError {
     }
 
     /// Check if the error is retryable
+    #[must_use]
     pub fn is_retryable(&self) -> bool {
         matches!(
             self,
@@ -223,6 +224,7 @@ impl GraphBitError {
     }
 
     /// Get retry delay in seconds for retryable errors
+    #[must_use]
     pub fn retry_delay(&self) -> Option<u64> {
         match self {
             GraphBitError::RateLimit {

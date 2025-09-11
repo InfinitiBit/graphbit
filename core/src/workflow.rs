@@ -93,6 +93,7 @@ impl WorkflowBuilder {
     }
 
     /// Set workflow description
+    #[must_use]
     pub fn description(mut self, description: impl Into<String>) -> Self {
         self.workflow.description = description.into();
         self
@@ -116,6 +117,7 @@ impl WorkflowBuilder {
     }
 
     /// Add metadata
+    #[must_use]
     pub fn metadata(mut self, key: String, value: serde_json::Value) -> Self {
         self.workflow.set_metadata(key, value);
         self
@@ -150,6 +152,7 @@ pub struct WorkflowExecutor {
 
 impl WorkflowExecutor {
     /// Create a new workflow executor with sensible defaults
+    #[must_use]
     pub fn new() -> Self {
         let concurrency_config = ConcurrencyConfig::default();
         let concurrency_manager = Arc::new(ConcurrencyManager::new(concurrency_config));
@@ -167,6 +170,7 @@ impl WorkflowExecutor {
     }
 
     /// Create a workflow executor optimized for high throughput
+    #[must_use]
     pub fn new_high_throughput() -> Self {
         let concurrency_config = ConcurrencyConfig::high_throughput();
         let concurrency_manager = Arc::new(ConcurrencyManager::new(concurrency_config));
@@ -184,6 +188,7 @@ impl WorkflowExecutor {
     }
 
     /// Create a workflow executor optimized for low latency
+    #[must_use]
     pub fn new_low_latency() -> Self {
         let concurrency_config = ConcurrencyConfig::low_latency();
         let concurrency_manager = Arc::new(ConcurrencyManager::new(concurrency_config));
@@ -201,6 +206,7 @@ impl WorkflowExecutor {
     }
 
     /// Create a workflow executor optimized for memory usage
+    #[must_use]
     pub fn new_memory_optimized() -> Self {
         let concurrency_config = ConcurrencyConfig::memory_optimized();
         let concurrency_manager = Arc::new(ConcurrencyManager::new(concurrency_config));
@@ -224,36 +230,42 @@ impl WorkflowExecutor {
     }
 
     /// Set maximum execution time per node
+    #[must_use]
     pub fn with_max_node_execution_time(mut self, timeout_ms: u64) -> Self {
         self.max_node_execution_time_ms = Some(timeout_ms);
         self
     }
 
     /// Configure whether to fail fast on errors
+    #[must_use]
     pub fn with_fail_fast(mut self, fail_fast: bool) -> Self {
         self.fail_fast = fail_fast;
         self
     }
 
     /// Set retry configuration
+    #[must_use]
     pub fn with_retry_config(mut self, retry_config: RetryConfig) -> Self {
         self.default_retry_config = Some(retry_config);
         self
     }
 
     /// Set circuit breaker configuration
+    #[must_use]
     pub fn with_circuit_breaker_config(mut self, config: CircuitBreakerConfig) -> Self {
         self.circuit_breaker_config = config;
         self
     }
 
     /// Set default LLM configuration for auto-generated agents
+    #[must_use]
     pub fn with_default_llm_config(mut self, llm_config: crate::llm::LlmConfig) -> Self {
         self.default_llm_config = Some(llm_config);
         self
     }
 
     /// Disable retries
+    #[must_use]
     pub fn without_retries(mut self) -> Self {
         self.default_retry_config = None;
         self
@@ -1490,6 +1502,7 @@ impl WorkflowExecutor {
     }
 
     /// Create with custom concurrency configuration
+    #[must_use]
     pub fn with_concurrency_config(mut self, concurrency_config: ConcurrencyConfig) -> Self {
         self.concurrency_manager = Arc::new(ConcurrencyManager::new(concurrency_config));
         self
@@ -1517,6 +1530,7 @@ fn extract_agent_ids_from_workflow(workflow: &Workflow) -> Vec<String> {
 
 impl WorkflowExecutor {
     /// Resolve template variables in a string, supporting both node references and regular variables
+    #[must_use]
     pub fn resolve_template_variables(template: &str, context: &WorkflowContext) -> String {
         let mut result = template.to_string();
 

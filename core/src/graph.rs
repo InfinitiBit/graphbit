@@ -42,6 +42,7 @@ pub struct WorkflowGraph {
 
 impl WorkflowGraph {
     /// Create a new empty workflow graph
+    #[must_use]
     pub fn new() -> Self {
         Self {
             graph: DiGraph::new(),
@@ -169,23 +170,27 @@ impl WorkflowGraph {
 
     /// Get a node by ID
     #[inline]
+    #[must_use]
     pub fn get_node(&self, node_id: &NodeId) -> Option<&WorkflowNode> {
         self.nodes.get(node_id)
     }
 
     /// Get all nodes
     #[inline]
+    #[must_use]
     pub fn get_nodes(&self) -> &HashMap<NodeId, WorkflowNode> {
         &self.nodes
     }
 
     /// Get all edges
     #[inline]
+    #[must_use]
     pub fn get_edges(&self) -> &[(NodeId, NodeId, WorkflowEdge)] {
         &self.edges
     }
 
     /// Check if the graph contains cycles
+    #[must_use]
     pub fn has_cycles(&self) -> bool {
         is_cyclic_directed(&self.graph)
     }
@@ -450,23 +455,27 @@ impl WorkflowGraph {
     }
 
     /// Get metadata
+    #[must_use]
     pub fn get_metadata(&self, key: &str) -> Option<&serde_json::Value> {
         self.metadata.get(key)
     }
 
     /// Get number of nodes
     #[inline]
+    #[must_use]
     pub fn node_count(&self) -> usize {
         self.nodes.len()
     }
 
     /// Get number of edges
     #[inline]
+    #[must_use]
     pub fn edge_count(&self) -> usize {
         self.edges.len()
     }
 
     /// Get node ID by name
+    #[must_use]
     pub fn get_node_id_by_name(&self, name: &str) -> Option<NodeId> {
         self.nodes
             .values()
@@ -528,36 +537,42 @@ impl WorkflowNode {
     }
 
     /// Set node configuration
+    #[must_use]
     pub fn with_config(mut self, key: String, value: serde_json::Value) -> Self {
         self.config.insert(key, value);
         self
     }
 
     /// Set input schema
+    #[must_use]
     pub fn with_input_schema(mut self, schema: serde_json::Value) -> Self {
         self.input_schema = Some(schema);
         self
     }
 
     /// Set output schema
+    #[must_use]
     pub fn with_output_schema(mut self, schema: serde_json::Value) -> Self {
         self.output_schema = Some(schema);
         self
     }
 
     /// Set retry configuration
+    #[must_use]
     pub fn with_retry_config(mut self, retry_config: RetryConfig) -> Self {
         self.retry_config = retry_config;
         self
     }
 
     /// Set timeout
+    #[must_use]
     pub fn with_timeout(mut self, timeout_seconds: u64) -> Self {
         self.timeout_seconds = Some(timeout_seconds);
         self
     }
 
     /// Add tags
+    #[must_use]
     pub fn with_tags(mut self, tags: Vec<String>) -> Self {
         self.tags = tags;
         self
@@ -689,6 +704,7 @@ pub struct WorkflowEdge {
 
 impl WorkflowEdge {
     /// Create a new data flow edge
+    #[must_use]
     pub fn data_flow() -> Self {
         Self {
             edge_type: EdgeType::DataFlow,
@@ -699,6 +715,7 @@ impl WorkflowEdge {
     }
 
     /// Create a new control flow edge
+    #[must_use]
     pub fn control_flow() -> Self {
         Self {
             edge_type: EdgeType::ControlFlow,
@@ -719,12 +736,14 @@ impl WorkflowEdge {
     }
 
     /// Add a transformation to the edge
+    #[must_use]
     pub fn with_transform(mut self, transform: impl Into<String>) -> Self {
         self.transform = Some(transform.into());
         self
     }
 
     /// Add metadata to the edge
+    #[must_use]
     pub fn with_metadata(mut self, key: String, value: serde_json::Value) -> Self {
         self.metadata.insert(key, value);
         self

@@ -71,6 +71,7 @@ impl OpenAiProvider {
     }
 
     /// Set organization ID
+    #[must_use]
     pub fn with_organization(mut self, organization: String) -> Self {
         self.organization = Some(organization);
         self

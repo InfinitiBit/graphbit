@@ -61,6 +61,7 @@ pub enum EmbeddingInput {
 
 impl EmbeddingInput {
     /// Get the texts as a vector
+    #[must_use]
     pub fn as_texts(&self) -> Vec<&str> {
         match self {
             EmbeddingInput::Single(text) => vec![text.as_str()],
@@ -69,6 +70,7 @@ impl EmbeddingInput {
     }
 
     /// Get the number of texts
+    #[must_use]
     pub fn len(&self) -> usize {
         match self {
             EmbeddingInput::Single(_) => 1,
@@ -77,6 +79,7 @@ impl EmbeddingInput {
     }
 
     /// Check if empty
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         match self {
             EmbeddingInput::Single(text) => text.is_empty(),

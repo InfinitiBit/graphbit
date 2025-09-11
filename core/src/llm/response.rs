@@ -38,51 +38,60 @@ impl LlmResponse {
     }
 
     /// Add tool calls to the response
+    #[must_use]
     pub fn with_tool_calls(mut self, tool_calls: Vec<LlmToolCall>) -> Self {
         self.tool_calls = tool_calls;
         self
     }
 
     /// Set usage statistics
+    #[must_use]
     pub fn with_usage(mut self, usage: LlmUsage) -> Self {
         self.usage = usage;
         self
     }
 
     /// Add metadata
+    #[must_use]
     pub fn with_metadata(mut self, key: String, value: serde_json::Value) -> Self {
         self.metadata.insert(key, value);
         self
     }
 
     /// Set finish reason
+    #[must_use]
     pub fn with_finish_reason(mut self, finish_reason: FinishReason) -> Self {
         self.finish_reason = finish_reason;
         self
     }
 
     /// Set response ID
+    #[must_use]
     pub fn with_id(mut self, id: String) -> Self {
         self.id = Some(id);
         self
     }
 
     /// Check if the response contains tool calls
+    #[must_use]
     pub fn has_tool_calls(&self) -> bool {
         !self.tool_calls.is_empty()
     }
 
     /// Check if the response was truncated due to length
+    #[must_use]
     pub fn is_truncated(&self) -> bool {
         matches!(self.finish_reason, FinishReason::Length)
     }
 
     /// Get the total token count
+    #[must_use]
     pub fn total_tokens(&self) -> u32 {
         self.usage.total_tokens
     }
 
     /// Estimate the cost of this response (if cost per token is known)
+    #[must_use]
     pub fn estimate_cost(&self, input_cost_per_token: f64, output_cost_per_token: f64) -> f64 {
         (self.usage.prompt_tokens as f64 * input_cost_per_token)
             + (self.usage.completion_tokens as f64 * output_cost_per_token)
@@ -102,6 +111,7 @@ pub struct LlmUsage {
 
 impl LlmUsage {
     /// Create new usage statistics
+    #[must_use]
     pub fn new(prompt_tokens: u32, completion_tokens: u32) -> Self {
         Self {
             prompt_tokens,
@@ -111,6 +121,7 @@ impl LlmUsage {
     }
 
     /// Create empty usage statistics
+    #[must_use]
     pub fn empty() -> Self {
         Self {
             prompt_tokens: 0,
@@ -173,16 +184,19 @@ pub enum FinishReason {
 
 impl FinishReason {
     /// Check if the response finished naturally
+    #[must_use]
     pub fn is_natural_stop(&self) -> bool {
         matches!(self, FinishReason::Stop | FinishReason::ToolCalls)
     }
 
     /// Check if the response was truncated
+    #[must_use]
     pub fn is_truncated(&self) -> bool {
         matches!(self, FinishReason::Length)
     }
 
     /// Check if there was an error
+    #[must_use]
     pub fn is_error(&self) -> bool {
         matches!(self, FinishReason::Error | FinishReason::ContentFilter)
     }

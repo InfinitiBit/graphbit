@@ -138,6 +138,7 @@ pub struct TextChunk {
 
 impl TextChunk {
     /// Create a new text chunk
+    #[must_use]
     pub fn new(content: String, start_index: usize, end_index: usize, chunk_index: usize) -> Self {
         let mut metadata = HashMap::new();
         metadata.insert(
@@ -155,6 +156,7 @@ impl TextChunk {
     }
 
     /// Add metadata to the chunk
+    #[must_use]
     pub fn with_metadata(mut self, key: String, value: serde_json::Value) -> Self {
         self.metadata.insert(key, value);
         self
