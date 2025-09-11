@@ -14,20 +14,20 @@ The Python API provides a user-friendly interface for creating and managing work
 
 ```python
 # High-level Python interface
-import graphbit
+from graphbit import init, Workflow, Executor
 
-graphbit.init()
-builder = graphbit.PyWorkflowBuilder("My Workflow")
+init()
+builder = Workflow("My Workflow")
 # ... build workflow
-executor = graphbit.PyWorkflowExecutor(config)
+executor = Executor(config)
 result = executor.execute(workflow)
 ```
 
 **Key Classes:**
-- `PyWorkflowBuilder` - Fluent workflow construction
-- `PyWorkflowExecutor` - Workflow execution engine
-- `PyWorkflowNode` - Node creation and management
-- `PyLlmConfig` - LLM provider configuration
+- `Workflow` - Fluent workflow construction
+- `Executor` - Workflow execution engine
+- `Node` - Node creation and management
+- `LlmConfig` - LLM provider configuration
 
 ### 2. PyO3 Bindings Layer
 
@@ -50,7 +50,7 @@ impl LlmClient {
         // Production-grade initialization with error handling
     }
     
-    fn complete(&self, prompt: String, max_tokens: Option<u32>) -> PyResult<String> {
+    fn complete(&self, prompt: String, max_tokens: Option<i64>, temperature: Option<f64>) -> PyResult<String> {
         // High-performance completion with resilience patterns
     }
 }
@@ -80,14 +80,27 @@ The Rust core provides high-performance execution and reliability:
 ```rust
 // Core workflow execution
 pub struct WorkflowExecutor {
-    llm_client: Arc<dyn LlmClient>,
-    circuit_breaker: CircuitBreaker,
-    retry_policy: RetryPolicy,
+    /// Registered agents - use RwLock for better read performance
+    agents: Arc<RwLock<HashMap<crate::types::AgentId, Arc<dyn AgentTrait>>>>,
+    /// Simplified concurrency management system
+    concurrency_manager: Arc<ConcurrencyManager>,
+    /// Maximum execution time per node in milliseconds
+    max_node_execution_time_ms: Option<u64>,
+    /// Whether to fail fast on first error or continue with other nodes
+    fail_fast: bool,
+    /// Default retry configuration for all nodes
+    default_retry_config: Option<RetryConfig>,
+    /// Circuit breakers per agent to prevent cascading failures - use RwLock for better performance
+    circuit_breakers: Arc<RwLock<HashMap<crate::types::AgentId, CircuitBreaker>>>,
+    /// Global circuit breaker configuration
+    circuit_breaker_config: CircuitBreakerConfig,
+    /// Default LLM configuration for auto-generated agents
+    default_llm_config: Option<crate::llm::LlmConfig>,
 }
 
 impl WorkflowExecutor {
-    pub async fn execute(&self, workflow: &Workflow) -> Result<ExecutionResult> {
-        // High-performance execution logic
+    pub async fn execute(&self, workflow: Workflow) -> Result<ExecutionResult> {
+        // Workflow executor with sensible defaults
     }
 }
 ```
@@ -117,22 +130,19 @@ impl WorkflowExecutor {
 
 ```rust
 pub struct WorkflowBuilder {
-    name: String,
-    description: Option<String>,
-    nodes: HashMap<NodeId, Node>,
-    edges: Vec<Edge>,
+    workflow: Workflow,
 }
 
 impl WorkflowBuilder {
-    pub fn add_node(&mut self, node: Node) -> NodeId {
-        // Add node and return unique ID
+    pub fn add_node(mut self, node: WorkflowNode) -> GraphBitResult<(Self, NodeId)>  {
+        // Add node and return unique name and ID
     }
     
-    pub fn connect(&mut self, from: NodeId, to: NodeId, edge: Edge) {
+    pub fn connect(mut self, from: NodeId, to: NodeId, edge: crate::graph::WorkflowEdge) -> GraphBitResult<Self> {
         // Connect nodes with typed edges
     }
     
-    pub fn build(self) -> Result<Workflow> {
+    pub fn build(self) -> GraphBitResult<Workflow> {
         // Validate and build immutable workflow
     }
 }
@@ -153,55 +163,76 @@ GraphBit performs comprehensive validation:
 
 **Sequential Execution:**
 ```rust
-async fn execute_sequential(&self, workflow: &Workflow) -> Result<ExecutionResult> {
-    let execution_order = self.topological_sort(workflow)?;
-    
-    for node_id in execution_order {
-        let result = self.execute_node(node_id).await?;
-        self.context.set_result(node_id, result);
-    }
-    
-    Ok(self.context.into_result())
-}
+use graphbit_core::workflow::WorkflowExecutor;
+use graphbit_core::types::ConcurrencyConfig;
+
+// Configure minimal concurrency for sequential-like behavior
+let mut concurrency_config = ConcurrencyConfig::default();
+concurrency_config.global_max_concurrency = 1;
+concurrency_config.node_type_limits.insert("agent".to_string(), 1);
+concurrency_config.node_type_limits.insert("http_request".to_string(), 1);
+concurrency_config.node_type_limits.insert("transform".to_string(), 1);
+
+let executor = WorkflowExecutor::new()
+    .with_concurrency_config(concurrency_config)
+    .with_fail_fast(true);
+
+let result = executor.execute(workflow).await?;
 ```
 
 **Parallel Execution:**
 ```rust
-async fn execute_parallel(&self, workflow: &Workflow) -> Result<ExecutionResult> {
-    let execution_batches = self.create_execution_batches(workflow)?;
-    
-    for batch in execution_batches {
-        let batch_results = join_all(
-            batch.into_iter().map(|node_id| self.execute_node(node_id))
-        ).await;
-        
-        self.context.merge_results(batch_results)?;
-    }
-    
-    Ok(self.context.into_result())
-}
+// Use pre-built high-throughput configuration
+let executor = WorkflowExecutor::new_high_throughput()
+    .with_fail_fast(false);
+
+let result = executor.execute(workflow).await?;
+```
+
+**Custom Concurrency Control:**
+```rust
+// Fine-grained control over different node types
+let mut concurrency_config = ConcurrencyConfig::default();
+concurrency_config.global_max_concurrency = 100;
+concurrency_config.node_type_limits.insert("agent".to_string(), 20);
+concurrency_config.node_type_limits.insert("http_request".to_string(), 50);
+concurrency_config.node_type_limits.insert("transform".to_string(), 30);
+
+let executor = WorkflowExecutor::new()
+    .with_concurrency_config(concurrency_config);
+
+let result = executor.execute(workflow).await?;
 ```
 
 #### Context Management
 
 ```rust
-pub struct ExecutionContext {
-    variables: HashMap<String, Value>,
-    node_results: HashMap<NodeId, NodeResult>,
-    metadata: ExecutionMetadata,
+pub struct WorkflowContext {
+    pub workflow_id: WorkflowId,
+    pub state: WorkflowState,
+    pub variables: HashMap<String, serde_json::Value>,
+    pub node_outputs: HashMap<String, serde_json::Value>,
+    pub metadata: HashMap<String, serde_json::Value>,
+    pub started_at: chrono::DateTime<chrono::Utc>,
+    pub completed_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub stats: Option<WorkflowExecutionStats>,
 }
 
-impl ExecutionContext {
-    pub fn get_variable(&self, key: &str) -> Option<&Value> {
+impl WorkflowContext {
+    pub fn get_variable(&self, key: &str) -> Option<&serde_json::Value> {
         self.variables.get(key)
     }
-    
-    pub fn set_variable(&mut self, key: String, value: Value) {
+
+    pub fn set_variable(&mut self, key: String, value: serde_json::Value) {
         self.variables.insert(key, value);
     }
-    
-    pub fn substitute_template(&self, template: &str) -> String {
-        // Template variable substitution
+
+    pub fn set_node_output(&mut self, node_id: &NodeId, output: serde_json::Value) {
+        self.node_outputs.insert(node_id.to_string(), output);
+    }
+
+    pub fn get_node_output(&self, node_id: &str) -> Option<&serde_json::Value> {
+        self.node_outputs.get(node_id)
     }
 }
 ```
@@ -212,12 +243,19 @@ impl ExecutionContext {
 
 ```rust
 #[async_trait]
-pub trait LlmClient: Send + Sync {
-    async fn generate(&self, request: GenerateRequest) -> Result<GenerateResponse>;
-    async fn embed(&self, request: EmbedRequest) -> Result<EmbedResponse>;
-    
+pub trait LlmProviderTrait: Send + Sync {
     fn provider_name(&self) -> &str;
-    fn model_info(&self) -> ModelInfo;
+    fn model_name(&self) -> &str;
+
+    async fn complete(&self, request: LlmRequest) -> GraphBitResult<LlmResponse>;
+
+    async fn stream(&self, request: LlmRequest) -> GraphBitResult<Box<dyn futures::Stream<Item = GraphBitResult<LlmResponse>> + Unpin + Send>> {
+        // Optional streaming support
+    }
+
+    fn supports_streaming(&self) -> bool { false }
+    fn supports_function_calling(&self) -> bool { false }
+    fn max_context_length(&self) -> Option<u32> { None }
 }
 ```
 
@@ -225,36 +263,42 @@ pub trait LlmClient: Send + Sync {
 
 **OpenAI Client:**
 ```rust
-pub struct OpenAiClient {
+pub struct OpenAiProvider {
     client: Client,
     api_key: String,
     model: String,
+    base_url: String,
+    organization: Option<String>,
 }
-
+impl OpenAiProvider {
+    pub fn new(api_key: String, model: String) -> GraphBitResult<Self> {
+        // Create provider with optimized settings
+    }
+    fn convert_message(&self, message: &LlmMessage) -> OpenAiMessage {
+        // Convert to OpenAI message format
+    }
+}
 #[async_trait]
-impl LlmClient for OpenAiClient {
-    async fn generate(&self, request: GenerateRequest) -> Result<GenerateResponse> {
-        let openai_request = self.convert_request(request);
-        let response = self.client.chat().create(openai_request).await?;
-        Ok(self.convert_response(response))
+impl LlmProviderTrait for OpenAiProvider {
+    async fn complete(&self, request: LlmRequest) -> GraphBitResult<LlmResponse> {
+        // Perform completion request
     }
 }
 ```
 
 **Anthropic Client:**
 ```rust
-pub struct AnthropicClient {
-    client: Client, 
+pub struct AnthropicProvider {
+    client: Client,
     api_key: String,
     model: String,
+    base_url: String,
 }
 
 #[async_trait]
 impl LlmClient for AnthropicClient {
-    async fn generate(&self, request: GenerateRequest) -> Result<GenerateResponse> {
-        let claude_request = self.convert_request(request);
-        let response = self.client.messages().create(claude_request).await?;
-        Ok(self.convert_response(response))
+    async fn complete(&self, request: LlmRequest) -> GraphBitResult<LlmResponse> {
+        // Perform completion request
     }
 }
 ```
@@ -264,56 +308,80 @@ impl LlmClient for AnthropicClient {
 #### Circuit Breaker Pattern
 
 ```rust
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum CircuitBreakerState {
+    Closed,
+    Open { opened_at: chrono::DateTime<chrono::Utc> },
+    HalfOpen,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CircuitBreaker {
-    state: Arc<Mutex<CircuitState>>,
-    failure_threshold: u32,
-    timeout_duration: Duration,
-    half_open_max_calls: u32,
+    pub config: CircuitBreakerConfig,
+    pub state: CircuitBreakerState,
+    pub failure_count: u32,
+    pub success_count: u32,
+    pub last_failure: Option<chrono::DateTime<chrono::Utc>>,
 }
 
 impl CircuitBreaker {
-    pub async fn call<F, T>(&self, operation: F) -> Result<T>
-    where
-        F: Future<Output = Result<T>>,
-    {
-        match self.state() {
-            CircuitState::Closed => self.execute_operation(operation).await,
-            CircuitState::Open => Err(Error::CircuitBreakerOpen),
-            CircuitState::HalfOpen => self.try_half_open_operation(operation).await,
+    pub fn new(config: CircuitBreakerConfig) -> Self {
+        Self {
+            config,
+            state: CircuitBreakerState::Closed,
+            failure_count: 0,
+            success_count: 0,
+            last_failure: None,
         }
+    }
+
+    pub fn should_allow_request(&mut self) -> bool {
+        // Check if request should be allowed based on current state
+    }
+
+    pub fn record_success(&mut self) {
+        // Record successful operation and potentially close circuit
+    }
+
+    pub fn record_failure(&mut self) {
+        // Record failure and potentially open circuit
     }
 }
 ```
 
-#### Retry Policy
+#### Retry Configuration
 
 ```rust
-pub struct RetryPolicy {
-    max_attempts: u32,
-    base_delay: Duration,
-    max_delay: Duration,
-    backoff_multiplier: f64,
-    jitter: f64,
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum RetryableErrorType {
+    NetworkError,
+    TimeoutError,
+    TemporaryUnavailable,
+    InternalServerError,
+    RateLimited,
 }
 
-impl RetryPolicy {
-    pub async fn execute<F, T>(&self, mut operation: F) -> Result<T>
-    where
-        F: FnMut() -> Pin<Box<dyn Future<Output = Result<T>>>>,
-    {
-        let mut attempt = 0;
-        
-        loop {
-            match operation().await {
-                Ok(result) => return Ok(result),
-                Err(e) if attempt >= self.max_attempts => return Err(e),
-                Err(_) => {
-                    attempt += 1;
-                    let delay = self.calculate_delay(attempt);
-                    tokio::time::sleep(delay).await;
-                }
-            }
-        }
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RetryConfig {
+    pub max_attempts: u32,
+    pub initial_delay_ms: u64,
+    pub backoff_multiplier: f64,
+    pub max_delay_ms: u64,
+    pub jitter_factor: f64,
+    pub retryable_errors: Vec<RetryableErrorType>,
+}
+
+impl RetryConfig {
+    pub fn new(max_attempts: u32) -> Self {
+        // Create with default settings
+    }
+
+    pub fn calculate_delay(&self, attempt: u32) -> u64 {
+        // Calculate delay with exponential backoff and jitter
+    }
+
+    pub fn should_retry(&self, error: &GraphBitError, attempt: u32) -> bool {
+        // Determine if error should trigger a retry
     }
 }
 ```
@@ -323,20 +391,32 @@ impl RetryPolicy {
 ### Python-Rust Boundary
 
 ```rust
-// Efficient data transfer
+// Workflow result exposed to Python
 #[pyclass]
-pub struct PyExecutionResult {
-    #[pyo3(get)]
-    pub status: String,
-    
-    // Internal Rust data (not exposed to Python)
-    result: Arc<ExecutionResult>,
+pub struct WorkflowResult {
+    pub(crate) inner: WorkflowContext,
 }
 
-impl PyExecutionResult {
-    // Zero-copy access to internal data when possible
-    pub fn get_variable(&self, key: &str) -> Option<String> {
-        self.result.variables.get(key).map(|v| v.to_string())
+#[pymethods]
+impl WorkflowResult {
+    fn is_success(&self) -> bool {
+        matches!(self.inner.state, WorkflowState::Completed)
+    }
+
+    fn is_failed(&self) -> bool {
+        matches!(self.inner.state, WorkflowState::Failed { .. })
+    }
+
+    fn execution_time_ms(&self) -> u64 {
+        self.inner.execution_duration_ms().unwrap_or(0)
+    }
+
+    fn get_variable(&self, key: &str) -> Option<String> {
+        self.inner.variables.get(key).map(|v| v.to_string())
+    }
+
+    fn get_node_output(&self, node_id: &str) -> Option<String> {
+        self.inner.get_node_output(node_id).map(|v| v.to_string())
     }
 }
 ```
@@ -345,18 +425,34 @@ impl PyExecutionResult {
 
 **Connection Pooling:**
 ```rust
-pub struct ConnectionPool {
-    pools: HashMap<String, Pool<Connection>>,
-    max_connections: usize,
+// Each LLM provider manages its own connection pool
+impl OpenAiProvider {
+    pub fn new(api_key: String, model: String) -> GraphBitResult<Self> {
+        let client = Client::builder()
+            .timeout(Duration::from_secs(60))
+            .pool_max_idle_per_host(10)
+            .pool_idle_timeout(Duration::from_secs(30))
+            .tcp_keepalive(Duration::from_secs(60))
+            .build()?;
+        // ...
+    }
 }
 ```
 
-**Memory Efficient Node Storage:**
+**Workflow Graph Storage:**
 ```rust
-// Nodes stored with minimal overhead
-pub struct NodeStorage {
-    nodes: SlotMap<NodeId, Node>,
-    node_index: HashMap<String, NodeId>,
+// Efficient workflow representation
+pub struct WorkflowGraph {
+    nodes: HashMap<NodeId, WorkflowNode>,
+    edges: Vec<(NodeId, NodeId, WorkflowEdge)>,
+}
+
+pub struct WorkflowNode {
+    pub id: NodeId,
+    pub name: String,
+    pub node_type: NodeType,
+    pub config: HashMap<String, serde_json::Value>,
+    pub retry_config: RetryConfig,
 }
 ```
 
@@ -375,99 +471,154 @@ pub struct NodeStorage {
 
 #### 1. Async Processing
 ```rust
-// All I/O operations are async
-pub async fn execute_workflow(&self, workflow: &Workflow) -> Result<ExecutionResult> {
-    // Concurrent execution of independent nodes
-    let futures = ready_nodes.into_iter()
-        .map(|node| self.execute_node(node))
-        .collect::<Vec<_>>();
-    
-    let results = join_all(futures).await;
-    // Process results...
+// I/O async operations
+impl WorkflowExecutor {
+    pub async fn execute(&self, workflow: Workflow) -> GraphBitResult<WorkflowContext> {
+        // Dependency-aware batch execution
+        let batches = self.create_execution_batches(&workflow.graph)?;
+
+        for batch in batches {
+            let futures = batch.into_iter()
+                .map(|node_id| self.execute_node_with_concurrency(node_id, &workflow))
+                .collect::<Vec<_>>();
+
+            let _results = futures::future::join_all(futures).await;
+        }
+
+        Ok(context)
+    }
 }
 ```
 
-#### 2. Connection Reuse
+#### 2. Connection Pooling (per provider)
 ```rust
-// HTTP client reuse
-pub struct LlmClientManager {
-    clients: HashMap<String, Arc<dyn LlmClient>>,
+// Each LLM provider manages its own HTTP client pool
+impl OpenAiProvider {
+    pub fn new(api_key: String, model: String) -> GraphBitResult<Self> {
+        let client = Client::builder()
+            .pool_max_idle_per_host(10)
+            .pool_idle_timeout(Duration::from_secs(30))
+            .tcp_keepalive(Duration::from_secs(60))
+            .build()?;
+        // ...
+    }
 }
 ```
 
-#### 3. Memory Pooling
+#### 3. Execution Mode Optimization
 ```rust
-// Reuse allocations where possible
-pub struct NodeExecutor {
-    buffer_pool: ObjectPool<Vec<u8>>,
+// Different execution modes for different use cases
+impl Executor {
+    async fn execute_workflow_internal(
+        llm_config: LlmConfig,
+        workflow: Workflow,
+        config: ExecutionConfig,
+    ) -> Result<WorkflowContext, GraphBitError> {
+        let executor = match config.mode {
+            ExecutionMode::HighThroughput => {
+                CoreWorkflowExecutor::new_high_throughput()
+            }
+            ExecutionMode::LowLatency => {
+                CoreWorkflowExecutor::new_low_latency().without_retries()
+            }
+            ExecutionMode::MemoryOptimized => {
+                CoreWorkflowExecutor::new_high_throughput()
+            }
+        };
+
+        executor.execute(workflow).await
+    }
 }
 ```
 
 ## Security Architecture
 
-### API Key Management
+### API Key Validation
 
 ```rust
-pub struct SecureConfig {
-    // API keys stored securely
-    encrypted_keys: HashMap<String, Vec<u8>>,
-    key_cipher: ChaCha20Poly1305,
-}
-```
-
-### Input Validation
-
-```rust
-pub fn validate_input(input: &str) -> Result<()> {
-    // Comprehensive input validation
-    if input.len() > MAX_INPUT_SIZE {
-        return Err(Error::InputTooLarge);
+// Actual API key validation in Python bindings
+pub(crate) fn validate_api_key(api_key: &str, provider: &str) -> PyResult<()> {
+    if api_key.is_empty() {
+        return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+            "{} API key cannot be empty",
+            provider
+        )));
     }
-    
-    // Check for potentially dangerous content
-    validate_content_safety(input)?;
-    
+
+    let min_length = match provider.to_lowercase().as_str() {
+        "openai" => 20,
+        "anthropic" => 15,
+        "huggingface" => 10,
+        _ => 8,
+    };
+
+    if api_key.len() < min_length {
+        return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+            "{} API key too short",
+            provider
+        )));
+    }
+
     Ok(())
-}
-```
-
-### Safe Template Processing
-
-```rust
-pub struct SafeTemplateEngine {
-    // Prevent template injection attacks
-    allowed_functions: HashSet<String>,
 }
 ```
 
 ## Extensibility
 
-### Plugin Architecture
+### Tool Registration System
 
 ```rust
-pub trait NodeProcessor: Send + Sync {
-    fn process(&self, input: &NodeInput) -> Result<NodeOutput>;
-    fn node_type(&self) -> &str;
+// Actual tool registration in Python bindings
+thread_local! {
+    static TOOL_REGISTRY: RefCell<HashMap<String, PyObject>> = RefCell::new(HashMap::new());
 }
 
-// Register custom processors
-pub struct ProcessorRegistry {
-    processors: HashMap<String, Box<dyn NodeProcessor>>,
+impl Node {
+    fn create_tool_executor(&self, py: Python<'_>) -> PyResult<ToolExecutor> {
+        let registry = ToolRegistry::new();
+
+        // Register tools from the global registry
+        TOOL_REGISTRY.with(|global_registry| {
+            let global_registry = global_registry.borrow();
+            for tool_name in &tool_names {
+                if let Some(tool_func) = global_registry.get(tool_name) {
+                    registry.register_tool(
+                        tool_name.clone(),
+                        format!("Tool function: {}", tool_name),
+                        tool_func.clone_ref(py),
+                        &params_dict,
+                        None,
+                    )?;
+                }
+            }
+        })?;
+
+        Ok(ToolExecutor::new(Some(&registry), None))
+    }
 }
 ```
 
 ### Custom LLM Providers
 
 ```rust
-// Implement custom provider
-pub struct CustomLlmClient {
-    // Custom implementation
+// Actual LLM provider trait implementation
+#[async_trait]
+pub trait LlmProviderTrait: Send + Sync {
+    fn provider_name(&self) -> &str;
+    fn model_name(&self) -> &str;
+
+    async fn complete(&self, request: LlmRequest) -> GraphBitResult<LlmResponse>;
+
+    async fn stream(&self, request: LlmRequest)
+        -> GraphBitResult<Box<dyn futures::Stream<Item = GraphBitResult<LlmResponse>> + Unpin + Send>>;
+
+    fn supports_streaming(&self) -> bool;
 }
 
-#[async_trait]
-impl LlmClient for CustomLlmClient {
-    async fn generate(&self, request: GenerateRequest) -> Result<GenerateResponse> {
-        // Custom LLM integration
+// Example: Custom provider implementation
+impl LlmProviderTrait for CustomProvider {
+    async fn complete(&self, request: LlmRequest) -> GraphBitResult<LlmResponse> {
+        // Custom implementation
     }
 }
 ```
@@ -477,40 +628,73 @@ impl LlmClient for CustomLlmClient {
 ### Structured Logging
 
 ```rust
-use tracing::{info, warn, error, instrument};
+// Real tracing usage in workflow executor
+use tracing::{debug, error, info, instrument, warn};
 
-#[instrument]
-pub async fn execute_node(&self, node: &Node) -> Result<NodeResult> {
-    info!(node_id = %node.id(), "Starting node execution");
-    
-    let start = Instant::now();
-    let result = self.process_node(node).await;
-    let duration = start.elapsed();
-    
-    match &result {
-        Ok(_) => info!(
-            node_id = %node.id(),
-            duration_ms = duration.as_millis(),
-            "Node execution completed successfully"
-        ),
-        Err(e) => error!(
-            node_id = %node.id(),
-            error = %e,
-            "Node execution failed"
-        ),
+impl Executor {
+    #[instrument(skip(self, workflow), fields(workflow_name = %workflow.inner.name))]
+    fn execute(&mut self, workflow: &Workflow) -> PyResult<WorkflowResult> {
+        let start_time = Instant::now();
+
+        if debug {
+            debug!("Starting workflow execution with mode: {:?}", config.mode);
+        }
+
+        let result = get_runtime().block_on(async move {
+            Self::execute_workflow_internal(llm_config, workflow_clone, config).await
+        });
+
+        match result {
+            Ok(context) => {
+                let duration = start_time.elapsed();
+                info!("Workflow execution completed in {:?}", duration);
+                self.update_stats(true, duration);
+                Ok(WorkflowResult::new(context))
+            }
+            Err(e) => {
+                let duration = start_time.elapsed();
+                error!("Workflow execution failed: {}", e);
+                self.update_stats(false, duration);
+                Err(to_py_error(e))
+            }
+        }
     }
-    
-    result
 }
 ```
 
-### Metrics Collection
+### Execution Statistics
 
 ```rust
-pub struct MetricsCollector {
-    execution_times: Histogram,
-    success_counter: Counter,
-    error_counter: Counter,
+// Real statistics tracking in executor
+#[derive(Debug, Clone)]
+pub(crate) struct ExecutionStats {
+    pub total_executions: u64,
+    pub successful_executions: u64,
+    pub failed_executions: u64,
+    pub average_duration_ms: f64,
+    pub total_duration_ms: u64,
+    pub created_at: Instant,
+}
+
+impl Executor {
+    fn update_stats(&mut self, success: bool, duration: Duration) {
+        if !self.config.enable_metrics {
+            return;
+        }
+
+        self.stats.total_executions += 1;
+        let duration_ms = duration.as_millis() as u64;
+        self.stats.total_duration_ms += duration_ms;
+
+        if success {
+            self.stats.successful_executions += 1;
+        } else {
+            self.stats.failed_executions += 1;
+        }
+
+        self.stats.average_duration_ms =
+            self.stats.total_duration_ms as f64 / self.stats.total_executions as f64;
+    }
 }
 ```
 
