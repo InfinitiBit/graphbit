@@ -234,10 +234,10 @@ ifeq ($(ENV_TYPE),poetry)
 	poetry install --no-root
 else ifeq ($(ENV_TYPE),conda)
 	conda run -n graphbit pip install poetry
-	conda run -n graphbit poetry install --with dev,benchmarks
+	conda run -n graphbit poetry install --no-root
 else ifeq ($(ENV_TYPE),venv)
 	$(PYTHON_ENV) pip install poetry
-	$(PYTHON_ENV) poetry install --with dev,benchmarks
+	$(PYTHON_ENV) poetry install --no-root
 endif
 	@echo "Python dependencies installed."
 
