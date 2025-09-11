@@ -116,6 +116,7 @@ async def main():
 
 asyncio.run(main())
 ```
+
 ---
 
 This documentation demonstrates sync and async functions supported by GraphBit’s Python API, enabling you to select the best approach for your use case, whether you need straightforward synchronous calls or high-performance asynchronous workflows.

@@ -11,33 +11,27 @@ This guide will help you install GraphBit on your system and set up your develop
 
 ---
 
-## Installation Methods
-
-### Method 1: Install from PyPI (Recommended)
-
-The easiest way to install GraphBit is using pip:
-
+## Installation 
+Clone the repository
 ```bash
-pip install graphbit
-```
-
-### Method 2: Install from Source
-
-For development or the latest features:
-
-```bash
-# Clone the repository
 git clone https://github.com/InfinitiBit/graphbit.git
 cd graphbit
+```
 
-# Install Rust (if not already installed)
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-source ~/.cargo/env
+Install Rust
+- **Linux/macOS**: 
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh && source $HOME/.cargo/env`
+```  
+- **Windows**: Download & run [rustup-init.exe](https://win.rustup.rs/x86_64)  
 
-# Set environment variable for compilation
-unset ARGV0
+Set up poetry environment, then install dependencies
+```bash
+poetry install --no-root
+```
 
-# Build and install Python bindings
+Build Python bindings
+```bash
 cd python
 maturin develop
 ```
@@ -117,39 +111,11 @@ cd python
 maturin develop
 ```
 
----
-
-## Docker Installation (Alternative)
-
-Run GraphBit in a containerized environment:
-
-```bash
-# Pull the official image
-docker pull graphbit/graphbit:latest
-
-# Run with environment variables
-docker run -e OPENAI_API_KEY=$OPENAI_API_KEY \
-           -v $(pwd):/workspace \
-           graphbit/graphbit:latest
-```
-
----
-
 ## Troubleshooting
 
 ### Common Issues
 
-#### 1. Import Error
-```
-ImportError: No module named 'graphbit'
-```
-**Solution**: Ensure you're using the correct Python environment and GraphBit is installed:
-```bash
-pip list | grep graphbit
-pip install --upgrade graphbit
-```
-
-#### 2. Rust Compilation Errors
+#### 1. Rust Compilation Errors
 ```
 error: Microsoft Visual C++ 14.0 is required (Windows)
 ```
@@ -164,7 +130,7 @@ unset ARGV0
 rustc --version
 ```
 
-#### 3. Runtime Initialization Errors
+#### 2. Runtime Initialization Errors
 ```
 Failed to initialize GraphBit runtime
 ```
@@ -177,16 +143,14 @@ health = health_check()
 print(health)
 ```
 
-#### 4. Permission Errors (Linux/macOS)
+#### 3. Permission Errors (Linux/macOS)
 ```bash
-# If you get permission errors, try:
-pip install --user graphbit
-
-# Or use virtual environment (recommended)
+# Use virtual environment (recommended)
 python -m venv graphbit-env
 source graphbit-env/bin/activate  # Linux/macOS
 # graphbit-env\Scripts\activate   # Windows
-pip install graphbit
+cd python
+maturin develop
 ```
 
 ### Get Help
@@ -208,9 +172,6 @@ If you encounter issues:
 Keep GraphBit updated for the latest features and bug fixes:
 
 ```bash
-# Update from PyPI
-pip install --upgrade graphbit
-
 # Update from source
 cd graphbit
 git pull origin main

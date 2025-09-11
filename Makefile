@@ -231,7 +231,7 @@ install-rust-deps: ## Install Rust dependencies
 install-python-deps: ## Install Python dependencies using Poetry
 	@echo "Installing Python dependencies..."
 ifeq ($(ENV_TYPE),poetry)
-	poetry install --with dev,benchmarks
+	poetry install --no-root
 else ifeq ($(ENV_TYPE),conda)
 	conda run -n graphbit pip install poetry
 	conda run -n graphbit poetry install --with dev,benchmarks

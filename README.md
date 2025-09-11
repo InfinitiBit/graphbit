@@ -53,10 +53,18 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh && source $HOME/.
 ```  
 - **Windows**: Download & run [rustup-init.exe](https://win.rustup.rs/x86_64)  
 
+Install Poetry
+```bash
+curl -sSL https://install.python-poetry.org | python3 -
+```
+
 Set up poetry environment, then install dependencies
 ```bash
+poetry env use python3.11   # Supports from python 3.10 to 3.13
+source $(poetry env info --path)/bin/activate
 poetry install --no-root
 ```
+
 Build Python bindings
 ```bash
 git clone https://github.com/InfinitiBit/graphbit.git
