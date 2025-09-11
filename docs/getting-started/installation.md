@@ -143,7 +143,7 @@ health = health_check()
 print(health)
 ```
 
-#### 3. Permission Errors (Linux/macOS)
+#### 3. Environment Setup (Linux/macOS)
 ```bash
 # Use virtual environment (recommended)
 python -m venv graphbit-env
