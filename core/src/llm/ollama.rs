@@ -62,7 +62,7 @@ impl OllamaProvider {
         })
     }
 
-    /// Convert GraphBit message to Ollama message format
+    /// Convert `GraphBit` message to Ollama message format
     fn convert_message(&self, message: &LlmMessage) -> OllamaMessage {
         OllamaMessage {
             role: match message.role {
@@ -91,7 +91,7 @@ impl OllamaProvider {
         }
     }
 
-    /// Convert GraphBit tool to Ollama tool format
+    /// Convert `GraphBit` tool to Ollama tool format
     fn convert_tool(&self, tool: &LlmTool) -> OllamaTool {
         OllamaTool {
             r#type: "function".to_string(),
@@ -103,7 +103,7 @@ impl OllamaProvider {
         }
     }
 
-    /// Parse Ollama response to GraphBit response
+    /// Parse Ollama response to `GraphBit` response
     fn parse_response(&self, response: OllamaResponse) -> GraphBitResult<LlmResponse> {
         let content = response.message.content;
         let tool_calls = response

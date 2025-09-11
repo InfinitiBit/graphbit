@@ -1,4 +1,4 @@
-//! Error handling for GraphBit Core
+//! Error handling for `GraphBit` Core
 //!
 //! This module provides a comprehensive error handling system that covers
 //! all potential failure modes in the agentic workflow framework.
@@ -6,74 +6,126 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-/// Result type alias for GraphBit operations
+/// Result type alias for `GraphBit` operations
 pub type GraphBitResult<T> = Result<T, GraphBitError>;
 
-/// Comprehensive error types for the GraphBit framework
+/// Comprehensive error types for the `GraphBit` framework
 #[derive(Error, Debug, Clone, Serialize, Deserialize)]
 pub enum GraphBitError {
     /// Configuration related errors
     #[error("Configuration error: {message}")]
-    Configuration { message: String },
+    Configuration {
+        /// Error message describing the configuration issue
+        message: String,
+    },
 
     /// LLM provider errors
     #[error("LLM provider error: {provider} - {message}")]
-    LlmProvider { provider: String, message: String },
+    LlmProvider {
+        /// Name of the LLM provider that caused the error
+        provider: String,
+        /// Error message describing the issue
+        message: String,
+    },
 
     /// Generic LLM errors
     #[error("LLM error: {message}")]
-    Llm { message: String },
+    Llm {
+        /// Error message describing the LLM issue
+        message: String,
+    },
 
     /// Network communication errors
     #[error("Network error: {message}")]
-    Network { message: String },
+    Network {
+        /// Error message describing the network issue
+        message: String,
+    },
 
     /// JSON serialization/deserialization errors
     #[error("Serialization error: {message}")]
-    Serialization { message: String },
+    Serialization {
+        /// Error message describing the serialization issue
+        message: String,
+    },
 
     /// Workflow execution errors
     #[error("Workflow execution error: {message}")]
-    WorkflowExecution { message: String },
+    WorkflowExecution {
+        /// Error message describing the workflow execution issue
+        message: String,
+    },
 
     /// Graph structure errors
     #[error("Graph error: {message}")]
-    Graph { message: String },
+    Graph {
+        /// Error message describing the graph structure issue
+        message: String,
+    },
 
     /// Agent-related errors
     #[error("Agent error: {agent_id} - {message}")]
-    Agent { agent_id: String, message: String },
+    Agent {
+        /// ID of the agent that caused the error
+        agent_id: String,
+        /// Error message describing the agent issue
+        message: String,
+    },
 
     /// Agent not found errors
     #[error("Agent not found: {agent_id}")]
-    AgentNotFound { agent_id: String },
+    AgentNotFound {
+        /// ID of the agent that was not found
+        agent_id: String,
+    },
 
     /// Type validation errors
     #[error("Validation error: {field} - {message}")]
-    Validation { field: String, message: String },
+    Validation {
+        /// Name of the field that failed validation
+        field: String,
+        /// Error message describing the validation issue
+        message: String,
+    },
 
     /// Authentication and authorization errors
     #[error("Authentication error: {provider} - {message}")]
-    Authentication { provider: String, message: String },
+    Authentication {
+        /// Name of the provider that caused the authentication error
+        provider: String,
+        /// Error message describing the authentication issue
+        message: String,
+    },
 
     /// Rate limiting errors
     #[error("Rate limit exceeded: {provider} - retry after {retry_after_seconds}s")]
     RateLimit {
+        /// Name of the provider that imposed the rate limit
         provider: String,
+        /// Number of seconds to wait before retrying
         retry_after_seconds: u64,
     },
 
     /// Generic internal errors
     #[error("Internal error: {message}")]
-    Internal { message: String },
+    Internal {
+        /// Error message describing the internal issue
+        message: String,
+    },
 
     /// IO errors
     #[error("IO error: {message}")]
-    Io { message: String },
+    Io {
+        /// Error message describing the IO issue
+        message: String,
+    },
 
     /// Concurrency control errors
     #[error("Concurrency error: {message}")]
-    Concurrency { message: String },
+    Concurrency {
+        /// Error message describing the concurrency issue
+        message: String,
+    },
 }
 
 impl GraphBitError {

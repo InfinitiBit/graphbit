@@ -1,7 +1,7 @@
-//! Embeddings support for GraphBit
+//! Embeddings support for `GraphBit`
 //!
 //! This module provides a unified interface for working with different
-//! embedding providers including HuggingFace and OpenAI.
+//! embedding providers including `HuggingFace` and `OpenAI`.
 
 use crate::errors::{GraphBitError, GraphBitResult};
 use async_trait::async_trait;
@@ -32,7 +32,9 @@ pub struct EmbeddingConfig {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum EmbeddingProvider {
+    /// Embedding provider from `OpenAI`
     OpenAI,
+    /// Embedding provider from `HuggingFace`
     HuggingFace,
 }
 
@@ -176,7 +178,7 @@ pub trait EmbeddingProviderTrait: Send + Sync {
     }
 }
 
-/// OpenAI embedding provider
+/// `OpenAI` embedding provider
 #[derive(Debug, Clone)]
 pub struct OpenAIEmbeddingProvider {
     config: EmbeddingConfig,
@@ -184,7 +186,7 @@ pub struct OpenAIEmbeddingProvider {
 }
 
 impl OpenAIEmbeddingProvider {
-    /// Create a new OpenAI embedding provider
+    /// Create a new `OpenAI` embedding provider
     pub fn new(config: EmbeddingConfig) -> GraphBitResult<Self> {
         if config.provider != EmbeddingProvider::OpenAI {
             return Err(GraphBitError::config(
@@ -339,7 +341,7 @@ impl EmbeddingProviderTrait for OpenAIEmbeddingProvider {
     }
 }
 
-/// HuggingFace embedding provider
+/// `HuggingFace` embedding provider
 #[derive(Debug, Clone)]
 pub struct HuggingFaceEmbeddingProvider {
     config: EmbeddingConfig,
@@ -347,7 +349,7 @@ pub struct HuggingFaceEmbeddingProvider {
 }
 
 impl HuggingFaceEmbeddingProvider {
-    /// Create a new HuggingFace embedding provider
+    /// Create a new `HuggingFace` embedding provider
     pub fn new(config: EmbeddingConfig) -> GraphBitResult<Self> {
         if config.provider != EmbeddingProvider::HuggingFace {
             return Err(GraphBitError::config(
@@ -600,10 +602,9 @@ impl EmbeddingService {
                             Ok(_) => break,     // Successfully acquired slot
                             Err(_) => continue, // Retry
                         }
-                    } else {
-                        // Brief yield to avoid busy waiting
-                        tokio::task::yield_now().await;
                     }
+                    // Brief yield to avoid busy waiting
+                    tokio::task::yield_now().await;
                 }
 
                 // Execute the request

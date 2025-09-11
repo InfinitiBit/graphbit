@@ -1,7 +1,7 @@
-//! Core type definitions for GraphBit
+//! Core type definitions for `GraphBit`
 //!
 //! This module contains all the fundamental types used throughout the
-//! GraphBit agentic workflow automation framework.
+//! `GraphBit` agentic workflow automation framework.
 
 use chrono;
 use serde::{Deserialize, Serialize};
@@ -214,18 +214,25 @@ pub enum MessageContent {
     Data(serde_json::Value),
     /// Tool call request
     ToolCall {
+        /// Name of the tool to call
         tool_name: String,
+        /// Parameters to pass to the tool
         parameters: serde_json::Value,
     },
     /// Tool call response
     ToolResponse {
+        /// Name of the tool that was called
         tool_name: String,
+        /// Result returned by the tool
         result: serde_json::Value,
+        /// Whether the tool call was successful
         success: bool,
     },
     /// Error message
     Error {
+        /// Error code identifying the type of error
         error_code: String,
+        /// Human-readable error message
         error_message: String,
     },
 }
@@ -382,16 +389,24 @@ pub enum WorkflowState {
     /// Workflow is pending execution
     Pending,
     /// Workflow is currently running
-    Running { current_node: NodeId },
+    Running {
+        /// ID of the node currently being executed
+        current_node: NodeId,
+    },
     /// Workflow is paused
     Paused {
+        /// ID of the node where execution was paused
         current_node: NodeId,
+        /// Reason why the workflow was paused
         reason: String,
     },
     /// Workflow completed successfully
     Completed,
     /// Workflow failed
-    Failed { error: String },
+    Failed {
+        /// Error message describing why the workflow failed
+        error: String,
+    },
     /// Workflow was cancelled
     Cancelled,
 }
@@ -746,6 +761,7 @@ pub enum CircuitBreakerState {
     Closed,
     /// Circuit is open, requests are rejected
     Open {
+        /// Timestamp when the circuit was opened
         opened_at: chrono::DateTime<chrono::Utc>,
     },
     /// Circuit is half-open, testing if service has recovered
@@ -1033,10 +1049,9 @@ impl ConcurrencyManager {
                     Ok(_) => break,     // Successfully acquired
                     Err(_) => continue, // Retry - another thread modified the count
                 }
-            } else {
-                // At capacity, wait for notification
-                wait_queue.notified().await;
             }
+            // At capacity, wait for notification
+            wait_queue.notified().await;
         }
 
         // Update statistics

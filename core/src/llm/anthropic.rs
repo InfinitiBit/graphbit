@@ -29,7 +29,7 @@ impl AnthropicProvider {
         })
     }
 
-    /// Convert GraphBit messages to Anthropic format
+    /// Convert `GraphBit` messages to Anthropic format
     fn convert_messages(&self, messages: &[LlmMessage]) -> (Option<String>, Vec<AnthropicMessage>) {
         let mut system_prompt = None;
         let mut anthropic_messages = Vec::new();
@@ -63,7 +63,7 @@ impl AnthropicProvider {
         (system_prompt, anthropic_messages)
     }
 
-    /// Parse Anthropic response to GraphBit response
+    /// Parse Anthropic response to `GraphBit` response
     fn parse_response(&self, response: AnthropicResponse) -> GraphBitResult<LlmResponse> {
         let content_text = response
             .content
@@ -73,7 +73,7 @@ impl AnthropicProvider {
             .join("\n");
 
         let finish_reason = match response.stop_reason.as_deref() {
-            Some("end_turn") | Some("stop_sequence") => FinishReason::Stop,
+            Some("end_turn" | "stop_sequence") => FinishReason::Stop,
             Some("max_tokens") => FinishReason::Length,
             Some("tool_use") => FinishReason::Other("tool_use".into()),
             Some(other) => FinishReason::Other(other.to_string()),
@@ -146,13 +146,13 @@ impl LlmProviderTrait for AnthropicProvider {
 
     fn max_context_length(&self) -> Option<u32> {
         match self.model.as_str() {
-            "claude-instant-1.2" => Some(100000),
-            "claude-2.0" => Some(100000),
-            "claude-2.1" => Some(200000),
-            "claude-3-sonnet-20240229" => Some(200000),
-            "claude-3-opus-20240229" => Some(200000),
-            "claude-3-haiku-20240307" => Some(200000),
-            _ if self.model.starts_with("claude-3") => Some(200000),
+            "claude-instant-1.2" => Some(100_000),
+            "claude-2.0" => Some(100_000),
+            "claude-2.1" => Some(200_000),
+            "claude-3-sonnet-20240229" => Some(200_000),
+            "claude-3-opus-20240229" => Some(200_000),
+            "claude-3-haiku-20240307" => Some(200_000),
+            _ if self.model.starts_with("claude-3") => Some(200_000),
             _ => None,
         }
     }

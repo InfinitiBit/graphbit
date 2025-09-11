@@ -1,4 +1,4 @@
-//! LLM provider abstraction for GraphBit
+//! LLM provider abstraction for `GraphBit`
 //!
 //! This module provides a unified interface for working with different
 //! LLM providers while maintaining strong type safety and validation.
@@ -188,9 +188,13 @@ impl LlmMessage {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum LlmRole {
+    /// Message from a user/human
     User,
+    /// Message from the AI assistant
     Assistant,
+    /// System message providing context or instructions
     System,
+    /// Message from a tool execution
     Tool,
 }
 

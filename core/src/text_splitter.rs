@@ -1,4 +1,4 @@
-//! Text splitting functionality for GraphBit
+//! Text splitting functionality for `GraphBit`
 //!
 //! This module provides various text splitting strategies for processing
 //! large documents into manageable chunks while maintaining context.
@@ -44,54 +44,79 @@ impl Default for TextSplitterConfig {
 pub enum SplitterStrategy {
     /// Split by character count
     Character {
+        /// Maximum number of characters per chunk
         chunk_size: usize,
+        /// Number of characters to overlap between chunks
         chunk_overlap: usize,
     },
     /// Split by token count (word-based)
     Token {
+        /// Maximum number of tokens per chunk
         chunk_size: usize,
+        /// Number of tokens to overlap between chunks
         chunk_overlap: usize,
+        /// Optional regex pattern for token identification
         token_pattern: Option<String>,
     },
     /// Split by sentence boundaries
     Sentence {
+        /// Maximum number of characters per chunk
         chunk_size: usize,
+        /// Number of characters to overlap between chunks
         chunk_overlap: usize,
+        /// Optional custom sentence ending patterns
         sentence_endings: Option<Vec<String>>,
     },
     /// Recursive splitting with multiple separators
     Recursive {
+        /// Maximum number of characters per chunk
         chunk_size: usize,
+        /// Number of characters to overlap between chunks
         chunk_overlap: usize,
+        /// Optional custom separator patterns for splitting
         separators: Option<Vec<String>>,
     },
     /// Split by paragraphs
     Paragraph {
+        /// Maximum number of characters per chunk
         chunk_size: usize,
+        /// Number of characters to overlap between chunks
         chunk_overlap: usize,
+        /// Minimum length required for a paragraph to be considered
         min_paragraph_length: Option<usize>,
     },
     /// Split by semantic similarity (requires embeddings)
     Semantic {
+        /// Maximum number of characters per chunk
         max_chunk_size: usize,
+        /// Similarity threshold for grouping related content
         similarity_threshold: f32,
     },
     /// Split Markdown documents preserving structure
     Markdown {
+        /// Maximum number of characters per chunk
         chunk_size: usize,
+        /// Number of characters to overlap between chunks
         chunk_overlap: usize,
+        /// Whether to split at header boundaries
         split_by_headers: bool,
     },
     /// Split code files preserving syntax
     Code {
+        /// Maximum number of characters per chunk
         chunk_size: usize,
+        /// Number of characters to overlap between chunks
         chunk_overlap: usize,
+        /// Programming language for syntax-aware splitting
         language: Option<String>,
     },
     /// Custom regex-based splitting
     Regex {
+        /// Regular expression pattern for splitting
         pattern: String,
+        /// Maximum number of characters per chunk
         chunk_size: usize,
+        /// Number of characters to overlap between chunks
         chunk_overlap: usize,
     },
 }

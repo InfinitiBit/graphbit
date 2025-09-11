@@ -1,4 +1,4 @@
-//! HuggingFace LLM provider implementation
+//! `HuggingFace` LLM provider implementation
 
 use crate::errors::{GraphBitError, GraphBitResult};
 use crate::llm::providers::LlmProviderTrait;
@@ -8,7 +8,7 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-/// HuggingFace API provider
+/// `HuggingFace` API provider
 pub struct HuggingFaceProvider {
     client: Client,
     api_key: String,
@@ -17,7 +17,7 @@ pub struct HuggingFaceProvider {
 }
 
 impl HuggingFaceProvider {
-    /// Create a new HuggingFace provider
+    /// Create a new `HuggingFace` provider
     pub fn new(api_key: String, model: String) -> GraphBitResult<Self> {
         let client = Client::new();
         let base_url = "https://api-inference.huggingface.co/models".to_string();
@@ -30,7 +30,7 @@ impl HuggingFaceProvider {
         })
     }
 
-    /// Create a new HuggingFace provider with custom base URL
+    /// Create a new `HuggingFace` provider with custom base URL
     pub fn with_base_url(api_key: String, model: String, base_url: String) -> GraphBitResult<Self> {
         let client = Client::new();
 
@@ -42,7 +42,7 @@ impl HuggingFaceProvider {
         })
     }
 
-    /// Convert GraphBit messages to HuggingFace chat format
+    /// Convert `GraphBit` messages to `HuggingFace` chat format
     fn format_messages_for_chat(&self, messages: &[LlmMessage]) -> String {
         let mut formatted = String::new();
 
@@ -68,7 +68,7 @@ impl HuggingFaceProvider {
         formatted
     }
 
-    /// Parse HuggingFace response to GraphBit response
+    /// Parse `HuggingFace` response to `GraphBit` response
     fn parse_response(&self, response: HuggingFaceResponse) -> GraphBitResult<LlmResponse> {
         let generated_text = response
             .into_iter()

@@ -2,6 +2,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use serde_json::Value as JsonValue;
 
+/// Python wrapper for workflow execution context
 #[pyclass]
 #[derive(Clone)]
 pub struct WorkflowContext {

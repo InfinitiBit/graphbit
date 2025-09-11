@@ -1,4 +1,4 @@
-//! Type validation system for GraphBit
+//! Type validation system for `GraphBit`
 //!
 //! This module provides comprehensive validation of LLM responses and data
 //! against JSON schemas and custom validation rules.

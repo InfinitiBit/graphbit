@@ -66,7 +66,7 @@ impl PerplexityProvider {
         })
     }
 
-    /// Convert GraphBit message to Perplexity message format (OpenAI-compatible)
+    /// Convert `GraphBit` message to Perplexity message format (`OpenAI`-compatible)
     fn convert_message(&self, message: &LlmMessage) -> PerplexityMessage {
         PerplexityMessage {
             role: match message.role {
@@ -97,7 +97,7 @@ impl PerplexityProvider {
         }
     }
 
-    /// Convert GraphBit tool to Perplexity tool format (OpenAI-compatible)
+    /// Convert `GraphBit` tool to Perplexity tool format (`OpenAI`-compatible)
     fn convert_tool(&self, tool: &LlmTool) -> PerplexityTool {
         PerplexityTool {
             r#type: "function".to_string(),
@@ -109,7 +109,7 @@ impl PerplexityProvider {
         }
     }
 
-    /// Parse Perplexity response to GraphBit response
+    /// Parse Perplexity response to `GraphBit` response
     fn parse_response(&self, response: PerplexityResponse) -> GraphBitResult<LlmResponse> {
         let choice =
             response.choices.into_iter().next().ok_or_else(|| {
@@ -251,16 +251,16 @@ impl LlmProviderTrait for PerplexityProvider {
     fn cost_per_token(&self) -> Option<(f64, f64)> {
         // Cost per token in USD (input, output) based on Perplexity pricing
         match self.model.as_str() {
-            "pplx-7b-online" => Some((0.0000002, 0.0000002)),
-            "pplx-70b-online" => Some((0.000001, 0.000001)),
-            "pplx-7b-chat" => Some((0.0000002, 0.0000002)),
-            "pplx-70b-chat" => Some((0.000001, 0.000001)),
-            "llama-2-70b-chat" => Some((0.000001, 0.000001)),
-            "codellama-34b-instruct" => Some((0.00000035, 0.00000140)),
-            "mistral-7b-instruct" => Some((0.0000002, 0.0000002)),
-            "sonar" => Some((0.000001, 0.000001)),
-            "sonar-reasoning" => Some((0.000002, 0.000002)),
-            "sonar-deep-research" => Some((0.000005, 0.000005)),
+            "pplx-7b-online" => Some((0.000_000_2, 0.000_000_2)),
+            "pplx-70b-online" => Some((0.000_001, 0.000_001)),
+            "pplx-7b-chat" => Some((0.000_000_2, 0.000_000_2)),
+            "pplx-70b-chat" => Some((0.000_001, 0.000_001)),
+            "llama-2-70b-chat" => Some((0.000_001, 0.000_001)),
+            "codellama-34b-instruct" => Some((0.000_000_35, 0.000_001_40)),
+            "mistral-7b-instruct" => Some((0.000_000_2, 0.000_000_2)),
+            "sonar" => Some((0.000_001, 0.000_001)),
+            "sonar-reasoning" => Some((0.000_002, 0.000_002)),
+            "sonar-deep-research" => Some((0.000_005, 0.000_005)),
             _ => None,
         }
     }

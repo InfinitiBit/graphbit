@@ -1,4 +1,4 @@
-//! OpenAI LLM provider implementation
+//! `OpenAI` LLM provider implementation
 
 use crate::errors::{GraphBitError, GraphBitResult};
 use crate::llm::providers::LlmProviderTrait;
@@ -9,7 +9,7 @@ use async_trait::async_trait;
 use reqwest::Client;
 use serde::{Deserialize, Deserializer, Serialize};
 
-/// OpenAI API provider
+/// `OpenAI` API provider
 pub struct OpenAiProvider {
     client: Client,
     api_key: String,
@@ -19,7 +19,7 @@ pub struct OpenAiProvider {
 }
 
 impl OpenAiProvider {
-    /// Create a new OpenAI provider
+    /// Create a new `OpenAI` provider
     pub fn new(api_key: String, model: String) -> GraphBitResult<Self> {
         // Optimized client with connection pooling for better performance
         let client = Client::builder()
@@ -45,7 +45,7 @@ impl OpenAiProvider {
         })
     }
 
-    /// Create a new OpenAI provider with custom base URL
+    /// Create a new `OpenAI` provider with custom base URL
     pub fn with_base_url(api_key: String, model: String, base_url: String) -> GraphBitResult<Self> {
         // Use same optimized client settings
         let client = Client::builder()
@@ -76,7 +76,7 @@ impl OpenAiProvider {
         self
     }
 
-    /// Convert GraphBit message to OpenAI message format
+    /// Convert `GraphBit` message to `OpenAI` message format
     fn convert_message(&self, message: &LlmMessage) -> OpenAiMessage {
         OpenAiMessage {
             role: match message.role {
@@ -107,7 +107,7 @@ impl OpenAiProvider {
         }
     }
 
-    /// Convert GraphBit tool to OpenAI tool format
+    /// Convert `GraphBit` tool to `OpenAI` tool format
     fn convert_tool(&self, tool: &LlmTool) -> OpenAiTool {
         OpenAiTool {
             r#type: "function".to_string(),
@@ -119,7 +119,7 @@ impl OpenAiProvider {
         }
     }
 
-    /// Parse OpenAI response to GraphBit response
+    /// Parse `OpenAI` response to `GraphBit` response
     fn parse_response(&self, response: OpenAiResponse) -> GraphBitResult<LlmResponse> {
         let choice = response
             .choices
@@ -287,9 +287,9 @@ impl LlmProviderTrait for OpenAiProvider {
         match self.model.as_str() {
             "gpt-4" => Some(8192),
             "gpt-4-32k" => Some(32768),
-            "gpt-4-turbo" => Some(128000),
-            "gpt-4o" => Some(128000),
-            "gpt-4o-mini" => Some(128000),
+            "gpt-4-turbo" => Some(128_000),
+            "gpt-4o" => Some(128_000),
+            "gpt-4o-mini" => Some(128_000),
             "gpt-3.5-turbo" => Some(4096),
             "gpt-3.5-turbo-16k" => Some(16384),
             _ => None,
@@ -302,10 +302,10 @@ impl LlmProviderTrait for OpenAiProvider {
             "gpt-4" => Some((0.00003, 0.00006)),
             "gpt-4-32k" => Some((0.00006, 0.00012)),
             "gpt-4-turbo" => Some((0.00001, 0.00003)),
-            "gpt-4o" => Some((0.000005, 0.000015)),
-            "gpt-4o-mini" => Some((0.00000015, 0.0000006)),
-            "gpt-3.5-turbo" => Some((0.0000015, 0.000002)),
-            "gpt-3.5-turbo-16k" => Some((0.000003, 0.000004)),
+            "gpt-4o" => Some((0.000_005, 0.000_015)),
+            "gpt-4o-mini" => Some((0.000_000_15, 0.000_000_6)),
+            "gpt-3.5-turbo" => Some((0.000_001_5, 0.000_002)),
+            "gpt-3.5-turbo-16k" => Some((0.000_003, 0.000_004)),
             _ => None,
         }
     }
@@ -383,7 +383,7 @@ struct OpenAiUsage {
 }
 
 /// Custom deserializer for nullable content field
-/// OpenAI returns null for content when tool calls are made
+/// `OpenAI` returns null for content when tool calls are made
 fn deserialize_nullable_content<'de, D>(deserializer: D) -> Result<String, D::Error>
 where
     D: Deserializer<'de>,

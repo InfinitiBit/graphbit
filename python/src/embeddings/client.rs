@@ -8,6 +8,7 @@ use super::config::EmbeddingConfig;
 use crate::errors::to_py_runtime_error;
 use crate::runtime::get_runtime;
 
+/// Python wrapper for the embedding service client
 #[pyclass]
 pub struct EmbeddingClient {
     service: Arc<EmbeddingService>,

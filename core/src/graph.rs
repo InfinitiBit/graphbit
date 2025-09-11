@@ -1,4 +1,4 @@
-//! Graph-based workflow system for GraphBit
+//! Graph-based workflow system for `GraphBit`
 //!
 //! This module provides a directed graph structure for defining and executing
 //! agentic workflows with proper dependency management and parallel execution.
@@ -19,7 +19,7 @@ pub struct WorkflowGraph {
     /// Graph structure
     #[serde(skip)]
     graph: DiGraph<WorkflowNode, WorkflowEdge>,
-    /// Mapping from NodeId to graph indices
+    /// Mapping from `NodeId` to graph indices
     #[serde(skip)]
     node_map: HashMap<NodeId, NodeIndex>,
     /// Serializable representation of nodes
@@ -65,7 +65,7 @@ impl WorkflowGraph {
     }
 
     /// Rebuild the graph structure from serialized data
-    /// This must be called after deserialization since graph and node_map are not serialized
+    /// This must be called after deserialization since `graph` and `node_map` are not serialized
     pub fn rebuild_graph(&mut self) -> GraphBitResult<()> {
         // Clear existing graph structures
         self.graph = DiGraph::new();
@@ -625,31 +625,51 @@ impl WorkflowNode {
 pub enum NodeType {
     /// Agent execution node
     Agent {
+        /// Unique identifier of the agent to execute
         agent_id: crate::types::AgentId,
+        /// Template for the prompt to send to the agent
         prompt_template: String,
     },
     /// Conditional branching node
-    Condition { expression: String },
+    Condition {
+        /// Boolean expression to evaluate for branching
+        expression: String,
+    },
     /// Data transformation node
-    Transform { transformation: String },
+    Transform {
+        /// Transformation logic or script to apply
+        transformation: String,
+    },
     /// Parallel execution splitter
     Split,
     /// Parallel execution joiner
     Join,
     /// Delay/wait node
-    Delay { duration_seconds: u64 },
+    Delay {
+        /// Number of seconds to delay execution
+        duration_seconds: u64,
+    },
     /// HTTP request node
     HttpRequest {
+        /// Target URL for the HTTP request
         url: String,
+        /// HTTP method (GET, POST, PUT, DELETE, etc.)
         method: String,
+        /// HTTP headers to include in the request
         headers: HashMap<String, String>,
     },
     /// Custom function node
-    Custom { function_name: String },
+    Custom {
+        /// Name of the custom function to execute
+        function_name: String,
+    },
     /// Document loading node
     DocumentLoader {
+        /// Type of document to load (pdf, txt, html, etc.)
         document_type: String,
+        /// Path or URL to the document source
         source_path: String,
+        /// Optional character encoding for text documents
         encoding: Option<String>,
     },
 }

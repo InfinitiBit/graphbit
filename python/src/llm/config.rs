@@ -4,6 +4,7 @@ use crate::validation::validate_api_key;
 use graphbit_core::llm::LlmConfig as CoreLlmConfig;
 use pyo3::prelude::*;
 
+/// Python wrapper for LLM configuration
 #[pyclass]
 #[derive(Clone)]
 pub struct LlmConfig {
