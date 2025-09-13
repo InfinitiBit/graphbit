@@ -120,8 +120,8 @@ smart_agent = Node.agent(
 )
 
 processor = Node.agent(
-    name = "Data Processor",
-    prompt = "Process the results obtained from Smart Agent.",
+    name="Data Processor",
+    prompt="Process the results obtained from Smart Agent.",
     system_prompt="""You process and organize results from other agents.
 
     - Summarize and clarify key points
