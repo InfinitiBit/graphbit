@@ -2,7 +2,7 @@
 
 
 <p align="center">
-    <img src="assets/logo(circle).png" width="160px" alt="Logo" />
+    <img src="../assets/logo(circle).png" width="160px" alt="Logo" />
 </p>
 
 <h1 align="center" style="margin: 20px 0; color: #6C4FF7; font-size: 2.5rem; font-weight: 700;">GraphBit</h1>

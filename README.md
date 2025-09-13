@@ -161,6 +161,7 @@ We welcome contributions. To get started, please see the [Contributing](CONTRIBU
 
 GraphBit is built by a wonderful community of researchers and engineers.
 
-<a href="https://github.com/InfinitiBit/graphbit/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=InfinitiBit/graphbit&columns=10" />
-</a> 
+<!-- readme: contributors -start -->
+<!-- readme: contributors -end -->
+
+> **Note**: The contributor list above is automatically updated by our [Contributors Workflow](.github/workflows/update-contributors.yml) whenever changes are pushed to the main branch. New contributors will appear automatically after their first merged contribution.
