@@ -74,8 +74,7 @@ cargo build --release
 Build Python bindings
 ```bash
 cd python/
-cargo clean
-maturin develop
+maturin develop --release
 ```
 
 ### Environment Setup
