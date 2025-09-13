@@ -16,8 +16,6 @@
 
 [![Build Status](https://img.shields.io/github/actions/workflow/status/InfinitiBit/graphbit/update-docs.yml?branch=main)](https://github.com/InfinitiBit/graphbit/actions/workflows/update-docs.yml)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/InfinitiBit/graphbit/blob/main/CONTRIBUTING.md)
-[![PyPI](https://img.shields.io/pypi/v/graphbit)](https://pypi.org/project/graphbit/)
-[![Downloads](https://img.shields.io/pypi/dm/graphbit)](https://pypi.org/project/graphbit/)
 [![Rust Version](https://img.shields.io/badge/rust-1.70+-blue.svg)](https://www.rust-lang.org)
 [![Python Version](https://img.shields.io/pypi/pyversions/graphbit)](https://pypi.org/project/graphbit/)
 
