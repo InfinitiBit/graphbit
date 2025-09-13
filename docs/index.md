@@ -1,17 +1,26 @@
 <div align="center">
 
-# GraphBit - High Performance Agentic Framework
-
 <p align="center">
-    <img src="../assets/logo(circle).png" width="160px" alt="Logo" />
+    <img src="assets/logo(circle).png" width="160px" alt="GraphBit Logo" />
 </p>
 
-[![Build Status](https://img.shields.io/github/actions/workflow/status/InfinitiBit/graphbit/update-docs.yml?branch=main)](https://github.com/InfinitiBit/graphbit/actions/workflows/update-docs.yml)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/InfinitiBit/graphbit/blob/main/CONTRIBUTING.md)
-[![Rust Version](https://img.shields.io/badge/rust-1.70+-blue.svg)](https://www.rust-lang.org)
-[![Python Version](https://img.shields.io/badge/python-3.10--3.13-blue.svg)](https://www.python.org)
+<h1 align="center" style="margin: 20px 0; color: #6C4FF7; font-size: 2.5rem; font-weight: 700;">GraphBit</h1>
 
-**Type-Safe AI Agent Workflows with Rust Performance**
+<p align="center" style="margin: 10px 0 30px 0; color: #8A6EF9; font-size: 1.2rem; font-weight: 500;">High Performance AI Agent Framework</p>
+
+<a href="https://github.com/InfinitiBit/graphbit/actions/workflows/update-docs.yml">
+  <img src="https://img.shields.io/github/actions/workflow/status/InfinitiBit/graphbit/update-docs.yml?branch=main" alt="Build Status">
+</a>
+<a href="https://github.com/InfinitiBit/graphbit/blob/main/CONTRIBUTING.md">
+  <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome">
+</a>
+<a href="https://www.rust-lang.org">
+  <img src="https://img.shields.io/badge/rust-1.70+-blue.svg" alt="Rust Version">
+</a>
+<a href="https://www.python.org">
+  <img src="https://img.shields.io/badge/python-3.10--3.13-blue.svg" alt="Python Version">
+</a>
+
 
 </div>
 
