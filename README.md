@@ -162,63 +162,6 @@ We welcome contributions. To get started, please see the [Contributing](CONTRIBU
 GraphBit is built by a wonderful community of researchers and engineers.
 
 <!-- readme: contributors -start -->
-<table>
-	<tbody>
-		<tr>
-            <td align="center">
-                <a href="https://github.com/JunaidHossain04">
-                    <img src="https://avatars.githubusercontent.com/u/219679880?v=4" width="64;" alt="JunaidHossain04"/>
-                    <br />
-                    <sub><b>Junaid Hossain</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/tanimahossain-infiniti">
-                    <img src="https://avatars.githubusercontent.com/u/204321623?v=4" width="64;" alt="tanimahossain-infiniti"/>
-                    <br />
-                    <sub><b>tanimahossain-infiniti</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/jj-devhub">
-                    <img src="https://avatars.githubusercontent.com/u/207973556?v=4" width="64;" alt="jj-devhub"/>
-                    <br />
-                    <sub><b>Jaid Jashim</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/yeahia-sarker">
-                    <img src="https://avatars.githubusercontent.com/u/214602962?v=4" width="64;" alt="yeahia-sarker"/>
-                    <br />
-                    <sub><b>Yeahia Sarker</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/masbulhaider">
-                    <img src="https://avatars.githubusercontent.com/u/225145101?v=4" width="64;" alt="masbulhaider"/>
-                    <br />
-                    <sub><b>masbulhaider</b></sub>
-                </a>
-            </td>
-		</tr>
-		<tr>
-            <td align="center">
-                <a href="https://github.com/MdRahmatUllah">
-                    <img src="https://avatars.githubusercontent.com/u/32609767?v=4" width="64;" alt="MdRahmatUllah"/>
-                    <br />
-                    <sub><b>Md Rahmat Ullah</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/rahmat-ullah">
-                    <img src="https://avatars.githubusercontent.com/u/172137678?v=4" width="64;" alt="rahmat-ullah"/>
-                    <br />
-                    <sub><b>Md Rahmat Ullah</b></sub>
-                </a>
-            </td>
-		</tr>
-	<tbody>
-</table>
 <!-- readme: contributors -end -->
 
-> **Note**: The contributor list above is automatically updated by our [Contributors Workflow](.github/workflows/update-contributors.yml) whenever changes are pushed to the main branch. New contributors will appear automatically after their first merged contribution.
+> **Note**: The contributor list above is automatically updated by our [Contributors Workflow](.github/workflows/update-contributors.yml) and maintains the **exact same ranking** as GitHub's [Contributors page](https://github.com/InfinitiBit/graphbit/graphs/contributors) (Period: All, Contribution: Commits). Contributors are ranked by commit count **excluding merge commits**, matching GitHub's default display.
