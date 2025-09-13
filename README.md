@@ -10,15 +10,12 @@
 <p align="center">
     <a href="https://graphbit.ai/">Website</a> | 
     <a href="https://docs.graphbit.ai/">Docs</a> |
-    <a href="https://discord.gg/8TvUK6uf">Discord</a> |
-    <a href="https://docs.google.com/spreadsheets/d/1deQk0p7cCJUeeZw3t8FimxVg4jc99w0Bw1XQyLPN0Zk/edit?usp=sharing">Roadmap</a> 
+    <a href="https://discord.gg/8TvUK6uf">Discord</a>
     <br /><br />
 </p>
 
 [![Build Status](https://img.shields.io/github/actions/workflow/status/InfinitiBit/graphbit/python-integration-tests.yml?branch=main)](https://github.com/InfinitiBit/graphbit/actions/workflows/python-integration-tests.yml)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/InfinitiBit/graphbit/blob/main/CONTRIBUTING.md)
-[![Test Coverage](https://img.shields.io/codecov/c/github/InfinitiBit/graphbit)](https://codecov.io/gh/InfinitiBit/graphbit)
-[![Rust Coverage](https://img.shields.io/badge/Rust%20Coverage-47.25%25-yellow)](https://github.com/InfinitiBit/graphbit)
 [![PyPI](https://img.shields.io/pypi/v/graphbit)](https://pypi.org/project/graphbit/)
 [![Downloads](https://img.shields.io/pypi/dm/graphbit)](https://pypi.org/project/graphbit/)
 [![Rust Version](https://img.shields.io/badge/rust-1.70+-blue.svg)](https://www.rust-lang.org)
@@ -46,6 +43,12 @@ Designed to run **multi-agent workflows in parallel**, Graphbit persists memory 
 ##  Quick Start
 
 ### Installation
+Clone the repository
+```bash
+git clone https://github.com/InfinitiBit/graphbit.git
+cd graphbit
+```
+
 Install Rust
 - **Linux/macOS**: 
 ```bash
@@ -65,11 +68,13 @@ source $(poetry env info --path)/bin/activate
 poetry install --no-root
 ```
 
+Build Rust Core
+```bash
+cargo build --release
+```
+
 Build Python bindings
 ```bash
-git clone https://github.com/InfinitiBit/graphbit.git
-cd graphbit/
-cargo build --release
 cd python/
 cargo clean
 maturin develop
