@@ -66,7 +66,7 @@ source $(poetry env info --path)/bin/activate
 poetry install --no-root
 ```
 
-Build Rust Core
+Build from source
 ```bash
 cargo build --release
 ```
