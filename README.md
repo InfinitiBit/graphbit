@@ -10,7 +10,7 @@
 <p align="center">
     <a href="https://graphbit.ai/">Website</a> | 
     <a href="https://docs.graphbit.ai/">Docs</a> |
-    <a href="https://discord.gg/8TvUK6uf">Discord</a>
+    <a href="https://discord.com/invite/huVJwkyu">Discord</a>
     <br /><br />
 </p>
 
