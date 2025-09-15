@@ -15,7 +15,7 @@ pub enum GraphBitError {
     /// Configuration related errors
     #[error("Configuration error: {message}")]
     Configuration {
-        /// Error message describing the configuration issue
+        /// Error message
         message: String,
     },
 

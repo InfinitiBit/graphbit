@@ -5,7 +5,7 @@ use crate::errors::to_py_runtime_error;
 use graphbit_core::{graph::WorkflowEdge, types::NodeId, workflow::Workflow as CoreWorkflow};
 use pyo3::prelude::*;
 
-/// Python wrapper for workflow definition and execution
+/// A workflow definition containing nodes and their execution flow
 #[pyclass]
 #[derive(Clone)]
 pub struct Workflow {

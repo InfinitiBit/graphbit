@@ -26,6 +26,7 @@ profiling = ["tracing-subscriber/env-filter"]
 
 [lib]
 crate-type = ["cdylib"]
+name = "graphbit"
 
 [lints]
 workspace = true

@@ -5,7 +5,7 @@ use pyo3::prelude::*;
 use serde_json;
 use std::collections::HashMap;
 
-/// Python wrapper for workflow execution result
+/// Result of workflow execution containing output data and execution metadata
 #[pyclass]
 pub struct WorkflowResult {
     pub(crate) inner: WorkflowContext,

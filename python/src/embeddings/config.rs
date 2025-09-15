@@ -5,7 +5,7 @@ use graphbit_core::embeddings::{EmbeddingConfig as CoreEmbeddingConfig, Embeddin
 use pyo3::prelude::*;
 use std::collections::HashMap;
 
-/// Python wrapper for embedding configuration
+/// Configuration for embedding providers and models
 #[pyclass]
 #[derive(Clone)]
 pub struct EmbeddingConfig {

@@ -16,7 +16,7 @@ thread_local! {
     static TOOL_REGISTRY: RefCell<HashMap<String, PyObject>> = RefCell::new(HashMap::new());
 }
 
-/// Python wrapper for workflow node
+/// A workflow node representing a single operation or step in a workflow
 #[pyclass]
 #[derive(Clone)]
 pub struct Node {

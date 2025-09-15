@@ -32,9 +32,9 @@ pub struct EmbeddingConfig {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum EmbeddingProvider {
-    /// Embedding provider from `OpenAI`
+    /// OpenAI embedding provider
     OpenAI,
-    /// Embedding provider from `HuggingFace`
+    /// HuggingFace embedding provider
     HuggingFace,
 }
 

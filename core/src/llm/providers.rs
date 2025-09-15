@@ -10,65 +10,65 @@ use std::collections::HashMap;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "provider")]
 pub enum LlmConfig {
-    /// `OpenAI` language model configuration
+    /// OpenAI LLM provider configuration
     OpenAI {
-        /// API key for `OpenAI` authentication
+        /// API key for authentication
         api_key: String,
-        /// Model name (e.g., "gpt-4", "gpt-3.5-turbo")
+        /// Model name to use
         model: String,
-        /// Optional custom base URL for API requests
+        /// Optional custom base URL
         base_url: Option<String>,
-        /// Optional organization ID for `OpenAI`
+        /// Optional organization ID
         organization: Option<String>,
     },
-    /// Anthropic Claude language model configuration
+    /// Anthropic LLM provider configuration
     Anthropic {
-        /// API key for Anthropic authentication
+        /// API key for authentication
         api_key: String,
-        /// Model name (e.g., "claude-3-sonnet", "claude-3-opus")
+        /// Model name to use
         model: String,
-        /// Optional custom base URL for API requests
+        /// Optional custom base URL
         base_url: Option<String>,
     },
-    /// `DeepSeek` language model configuration
+    /// DeepSeek LLM provider configuration
     DeepSeek {
-        /// API key for `DeepSeek` authentication
+        /// API key for authentication
         api_key: String,
-        /// Model name (e.g., "deepseek-chat", "deepseek-coder")
+        /// Model name to use
         model: String,
-        /// Optional custom base URL for API requests
+        /// Optional custom base URL
         base_url: Option<String>,
     },
-    /// `HuggingFace` language model configuration
+    /// HuggingFace LLM provider configuration
     HuggingFace {
-        /// API key for `HuggingFace` authentication
+        /// API key for authentication
         api_key: String,
-        /// Model name or repository path
+        /// Model name to use
         model: String,
-        /// Optional custom base URL for API requests
+        /// Optional custom base URL
         base_url: Option<String>,
     },
-    /// Ollama local language model configuration
+    /// Ollama LLM provider configuration
     Ollama {
-        /// Model name available in Ollama
+        /// Model name to use
         model: String,
-        /// Optional custom base URL for Ollama server
+        /// Optional custom base URL
         base_url: Option<String>,
     },
-    /// Perplexity language model configuration
+    /// Perplexity LLM provider configuration
     Perplexity {
-        /// API key for Perplexity authentication
+        /// API key for authentication
         api_key: String,
-        /// Model name (e.g., "pplx-7b-online", "pplx-70b-online")
+        /// Model name to use
         model: String,
-        /// Optional custom base URL for API requests
+        /// Optional custom base URL
         base_url: Option<String>,
     },
-    /// Custom language model provider configuration
+    /// Custom LLM provider configuration
     Custom {
-        /// Type identifier for the custom provider
+        /// Provider type identifier
         provider_type: String,
-        /// Arbitrary configuration parameters for the custom provider
+        /// Custom configuration parameters
         config: HashMap<String, serde_json::Value>,
     },
 }

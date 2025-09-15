@@ -661,7 +661,7 @@ pub enum NodeType {
     Join,
     /// Delay/wait node
     Delay {
-        /// Number of seconds to delay execution
+        /// Duration to wait in seconds
         duration_seconds: u64,
     },
     /// HTTP request node

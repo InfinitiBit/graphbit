@@ -1,29 +1,4 @@
 /* =====================================================
-   Navigation Tab Button Sizing - Make navigation tabs smaller
-   ===================================================== */
-
-/* Make navigation tab buttons smaller */
-.md-header__nav-row .md-tabs__link {
-  padding: 0.5rem 0.8rem !important;
-  font-size: 0.8rem !important;
-  height: 2.5rem !important;
-  display: flex !important;
-  align-items: center !important;
-}
-
-/* Adjust tab container height to match smaller buttons */
-.md-header__nav-row .md-tabs__list {
-  height: 2.5rem !important;
-}
-
-/* Ensure proper alignment with smaller tabs */
-.md-header__nav-row .md-header__inner {
-  min-height: 2.5rem !important;
-  max-height: 2.5rem !important;
-  height: 2.5rem !important;
-}
-
-/* =====================================================
    GraphBit Docs – Quantum Violet Theme Enhancements
    Primary (Quantum Violet): #6C4FF7
    Light Variant:            #8A6EF9
@@ -107,54 +82,37 @@
 }
 
 /* =====================================================
-   Unified Header Implementation
+   Two-Row Header Implementation
    ===================================================== */
 
-/* Header container - unified with two rows inside */
+/* Header container - ensure proper stacking */
 .md-header {
   position: fixed;
   top: 0;
   right: 0;
   left: 0;
-  z-index: 4;
-  background: linear-gradient(135deg, #4A2DB8 0%, #5A3BC4 15%, #6C4FF7 30%, #7A5BF0 45%, #8A6EF9 60%, #7A5BF0 75%, #6C4FF7 85%, #5A3BC4 95%, #3D1F8A 100%) !important;
-  box-shadow: none;
+  z-index: 4; /* Base z-index for header */
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(135deg, #5A42D6 0%, #6C4FF7 50%, #8A6EF9 100%) !important;
+  box-shadow: 0 0 0.2rem rgba(0,0,0,.1), 0 0.2rem 0.4rem rgba(0,0,0,.2);
   transition: transform 0.25s cubic-bezier(0.1, 0.7, 0.1, 1);
 }
 
-/* Unified header container - wraps both rows */
-.md-header__unified {
-  background: linear-gradient(135deg, #4A2DB8 0%, #5A3BC4 15%, #6C4FF7 30%, #7A5BF0 45%, #8A6EF9 60%, #7A5BF0 75%, #6C4FF7 85%, #5A3BC4 95%, #3D1F8A 100%) !important;
-  border: none !important;
-  box-shadow: none !important;
-  display: flex !important;
-  flex-direction: column !important;
-  transition: transform 0.25s cubic-bezier(0.1, 0.7, 0.1, 1);
-}
-
-/* Logo Header (Top Row) - inside unified container */
+/* Logo Header (Top Row) - Highest z-index */
 .md-header__logo-row {
-  z-index: 6;
-  background: transparent !important;
-  border: none !important;
-  border-bottom: none !important;
-  box-shadow: none !important;
+  z-index: 6; /* Highest z-index to appear above all other elements */
+  background: linear-gradient(135deg, #5A42D6 0%, #6C4FF7 50%, #8A6EF9 100%) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
   transition: transform 0.25s cubic-bezier(0.1, 0.7, 0.1, 1);
 }
 
-/* Navigation Header (Bottom Row) - inside unified container */
+/* Navigation Header (Bottom Row) */
 .md-header__nav-row {
-  z-index: 5;
-  background: transparent !important;
-  border: none !important;
-  border-top: none !important;
-  box-shadow: none !important;
+  z-index: 5; /* Lower than logo header but higher than content */
+  background: linear-gradient(135deg, #5A42D6 0%, #6C4FF7 50%, #8A6EF9 100%) !important;
   position: sticky;
   top: 0;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  text-align: center !important;
 }
 
 /* Mobile hamburger menu button */
@@ -170,7 +128,6 @@
   align-items: center;
   flex: 1;
   min-width: 0;
-  order: 1;
 }
 
 /* Logo styling */
@@ -202,12 +159,6 @@
   align-items: center;
   gap: 0.5rem;
   margin-left: auto;
-  margin-right: 0;
-  order: 3;
-  position: absolute;
-  right: 0.5rem;
-  top: 50%;
-  transform: translateY(-50%);
 }
 
 /* Search container with theme toggle */
@@ -215,14 +166,8 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  position: absolute !important;
-  right: 1rem !important;
-  top: 50% !important;
-  transform: translateY(-50%) !important;
-  z-index: 10 !important;
+  position: relative;
 }
-
-
 
 /* Theme toggle positioning */
 .md-header__theme-toggle {
@@ -233,16 +178,13 @@
 .md-header__logo-row .md-header__inner {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   padding: 0 1rem;
   min-height: 3rem;
-  position: relative;
 }
 
 .md-header__nav-row .md-header__inner {
   display: flex;
   align-items: center;
-  justify-content: center;
   padding: 0 1rem;
   min-height: 3rem;
 }
@@ -250,45 +192,27 @@
 /* Navigation tabs styling */
 .md-header__nav-row .md-tabs {
   width: 100%;
-  margin: 0 !important;
-  padding: 0 !important;
+  margin: 0;
+  padding: 0;
   height: 100%;
-  display: flex !important;
+  display: flex;
   align-items: center;
-  justify-content: center !important;
-  background: transparent;
-  text-align: center !important;
-  position: relative;
+  background: transparent !important;
 }
 
-/* Override Material theme navigation centering */
-.md-header__nav-row {
-  text-align: center !important;
-}
-
-.md-header__nav-row * {
-  text-align: center !important;
-}
-
-/* Force navigation to be centered */
 .md-header__nav-row .md-tabs__list {
-  position: relative !important;
-  margin: 0 auto !important;
-  padding: 0 !important;
-  display: flex !important;
+  display: flex;
+  margin: 0;
+  padding: 0;
   list-style: none;
   white-space: nowrap;
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  height: 100% !important;
+  height: 100%;
   align-items: center;
-  justify-content: center !important;
   flex-wrap: nowrap;
-  text-align: center !important;
-  width: auto !important;
-  max-width: none !important;
 }
 
 .md-header__nav-row .md-tabs__list::-webkit-scrollbar {
@@ -322,13 +246,13 @@
 .md-header__nav-row .md-tabs__link {
   display: flex;
   align-items: center;
-  padding: 0.8rem 1rem;
+  padding: 0.5rem 0.75rem;
   color: rgba(255, 255, 255, 0.9);
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   font-weight: 500;
   text-decoration: none;
   transition: color 0.125s, background-color 0.125s;
-  border: none;
+  border-bottom: 2px solid transparent;
   height: 100%;
   white-space: nowrap;
 }
@@ -341,8 +265,7 @@
 
 .md-header__nav-row .md-tabs__link--active {
   color: white;
-  background-color: rgba(255, 255, 255, 0.1);
-  border: none;
+  border-bottom-color: rgba(255, 255, 255, 0.8);
 }
 
 /* Ensure content doesn't overlap with fixed header */
@@ -453,102 +376,9 @@
   }
 }
 
-/* Force header background color override */
-.md-header,
-.md-header__inner,
-.md-header__unified,
-.md-header__logo-row,
-.md-header__nav-row,
-.md-tabs,
-.md-tabs__list {
-  background: linear-gradient(135deg, #4A2DB8 0%, #5A3BC4 15%, #6C4FF7 30%, #7A5BF0 45%, #8A6EF9 60%, #7A5BF0 75%, #6C4FF7 85%, #5A3BC4 95%, #3D1F8A 100%) !important;
-  border: none !important;
-}
-
-/* Remove any potential borders or lines from header elements */
-.md-header *,
-.md-header__inner *,
-.md-header__unified *,
-.md-header__logo-row *,
-.md-header__nav-row *,
-.md-tabs *,
-.md-tabs__list *,
-.md-tabs__item *,
-.md-tabs__link,
-.md-header__button,
-.md-header__search,
-.md-header__search-container,
-.md-header__controls,
-.md-header__logo-section,
-.md-header__title {
-  border: none !important;
-  outline: none !important;
-  box-shadow: none !important;
-  border-left: none !important;
-  border-right: none !important;
-  border-top: none !important;
-  border-bottom: none !important;
-}
-
-/* Force complete transparency and remove any visual separators */
-.md-header__logo-row,
-.md-header__nav-row,
-.md-header__logo-row *,
-.md-header__nav-row * {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  margin: 0 !important;
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
-}
-
-/* Ensure no gaps between rows */
-.md-header__logo-row {
-  margin-bottom: 0 !important;
-  padding-bottom: 0 !important;
-  margin-top: 0 !important;
-  padding-top: 0 !important;
-}
-
-.md-header__nav-row {
-  margin-top: 0 !important;
-  padding-top: 0 !important;
-  margin-bottom: 0 !important;
-  padding-bottom: 0 !important;
-}
-
-/* Completely eliminate any visual separation between rows */
-.md-header__unified > * {
-  margin: 0 !important;
-  padding: 0 !important;
-  border: none !important;
-  box-shadow: none !important;
-  background: transparent !important;
-}
-
-/* Force seamless connection between rows */
-.md-header__logo-row + .md-header__nav-row {
-  margin-top: 0 !important;
-  padding-top: 0 !important;
-  border-top: none !important;
-}
-
-/* Additional specific overrides for Material theme defaults */
-.md-header__inner::before,
-.md-header__inner::after,
-.md-header__unified::before,
-.md-header__unified::after,
-.md-header__logo-row::before,
-.md-header__logo-row::after,
-.md-header__nav-row::before,
-.md-header__nav-row::after,
-.md-tabs::before,
-.md-tabs::after,
-.md-tabs__list::before,
-.md-tabs__list::after {
-  display: none !important;
-  content: none !important;
+.md-header .md-header--shadow {
+  background: linear-gradient(135deg, #5A42D6 0%, #6C4FF7 50%, #8A6EF9 100%) !important;
+  color: white !important;
 }
 
 /* Force drawer navigation header background override */
@@ -558,8 +388,7 @@
 .md-sidebar--primary .md-nav__title,
 .md-nav__title .md-nav__button,
 .md-nav__button {
-  background: linear-gradient(135deg, #4A2DB8 0%, #5A3BC4 15%, #6C4FF7 30%, #7A5BF0 45%, #8A6EF9 60%, #7A5BF0 75%, #6C4FF7 85%, #5A3BC4 95%, #3D1F8A 100%) !important;
-  color: white !important;
+  background: transparent !important;
 }
 
 /* Mobile navigation drawer styles */
@@ -573,7 +402,7 @@
   .md-nav--primary .md-nav__title,
   .md-nav__title,
   .md-nav__title[for="__drawer"] {
-    background: linear-gradient(135deg, #4A2DB8 0%, #5A3BC4 15%, #6C4FF7 30%, #7A5BF0 45%, #8A6EF9 60%, #7A5BF0 75%, #6C4FF7 85%, #5A3BC4 95%, #3D1F8A 100%) !important;
+    background: linear-gradient(135deg, #5A42D6 0%, #6C4FF7 50%, #8A6EF9 100%) !important;
     color: white !important;
     font-weight: 600;
   }
@@ -605,222 +434,7 @@
 
   /* Additional drawer header overrides */
   .md-sidebar--primary .md-sidebar__scrollwrap .md-nav--primary .md-nav__title {
-    background: linear-gradient(135deg, #4A2DB8 0%, #5A3BC4 15%, #6C4FF7 30%, #7A5BF0 45%, #8A6EF9 60%, #7A5BF0 75%, #6C4FF7 85%, #5A3BC4 95%, #3D1F8A 100%) !important;
-  }
-}
-
-/* =====================================================
-   Search Dropdown Visibility Improvements
-   ===================================================== */
-
-/* Search form container */
-.md-search__form {
-  background-color: transparent !important;
-  border-radius: 0.5rem !important;
-  position: relative !important;
-  display: flex !important;
-  align-items: center !important;
-}
-
-/* Search input field styling */
-.md-search__input {
-  background-color: rgba(255, 255, 255, 0.15) !important;
-  border: 1px solid rgba(255, 255, 255, 0.3) !important;
-  border-radius: 0.5rem !important;
-  color: white !important;
-  padding: 0.5rem 3rem 0.5rem 2.5rem !important; /* Left padding for search icon, right padding for action icons */
-  font-size: 0.9rem !important;
-  transition: all 0.2s ease !important;
-  width: 100% !important;
-  min-width: 200px !important;
-}
-
-/* Search input placeholder text */
-.md-search__input::placeholder {
-  color: rgba(255, 255, 255, 0.7) !important;
-  opacity: 1 !important;
-}
-
-/* Search input focus state */
-.md-search__input:focus {
-  background-color: rgba(255, 255, 255, 0.25) !important;
-  border-color: rgba(255, 255, 255, 0.5) !important;
-  outline: none !important;
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2) !important;
-}
-
-/* Search icon positioning - left side of input */
-.md-search__icon[for="__search"] {
-  position: absolute !important;
-  left: 0.75rem !important;
-  top: 50% !important;
-  transform: translateY(-50%) !important;
-  z-index: 2 !important;
-  color: rgba(255, 255, 255, 0.8) !important;
-  pointer-events: none !important;
-}
-
-/* Search action icons container - right side of input */
-.md-search__options {
-  position: absolute !important;
-  right: 0.5rem !important;
-  top: 50% !important;
-  transform: translateY(-50%) !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 0.25rem !important;
-  z-index: 2 !important;
-}
-
-/* Individual action icons (share, close) */
-.md-search__icon:not([for="__search"]) {
-  color: rgba(255, 255, 255, 0.8) !important;
-  padding: 0.25rem !important;
-  border-radius: 0.25rem !important;
-  transition: all 0.15s ease !important;
-  cursor: pointer !important;
-}
-
-.md-search__icon:not([for="__search"]):hover {
-  color: white !important;
-  background-color: rgba(255, 255, 255, 0.1) !important;
-}
-
-/* Search output/dropdown container */
-.md-search__output {
-  background-color: var(--md-default-bg-color) !important;
-  border: 1px solid var(--md-default-fg-color--lightest) !important;
-  border-radius: 0.5rem !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
-  margin-top: 0.5rem !important;
-  max-height: 70vh !important;
-  overflow-y: auto !important;
-}
-
-/* Search results styling */
-.md-search-result {
-  border-bottom: 1px solid var(--md-default-fg-color--lightest) !important;
-}
-
-.md-search-result:last-child {
-  border-bottom: none !important;
-}
-
-/* Search result item styling */
-.md-search-result__item {
-  padding: 1rem !important;
-  transition: background-color 0.15s ease !important;
-}
-
-.md-search-result__item:hover,
-.md-search-result__item:focus {
-  background-color: var(--md-default-fg-color--lightest) !important;
-}
-
-/* Search result title */
-.md-search-result__title {
-  color: var(--md-primary-fg-color) !important;
-  font-weight: 600 !important;
-  margin-bottom: 0.25rem !important;
-}
-
-/* Search result text */
-.md-search-result__teaser {
-  color: var(--md-default-fg-color--light) !important;
-  font-size: 0.85rem !important;
-  line-height: 1.4 !important;
-}
-
-/* Search result highlight */
-.md-search-result mark {
-  background-color: var(--md-primary-fg-color--light) !important;
-  color: white !important;
-  padding: 0.1rem 0.2rem !important;
-  border-radius: 0.2rem !important;
-}
-
-/* General search icon styling (fallback) */
-.md-search__icon {
-  color: rgba(255, 255, 255, 0.8) !important;
-  transition: color 0.15s ease !important;
-}
-
-.md-search__icon:hover {
-  color: white !important;
-}
-
-/* Dark mode specific adjustments */
-[data-md-color-scheme="slate"] .md-search__output {
-  background-color: var(--md-default-bg-color) !important;
-  border-color: var(--md-default-fg-color--lightest) !important;
-}
-
-[data-md-color-scheme="slate"] .md-search-result__item:hover,
-[data-md-color-scheme="slate"] .md-search-result__item:focus {
-  background-color: rgba(255, 255, 255, 0.05) !important;
-}
-
-/* Light mode specific adjustments */
-[data-md-color-scheme="default"] .md-search__output {
-  background-color: white !important;
-  border-color: rgba(0, 0, 0, 0.1) !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
-}
-
-[data-md-color-scheme="default"] .md-search-result__item:hover,
-[data-md-color-scheme="default"] .md-search-result__item:focus {
-  background-color: rgba(0, 0, 0, 0.05) !important;
-}
-
-/* Responsive search adjustments */
-@media screen and (max-width: 60em) {
-  .md-search__input {
-    font-size: 0.85rem !important;
-    padding: 0.4rem 2.8rem 0.4rem 2.2rem !important; /* Adjusted for smaller screens */
-    min-width: 180px !important;
-  }
-
-  .md-search__icon[for="__search"] {
-    left: 0.6rem !important;
-  }
-
-  .md-search__options {
-    right: 0.4rem !important;
-  }
-
-  .md-search__output {
-    max-height: 60vh !important;
-    margin-top: 0.3rem !important;
-  }
-}
-
-@media screen and (max-width: 44.9375em) {
-  .md-search__input {
-    font-size: 0.8rem !important;
-    padding: 0.35rem 2.5rem 0.35rem 2rem !important; /* Further adjusted for mobile */
-    min-width: 160px !important;
-  }
-
-  .md-search__icon[for="__search"] {
-    left: 0.5rem !important;
-  }
-
-  .md-search__options {
-    right: 0.3rem !important;
-    gap: 0.15rem !important;
-  }
-
-  .md-search__icon:not([for="__search"]) {
-    padding: 0.2rem !important;
-  }
-
-  .md-search__output {
-    max-height: 50vh !important;
-    border-radius: 0.3rem !important;
-  }
-
-  .md-search-result__item {
-    padding: 0.8rem !important;
+    background: linear-gradient(135deg, #5A42D6 0%, #6C4FF7 50%, #8A6EF9 100%) !important;
   }
 }
 

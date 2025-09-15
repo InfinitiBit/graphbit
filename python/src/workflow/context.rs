@@ -2,7 +2,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use serde_json::Value as JsonValue;
 
-/// Python wrapper for workflow execution context
+/// Context object for workflow execution containing shared state and variables
 #[pyclass]
 #[derive(Clone)]
 pub struct WorkflowContext {
