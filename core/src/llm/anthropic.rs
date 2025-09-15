@@ -123,7 +123,7 @@ impl LlmProviderTrait for AnthropicProvider {
             .send()
             .await
             .map_err(|e| {
-                GraphBitError::llm_provider("anthropic", format!("Request failed: {}", e))
+                GraphBitError::llm_provider("anthropic", format!("Request failed: {e}"))
             })?;
 
         if !response.status().is_success() {
@@ -133,12 +133,12 @@ impl LlmProviderTrait for AnthropicProvider {
                 .unwrap_or_else(|_| "Unknown error".to_string());
             return Err(GraphBitError::llm_provider(
                 "anthropic",
-                format!("API error: {}", error_text),
+                format!("API error: {error_text}"),
             ));
         }
 
         let anthropic_response: AnthropicResponse = response.json().await.map_err(|e| {
-            GraphBitError::llm_provider("anthropic", format!("Failed to parse response: {}", e))
+            GraphBitError::llm_provider("anthropic", format!("Failed to parse response: {e}"))
         })?;
 
         self.parse_response(anthropic_response)
