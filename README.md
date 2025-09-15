@@ -161,62 +161,6 @@ We welcome contributions. To get started, please see the [Contributing](CONTRIBU
 
 GraphBit is built by a wonderful community of researchers and engineers.
 
-<!-- readme: contributors -start -->
-
-<table>
-<tr>
-    <td align="center">
-        <a href="https://github.com/jj-devhub">
-            <img src="https://github.com/jj-devhub.png" width="64" height="64" alt="jj-devhub"/>
-            <br />
-            <sub><b>jj-devhub</b></sub>
-        </a>
-    </td>
-    <td align="center">
-        <a href="https://github.com/JunaidHossain04">
-            <img src="https://github.com/JunaidHossain04.png" width="64" height="64" alt="JunaidHossain04"/>
-            <br />
-            <sub><b>JunaidHossain04</b></sub>
-        </a>
-    </td>
-    <td align="center">
-        <a href="https://github.com/tanimahossain-infiniti">
-            <img src="https://github.com/tanimahossain-infiniti.png" width="64" height="64" alt="tanimahossain-infiniti"/>
-            <br />
-            <sub><b>tanimahossain-infiniti</b></sub>
-        </a>
-    </td>
-    <td align="center">
-        <a href="https://github.com/yeahia-sarker">
-            <img src="https://github.com/yeahia-sarker.png" width="64" height="64" alt="yeahia-sarker"/>
-            <br />
-            <sub><b>yeahia-sarker</b></sub>
-        </a>
-    </td>
-    <td align="center">
-        <a href="https://github.com/masbulhaider">
-            <img src="https://github.com/masbulhaider.png" width="64" height="64" alt="masbulhaider"/>
-            <br />
-            <sub><b>masbulhaider</b></sub>
-        </a>
-    </td>
-</tr>
-<tr>
-    <td align="center">
-        <a href="https://github.com/MdRahmatUllah">
-            <img src="https://github.com/MdRahmatUllah.png" width="64" height="64" alt="MdRahmatUllah"/>
-            <br />
-            <sub><b>MdRahmatUllah</b></sub>
-        </a>
-    </td>
-    <td colspan="4" align="center">
-        <a href="https://github.com/InfinitiBit/graphbit/graphs/contributors">
-            <b>View all contributors →</b>
-        </a>
-    </td>
-</tr>
-</table>
-
-<!-- readme: contributors -end -->
-
-> **Note**: The contributor list above is automatically updated by our [Contributors Workflow](.github/workflows/update-contributors.yml) and maintains the **exact same ranking** as GitHub's [Contributors page](https://github.com/InfinitiBit/graphbit/graphs/contributors) (Period: All, Contribution: Commits). Contributors are ranked by commit count **excluding merge commits**, matching GitHub's default display.
+<a href="https://github.com/InfinitiBit/graphbit/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=InfinitiBit/graphbit&columns=10" />
+</a>
