@@ -475,7 +475,7 @@ impl WorkflowExecutor {
         }
 
         // Execute nodes in dependency-aware batches (parents before children)
-        let batches = self.create_dependency_batches(&workflow.graph).await?;
+        let batches = Self::create_dependency_batches(&workflow.graph)?;
         tracing::info!(
             batch_count = batches.len(),
             "Planned dependency-aware batches"
@@ -711,10 +711,10 @@ impl WorkflowExecutor {
                     .await
                 }
                 NodeType::Condition { expression } => {
-                    Self::execute_condition_node_static(expression).await
+                    Self::execute_condition_node_static(expression)
                 }
                 NodeType::Transform { transformation } => {
-                    Self::execute_transform_node_static(transformation, context.clone()).await
+                    Self::execute_transform_node_static(transformation, context.clone())
                 }
                 NodeType::Delay { duration_seconds } => {
                     Self::execute_delay_node_static(*duration_seconds).await
@@ -886,19 +886,6 @@ impl WorkflowExecutor {
                 available_output_keys = ?available_keys,
                 "Implicit preamble: checking direct parents and available outputs"
             );
-
-            // Build a set of keys to include: each parent by id and by name (if known)
-            let mut include_keys: Vec<String> = Vec::new();
-            if let Some(map) = id_name_obj {
-                for pid in &parent_ids {
-                    include_keys.push(pid.clone());
-                    if let Some(name_val) = map.get(pid).and_then(|v| v.as_str()) {
-                        include_keys.push(name_val.to_string());
-                    }
-                }
-            } else {
-                include_keys.extend(parent_ids.iter().cloned());
-            }
 
             // Preserve order by iterating parent_ids, using id->name for titles, and fetching outputs by key
             for pid in &parent_ids {
@@ -1134,13 +1121,13 @@ impl WorkflowExecutor {
     }
 
     /// Execute a condition node (static version)
-    async fn execute_condition_node_static(_expression: &str) -> GraphBitResult<serde_json::Value> {
+    fn execute_condition_node_static(_expression: &str) -> GraphBitResult<serde_json::Value> {
         // Simple condition evaluation (in a real implementation, you'd use a proper expression evaluator)
         Ok(serde_json::Value::Bool(true))
     }
 
     /// Execute a transform node (static version)
-    async fn execute_transform_node_static(
+    fn execute_transform_node_static(
         _transformation: &str,
         _context: Arc<Mutex<WorkflowContext>>,
     ) -> GraphBitResult<serde_json::Value> {
@@ -1442,10 +1429,7 @@ impl WorkflowExecutor {
     }
 
     /// Create batches that strictly respect dependencies: only direct-ready nodes per layer
-    async fn create_dependency_batches(
-        &self,
-        graph: &WorkflowGraph,
-    ) -> GraphBitResult<Vec<Vec<WorkflowNode>>> {
+    fn create_dependency_batches(graph: &WorkflowGraph) -> GraphBitResult<Vec<Vec<WorkflowNode>>> {
         use std::collections::HashSet;
 
         let mut graph_clone = graph.clone();
