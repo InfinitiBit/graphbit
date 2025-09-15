@@ -188,9 +188,13 @@ impl LlmMessage {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum LlmRole {
+    /// User message role
     User,
+    /// Assistant message role
     Assistant,
+    /// System message role
     System,
+    /// Tool message role
     Tool,
 }
 

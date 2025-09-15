@@ -625,31 +625,51 @@ impl WorkflowNode {
 pub enum NodeType {
     /// Agent execution node
     Agent {
+        /// Unique identifier for the agent
         agent_id: crate::types::AgentId,
+        /// Template for the prompt to send to the agent
         prompt_template: String,
     },
     /// Conditional branching node
-    Condition { expression: String },
+    Condition {
+        /// Boolean expression to evaluate
+        expression: String,
+    },
     /// Data transformation node
-    Transform { transformation: String },
+    Transform {
+        /// Transformation logic to apply
+        transformation: String,
+    },
     /// Parallel execution splitter
     Split,
     /// Parallel execution joiner
     Join,
     /// Delay/wait node
-    Delay { duration_seconds: u64 },
+    Delay {
+        /// Duration to wait in seconds
+        duration_seconds: u64,
+    },
     /// HTTP request node
     HttpRequest {
+        /// Target URL for the request
         url: String,
+        /// HTTP method (GET, POST, etc.)
         method: String,
+        /// HTTP headers to include
         headers: HashMap<String, String>,
     },
     /// Custom function node
-    Custom { function_name: String },
+    Custom {
+        /// Name of the custom function to execute
+        function_name: String,
+    },
     /// Document loading node
     DocumentLoader {
+        /// Type of document to load
         document_type: String,
+        /// Path to the source document
         source_path: String,
+        /// Optional encoding specification
         encoding: Option<String>,
     },
 }

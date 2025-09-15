@@ -10,38 +10,65 @@ use std::collections::HashMap;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "provider")]
 pub enum LlmConfig {
+    /// OpenAI LLM provider configuration
     OpenAI {
+        /// API key for authentication
         api_key: String,
+        /// Model name to use
         model: String,
+        /// Optional custom base URL
         base_url: Option<String>,
+        /// Optional organization ID
         organization: Option<String>,
     },
+    /// Anthropic LLM provider configuration
     Anthropic {
+        /// API key for authentication
         api_key: String,
+        /// Model name to use
         model: String,
+        /// Optional custom base URL
         base_url: Option<String>,
     },
+    /// DeepSeek LLM provider configuration
     DeepSeek {
+        /// API key for authentication
         api_key: String,
+        /// Model name to use
         model: String,
+        /// Optional custom base URL
         base_url: Option<String>,
     },
+    /// HuggingFace LLM provider configuration
     HuggingFace {
+        /// API key for authentication
         api_key: String,
+        /// Model name to use
         model: String,
+        /// Optional custom base URL
         base_url: Option<String>,
     },
+    /// Ollama LLM provider configuration
     Ollama {
+        /// Model name to use
         model: String,
+        /// Optional custom base URL
         base_url: Option<String>,
     },
+    /// Perplexity LLM provider configuration
     Perplexity {
+        /// API key for authentication
         api_key: String,
+        /// Model name to use
         model: String,
+        /// Optional custom base URL
         base_url: Option<String>,
     },
+    /// Custom LLM provider configuration
     Custom {
+        /// Provider type identifier
         provider_type: String,
+        /// Custom configuration parameters
         config: HashMap<String, serde_json::Value>,
     },
 }
