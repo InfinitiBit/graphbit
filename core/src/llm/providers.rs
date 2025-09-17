@@ -247,6 +247,11 @@ impl LlmProvider {
 
     /// Send a request to the LLM
     pub async fn complete(&self, request: LlmRequest) -> GraphBitResult<LlmResponse> {
+        tracing::info!(
+            "LlmProvider wrapper: Forwarding request with {} tools to {} provider",
+            request.tools.len(),
+            self.config.provider_name()
+        );
         self.inner.complete(request).await
     }
 

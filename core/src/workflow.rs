@@ -1032,6 +1032,8 @@ impl WorkflowExecutor {
         if has_tools {
             // Execute agent with tool calling orchestration
             tracing::info!("Executing agent with tools - prompt: '{}'", resolved_prompt);
+            tracing::info!("ENTERING execute_agent_with_tools function");
+
             let result =
                 Self::execute_agent_with_tools(agent_id, &resolved_prompt, node_config, agent)
                     .await;
@@ -1039,6 +1041,7 @@ impl WorkflowExecutor {
             result
         } else {
             // Execute agent without tools (original behavior)
+            tracing::info!("NO TOOLS DETECTED - using standard agent execution");
             let message = AgentMessage::new(
                 agent_id.clone(),
                 None,
@@ -1084,7 +1087,16 @@ impl WorkflowExecutor {
             request = request.with_tool(tool.clone());
         }
 
+        tracing::info!("Created LLM request with {} tools", request.tools.len());
+        for (i, tool) in request.tools.iter().enumerate() {
+            tracing::info!("Tool {}: {} - {}", i, tool.name, tool.description);
+        }
+
         // Execute LLM request directly to get tool calls
+        tracing::info!(
+            "About to call LLM provider with {} tools",
+            request.tools.len()
+        );
         let llm_response = agent.llm_provider().complete(request).await?;
 
         // DEBUG: Log LLM response details
