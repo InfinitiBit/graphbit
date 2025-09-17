@@ -640,13 +640,14 @@ impl Executor {
                                                 v.clone(),
                                             )
                                             .ok()
-                                        })
-                                        .unwrap_or_default();
+                                        });
 
-                                    // Create the LLM provider using the factory
-                                    match graphbit_core::llm::LlmProviderFactory::create_provider(
-                                        llm_config.clone(),
-                                    ) {
+                                    // Only proceed if we have an explicit LLM configuration
+                                    if let Some(llm_config) = llm_config {
+                                        // Create the LLM provider using the factory
+                                        match graphbit_core::llm::LlmProviderFactory::create_provider(
+                                            llm_config.clone(),
+                                        ) {
                                         Ok(provider_trait) => {
                                             let llm_provider =
                                                 LlmProvider::new(provider_trait, llm_config);
@@ -716,6 +717,14 @@ impl Executor {
                                             );
                                         }
                                     }
+                                } else {
+                                    // No LLM configuration available, just keep tool results
+                                    tracing::warn!("No LLM configuration found in context metadata for final response. Using tool results only.");
+                                    context.set_node_output(
+                                        &node.id,
+                                        serde_json::Value::String(tool_results.clone()),
+                                    );
+                                }
                                 }
                             }
                         }
