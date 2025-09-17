@@ -5,7 +5,7 @@ on:
     branches: [main]
   schedule:
     # Run weekly on Sundays at 00:00 UTC to catch any missed contributors
-    - cron: '0 0 * * 0'
+  - cron: 0 0 * * 0
   workflow_dispatch: {}  # Allow manual runs
 
 jobs:
@@ -16,130 +16,130 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
-      - name: Verify GitHub Contributors Page Ranking
-        run: |
-          echo "🔍 Verifying current GitHub contributors page ranking..."
-          echo "URL: https://github.com/InfinitiBit/graphbit/graphs/contributors"
-          echo "Settings: Period=All, Contribution=Commits (excludes merge commits)"
-          echo ""
-          echo "Expected ranking based on GitHub contributors page:"
-          echo "1. jj-devhub - 44 contributions"
-          echo "2. JunaidHossain04 - 40 contributions"
-          echo "3. tanimahossain-infiniti - 38 contributions"
-          echo "4. yeahia-sarker - 31 contributions"
-          echo "5. masbulhaider - 22 contributions"
-          echo "6. MdRahmatUllah - 1 contribution"
-          echo ""
+    - name: Verify GitHub Contributors Page Ranking
+      run: |
+        echo "🔍 Verifying current GitHub contributors page ranking..."
+        echo "URL: https://github.com/InfinitiBit/graphbit/graphs/contributors"
+        echo "Settings: Period=All, Contribution=Commits (excludes merge commits)"
+        echo ""
+        echo "Expected ranking based on GitHub contributors page:"
+        echo "1. jj-devhub - 44 contributions"
+        echo "2. JunaidHossain04 - 40 contributions"
+        echo "3. tanimahossain-infiniti - 38 contributions"
+        echo "4. yeahia-sarker - 31 contributions"
+        echo "5. masbulhaider - 22 contributions"
+        echo "6. MdRahmatUllah - 1 contribution"
+        echo ""
 
-      - name: Create Contributors HTML (Matches GitHub Page Exactly)
-        run: |
-          echo "🔧 Creating contributors HTML with exact GitHub page ranking..."
+    - name: Create Contributors HTML (Matches GitHub Page Exactly)
+      run: |
+        echo "🔧 Creating contributors HTML with exact GitHub page ranking..."
 
-          # Create the contributors HTML with the exact ranking from GitHub's contributors page
-          # This matches https://github.com/InfinitiBit/graphbit/graphs/contributors
-          # with Period=All and Contribution=Commits (excludes merge commits)
+        # Create the contributors HTML with the exact ranking from GitHub's contributors page
+        # This matches https://github.com/InfinitiBit/graphbit/graphs/contributors
+        # with Period=All and Contribution=Commits (excludes merge commits)
 
-          cat > /tmp/contributors.html << 'EOF'
-          <table>
-          <tr>
-              <td align="center">
-                  <a href="https://github.com/jj-devhub">
-                      <img src="https://github.com/jj-devhub.png" width="64" height="64" alt="jj-devhub"/>
-                      <br />
-                      <sub><b>jj-devhub</b></sub>
-                  </a>
-              </td>
-              <td align="center">
-                  <a href="https://github.com/JunaidHossain04">
-                      <img src="https://github.com/JunaidHossain04.png" width="64" height="64" alt="JunaidHossain04"/>
-                      <br />
-                      <sub><b>JunaidHossain04</b></sub>
-                  </a>
-              </td>
-              <td align="center">
-                  <a href="https://github.com/tanimahossain-infiniti">
-                      <img src="https://github.com/tanimahossain-infiniti.png" width="64" height="64" alt="tanimahossain-infiniti"/>
-                      <br />
-                      <sub><b>tanimahossain-infiniti</b></sub>
-                  </a>
-              </td>
-              <td align="center">
-                  <a href="https://github.com/yeahia-sarker">
-                      <img src="https://github.com/yeahia-sarker.png" width="64" height="64" alt="yeahia-sarker"/>
-                      <br />
-                      <sub><b>yeahia-sarker</b></sub>
-                  </a>
-              </td>
-              <td align="center">
-                  <a href="https://github.com/masbulhaider">
-                      <img src="https://github.com/masbulhaider.png" width="64" height="64" alt="masbulhaider"/>
-                      <br />
-                      <sub><b>masbulhaider</b></sub>
-                  </a>
-              </td>
-          </tr>
-          <tr>
-              <td align="center">
-                  <a href="https://github.com/MdRahmatUllah">
-                      <img src="https://github.com/MdRahmatUllah.png" width="64" height="64" alt="MdRahmatUllah"/>
-                      <br />
-                      <sub><b>MdRahmatUllah</b></sub>
-                  </a>
-              </td>
-              <td colspan="4" align="center">
-                  <a href="https://github.com/InfinitiBit/graphbit/graphs/contributors">
-                      <b>View all contributors →</b>
-                  </a>
-              </td>
-          </tr>
-          </table>
-          EOF
+        cat > /tmp/contributors.html << 'EOF'
+        <table>
+        <tr>
+            <td align="center">
+                <a href="https://github.com/jj-devhub">
+                    <img src="https://github.com/jj-devhub.png" width="64" height="64" alt="jj-devhub"/>
+                    <br />
+                    <sub><b>jj-devhub</b></sub>
+                </a>
+            </td>
+            <td align="center">
+                <a href="https://github.com/JunaidHossain04">
+                    <img src="https://github.com/JunaidHossain04.png" width="64" height="64" alt="JunaidHossain04"/>
+                    <br />
+                    <sub><b>JunaidHossain04</b></sub>
+                </a>
+            </td>
+            <td align="center">
+                <a href="https://github.com/tanimahossain-infiniti">
+                    <img src="https://github.com/tanimahossain-infiniti.png" width="64" height="64" alt="tanimahossain-infiniti"/>
+                    <br />
+                    <sub><b>tanimahossain-infiniti</b></sub>
+                </a>
+            </td>
+            <td align="center">
+                <a href="https://github.com/yeahia-sarker">
+                    <img src="https://github.com/yeahia-sarker.png" width="64" height="64" alt="yeahia-sarker"/>
+                    <br />
+                    <sub><b>yeahia-sarker</b></sub>
+                </a>
+            </td>
+            <td align="center">
+                <a href="https://github.com/masbulhaider">
+                    <img src="https://github.com/masbulhaider.png" width="64" height="64" alt="masbulhaider"/>
+                    <br />
+                    <sub><b>masbulhaider</b></sub>
+                </a>
+            </td>
+        </tr>
+        <tr>
+            <td align="center">
+                <a href="https://github.com/MdRahmatUllah">
+                    <img src="https://github.com/MdRahmatUllah.png" width="64" height="64" alt="MdRahmatUllah"/>
+                    <br />
+                    <sub><b>MdRahmatUllah</b></sub>
+                </a>
+            </td>
+            <td colspan="4" align="center">
+                <a href="https://github.com/InfinitiBit/graphbit/graphs/contributors">
+                    <b>View all contributors →</b>
+                </a>
+            </td>
+        </tr>
+        </table>
+        EOF
 
-          echo "✅ Contributors HTML created with exact GitHub page ranking"
-          echo "   Ranking: jj-devhub → JunaidHossain04 → tanimahossain-infiniti → yeahia-sarker → masbulhaider → MdRahmatUllah"
+        echo "✅ Contributors HTML created with exact GitHub page ranking"
+        echo "   Ranking: jj-devhub → JunaidHossain04 → tanimahossain-infiniti → yeahia-sarker → masbulhaider → MdRahmatUllah"
 
-      - name: Update README with Contributors
-        run: |
-          echo "📝 Updating README.md with correct contributor ranking..."
+    - name: Update README with Contributors
+      run: |
+        echo "📝 Updating README.md with correct contributor ranking..."
 
-          # Read the current README
-          cp README.md README.md.backup
+        # Read the current README
+        cp README.md README.md.backup
 
-          # Replace the content between the markers
-          awk '
-          /<!-- readme: contributors -start -->/ {
-              print $0
-              print ""
-              while ((getline line < "/tmp/contributors.html") > 0) {
-                  print line
-              }
-              close("/tmp/contributors.html")
-              print ""
-              # Skip until end marker
-              while (getline && !/<!-- readme: contributors -end -->/) {}
-              print $0
-              next
-          }
-          { print }
-          ' README.md.backup > README.md
+        # Replace the content between the markers
+        awk '
+        /<!-- readme: contributors -start -->/ {
+            print $0
+            print ""
+            while ((getline line < "/tmp/contributors.html") > 0) {
+                print line
+            }
+            close("/tmp/contributors.html")
+            print ""
+            # Skip until end marker
+            while (getline && !/<!-- readme: contributors -end -->/) {}
+            print $0
+            next
+        }
+        { print }
+        ' README.md.backup > README.md
 
-          echo "✅ README.md updated with correct contributor ranking"
+        echo "✅ README.md updated with correct contributor ranking"
 
-      - name: Commit Changes
-        run: |
-          git config --local user.email "graphbit-bot@users.noreply.github.com"
-          git config --local user.name "graphbit-bot"
+    - name: Commit Changes
+      run: |
+        git config --local user.email "graphbit-bot@users.noreply.github.com"
+        git config --local user.name "graphbit-bot"
 
-          if git diff --quiet README.md; then
-            echo "No changes to commit"
-          else
-            git add README.md
-            git commit -m "docs(contributors): update contributor list [excludes merge commits, matches GitHub page]"
-            git push
-            echo "✅ Changes committed and pushed"
-          fi
+        if git diff --quiet README.md; then
+          echo "No changes to commit"
+        else
+          git add README.md
+          git commit -m "docs(contributors): update contributor list [excludes merge commits, matches GitHub page]"
+          git push
+          echo "✅ Changes committed and pushed"
+        fi

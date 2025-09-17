@@ -30,7 +30,7 @@ impl DeepSeekProvider {
             .map_err(|e| {
                 GraphBitError::llm_provider(
                     "deepseek",
-                    format!("Failed to create HTTP client: {}", e),
+                    format!("Failed to create HTTP client: {e}"),
                 )
             })?;
         let base_url = "https://api.deepseek.com/v1".to_string();
@@ -55,7 +55,7 @@ impl DeepSeekProvider {
             .map_err(|e| {
                 GraphBitError::llm_provider(
                     "deepseek",
-                    format!("Failed to create HTTP client: {}", e),
+                    format!("Failed to create HTTP client: {e}"),
                 )
             })?;
 
@@ -208,9 +208,7 @@ impl LlmProviderTrait for DeepSeekProvider {
             .json(&request_json)
             .send()
             .await
-            .map_err(|e| {
-                GraphBitError::llm_provider("deepseek", format!("Request failed: {}", e))
-            })?;
+            .map_err(|e| GraphBitError::llm_provider("deepseek", format!("Request failed: {e}")))?;
 
         if !response.status().is_success() {
             let error_text = response
@@ -219,12 +217,12 @@ impl LlmProviderTrait for DeepSeekProvider {
                 .unwrap_or_else(|_| "Unknown error".to_string());
             return Err(GraphBitError::llm_provider(
                 "deepseek",
-                format!("API error: {}", error_text),
+                format!("API error: {error_text}"),
             ));
         }
 
         let deepseek_response: DeepSeekResponse = response.json().await.map_err(|e| {
-            GraphBitError::llm_provider("deepseek", format!("Failed to parse response: {}", e))
+            GraphBitError::llm_provider("deepseek", format!("Failed to parse response: {e}"))
         })?;
 
         self.parse_response(deepseek_response)

@@ -186,7 +186,7 @@ impl TypeValidator {
             Err(e) => {
                 return ValidationResult::failure(vec![ValidationError::new(
                     "root",
-                    format!("Invalid JSON: {}", e),
+                    format!("Invalid JSON: {e}"),
                     "INVALID_JSON",
                 )]);
             }
@@ -250,8 +250,8 @@ impl TypeValidator {
                     if let Some(prop_name) = req_prop.as_str() {
                         if !data_obj.contains_key(prop_name) {
                             result.add_error(ValidationError::new(
-                                format!("{}.{}", path, prop_name),
-                                format!("Required property '{}' is missing", prop_name),
+                                format!("{path}.{prop_name}"),
+                                format!("Required property '{prop_name}' is missing"),
                                 "MISSING_REQUIRED_PROPERTY",
                             ));
                         }
@@ -262,7 +262,7 @@ impl TypeValidator {
             // Validate each property
             for (prop_name, prop_schema) in properties {
                 if let Some(prop_value) = data_obj.get(prop_name) {
-                    let prop_path = format!("{}.{}", path, prop_name);
+                    let prop_path = format!("{path}.{prop_name}");
                     let prop_result =
                         self.validate_json_against_schema(prop_value, prop_schema, &prop_path);
                     result.merge(prop_result);
@@ -273,7 +273,7 @@ impl TypeValidator {
         // Validate array items
         if let (Some(data_array), Some(items_schema)) = (data.as_array(), schema_obj.get("items")) {
             for (index, item) in data_array.iter().enumerate() {
-                let item_path = format!("{}[{}]", path, index);
+                let item_path = format!("{path}[{index}]");
                 let item_result = self.validate_json_against_schema(item, items_schema, &item_path);
                 result.merge(item_result);
             }
@@ -285,7 +285,7 @@ impl TypeValidator {
                 if (data_str.len() as u64) < min_length {
                     result.add_error(ValidationError::new(
                         path,
-                        format!("String too short (min: {})", min_length),
+                        format!("String too short (min: {min_length})"),
                         "STRING_TOO_SHORT",
                     ));
                 }
@@ -295,7 +295,7 @@ impl TypeValidator {
                 if (data_str.len() as u64) > max_length {
                     result.add_error(ValidationError::new(
                         path,
-                        format!("String too long (max: {})", max_length),
+                        format!("String too long (max: {max_length})"),
                         "STRING_TOO_LONG",
                     ));
                 }
@@ -308,7 +308,7 @@ impl TypeValidator {
                         if !re.is_match(data_str) {
                             result.add_error(ValidationError::new(
                                 path,
-                                format!("String does not match pattern: {}", pattern),
+                                format!("String does not match pattern: {pattern}"),
                                 "PATTERN_MISMATCH",
                             ));
                         }
@@ -316,7 +316,7 @@ impl TypeValidator {
                     Err(e) => {
                         result.add_error(ValidationError::new(
                             path,
-                            format!("Invalid regex pattern {}: {}", pattern, e),
+                            format!("Invalid regex pattern {pattern}: {e}"),
                             "INVALID_REGEX_PATTERN",
                         ));
                     }
@@ -330,7 +330,7 @@ impl TypeValidator {
                 if data_num < minimum {
                     result.add_error(ValidationError::new(
                         path,
-                        format!("Number too small (min: {})", minimum),
+                        format!("Number too small (min: {minimum})"),
                         "NUMBER_TOO_SMALL",
                     ));
                 }
@@ -340,7 +340,7 @@ impl TypeValidator {
                 if data_num > maximum {
                     result.add_error(ValidationError::new(
                         path,
-                        format!("Number too large (max: {})", maximum),
+                        format!("Number too large (max: {maximum})"),
                         "NUMBER_TOO_LARGE",
                     ));
                 }
@@ -368,7 +368,7 @@ impl TypeValidator {
                     Err(e) => {
                         result.add_error(ValidationError::new(
                             "custom_validator",
-                            format!("Custom validation failed: {}", e),
+                            format!("Custom validation failed: {e}"),
                             "CUSTOM_VALIDATION_ERROR",
                         ));
                     }
@@ -376,7 +376,7 @@ impl TypeValidator {
             } else {
                 result.add_error(ValidationError::new(
                     "validator",
-                    format!("Unknown validator: {}", validator_name),
+                    format!("Unknown validator: {validator_name}"),
                     "UNKNOWN_VALIDATOR",
                 ));
             }

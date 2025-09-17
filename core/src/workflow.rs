@@ -401,7 +401,7 @@ impl WorkflowExecutor {
 
                     // Create default agent configuration for this workflow
                     let mut default_config = crate::agents::AgentConfig::new(
-                        format!("Agent_{}", agent_id_str),
+                        format!("Agent_{agent_id_str}"),
                         "Auto-generated agent for workflow execution",
                         resolved_llm_config,
                     )
@@ -417,12 +417,11 @@ impl WorkflowExecutor {
                         Ok(agent) => {
                             let mut agents_guard = self.agents.write().await;
                             agents_guard.insert(agent_id.clone(), Arc::new(agent));
-                            tracing::debug!("Auto-registered agent: {}", agent_id);
+                            tracing::debug!("Auto-registered agent: {agent_id}");
                         }
                         Err(e) => {
                             return Err(GraphBitError::workflow_execution(format!(
-                                "Failed to create agent '{}': {}. This may be due to invalid API key or configuration.",
-                                agent_id_str, e
+                                "Failed to create agent '{agent_id_str}': {e}. This may be due to invalid API key or configuration.",
                             )));
                         }
                     }
@@ -515,8 +514,8 @@ impl WorkflowExecutor {
                                 .await
                                 .map_err(|e| {
                                     GraphBitError::workflow_execution(format!(
-                                        "Failed to acquire permits for node {}: {}",
-                                        node.id, e
+                                        "Failed to acquire permits for node {}: {e}",
+                                        node.id
                                     ))
                                 })?,
                         )
@@ -585,7 +584,7 @@ impl WorkflowExecutor {
                             // Fallback to generic naming if node not found (shouldn't happen)
                             if let Ok(output_str) = serde_json::to_string(&node_result.output) {
                                 ctx.set_variable(
-                                    format!("node_result_{}", total_executed),
+                                    format!("node_result_{total_executed}"),
                                     serde_json::Value::String(output_str),
                                 );
                                 tracing::debug!(
@@ -615,7 +614,7 @@ impl WorkflowExecutor {
                     Err(e) => {
                         if self.fail_fast {
                             should_fail_fast = true;
-                            failure_message = format!("Task execution failed: {}", e);
+                            failure_message = format!("Task execution failed: {e}");
                             break;
                         }
                         total_executed += 1;

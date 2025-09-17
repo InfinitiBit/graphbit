@@ -355,7 +355,7 @@ impl TokenSplitter {
         }
 
         let token_pattern = Regex::new(pattern).map_err(|e| {
-            GraphBitError::validation("text_splitter", format!("Invalid regex pattern: {}", e))
+            GraphBitError::validation("text_splitter", format!("Invalid regex pattern: {e}"))
         })?;
 
         let config = TextSplitterConfig {
@@ -484,7 +484,7 @@ impl SentenceSplitter {
 
         let pattern = format!("({})", endings.join("|"));
         let sentence_pattern = Regex::new(&pattern).map_err(|e| {
-            GraphBitError::validation("text_splitter", format!("Invalid regex pattern: {}", e))
+            GraphBitError::validation("text_splitter", format!("Invalid regex pattern: {e}"))
         })?;
 
         let config = TextSplitterConfig {
@@ -688,7 +688,7 @@ impl RecursiveSplitter {
             let potential_chunk = if current_chunk.is_empty() {
                 part.to_string()
             } else {
-                format!("{}{}{}", current_chunk, separator, part)
+                format!("{current_chunk}{separator}{part}")
             };
 
             if potential_chunk.len() <= self.chunk_size {
@@ -779,7 +779,7 @@ impl TextSplitterTrait for RecursiveSplitter {
                     let prev_chunk = &chunks[i - 1];
                     let overlap_start = prev_chunk.content.len().saturating_sub(self.chunk_overlap);
                     let overlap_text = &prev_chunk.content[overlap_start..];
-                    chunk_content = format!("{}{}", overlap_text, chunk_content);
+                    chunk_content = format!("{overlap_text}{chunk_content}");
                 }
 
                 // Add overlap from next chunk
@@ -787,7 +787,7 @@ impl TextSplitterTrait for RecursiveSplitter {
                     let next_chunk = &chunks[i + 1];
                     let overlap_end = self.chunk_overlap.min(next_chunk.content.len());
                     let overlap_text = &next_chunk.content[..overlap_end];
-                    chunk_content = format!("{}{}", chunk_content, overlap_text);
+                    chunk_content = format!("{chunk_content}{overlap_text}");
                 }
 
                 overlapped_chunks.push(TextChunk::new(

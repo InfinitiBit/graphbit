@@ -135,9 +135,10 @@ impl OpenRouterProvider {
 
     /// Parse OpenRouter response to GraphBit response
     fn parse_response(&self, response: OpenRouterResponse) -> GraphBitResult<LlmResponse> {
-        let choice = response.choices.into_iter().next().ok_or_else(|| {
-            GraphBitError::llm_provider("openrouter", "No choices in response")
-        })?;
+        let choice =
+            response.choices.into_iter().next().ok_or_else(|| {
+                GraphBitError::llm_provider("openrouter", "No choices in response")
+            })?;
 
         let content = choice.message.content.unwrap_or_default();
         let tool_calls = choice
@@ -277,24 +278,26 @@ impl LlmProviderTrait for OpenRouterProvider {
             "openai/gpt-4-turbo" => Some(128000),
             "openai/gpt-4" => Some(8192),
             "openai/gpt-3.5-turbo" => Some(16385),
-            
+
             // Anthropic models
             "anthropic/claude-3-5-sonnet" | "anthropic/claude-3-5-haiku" => Some(200000),
-            "anthropic/claude-3-opus" | "anthropic/claude-3-sonnet" | "anthropic/claude-3-haiku" => Some(200000),
-            
+            "anthropic/claude-3-opus"
+            | "anthropic/claude-3-sonnet"
+            | "anthropic/claude-3-haiku" => Some(200000),
+
             // Google models
             "google/gemini-pro" => Some(32768),
             "google/gemini-pro-1.5" => Some(1000000),
-            
+
             // Meta models
             "meta-llama/llama-3.1-405b-instruct" => Some(131072),
             "meta-llama/llama-3.1-70b-instruct" => Some(131072),
             "meta-llama/llama-3.1-8b-instruct" => Some(131072),
-            
+
             // Mistral models
             "mistralai/mistral-large" => Some(128000),
             "mistralai/mistral-medium" => Some(32768),
-            
+
             // Default for unknown models
             _ => Some(4096),
         }
@@ -310,13 +313,13 @@ impl LlmProviderTrait for OpenRouterProvider {
             "openai/gpt-4-turbo" => Some((0.00001, 0.00003)),
             "openai/gpt-4" => Some((0.00003, 0.00006)),
             "openai/gpt-3.5-turbo" => Some((0.0000005, 0.0000015)),
-            
+
             // Anthropic models
             "anthropic/claude-3-5-sonnet" => Some((0.000003, 0.000015)),
             "anthropic/claude-3-opus" => Some((0.000015, 0.000075)),
             "anthropic/claude-3-sonnet" => Some((0.000003, 0.000015)),
             "anthropic/claude-3-haiku" => Some((0.00000025, 0.00000125)),
-            
+
             // Many other models on OpenRouter are free or very low cost
             _ => None,
         }

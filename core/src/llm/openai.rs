@@ -29,10 +29,7 @@ impl OpenAiProvider {
             .tcp_keepalive(std::time::Duration::from_secs(60))
             .build()
             .map_err(|e| {
-                GraphBitError::llm_provider(
-                    "openai",
-                    format!("Failed to create HTTP client: {}", e),
-                )
+                GraphBitError::llm_provider("openai", format!("Failed to create HTTP client: {e}"))
             })?;
         let base_url = "https://api.openai.com/v1".to_string();
 
@@ -55,10 +52,7 @@ impl OpenAiProvider {
             .tcp_keepalive(std::time::Duration::from_secs(60))
             .build()
             .map_err(|e| {
-                GraphBitError::llm_provider(
-                    "openai",
-                    format!("Failed to create HTTP client: {}", e),
-                )
+                GraphBitError::llm_provider("openai", format!("Failed to create HTTP client: {e}"))
             })?;
 
         Ok(Self {
