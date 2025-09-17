@@ -1,7 +1,7 @@
-//! Core type definitions for GraphBit
+//! Core type definitions for `GraphBit`
 //!
 //! This module contains all the fundamental types used throughout the
-//! GraphBit agentic workflow automation framework.
+//! `GraphBit` agentic workflow automation framework.
 
 use chrono;
 use serde::{Deserialize, Serialize};

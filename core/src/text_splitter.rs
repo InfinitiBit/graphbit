@@ -1,4 +1,4 @@
-//! Text splitting functionality for GraphBit
+//! Text splitting functionality for `GraphBit`
 //!
 //! This module provides various text splitting strategies for processing
 //! large documents into manageable chunks while maintaining context.

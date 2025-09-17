@@ -46,7 +46,7 @@ pub(crate) struct ClientConfig {
 impl Default for ClientConfig {
     fn default() -> Self {
         Self {
-            request_timeout: Duration::from_secs(120), // Increased to match Ollama's capabilities
+            request_timeout: Duration::from_secs(120), // Increased to match `Ollama`'s capabilities
             max_retries: 3,
             base_retry_delay: Duration::from_millis(100),
             max_retry_delay: Duration::from_secs(5),
@@ -183,7 +183,7 @@ impl LlmClient {
         // Optimize timeout based on provider type
         match &config.inner {
             graphbit_core::llm::providers::LlmConfig::Ollama { .. } => {
-                // Ollama needs more time for local inference
+                // `Ollama` needs more time for local inference
                 client_config.request_timeout = Duration::from_secs(180);
             }
             graphbit_core::llm::providers::LlmConfig::OpenAI { .. }
