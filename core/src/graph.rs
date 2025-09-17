@@ -105,7 +105,7 @@ impl WorkflowGraph {
         let node_id = node.id.clone();
 
         if self.nodes.contains_key(&node_id) {
-            let incoming_name = node.name.clone();
+            let incoming_name = node.name;
             let existing_name = self
                 .nodes
                 .get(&node_id)
