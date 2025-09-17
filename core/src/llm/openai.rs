@@ -281,12 +281,12 @@ impl LlmProviderTrait for OpenAiProvider {
     fn max_context_length(&self) -> Option<u32> {
         match self.model.as_str() {
             "gpt-4" => Some(8192),
-            "gpt-4-32k" => Some(32768),
+            "gpt-4-32k" => Some(32_768),
             "gpt-4-turbo" => Some(128_000),
             "gpt-4o" => Some(128_000),
             "gpt-4o-mini" => Some(128_000),
             "gpt-3.5-turbo" => Some(4096),
-            "gpt-3.5-turbo-16k" => Some(16384),
+            "gpt-3.5-turbo-16k" => Some(16_384),
             _ => None,
         }
     }
@@ -294,9 +294,9 @@ impl LlmProviderTrait for OpenAiProvider {
     fn cost_per_token(&self) -> Option<(f64, f64)> {
         // Cost per token in USD (input, output) as of late 2023
         match self.model.as_str() {
-            "gpt-4" => Some((0.00003, 0.00006)),
-            "gpt-4-32k" => Some((0.00006, 0.00012)),
-            "gpt-4-turbo" => Some((0.00001, 0.00003)),
+            "gpt-4" => Some((0.000_03, 0.000_06)),
+            "gpt-4-32k" => Some((0.000_06, 0.000_12)),
+            "gpt-4-turbo" => Some((0.000_01, 0.000_03)),
             "gpt-4o" => Some((0.000_005, 0.000_015)),
             "gpt-4o-mini" => Some((0.000_000_15, 0.000_000_6)),
             "gpt-3.5-turbo" => Some((0.000_001_5, 0.000_002)),

@@ -239,10 +239,10 @@ impl LlmProviderTrait for PerplexityProvider {
             "pplx-7b-online" | "pplx-70b-online" => Some(4096),
             "pplx-7b-chat" | "pplx-70b-chat" => Some(8192),
             "llama-2-70b-chat" => Some(4096),
-            "codellama-34b-instruct" => Some(16384),
-            "mistral-7b-instruct" => Some(16384),
+            "codellama-34b-instruct" => Some(16_384),
+            "mistral-7b-instruct" => Some(16_384),
             "sonar" | "sonar-reasoning" => Some(8192),
-            "sonar-deep-research" => Some(32768),
+            "sonar-deep-research" => Some(32_768),
             _ if self.model.starts_with("sonar") => Some(8192),
             _ => Some(4096), // Conservative default
         }

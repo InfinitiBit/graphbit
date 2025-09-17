@@ -274,29 +274,29 @@ impl LlmProviderTrait for OpenRouterProvider {
         // Common models and their approximate context lengths
         match self.model.as_str() {
             // OpenAI models
-            "openai/gpt-4o" | "openai/gpt-4o-mini" => Some(128000),
-            "openai/gpt-4-turbo" => Some(128000),
+            "openai/gpt-4o" | "openai/gpt-4o-mini" => Some(128_000),
+            "openai/gpt-4-turbo" => Some(128_000),
             "openai/gpt-4" => Some(8192),
-            "openai/gpt-3.5-turbo" => Some(16385),
+            "openai/gpt-3.5-turbo" => Some(16_385),
 
             // Anthropic models
-            "anthropic/claude-3-5-sonnet" | "anthropic/claude-3-5-haiku" => Some(200000),
+            "anthropic/claude-3-5-sonnet" | "anthropic/claude-3-5-haiku" => Some(200_000),
             "anthropic/claude-3-opus"
             | "anthropic/claude-3-sonnet"
-            | "anthropic/claude-3-haiku" => Some(200000),
+            | "anthropic/claude-3-haiku" => Some(200_000),
 
             // Google models
-            "google/gemini-pro" => Some(32768),
-            "google/gemini-pro-1.5" => Some(1000000),
+            "google/gemini-pro" => Some(32_768),
+            "google/gemini-pro-1.5" => Some(1_000_000),
 
             // Meta models
-            "meta-llama/llama-3.1-405b-instruct" => Some(131072),
-            "meta-llama/llama-3.1-70b-instruct" => Some(131072),
-            "meta-llama/llama-3.1-8b-instruct" => Some(131072),
+            "meta-llama/llama-3.1-405b-instruct" => Some(131_072),
+            "meta-llama/llama-3.1-70b-instruct" => Some(131_072),
+            "meta-llama/llama-3.1-8b-instruct" => Some(131_072),
 
             // Mistral models
-            "mistralai/mistral-large" => Some(128000),
-            "mistralai/mistral-medium" => Some(32768),
+            "mistralai/mistral-large" => Some(128_000),
+            "mistralai/mistral-medium" => Some(32_768),
 
             // Default for unknown models
             _ => Some(4096),
@@ -307,18 +307,18 @@ impl LlmProviderTrait for OpenRouterProvider {
         // Cost per token in USD (input, output) - varies by model on `OpenRouter`
         // These are approximate costs and may change
         match self.model.as_str() {
-            // OpenAI models (approximate `OpenRouter` pricing)
-            "openai/gpt-4o" => Some((0.0000025, 0.00001)),
-            "openai/gpt-4o-mini" => Some((0.00000015, 0.0000006)),
-            "openai/gpt-4-turbo" => Some((0.00001, 0.00003)),
-            "openai/gpt-4" => Some((0.00003, 0.00006)),
-            "openai/gpt-3.5-turbo" => Some((0.0000005, 0.0000015)),
+            // OpenAI models (approximate OpenRouter pricing)
+            "openai/gpt-4o" => Some((0.000_002_5, 0.000_01)),
+            "openai/gpt-4o-mini" => Some((0.000_000_15, 0.000_000_6)),
+            "openai/gpt-4-turbo" => Some((0.000_01, 0.000_03)),
+            "openai/gpt-4" => Some((0.000_03, 0.000_06)),
+            "openai/gpt-3.5-turbo" => Some((0.000_000_5, 0.000_001_5)),
 
             // Anthropic models
-            "anthropic/claude-3-5-sonnet" => Some((0.000003, 0.000015)),
-            "anthropic/claude-3-opus" => Some((0.000015, 0.000075)),
-            "anthropic/claude-3-sonnet" => Some((0.000003, 0.000015)),
-            "anthropic/claude-3-haiku" => Some((0.00000025, 0.00000125)),
+            "anthropic/claude-3-5-sonnet" => Some((0.000_003, 0.000_015)),
+            "anthropic/claude-3-opus" => Some((0.000_015, 0.000_075)),
+            "anthropic/claude-3-sonnet" => Some((0.000_003, 0.000_015)),
+            "anthropic/claude-3-haiku" => Some((0.000_000_25, 0.000_001_25)),
 
             // Many other models on OpenRouter are free or very low cost
             _ => None,

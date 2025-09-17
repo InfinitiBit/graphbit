@@ -342,8 +342,8 @@ impl LlmProviderTrait for OllamaProvider {
         match self.model.as_str() {
             m if m.contains("llama3") => Some(8192),
             m if m.contains("llama2") => Some(4096),
-            m if m.contains("codellama") => Some(16384),
-            m if m.contains("mixtral") => Some(32768),
+            m if m.contains("codellama") => Some(16_384),
+            m if m.contains("mixtral") => Some(32_768),
             m if m.contains("gemma") => Some(8192),
             _ => Some(4096), // Conservative default
         }
