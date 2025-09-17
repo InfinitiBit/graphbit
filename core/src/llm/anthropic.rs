@@ -203,13 +203,13 @@ impl LlmProviderTrait for AnthropicProvider {
 
     fn max_context_length(&self) -> Option<u32> {
         match self.model.as_str() {
-            "claude-instant-1.2" => Some(100000),
-            "claude-2.0" => Some(100000),
-            "claude-2.1" => Some(200000),
-            "claude-3-sonnet-20240229" => Some(200000),
-            "claude-3-opus-20240229" => Some(200000),
-            "claude-3-haiku-20240307" => Some(200000),
-            _ if self.model.starts_with("claude-3") => Some(200000),
+            "claude-instant-1.2" => Some(100_000),
+            "claude-2.0" => Some(100_000),
+            "claude-2.1" => Some(200_000),
+            "claude-3-sonnet-20240229" => Some(200_000),
+            "claude-3-opus-20240229" => Some(200_000),
+            "claude-3-haiku-20240307" => Some(200_000),
+            _ if self.model.starts_with("claude-3") => Some(200_000),
             _ => None,
         }
     }

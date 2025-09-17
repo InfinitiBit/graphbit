@@ -240,10 +240,10 @@ impl LlmProviderTrait for DeepSeekProvider {
 
     fn max_context_length(&self) -> Option<u32> {
         match self.model.as_str() {
-            "deepseek-chat" => Some(128000),
-            "deepseek-coder" => Some(128000),
-            "deepseek-reasoner" => Some(128000),
-            _ if self.model.starts_with("deepseek-") => Some(128000),
+            "deepseek-chat" => Some(128_000),
+            "deepseek-coder" => Some(128_000),
+            "deepseek-reasoner" => Some(128_000),
+            _ if self.model.starts_with("deepseek-") => Some(128_000),
             _ => None,
         }
     }
@@ -251,10 +251,10 @@ impl LlmProviderTrait for DeepSeekProvider {
     fn cost_per_token(&self) -> Option<(f64, f64)> {
         // Cost per token in USD (input, output) - DeepSeek is very competitive
         match self.model.as_str() {
-            "deepseek-chat" => Some((0.00000014, 0.00000028)), // $0.14/$0.28 per 1M tokens
-            "deepseek-coder" => Some((0.00000014, 0.00000028)), // $0.14/$0.28 per 1M tokens
-            "deepseek-reasoner" => Some((0.00000055, 0.0000022)), // $0.55/$2.19 per 1M tokens
-            _ if self.model.starts_with("deepseek-") => Some((0.00000014, 0.00000028)),
+            "deepseek-chat" => Some((0.000_000_14, 0.000_000_28)), // $0.14/$0.28 per 1M tokens
+            "deepseek-coder" => Some((0.000_000_14, 0.000_000_28)), // $0.14/$0.28 per 1M tokens
+            "deepseek-reasoner" => Some((0.000_000_55, 0.000_002_2)), // $0.55/$2.19 per 1M tokens
+            _ if self.model.starts_with("deepseek-") => Some((0.000_000_14, 0.000_000_28)),
             _ => None,
         }
     }

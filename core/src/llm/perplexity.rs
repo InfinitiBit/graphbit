@@ -239,10 +239,10 @@ impl LlmProviderTrait for PerplexityProvider {
             "pplx-7b-online" | "pplx-70b-online" => Some(4096),
             "pplx-7b-chat" | "pplx-70b-chat" => Some(8192),
             "llama-2-70b-chat" => Some(4096),
-            "codellama-34b-instruct" => Some(16384),
-            "mistral-7b-instruct" => Some(16384),
+            "codellama-34b-instruct" => Some(16_384),
+            "mistral-7b-instruct" => Some(16_384),
             "sonar" | "sonar-reasoning" => Some(8192),
-            "sonar-deep-research" => Some(32768),
+            "sonar-deep-research" => Some(32_768),
             _ if self.model.starts_with("sonar") => Some(8192),
             _ => Some(4096), // Conservative default
         }
@@ -251,16 +251,16 @@ impl LlmProviderTrait for PerplexityProvider {
     fn cost_per_token(&self) -> Option<(f64, f64)> {
         // Cost per token in USD (input, output) based on Perplexity pricing
         match self.model.as_str() {
-            "pplx-7b-online" => Some((0.0000002, 0.0000002)),
-            "pplx-70b-online" => Some((0.000001, 0.000001)),
-            "pplx-7b-chat" => Some((0.0000002, 0.0000002)),
-            "pplx-70b-chat" => Some((0.000001, 0.000001)),
-            "llama-2-70b-chat" => Some((0.000001, 0.000001)),
-            "codellama-34b-instruct" => Some((0.00000035, 0.00000140)),
-            "mistral-7b-instruct" => Some((0.0000002, 0.0000002)),
-            "sonar" => Some((0.000001, 0.000001)),
-            "sonar-reasoning" => Some((0.000002, 0.000002)),
-            "sonar-deep-research" => Some((0.000005, 0.000005)),
+            "pplx-7b-online" => Some((0.000_000_2, 0.000_000_2)),
+            "pplx-70b-online" => Some((0.000_001, 0.000_001)),
+            "pplx-7b-chat" => Some((0.000_000_2, 0.000_000_2)),
+            "pplx-70b-chat" => Some((0.000_001, 0.000_001)),
+            "llama-2-70b-chat" => Some((0.000_001, 0.000_001)),
+            "codellama-34b-instruct" => Some((0.000_000_35, 0.000_001_40)),
+            "mistral-7b-instruct" => Some((0.000_000_2, 0.000_000_2)),
+            "sonar" => Some((0.000_001, 0.000_001)),
+            "sonar-reasoning" => Some((0.000_002, 0.000_002)),
+            "sonar-deep-research" => Some((0.000_005, 0.000_005)),
             _ => None,
         }
     }
