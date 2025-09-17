@@ -99,11 +99,11 @@ config = LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4o-mini")
 executor = Executor(config)
 
 # Create tools with clear descriptions for LLM selection
-@tool(description="Get current weather information for any city")
+@tool(_description="Get current weather information for any city")
 def get_weather(location: str) -> dict:
     return {"location": location, "temperature": 22, "condition": "sunny"}
 
-@tool(description="Perform mathematical calculations and return results")
+@tool(_description="Perform mathematical calculations and return results")
 def calculate(expression: str) -> str:
     return f"Result: {eval(expression)}"
 
