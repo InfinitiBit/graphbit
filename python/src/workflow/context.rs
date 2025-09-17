@@ -2,6 +2,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use serde_json::Value as JsonValue;
 
+/// Context object for workflow execution containing shared state and variables
 #[pyclass]
 #[derive(Clone)]
 pub struct WorkflowContext {
@@ -125,17 +126,24 @@ impl WorkflowContext {
 /// Helper function to convert JSON values to Python objects
 fn json_to_python(value: &JsonValue, py: Python<'_>) -> PyResult<PyObject> {
     match value {
-        JsonValue::String(s) => Ok(s.clone().into_py(py)),
+        JsonValue::String(s) => Ok(s.clone().into_pyobject(py)?.into_any().unbind()),
         JsonValue::Number(n) => {
             if let Some(i) = n.as_i64() {
-                Ok(i.into_py(py))
+                Ok(i.into_pyobject(py)?.into_any().unbind())
             } else if let Some(f) = n.as_f64() {
-                Ok(f.into_py(py))
+                Ok(f.into_pyobject(py)?.into_any().unbind())
             } else {
-                Ok(n.to_string().into_py(py))
+                Ok(n.to_string().into_pyobject(py)?.into_any().unbind())
             }
         }
-        JsonValue::Bool(b) => Ok(b.into_py(py)),
+        JsonValue::Bool(b) => {
+            let py_bool = b.into_pyobject(py)?;
+            Ok(
+                <pyo3::Bound<'_, pyo3::types::PyBool> as Clone>::clone(&py_bool)
+                    .into_any()
+                    .unbind(),
+            )
+        }
         JsonValue::Null => Ok(py.None()),
         JsonValue::Array(arr) => {
             let py_list = pyo3::types::PyList::empty(py);
@@ -143,7 +151,7 @@ fn json_to_python(value: &JsonValue, py: Python<'_>) -> PyResult<PyObject> {
                 let py_item = json_to_python(item, py)?;
                 py_list.append(py_item)?;
             }
-            Ok(py_list.into())
+            Ok(py_list.into_any().unbind())
         }
         JsonValue::Object(obj) => {
             let py_dict = PyDict::new(py);
@@ -151,7 +159,7 @@ fn json_to_python(value: &JsonValue, py: Python<'_>) -> PyResult<PyObject> {
                 let py_value = json_to_python(v, py)?;
                 py_dict.set_item(k, py_value)?;
             }
-            Ok(py_dict.into())
+            Ok(py_dict.into_any().unbind())
         }
     }
 }

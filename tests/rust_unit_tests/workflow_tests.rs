@@ -422,7 +422,7 @@ async fn test_workflow_with_anthropic() {
 
     let llm_config = llm::LlmConfig::Anthropic {
         api_key: std::env::var("ANTHROPIC_API_KEY").unwrap(),
-        model: "claude-2".to_string(),
+        model: "claude-3-haiku-20240307".to_string(),
         base_url: None,
     };
 

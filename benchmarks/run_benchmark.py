@@ -299,7 +299,7 @@ class ComprehensiveBenchmarkRunner:
                     self.log("GraphBit Python bindings not found!", "ERROR")
                     if self.verbose:
                         print("Please run the following commands first:")
-                        print("  1. conda activate graphbit")
+                        print("  1. poetry shell")
                         print("  2. cargo build --release")
                         print("  3. maturin develop --release")
                     framework_info["errors"]["import"] = "GraphBit not available"

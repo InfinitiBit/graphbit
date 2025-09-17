@@ -14,66 +14,118 @@ pub type GraphBitResult<T> = Result<T, GraphBitError>;
 pub enum GraphBitError {
     /// Configuration related errors
     #[error("Configuration error: {message}")]
-    Configuration { message: String },
+    Configuration {
+        /// Error message
+        message: String,
+    },
 
     /// LLM provider errors
     #[error("LLM provider error: {provider} - {message}")]
-    LlmProvider { provider: String, message: String },
+    LlmProvider {
+        /// Provider name
+        provider: String,
+        /// Error message
+        message: String,
+    },
 
     /// Generic LLM errors
     #[error("LLM error: {message}")]
-    Llm { message: String },
+    Llm {
+        /// Error message
+        message: String,
+    },
 
     /// Network communication errors
     #[error("Network error: {message}")]
-    Network { message: String },
+    Network {
+        /// Error message
+        message: String,
+    },
 
     /// JSON serialization/deserialization errors
     #[error("Serialization error: {message}")]
-    Serialization { message: String },
+    Serialization {
+        /// Error message
+        message: String,
+    },
 
     /// Workflow execution errors
     #[error("Workflow execution error: {message}")]
-    WorkflowExecution { message: String },
+    WorkflowExecution {
+        /// Error message
+        message: String,
+    },
 
     /// Graph structure errors
     #[error("Graph error: {message}")]
-    Graph { message: String },
+    Graph {
+        /// Error message
+        message: String,
+    },
 
     /// Agent-related errors
     #[error("Agent error: {agent_id} - {message}")]
-    Agent { agent_id: String, message: String },
+    Agent {
+        /// Agent identifier
+        agent_id: String,
+        /// Error message
+        message: String,
+    },
 
     /// Agent not found errors
     #[error("Agent not found: {agent_id}")]
-    AgentNotFound { agent_id: String },
+    AgentNotFound {
+        /// Agent identifier
+        agent_id: String,
+    },
 
     /// Type validation errors
     #[error("Validation error: {field} - {message}")]
-    Validation { field: String, message: String },
+    Validation {
+        /// Field name that failed validation
+        field: String,
+        /// Error message
+        message: String,
+    },
 
     /// Authentication and authorization errors
     #[error("Authentication error: {provider} - {message}")]
-    Authentication { provider: String, message: String },
+    Authentication {
+        /// Provider name
+        provider: String,
+        /// Error message
+        message: String,
+    },
 
     /// Rate limiting errors
     #[error("Rate limit exceeded: {provider} - retry after {retry_after_seconds}s")]
     RateLimit {
+        /// Provider name
         provider: String,
+        /// Seconds to wait before retrying
         retry_after_seconds: u64,
     },
 
     /// Generic internal errors
     #[error("Internal error: {message}")]
-    Internal { message: String },
+    Internal {
+        /// Error message
+        message: String,
+    },
 
     /// IO errors
     #[error("IO error: {message}")]
-    Io { message: String },
+    Io {
+        /// Error message
+        message: String,
+    },
 
     /// Concurrency control errors
     #[error("Concurrency error: {message}")]
-    Concurrency { message: String },
+    Concurrency {
+        /// Error message
+        message: String,
+    },
 }
 
 impl GraphBitError {

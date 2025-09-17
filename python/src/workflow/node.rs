@@ -16,6 +16,7 @@ thread_local! {
     static TOOL_REGISTRY: RefCell<HashMap<String, PyObject>> = RefCell::new(HashMap::new());
 }
 
+/// A workflow node representing a single operation or step in a workflow
 #[pyclass]
 #[derive(Clone)]
 pub struct Node {
@@ -177,7 +178,8 @@ impl Node {
                             .getattr("__name__")
                             .and_then(|name| name.extract::<String>())
                             .unwrap_or_else(|_| format!("tool_{}", i));
-                        registry.insert(tool_name, tool.to_object(py));
+                        let py_obj = tool.into_pyobject(py).unwrap();
+                        registry.insert(tool_name, py_obj.into_any().unbind());
                     }
                 });
             });
@@ -623,24 +625,31 @@ fn map_python_type_to_json_schema(type_str: &str) -> &'static str {
 fn json_to_python_value(value: &serde_json::Value, py: Python<'_>) -> PyResult<PyObject> {
     match value {
         serde_json::Value::Null => Ok(py.None()),
-        serde_json::Value::Bool(b) => Ok(b.to_object(py)),
+        serde_json::Value::Bool(b) => {
+            let py_bool = b.into_pyobject(py)?;
+            Ok(
+                <pyo3::Bound<'_, pyo3::types::PyBool> as Clone>::clone(&py_bool)
+                    .into_any()
+                    .unbind(),
+            )
+        }
         serde_json::Value::Number(n) => {
             if let Some(i) = n.as_i64() {
-                Ok(i.to_object(py))
+                Ok(i.into_pyobject(py)?.into_any().unbind())
             } else if let Some(f) = n.as_f64() {
-                Ok(f.to_object(py))
+                Ok(f.into_pyobject(py)?.into_any().unbind())
             } else {
-                Ok(n.to_string().to_object(py))
+                Ok(n.to_string().into_pyobject(py)?.into_any().unbind())
             }
         }
-        serde_json::Value::String(s) => Ok(s.to_object(py)),
+        serde_json::Value::String(s) => Ok(s.into_pyobject(py)?.into_any().unbind()),
         serde_json::Value::Array(arr) => {
             let py_list = pyo3::types::PyList::empty(py);
             for item in arr {
                 let py_item = json_to_python_value(item, py)?;
                 py_list.append(py_item)?;
             }
-            Ok(py_list.to_object(py))
+            Ok(py_list.into_pyobject(py)?.into_any().unbind())
         }
         serde_json::Value::Object(obj) => {
             let py_dict = pyo3::types::PyDict::new(py);
@@ -648,7 +657,7 @@ fn json_to_python_value(value: &serde_json::Value, py: Python<'_>) -> PyResult<P
                 let py_val = json_to_python_value(val, py)?;
                 py_dict.set_item(key, py_val)?;
             }
-            Ok(py_dict.to_object(py))
+            Ok(py_dict.into_pyobject(py)?.into_any().unbind())
         }
     }
 }
@@ -718,7 +727,10 @@ pub(crate) fn sync_global_tools_to_workflow(py: Python<'_>) -> PyResult<()> {
                 None,
             )?;
 
-            local_registry.insert(tool_name.clone(), tool_placeholder.to_object(py));
+            local_registry.insert(
+                tool_name.clone(),
+                tool_placeholder.into_pyobject(py)?.into_any().unbind(),
+            );
         }
 
         Ok::<(), PyErr>(())
@@ -909,7 +921,6 @@ pub(crate) fn execute_production_tool_calls(
     tool_calls_json: String,
     node_tools: Vec<String>,
 ) -> PyResult<String> {
-    use crate::tools::executor::ToolExecutor;
     use crate::tools::registry::ToolRegistry;
 
     // Parse tool calls
@@ -941,9 +952,6 @@ pub(crate) fn execute_production_tool_calls(
         }
         Ok::<(), PyErr>(())
     })?;
-
-    // Create tool executor
-    let executor = ToolExecutor::new(Some(&registry), None);
 
     let mut results = Vec::new();
 

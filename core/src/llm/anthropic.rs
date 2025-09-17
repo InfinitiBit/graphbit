@@ -180,11 +180,8 @@ struct AnthropicMessage {
 #[derive(Debug, Deserialize)]
 struct AnthropicResponse {
     id: String,
-    model: String,
-    role: String,
     content: Vec<ContentBlock>,
     stop_reason: Option<String>,
-    stop_sequence: Option<String>,
     usage: AnthropicUsage,
 }
 

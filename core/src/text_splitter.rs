@@ -44,54 +44,79 @@ impl Default for TextSplitterConfig {
 pub enum SplitterStrategy {
     /// Split by character count
     Character {
+        /// Maximum size of each chunk in characters
         chunk_size: usize,
+        /// Number of characters to overlap between chunks
         chunk_overlap: usize,
     },
     /// Split by token count (word-based)
     Token {
+        /// Maximum size of each chunk in tokens
         chunk_size: usize,
+        /// Number of tokens to overlap between chunks
         chunk_overlap: usize,
+        /// Optional regex pattern for token identification
         token_pattern: Option<String>,
     },
     /// Split by sentence boundaries
     Sentence {
+        /// Maximum size of each chunk in characters
         chunk_size: usize,
+        /// Number of characters to overlap between chunks
         chunk_overlap: usize,
+        /// Optional custom sentence ending patterns
         sentence_endings: Option<Vec<String>>,
     },
     /// Recursive splitting with multiple separators
     Recursive {
+        /// Maximum size of each chunk in characters
         chunk_size: usize,
+        /// Number of characters to overlap between chunks
         chunk_overlap: usize,
+        /// Optional custom separator patterns
         separators: Option<Vec<String>>,
     },
     /// Split by paragraphs
     Paragraph {
+        /// Maximum size of each chunk in characters
         chunk_size: usize,
+        /// Number of characters to overlap between chunks
         chunk_overlap: usize,
+        /// Minimum length required for a paragraph
         min_paragraph_length: Option<usize>,
     },
     /// Split by semantic similarity (requires embeddings)
     Semantic {
+        /// Maximum size of each chunk in characters
         max_chunk_size: usize,
+        /// Similarity threshold for grouping content
         similarity_threshold: f32,
     },
     /// Split Markdown documents preserving structure
     Markdown {
+        /// Maximum size of each chunk in characters
         chunk_size: usize,
+        /// Number of characters to overlap between chunks
         chunk_overlap: usize,
+        /// Whether to split by header boundaries
         split_by_headers: bool,
     },
     /// Split code files preserving syntax
     Code {
+        /// Maximum size of each chunk in characters
         chunk_size: usize,
+        /// Number of characters to overlap between chunks
         chunk_overlap: usize,
+        /// Programming language for syntax-aware splitting
         language: Option<String>,
     },
     /// Custom regex-based splitting
     Regex {
+        /// Regex pattern for splitting
         pattern: String,
+        /// Maximum size of each chunk in characters
         chunk_size: usize,
+        /// Number of characters to overlap between chunks
         chunk_overlap: usize,
     },
 }

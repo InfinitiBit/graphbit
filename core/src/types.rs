@@ -214,18 +214,25 @@ pub enum MessageContent {
     Data(serde_json::Value),
     /// Tool call request
     ToolCall {
+        /// Name of the tool to call
         tool_name: String,
+        /// Parameters to pass to the tool
         parameters: serde_json::Value,
     },
     /// Tool call response
     ToolResponse {
+        /// Name of the tool that was called
         tool_name: String,
+        /// Result returned by the tool
         result: serde_json::Value,
+        /// Whether the tool call was successful
         success: bool,
     },
     /// Error message
     Error {
+        /// Error code identifier
         error_code: String,
+        /// Human-readable error message
         error_message: String,
     },
 }
@@ -382,16 +389,24 @@ pub enum WorkflowState {
     /// Workflow is pending execution
     Pending,
     /// Workflow is currently running
-    Running { current_node: NodeId },
+    Running {
+        /// ID of the currently executing node
+        current_node: NodeId,
+    },
     /// Workflow is paused
     Paused {
+        /// ID of the node where execution paused
         current_node: NodeId,
+        /// Reason for pausing
         reason: String,
     },
     /// Workflow completed successfully
     Completed,
     /// Workflow failed
-    Failed { error: String },
+    Failed {
+        /// Error message describing the failure
+        error: String,
+    },
     /// Workflow was cancelled
     Cancelled,
 }
@@ -746,6 +761,7 @@ pub enum CircuitBreakerState {
     Closed,
     /// Circuit is open, requests are rejected
     Open {
+        /// Timestamp when the circuit was opened
         opened_at: chrono::DateTime<chrono::Utc>,
     },
     /// Circuit is half-open, testing if service has recovered

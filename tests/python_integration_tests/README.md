@@ -200,8 +200,8 @@ pytest -k "workflow and static" -v
 Before running tests, ensure GraphBit is properly built:
 
 ```bash
-# Activate conda environment
-conda activate graphbit
+# Activate Poetry environment
+poetry shell
 
 # Set OpenAI API key
 export OPENAI_API_KEY=your_actual_api_key_here
@@ -267,7 +267,7 @@ All integration tests completed successfully!
 
 1. **GraphBit not found**: Ensure `maturin develop --release` was run
 2. **API key errors**: Set required environment variables
-3. **Import errors**: Activate the correct conda environment
+3. **Import errors**: Activate the correct Poetry environment
 4. **Build errors**: Run `cargo build --release` first
 
 ### Debug Mode
