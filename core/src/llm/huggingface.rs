@@ -44,21 +44,22 @@ impl HuggingFaceProvider {
 
     /// Convert GraphBit messages to HuggingFace chat format
     fn format_messages_for_chat(&self, messages: &[LlmMessage]) -> String {
+        use std::fmt::Write;
         let mut formatted = String::new();
 
         for message in messages {
             match message.role {
                 LlmRole::System => {
-                    formatted.push_str(&format!("System: {}\n", message.content));
+                    write!(formatted, "System: {}\n", message.content).unwrap();
                 }
                 LlmRole::User => {
-                    formatted.push_str(&format!("User: {}\n", message.content));
+                    write!(formatted, "User: {}\n", message.content).unwrap();
                 }
                 LlmRole::Assistant => {
-                    formatted.push_str(&format!("Assistant: {}\n", message.content));
+                    write!(formatted, "Assistant: {}\n", message.content).unwrap();
                 }
                 LlmRole::Tool => {
-                    formatted.push_str(&format!("Tool: {}\n", message.content));
+                    write!(formatted, "Tool: {}\n", message.content).unwrap();
                 }
             }
         }
