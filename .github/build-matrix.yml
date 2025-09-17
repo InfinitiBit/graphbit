@@ -2,9 +2,9 @@ name: Cross-Platform Build Matrix
 
 on:
   push:
-    branches: [development]
+    branches: [develop]
   pull_request:
-    branches: [development]
+    branches: [develop]
   workflow_dispatch:
 
 env:
