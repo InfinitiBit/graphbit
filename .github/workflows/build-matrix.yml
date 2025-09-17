@@ -2,9 +2,9 @@ name: Cross-Platform Build Matrix
 
 on:
   push:
-    branches: [develop]
+    branches: [development]
   pull_request:
-    branches: [develop]
+    branches: [development]
   workflow_dispatch:
 
 env:
@@ -53,6 +53,17 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
+
+      - name: Install system dependencies (Linux)
+        if: runner.os == 'Linux' && !matrix.cross
+        run: |
+          sudo apt-get install -y libssl-dev pkg-config
+
+      - name: Install system dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install openssl pkg-config
+          echo "PKG_CONFIG_PATH=$(brew --prefix openssl)/lib/pkgconfig" >> $GITHUB_ENV
 
       - name: Install cross-compilation tools
         if: matrix.cross
@@ -126,15 +137,22 @@ jobs:
       - name: Install maturin
         run: pip install maturin
 
+      - name: Install OpenSSL (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl-dev pkg-config
+
       - name: Build wheels (Linux)
         if: runner.os == 'Linux'
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
-          args: --release --out dist --find-interpreter
+          args: --release --out dist --find-interpreter --manifest-path python/Cargo.toml
           sccache: 'true'
           manylinux: ${{ matrix.manylinux }}
-          working-directory: python
+          before-script-linux: |
+            yum install -y openssl-devel
 
       - name: Build wheels (Windows/macOS)
         if: runner.os != 'Linux'
