@@ -46,7 +46,7 @@ impl LlmResponse {
 
     /// Set usage statistics
     #[must_use]
-    pub fn with_usage(mut self, usage: LlmUsage) -> Self {
+    pub const fn with_usage(mut self, usage: LlmUsage) -> Self {
         self.usage = usage;
         self
     }
@@ -80,13 +80,13 @@ impl LlmResponse {
 
     /// Check if the response was truncated due to length
     #[must_use]
-    pub fn is_truncated(&self) -> bool {
+    pub const fn is_truncated(&self) -> bool {
         matches!(self.finish_reason, FinishReason::Length)
     }
 
     /// Get the total token count
     #[must_use]
-    pub fn total_tokens(&self) -> u32 {
+    pub const fn total_tokens(&self) -> u32 {
         self.usage.total_tokens
     }
 
@@ -112,7 +112,7 @@ pub struct LlmUsage {
 impl LlmUsage {
     /// Create new usage statistics
     #[must_use]
-    pub fn new(prompt_tokens: u32, completion_tokens: u32) -> Self {
+    pub const fn new(prompt_tokens: u32, completion_tokens: u32) -> Self {
         Self {
             prompt_tokens,
             completion_tokens,
@@ -122,7 +122,7 @@ impl LlmUsage {
 
     /// Create empty usage statistics
     #[must_use]
-    pub fn empty() -> Self {
+    pub const fn empty() -> Self {
         Self {
             prompt_tokens: 0,
             completion_tokens: 0,
@@ -185,19 +185,19 @@ pub enum FinishReason {
 impl FinishReason {
     /// Check if the response finished naturally
     #[must_use]
-    pub fn is_natural_stop(&self) -> bool {
+    pub const fn is_natural_stop(&self) -> bool {
         matches!(self, FinishReason::Stop | FinishReason::ToolCalls)
     }
 
     /// Check if the response was truncated
     #[must_use]
-    pub fn is_truncated(&self) -> bool {
+    pub const fn is_truncated(&self) -> bool {
         matches!(self, FinishReason::Length)
     }
 
     /// Check if there was an error
     #[must_use]
-    pub fn is_error(&self) -> bool {
+    pub const fn is_error(&self) -> bool {
         matches!(self, FinishReason::Error | FinishReason::ContentFilter)
     }
 }

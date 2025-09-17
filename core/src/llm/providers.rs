@@ -240,7 +240,7 @@ impl LlmProvider {
 
     /// Get the provider configuration
     #[must_use]
-    pub fn config(&self) -> &LlmConfig {
+    pub const fn config(&self) -> &LlmConfig {
         &self.config
     }
 

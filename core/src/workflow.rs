@@ -231,14 +231,14 @@ impl WorkflowExecutor {
 
     /// Set maximum execution time per node
     #[must_use]
-    pub fn with_max_node_execution_time(mut self, timeout_ms: u64) -> Self {
+    pub const fn with_max_node_execution_time(mut self, timeout_ms: u64) -> Self {
         self.max_node_execution_time_ms = Some(timeout_ms);
         self
     }
 
     /// Configure whether to fail fast on errors
     #[must_use]
-    pub fn with_fail_fast(mut self, fail_fast: bool) -> Self {
+    pub const fn with_fail_fast(mut self, fail_fast: bool) -> Self {
         self.fail_fast = fail_fast;
         self
     }
@@ -252,7 +252,7 @@ impl WorkflowExecutor {
 
     /// Set circuit breaker configuration
     #[must_use]
-    pub fn with_circuit_breaker_config(mut self, config: CircuitBreakerConfig) -> Self {
+    pub const fn with_circuit_breaker_config(mut self, config: CircuitBreakerConfig) -> Self {
         self.circuit_breaker_config = config;
         self
     }

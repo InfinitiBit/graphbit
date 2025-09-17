@@ -177,7 +177,7 @@ impl WorkflowGraph {
     /// Get all nodes
     #[inline]
     #[must_use]
-    pub fn get_nodes(&self) -> &HashMap<NodeId, WorkflowNode> {
+    pub const fn get_nodes(&self) -> &HashMap<NodeId, WorkflowNode> {
         &self.nodes
     }
 
@@ -563,7 +563,7 @@ impl WorkflowNode {
 
     /// Set timeout
     #[must_use]
-    pub fn with_timeout(mut self, timeout_seconds: u64) -> Self {
+    pub const fn with_timeout(mut self, timeout_seconds: u64) -> Self {
         self.timeout_seconds = Some(timeout_seconds);
         self
     }

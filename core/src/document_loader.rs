@@ -65,7 +65,7 @@ impl DocumentLoader {
 
     /// Create a new document loader with custom configuration
     #[must_use]
-    pub fn with_config(config: DocumentLoaderConfig) -> Self {
+    pub const fn with_config(config: DocumentLoaderConfig) -> Self {
         Self { config }
     }
 

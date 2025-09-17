@@ -52,7 +52,7 @@ impl AgentId {
     /// Get the underlying UUID
     #[inline]
     #[must_use]
-    pub fn as_uuid(&self) -> &Uuid {
+    pub const fn as_uuid(&self) -> &Uuid {
         &self.0
     }
 }
@@ -91,7 +91,7 @@ impl WorkflowId {
     /// Get the underlying UUID
     #[inline]
     #[must_use]
-    pub fn as_uuid(&self) -> &Uuid {
+    pub const fn as_uuid(&self) -> &Uuid {
         &self.0
     }
 }
@@ -141,7 +141,7 @@ impl NodeId {
     /// Get the underlying UUID
     #[inline]
     #[must_use]
-    pub fn as_uuid(&self) -> &Uuid {
+    pub const fn as_uuid(&self) -> &Uuid {
         &self.0
     }
 }
@@ -324,7 +324,7 @@ impl WorkflowContext {
     /// Get execution statistics
     #[inline]
     #[must_use]
-    pub fn get_stats(&self) -> Option<&WorkflowExecutionStats> {
+    pub const fn get_stats(&self) -> Option<&WorkflowExecutionStats> {
         self.stats.as_ref()
     }
 
@@ -429,7 +429,7 @@ impl WorkflowState {
     /// Check if the workflow is in a terminal state
     #[inline]
     #[must_use]
-    pub fn is_terminal(&self) -> bool {
+    pub const fn is_terminal(&self) -> bool {
         matches!(
             self,
             WorkflowState::Completed | WorkflowState::Failed { .. } | WorkflowState::Cancelled
@@ -439,14 +439,14 @@ impl WorkflowState {
     /// Check if the workflow is currently running
     #[inline]
     #[must_use]
-    pub fn is_running(&self) -> bool {
+    pub const fn is_running(&self) -> bool {
         matches!(self, WorkflowState::Running { .. })
     }
 
     /// Check if the workflow is paused
     #[inline]
     #[must_use]
-    pub fn is_paused(&self) -> bool {
+    pub const fn is_paused(&self) -> bool {
         matches!(self, WorkflowState::Paused { .. })
     }
 }
@@ -531,14 +531,14 @@ impl NodeExecutionResult {
 
     /// Set execution duration
     #[must_use]
-    pub fn with_duration(mut self, duration_ms: u64) -> Self {
+    pub const fn with_duration(mut self, duration_ms: u64) -> Self {
         self.duration_ms = duration_ms;
         self
     }
 
     /// Set retry count
     #[must_use]
-    pub fn with_retry_count(mut self, retry_count: u32) -> Self {
+    pub const fn with_retry_count(mut self, retry_count: u32) -> Self {
         self.retry_count = retry_count;
         self
     }
@@ -647,7 +647,7 @@ impl RetryConfig {
 
     /// Configure exponential backoff
     #[must_use]
-    pub fn with_exponential_backoff(
+    pub const fn with_exponential_backoff(
         mut self,
         initial_delay_ms: u64,
         multiplier: f64,
@@ -816,7 +816,7 @@ pub struct CircuitBreaker {
 impl CircuitBreaker {
     /// Create a new circuit breaker
     #[must_use]
-    pub fn new(config: CircuitBreakerConfig) -> Self {
+    pub const fn new(config: CircuitBreakerConfig) -> Self {
         Self {
             config,
             state: CircuitBreakerState::Closed,

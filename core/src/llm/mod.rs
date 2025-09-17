@@ -73,7 +73,7 @@ impl LlmRequest {
     /// Set maximum tokens
     #[inline]
     #[must_use]
-    pub fn with_max_tokens(mut self, max_tokens: u32) -> Self {
+    pub const fn with_max_tokens(mut self, max_tokens: u32) -> Self {
         self.max_tokens = Some(max_tokens);
         self
     }

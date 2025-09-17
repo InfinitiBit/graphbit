@@ -70,21 +70,21 @@ impl AgentConfig {
 
     /// Set max tokens
     #[must_use]
-    pub fn with_max_tokens(mut self, max_tokens: u32) -> Self {
+    pub const fn with_max_tokens(mut self, max_tokens: u32) -> Self {
         self.max_tokens = Some(max_tokens);
         self
     }
 
     /// Set temperature
     #[must_use]
-    pub fn with_temperature(mut self, temperature: f32) -> Self {
+    pub const fn with_temperature(mut self, temperature: f32) -> Self {
         self.temperature = Some(temperature);
         self
     }
 
     /// Set agent ID explicitly
     #[must_use]
-    pub fn with_id(mut self, id: AgentId) -> Self {
+    pub const fn with_id(mut self, id: AgentId) -> Self {
         self.id = id;
         self
     }
@@ -305,21 +305,21 @@ impl AgentBuilder {
 
     /// Set max tokens
     #[must_use]
-    pub fn max_tokens(mut self, max_tokens: u32) -> Self {
+    pub const fn max_tokens(mut self, max_tokens: u32) -> Self {
         self.config.max_tokens = Some(max_tokens);
         self
     }
 
     /// Set temperature
     #[must_use]
-    pub fn temperature(mut self, temperature: f32) -> Self {
+    pub const fn temperature(mut self, temperature: f32) -> Self {
         self.config.temperature = Some(temperature);
         self
     }
 
     /// Set a specific agent ID (overrides the auto-generated ID)
     #[must_use]
-    pub fn with_id(mut self, id: AgentId) -> Self {
+    pub const fn with_id(mut self, id: AgentId) -> Self {
         self.config.id = id;
         self
     }
