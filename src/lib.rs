@@ -1,12 +1,12 @@
-//! GraphBit - Agentic Workflow Automation Framework
+//! `GraphBit` - Agentic Workflow Automation Framework
 //!
-//! GraphBit is a declarative framework for building agentic workflows that can
+//! `GraphBit` is a declarative framework for building agentic workflows that can
 //! dynamically adapt to changing requirements and data flows.
 //!
 //! ## Features
 //!
 //! - **Dynamic Workflow Graphs**: Build workflows that can adapt at runtime
-//! - **Multi-LLM Support**: Integrate with OpenAI, Anthropic, Ollama, and more
+//! - **Multi-LLM Support**: Integrate with `OpenAI`, `Anthropic`, `Ollama`, and more
 //! - **Agent-Based Architecture**: Compose complex workflows from simple agents
 //! - **Python Bindings**: Use GraphBit from Python applications
 //! - **Validation & Monitoring**: Built-in validation and execution monitoring

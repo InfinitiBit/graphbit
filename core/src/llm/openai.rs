@@ -270,7 +270,7 @@ impl LlmProviderTrait for OpenAiProvider {
     }
 
     fn supports_function_calling(&self) -> bool {
-        // Most OpenAI models support function calling
+        // Most `OpenAI` models support function calling
         matches!(
             self.model.as_str(),
             "gpt-4" | "gpt-4-turbo" | "gpt-3.5-turbo" | "gpt-4o" | "gpt-4o-mini"
@@ -306,7 +306,7 @@ impl LlmProviderTrait for OpenAiProvider {
     }
 }
 
-// OpenAI API types
+// `OpenAI` API types
 #[derive(Debug, Serialize)]
 struct OpenAiRequest {
     model: String,

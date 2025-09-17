@@ -229,7 +229,7 @@ impl LlmProviderTrait for DeepSeekProvider {
     }
 
     fn supports_function_calling(&self) -> bool {
-        // DeepSeek models support function calling
+        // `DeepSeek` models support function calling
         matches!(
             self.model.as_str(),
             "deepseek-chat" | "deepseek-coder" | "deepseek-reasoner"
@@ -247,7 +247,7 @@ impl LlmProviderTrait for DeepSeekProvider {
     }
 
     fn cost_per_token(&self) -> Option<(f64, f64)> {
-        // Cost per token in USD (input, output) - DeepSeek is very competitive
+        // Cost per token in USD (input, output) - `DeepSeek` is very competitive
         match self.model.as_str() {
             "deepseek-chat" => Some((0.000_000_14, 0.000_000_28)), // $0.14/$0.28 per 1M tokens
             "deepseek-coder" => Some((0.000_000_14, 0.000_000_28)), // $0.14/$0.28 per 1M tokens
@@ -258,7 +258,7 @@ impl LlmProviderTrait for DeepSeekProvider {
     }
 }
 
-// DeepSeek API types (similar to OpenAI since DeepSeek follows OpenAI API format)
+// `DeepSeek` API types (similar to `OpenAI` since `DeepSeek` follows `OpenAI` API format)
 #[derive(Debug, Serialize)]
 struct DeepSeekRequest {
     model: String,

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Simple OpenRouter Example for GraphBit
+Simple OpenRouter Example for GraphBit.
 
 This example demonstrates how to use OpenRouter with GraphBit to access
 multiple AI models through a unified API. OpenRouter provides access to
@@ -204,7 +204,7 @@ def demonstrate_openrouter_with_site_info():
 
 
 def main():
-    """Main function to run OpenRouter examples."""
+    """Run OpenRouter examples."""
     print("🚀 GraphBit OpenRouter Integration Examples")
     print("=" * 50)
 

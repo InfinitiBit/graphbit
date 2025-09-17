@@ -87,7 +87,7 @@ impl HuggingFaceProvider {
             generated_text.trim().to_string()
         };
 
-        // HuggingFace doesn't provide usage stats in the same way, so we estimate
+        // `HuggingFace` doesn't provide usage stats in the same way, so we estimate
         let usage = LlmUsage::new(
             (content.len() / 4) as u32, // Rough estimate: 4 chars per token
             (content.len() / 4) as u32,
@@ -112,7 +112,7 @@ impl LlmProviderTrait for HuggingFaceProvider {
     async fn complete(&self, request: LlmRequest) -> GraphBitResult<LlmResponse> {
         let url = self.base_url.clone() + "/" + &self.model;
 
-        // Format messages for HuggingFace
+        // Format messages for `HuggingFace`
         let inputs = self.format_messages_for_chat(&request.messages);
 
         let mut parameters = HashMap::new();
@@ -183,7 +183,7 @@ impl LlmProviderTrait for HuggingFaceProvider {
     }
 
     fn supports_function_calling(&self) -> bool {
-        false // Most HuggingFace models don't support function calling out of the box
+        false // Most `HuggingFace` models don't support function calling out of the box
     }
 
     fn supports_streaming(&self) -> bool {

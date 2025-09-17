@@ -1,7 +1,7 @@
 //! Embeddings Integration Tests
 //!
 //! Tests for embedding generation, vector operations, and similarity search
-//! using different providers (OpenAI, HuggingFace).
+//! using different providers (`OpenAI`, `HuggingFace`).
 
 use graphbit_core::embeddings::*;
 use serde_json::json;
@@ -348,7 +348,7 @@ async fn test_huggingface_real_embeddings() {
         api_key,
         model: "sentence-transformers/all-MiniLM-L6-v2".to_string(),
         base_url: None,
-        timeout_seconds: Some(60), // HuggingFace can be slower
+        timeout_seconds: Some(60), // `HuggingFace` can be slower
         max_batch_size: Some(32),
         extra_params: HashMap::new(),
     };
@@ -375,7 +375,7 @@ async fn test_huggingface_real_embeddings() {
         }
         Err(e) => {
             println!(" HuggingFace embeddings failed: {e:?}");
-            // HuggingFace API can be unreliable, so we log but don't fail the test
+            // `HuggingFace` API can be unreliable, so we log but don't fail the test
             println!("HuggingFace embeddings failed (this might be expected): {e:?}");
         }
     }
@@ -501,7 +501,7 @@ async fn test_embedding_provider_comparison() {
         }
     }
 
-    // Test HuggingFace if available
+    // Test `HuggingFace` if available
     if super::has_huggingface_api_key() {
         let api_key = std::env::var("HUGGINGFACE_API_KEY").unwrap();
         let config = EmbeddingConfig {
