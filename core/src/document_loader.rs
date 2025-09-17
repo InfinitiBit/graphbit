@@ -131,8 +131,8 @@ impl DocumentLoader {
             return Err(GraphBitError::validation(
                 "document_loader",
                 format!(
-                    "File size ({} bytes) exceeds maximum allowed size ({} bytes)",
-                    file_size, self.config.max_file_size
+                    "File size ({file_size} bytes) exceeds maximum allowed size ({} bytes)",
+                    self.config.max_file_size
                 ),
             ));
         }
@@ -150,8 +150,7 @@ impl DocumentLoader {
                 return Err(GraphBitError::validation(
                     "document_loader",
                     format!(
-                        "Unsupported document type: {}. Supported types: {:?}",
-                        document_type,
+                        "Unsupported document type: {document_type}. Supported types: {:?}",
                         Self::supported_types()
                     ),
                 ))
@@ -213,7 +212,7 @@ impl DocumentLoader {
         if !response.status().is_success() {
             return Err(GraphBitError::validation(
                 "document_loader",
-                format!("HTTP error {}: {}", response.status(), url),
+                format!("HTTP error {}: {url}", response.status()),
             ));
         }
 
@@ -223,8 +222,8 @@ impl DocumentLoader {
                 return Err(GraphBitError::validation(
                     "document_loader",
                     format!(
-                        "Remote file size ({} bytes) exceeds maximum allowed size ({} bytes)",
-                        content_length, self.config.max_file_size
+                        "Remote file size ({content_length} bytes) exceeds maximum allowed size ({} bytes)",
+                        self.config.max_file_size
                     ),
                 ));
             }

@@ -428,7 +428,7 @@ impl WorkflowExecutor {
                         Ok(agent) => {
                             let mut agents_guard = self.agents.write().await;
                             agents_guard.insert(agent_id.clone(), Arc::new(agent));
-                            tracing::debug!("Auto-registered agent: {}", agent_id);
+                            tracing::debug!("Auto-registered agent: {agent_id}");
                         }
                         Err(e) => {
                             return Err(GraphBitError::workflow_execution(format!(
