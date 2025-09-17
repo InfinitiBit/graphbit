@@ -7,6 +7,7 @@ GraphBit supports multiple Large Language Model providers through a unified clie
 GraphBit supports these LLM providers:
 - **OpenAI** - GPT models including GPT-4o, GPT-4o-mini
 - **Anthropic** - Claude models including Claude-4-Sonnet
+- **OpenRouter** - Unified access to 400+ models from multiple providers (GPT, Claude, Mistral, etc.)
 - **Perplexity** - Real-time search-enabled models including Sonar models
 - **DeepSeek** - High-performance models including DeepSeek-Chat, DeepSeek-Coder, and DeepSeek-Reasoner
 - **Ollama** - Local model execution with various open-source models
@@ -92,6 +93,69 @@ balanced_config = LlmConfig.anthropic(
 fast_config = LlmConfig.anthropic(
     api_key=os.getenv("ANTHROPIC_API_KEY"),
     model="claude-3-haiku-20240307"  # For speed and efficiency
+)
+```
+
+### OpenRouter Configuration
+
+OpenRouter provides unified access to 400+ AI models through a single API, including models from OpenAI, Anthropic, Google, Meta, Mistral, and many others. This allows you to easily switch between different models and providers without changing your code.
+
+```python
+import os
+
+from graphbit import LlmConfig
+
+# Basic OpenRouter configuration
+config = LlmConfig.openrouter(
+    api_key=os.getenv("OPENROUTER_API_KEY"),
+    model="openai/gpt-4o-mini"  # Optional - defaults to openai/gpt-4o-mini
+)
+
+print(f"Provider: {config.provider()}")  # "openrouter"
+print(f"Model: {config.model()}")        # "openai/gpt-4o-mini"
+```
+
+#### Popular OpenRouter Models
+
+| Model | Provider | Best For | Context Length |
+|-------|----------|----------|----------------|
+| `openai/gpt-4o` | OpenAI | Complex reasoning, latest features | 128K |
+| `openai/gpt-4o-mini` | OpenAI | Balanced performance and cost | 128K |
+| `anthropic/claude-3-5-sonnet` | Anthropic | Advanced reasoning, coding | 200K |
+| `anthropic/claude-3-5-haiku` | Anthropic | Fast responses, simple tasks | 200K |
+| `google/gemini-pro-1.5` | Google | Large context, multimodal | 1M |
+| `meta-llama/llama-3.1-405b-instruct` | Meta | Open source, high performance | 131K |
+| `mistralai/mistral-large` | Mistral | Multilingual, reasoning | 128K |
+
+```python
+# Model selection examples
+openai_config = LlmConfig.openrouter(
+    api_key=os.getenv("OPENROUTER_API_KEY"),
+    model="openai/gpt-4o"  # Access OpenAI models through OpenRouter
+)
+
+claude_config = LlmConfig.openrouter(
+    api_key=os.getenv("OPENROUTER_API_KEY"),
+    model="anthropic/claude-3-5-sonnet"  # Access Claude models
+)
+
+llama_config = LlmConfig.openrouter(
+    api_key=os.getenv("OPENROUTER_API_KEY"),
+    model="meta-llama/llama-3.1-405b-instruct"  # Access open source models
+)
+```
+
+#### OpenRouter with Site Information
+
+For better rankings and analytics on OpenRouter, you can provide your site information:
+
+```python
+# Configuration with site information for OpenRouter rankings
+config = LlmConfig.openrouter_with_site(
+    api_key=os.getenv("OPENROUTER_API_KEY"),
+    model="openai/gpt-4o-mini",
+    site_url="https://graphbit.ai",  # Optional - your site URL
+    site_name="GraphBit AI Framework"  # Optional - your site name
 )
 ```
 
@@ -512,6 +576,61 @@ def create_deepseek_coding_workflow():
 workflow, executor = create_deepseek_workflow()
 ```
 
+### OpenRouter Workflow Example
+
+```python
+from graphbit import LlmConfig, Workflow, Node, Executor
+import os
+
+def create_openrouter_workflow():
+    """Create workflow using OpenRouter with multiple models"""
+
+    # Configure OpenRouter with a high-performance model
+    config = LlmConfig.openrouter(
+        api_key=os.getenv("OPENROUTER_API_KEY"),
+        model="anthropic/claude-3-5-sonnet"  # Use Claude through OpenRouter
+    )
+
+    workflow = Workflow("OpenRouter Multi-Model Pipeline")
+
+    # Create analyzer using Claude for complex reasoning
+    analyzer = Node.agent(
+        name="Claude Content Analyzer",
+        prompt=f"""
+        Analyze this content comprehensively:
+        - Main themes and topics
+        - Sentiment and tone
+        - Key insights and takeaways
+        - Potential improvements
+
+        Content: {input}
+        """,
+        agent_id="claude_analyzer"
+    )
+
+    # Create summarizer using a different model for comparison
+    summarizer = Node.agent(
+        name="GPT Summarizer",
+        prompt=f"Create a concise summary of this analysis: {input}",
+        agent_id="gpt_summarizer",
+        llm_config=LlmConfig.openrouter(
+            api_key=os.getenv("OPENROUTER_API_KEY"),
+            model="openai/gpt-4o-mini"  # Use GPT for summarization
+        )
+    )
+
+    workflow.add_node(analyzer)
+    workflow.add_node(summarizer)
+    workflow.add_edge(analyzer, summarizer)
+    workflow.validate()
+
+    executor = Executor(config, timeout_seconds=120)
+    return workflow, executor
+
+# Usage
+workflow, executor = create_openrouter_workflow()
+```
+
 ### Ollama Workflow Example
 
 ```python
@@ -674,6 +793,11 @@ def get_optimal_config(use_case):
             api_key=os.getenv("DEEPSEEK_API_KEY"),
             model="deepseek-reasoner"
         )
+    elif use_case == "multi_model":
+        return LlmConfig.openrouter(
+            api_key=os.getenv("OPENROUTER_API_KEY"),
+            model="anthropic/claude-3-5-sonnet"
+        )
     elif use_case == "local":
         return LlmConfig.ollama(model="llama3.2")
     else:
@@ -696,6 +820,8 @@ def get_api_key(provider):
     key_mapping = {
         "openai": "OPENAI_API_KEY",
         "anthropic": "ANTHROPIC_API_KEY",
+        "openrouter": "OPENROUTER_API_KEY",
+        "perplexity": "PERPLEXITY_API_KEY",
         "deepseek": "DEEPSEEK_API_KEY"
     }
     

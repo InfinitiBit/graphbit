@@ -736,5 +736,145 @@ class TestLLMPerformance:
             pytest.fail(f"Response time consistency test failed: {e}")
 
 
+class TestOpenRouterLLM:
+    """Integration tests for OpenRouter LLM models."""
+
+    @pytest.fixture
+    def api_key(self) -> str:
+        """Get OpenRouter API key from environment."""
+        api_key = os.getenv("OPENROUTER_API_KEY")
+        if not api_key:
+            pytest.skip("OPENROUTER_API_KEY not set")
+        return api_key or ""
+
+    @pytest.fixture
+    def openrouter_gpt4_config(self, api_key: str) -> Any:
+        """Create OpenRouter GPT-4 configuration."""
+        return LlmConfig.openrouter(api_key, "openai/gpt-4o-mini")
+
+    @pytest.fixture
+    def openrouter_claude_config(self, api_key: str) -> Any:
+        """Create OpenRouter Claude configuration."""
+        return LlmConfig.openrouter(api_key, "anthropic/claude-3-5-haiku")
+
+    @pytest.fixture
+    def openrouter_with_site_config(self, api_key: str) -> Any:
+        """Create OpenRouter configuration with site information."""
+        return LlmConfig.openrouter_with_site(
+            api_key,
+            "openai/gpt-4o-mini",
+            "https://github.com/InfinitiBit/graphbit",
+            "GraphBit AI Framework"
+        )
+
+    @pytest.fixture
+    def openrouter_client(self, openrouter_gpt4_config: Any) -> Any:
+        """Create OpenRouter client."""
+        return LlmClient(openrouter_gpt4_config)
+
+    def test_openrouter_gpt4_config_creation(self, openrouter_gpt4_config: Any) -> None:
+        """Test OpenRouter GPT-4 config creation and properties."""
+        assert openrouter_gpt4_config.provider() == "openrouter"
+        assert openrouter_gpt4_config.model() == "openai/gpt-4o-mini"
+
+    def test_openrouter_claude_config_creation(self, openrouter_claude_config: Any) -> None:
+        """Test OpenRouter Claude config creation and properties."""
+        assert openrouter_claude_config.provider() == "openrouter"
+        assert openrouter_claude_config.model() == "anthropic/claude-3-5-haiku"
+
+    def test_openrouter_with_site_config_creation(self, openrouter_with_site_config: Any) -> None:
+        """Test OpenRouter config with site information."""
+        assert openrouter_with_site_config.provider() == "openrouter"
+        assert openrouter_with_site_config.model() == "openai/gpt-4o-mini"
+
+    def test_openrouter_client_creation(self, openrouter_client: Any) -> None:
+        """Test OpenRouter client creation."""
+        assert openrouter_client is not None
+        assert hasattr(openrouter_client, "complete")
+
+    def test_openrouter_simple_completion(self, openrouter_client: Any) -> None:
+        """Test simple completion with OpenRouter."""
+        try:
+            response = openrouter_client.complete(
+                "Say 'Hello from OpenRouter!' and nothing else.",
+                max_tokens=50,
+                temperature=0.1
+            )
+            assert response is not None
+            assert len(response) > 0
+            assert "openrouter" in response.lower() or "hello" in response.lower()
+        except Exception as e:
+            pytest.fail(f"OpenRouter completion failed: {e}")
+
+    def test_openrouter_workflow_execution(self, openrouter_gpt4_config: Any) -> None:
+        """Test workflow execution with OpenRouter."""
+        try:
+            workflow = Workflow("OpenRouter Test Workflow")
+
+            test_node = Node.agent(
+                name="OpenRouter Test Agent",
+                prompt="Respond with exactly: 'OpenRouter workflow test successful'",
+                agent_id="openrouter_test_agent"
+            )
+
+            workflow.add_node(test_node)
+            workflow.validate()
+
+            executor = Executor(openrouter_gpt4_config, debug=True)
+            context = executor.execute(workflow)
+
+            assert context.is_completed()
+            result = context.get_variable(f"node_result_{test_node.node_id}")
+            assert result is not None
+            assert len(result) > 0
+
+        except Exception as e:
+            pytest.fail(f"OpenRouter workflow execution failed: {e}")
+
+    def test_openrouter_multi_model_workflow(self, api_key: str) -> None:
+        """Test workflow with multiple OpenRouter models."""
+        try:
+            workflow = Workflow("Multi-Model OpenRouter Workflow")
+
+            # GPT node
+            gpt_node = Node.agent(
+                name="GPT Analyzer",
+                prompt="Analyze this topic in one sentence: 'artificial intelligence'",
+                agent_id="gpt_analyzer",
+                llm_config=LlmConfig.openrouter(api_key, "openai/gpt-4o-mini")
+            )
+
+            # Claude node
+            claude_node = Node.agent(
+                name="Claude Summarizer",
+                prompt="Summarize this analysis in 5 words: {input}",
+                agent_id="claude_summarizer",
+                llm_config=LlmConfig.openrouter(api_key, "anthropic/claude-3-5-haiku")
+            )
+
+            workflow.add_node(gpt_node)
+            workflow.add_node(claude_node)
+            workflow.add_edge(gpt_node, claude_node)
+            workflow.validate()
+
+            # Use default config for executor
+            default_config = LlmConfig.openrouter(api_key, "openai/gpt-4o-mini")
+            executor = Executor(default_config, debug=True)
+            context = executor.execute(workflow)
+
+            assert context.is_completed()
+
+            gpt_result = context.get_variable(f"node_result_{gpt_node.node_id}")
+            claude_result = context.get_variable(f"node_result_{claude_node.node_id}")
+
+            assert gpt_result is not None
+            assert claude_result is not None
+            assert len(gpt_result) > 0
+            assert len(claude_result) > 0
+
+        except Exception as e:
+            pytest.fail(f"Multi-model OpenRouter workflow failed: {e}")
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

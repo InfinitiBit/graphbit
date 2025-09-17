@@ -64,6 +64,19 @@ pub enum LlmConfig {
         /// Optional custom base URL
         base_url: Option<String>,
     },
+    /// OpenRouter LLM provider configuration
+    OpenRouter {
+        /// API key for authentication
+        api_key: String,
+        /// Model name to use (e.g., "openai/gpt-4o", "anthropic/claude-3-5-sonnet")
+        model: String,
+        /// Optional custom base URL
+        base_url: Option<String>,
+        /// Optional site URL for OpenRouter rankings
+        site_url: Option<String>,
+        /// Optional site name for OpenRouter rankings
+        site_name: Option<String>,
+    },
     /// Custom LLM provider configuration
     Custom {
         /// Provider type identifier
@@ -120,6 +133,33 @@ impl LlmConfig {
         }
     }
 
+    /// Create OpenRouter configuration
+    pub fn openrouter(api_key: impl Into<String>, model: impl Into<String>) -> Self {
+        Self::OpenRouter {
+            api_key: api_key.into(),
+            model: model.into(),
+            base_url: None,
+            site_url: None,
+            site_name: None,
+        }
+    }
+
+    /// Create OpenRouter configuration with site information
+    pub fn openrouter_with_site(
+        api_key: impl Into<String>,
+        model: impl Into<String>,
+        site_url: Option<String>,
+        site_name: Option<String>,
+    ) -> Self {
+        Self::OpenRouter {
+            api_key: api_key.into(),
+            model: model.into(),
+            base_url: None,
+            site_url,
+            site_name,
+        }
+    }
+
     /// Create `Ollama` configuration
     pub fn ollama(model: impl Into<String>) -> Self {
         Self::Ollama {
@@ -145,6 +185,7 @@ impl LlmConfig {
             LlmConfig::HuggingFace { .. } => "huggingface",
             LlmConfig::Ollama { .. } => "ollama",
             LlmConfig::Perplexity { .. } => "perplexity",
+            LlmConfig::OpenRouter { .. } => "openrouter",
             LlmConfig::Custom { provider_type, .. } => provider_type,
         }
     }
@@ -158,6 +199,7 @@ impl LlmConfig {
             LlmConfig::HuggingFace { model, .. } => model,
             LlmConfig::Ollama { model, .. } => model,
             LlmConfig::Perplexity { model, .. } => model,
+            LlmConfig::OpenRouter { model, .. } => model,
             LlmConfig::Custom { config, .. } => config
                 .get("model")
                 .and_then(|v| v.as_str())

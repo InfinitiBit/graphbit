@@ -8,6 +8,7 @@ pub mod deepseek;
 pub mod huggingface;
 pub mod ollama;
 pub mod openai;
+pub mod openrouter;
 pub mod perplexity;
 pub mod providers;
 pub mod response;
@@ -301,6 +302,28 @@ impl LlmProviderFactory {
                     )?))
                 } else {
                     Ok(Box::new(perplexity::PerplexityProvider::new(
+                        api_key, model,
+                    )?))
+                }
+            }
+            LlmConfig::OpenRouter {
+                api_key,
+                model,
+                base_url,
+                site_url,
+                site_name,
+                ..
+            } => {
+                if let Some(base_url) = base_url {
+                    Ok(Box::new(openrouter::OpenRouterProvider::with_base_url(
+                        api_key, model, base_url,
+                    )?))
+                } else if site_url.is_some() || site_name.is_some() {
+                    Ok(Box::new(openrouter::OpenRouterProvider::with_site_info(
+                        api_key, model, site_url, site_name,
+                    )?))
+                } else {
+                    Ok(Box::new(openrouter::OpenRouterProvider::new(
                         api_key, model,
                     )?))
                 }
