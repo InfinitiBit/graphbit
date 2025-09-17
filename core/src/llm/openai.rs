@@ -146,9 +146,8 @@ impl OpenAiProvider {
                         Ok(params) => params,
                         Err(e) => {
                             tracing::warn!(
-                                "Failed to parse tool call arguments for {}: {}. Arguments: '{}'",
+                                "Failed to parse tool call arguments for {}: {e}. Arguments: '{}'",
                                 tc.function.name,
-                                e,
                                 tc.function.arguments
                             );
                             // Try to create a simple object with the raw arguments
@@ -248,7 +247,7 @@ impl LlmProviderTrait for OpenAiProvider {
         let response = req_builder
             .send()
             .await
-            .map_err(|e| GraphBitError::llm_provider("openai", format!("Request failed: {}", e)))?;
+            .map_err(|e| GraphBitError::llm_provider("openai", format!("Request failed: {e}")))?;
 
         if !response.status().is_success() {
             let error_text = response
@@ -257,12 +256,12 @@ impl LlmProviderTrait for OpenAiProvider {
                 .unwrap_or_else(|_| "Unknown error".to_string());
             return Err(GraphBitError::llm_provider(
                 "openai",
-                format!("API error: {}", error_text),
+                format!("API error: {error_text}"),
             ));
         }
 
         let openai_response: OpenAiResponse = response.json().await.map_err(|e| {
-            GraphBitError::llm_provider("openai", format!("Failed to parse response: {}", e))
+            GraphBitError::llm_provider("openai", format!("Failed to parse response: {e}"))
         })?;
 
         self.parse_response(openai_response)

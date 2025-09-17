@@ -164,19 +164,19 @@ impl LlmProviderTrait for HuggingFaceProvider {
             .send()
             .await
             .map_err(|e| {
-                GraphBitError::llm_provider("huggingface", format!("Request failed: {}", e))
+                GraphBitError::llm_provider("huggingface", format!("Request failed: {e}"))
             })?;
 
         if !response.status().is_success() {
             let error_text = response.text().await.unwrap_or_default();
             return Err(GraphBitError::llm_provider(
                 "huggingface",
-                format!("API error: {}", error_text),
+                format!("API error: {error_text}"),
             ));
         }
 
         let hf_response: HuggingFaceResponse = response.json().await.map_err(|e| {
-            GraphBitError::llm_provider("huggingface", format!("Failed to parse response: {}", e))
+            GraphBitError::llm_provider("huggingface", format!("Failed to parse response: {e}"))
         })?;
 
         self.parse_response(hf_response)

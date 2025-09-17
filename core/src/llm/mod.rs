@@ -329,8 +329,7 @@ impl LlmProviderFactory {
                 }
             }
             LlmConfig::Custom { provider_type, .. } => Err(GraphBitError::config(format!(
-                "Unsupported custom provider: {}",
-                provider_type
+                "Unsupported custom provider: {provider_type}",
             ))),
         }
     }

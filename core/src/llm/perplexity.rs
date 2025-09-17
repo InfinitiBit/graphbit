@@ -30,7 +30,7 @@ impl PerplexityProvider {
             .map_err(|e| {
                 GraphBitError::llm_provider(
                     "perplexity",
-                    format!("Failed to create HTTP client: {}", e),
+                    format!("Failed to create HTTP client: {e}"),
                 )
             })?;
         let base_url = "https://api.perplexity.ai".to_string();
@@ -54,7 +54,7 @@ impl PerplexityProvider {
             .map_err(|e| {
                 GraphBitError::llm_provider(
                     "perplexity",
-                    format!("Failed to create HTTP client: {}", e),
+                    format!("Failed to create HTTP client: {e}"),
                 )
             })?;
 
@@ -208,7 +208,7 @@ impl LlmProviderTrait for PerplexityProvider {
             .send()
             .await
             .map_err(|e| {
-                GraphBitError::llm_provider("perplexity", format!("Request failed: {}", e))
+                GraphBitError::llm_provider("perplexity", format!("Request failed: {e}"))
             })?;
 
         if !response.status().is_success() {
@@ -223,7 +223,7 @@ impl LlmProviderTrait for PerplexityProvider {
         }
 
         let perplexity_response: PerplexityResponse = response.json().await.map_err(|e| {
-            GraphBitError::llm_provider("perplexity", format!("Failed to parse response: {}", e))
+            GraphBitError::llm_provider("perplexity", format!("Failed to parse response: {e}"))
         })?;
 
         self.parse_response(perplexity_response)

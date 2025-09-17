@@ -27,10 +27,7 @@ impl OllamaProvider {
             .timeout(std::time::Duration::from_secs(120)) // Reasonable timeout
             .build()
             .map_err(|e| {
-                GraphBitError::llm_provider(
-                    "ollama",
-                    format!("Failed to create HTTP client: {}", e),
-                )
+                GraphBitError::llm_provider("ollama", format!("Failed to create HTTP client: {e}"))
             })?;
         let base_url = "http://localhost:11434".to_string();
 
@@ -48,10 +45,7 @@ impl OllamaProvider {
             .timeout(std::time::Duration::from_secs(120))
             .build()
             .map_err(|e| {
-                GraphBitError::llm_provider(
-                    "ollama",
-                    format!("Failed to create HTTP client: {}", e),
-                )
+                GraphBitError::llm_provider("ollama", format!("Failed to create HTTP client: {e}"))
             })?;
 
         Ok(Self {
@@ -155,8 +149,8 @@ impl OllamaProvider {
             GraphBitError::llm_provider(
                 "ollama",
                 format!(
-                    "Failed to fetch models: {}. Make sure Ollama is running on {}",
-                    e, self.base_url
+                    "Failed to fetch models: {e}. Make sure Ollama is running on {}",
+                    self.base_url
                 ),
             )
         })?;
@@ -169,7 +163,7 @@ impl OllamaProvider {
         }
 
         let models_response: OllamaModelsResponse = response.json().await.map_err(|e| {
-            GraphBitError::llm_provider("ollama", format!("Failed to parse models response: {}", e))
+            GraphBitError::llm_provider("ollama", format!("Failed to parse models response: {e}"))
         })?;
 
         Ok(models_response.models.into_iter().map(|m| m.name).collect())
@@ -209,7 +203,7 @@ impl OllamaProvider {
             .map_err(|e| {
                 GraphBitError::llm_provider(
                     "ollama",
-                    format!("Failed to pull model '{}': {}", self.model, e),
+                    format!("Failed to pull model '{}': {e}", self.model),
                 )
             })?;
 
@@ -312,8 +306,8 @@ impl LlmProviderTrait for OllamaProvider {
                 GraphBitError::llm_provider(
                     "ollama",
                     format!(
-                        "Request failed: {}. Make sure Ollama is running on {}",
-                        e, self.base_url
+                        "Request failed: {e}. Make sure Ollama is running on {}",
+                        self.base_url
                     ),
                 )
             })?;
@@ -323,12 +317,12 @@ impl LlmProviderTrait for OllamaProvider {
             let error_text = response.text().await.unwrap_or_default();
             return Err(GraphBitError::llm_provider(
                 "ollama",
-                format!("HTTP {}: {}", status, error_text),
+                format!("HTTP {status}: {error_text}"),
             ));
         }
 
         let ollama_response: OllamaResponse = response.json().await.map_err(|e| {
-            GraphBitError::llm_provider("ollama", format!("Failed to parse response: {}", e))
+            GraphBitError::llm_provider("ollama", format!("Failed to parse response: {e}"))
         })?;
 
         self.parse_response(ollama_response)
