@@ -50,7 +50,7 @@ cd graphbit
 Install Rust
 - **Linux/macOS**: 
 ```bash
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh && source $HOME/.cargo/env`
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh && source $HOME/.cargo/env
 ```  
 - **Windows**: Download & run [rustup-init.exe](https://win.rustup.rs/x86_64)  
 
