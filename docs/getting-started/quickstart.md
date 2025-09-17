@@ -258,6 +258,12 @@ anthropic_config = LlmConfig.anthropic(
     "claude-sonnet-4-20250514"
 )
 
+# OpenRouter Configuration (access to 400+ models)
+openrouter_config = LlmConfig.openrouter(
+    os.getenv("OPENROUTER_API_KEY"),
+    "anthropic/claude-3-5-sonnet"  # Use Claude through OpenRouter
+)
+
 # Ollama Configuration (local)
 ollama_config = LlmConfig.ollama("llama3.2")
 

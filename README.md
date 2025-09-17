@@ -34,7 +34,7 @@ Designed to run **multi-agent workflows in parallel**, Graphbit persists memory 
 - **Tool Selection** - LLMs intelligently select tools based on descriptions
 - **Type Safety** - Strong typing throughout the execution pipeline
 - **Reliability** - Circuit breakers, retry policies, and error handling
-- **Multi-LLM Support** - OpenAI, Anthropic, DeepSeek, Ollama
+- **Multi-LLM Support** - OpenAI, Anthropic, OpenRouter, DeepSeek, Ollama
 - **Resource Management** - Concurrency controls and memory optimization
 - **Observability** - Built-in metrics and execution tracing
 
@@ -99,11 +99,11 @@ config = LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4o-mini")
 executor = Executor(config)
 
 # Create tools with clear descriptions for LLM selection
-@tool(description="Get current weather information for any city")
+@tool(_description="Get current weather information for any city")
 def get_weather(location: str) -> dict:
     return {"location": location, "temperature": 22, "condition": "sunny"}
 
-@tool(description="Perform mathematical calculations and return results")
+@tool(_description="Perform mathematical calculations and return results")
 def calculate(expression: str) -> str:
     return f"Result: {eval(expression)}"
 
