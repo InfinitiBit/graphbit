@@ -36,7 +36,7 @@ impl OpenRouterProvider {
             .map_err(|e| {
                 GraphBitError::llm_provider(
                     "openrouter",
-                    format!("Failed to create HTTP client: {}", e),
+                    format!("Failed to create HTTP client: {e}"),
                 )
             })?;
         let base_url = "https://openrouter.ai/api/v1".to_string();
@@ -63,7 +63,7 @@ impl OpenRouterProvider {
             .map_err(|e| {
                 GraphBitError::llm_provider(
                     "openrouter",
-                    format!("Failed to create HTTP client: {}", e),
+                    format!("Failed to create HTTP client: {e}"),
                 )
             })?;
 
@@ -242,7 +242,7 @@ impl LlmProviderTrait for OpenRouterProvider {
             .send()
             .await
             .map_err(|e| {
-                GraphBitError::llm_provider("openrouter", format!("Request failed: {}", e))
+                GraphBitError::llm_provider("openrouter", format!("Request failed: {e}"))
             })?;
 
         if !response.status().is_success() {
@@ -252,12 +252,12 @@ impl LlmProviderTrait for OpenRouterProvider {
                 .unwrap_or_else(|_| "Unknown error".to_string());
             return Err(GraphBitError::llm_provider(
                 "openrouter",
-                format!("API error: {}", error_text),
+                format!("API error: {error_text}"),
             ));
         }
 
         let openrouter_response: OpenRouterResponse = response.json().await.map_err(|e| {
-            GraphBitError::llm_provider("openrouter", format!("Failed to parse response: {}", e))
+            GraphBitError::llm_provider("openrouter", format!("Failed to parse response: {e}"))
         })?;
 
         self.parse_response(openrouter_response)

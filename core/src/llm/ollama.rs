@@ -149,8 +149,8 @@ impl OllamaProvider {
             GraphBitError::llm_provider(
                 "ollama",
                 format!(
-                    "Failed to fetch models: {}. Make sure Ollama is running on {}",
-                    e, self.base_url
+                    "Failed to fetch models: {e}. Make sure Ollama is running on {}",
+                    self.base_url
                 ),
             )
         })?;
@@ -306,8 +306,8 @@ impl LlmProviderTrait for OllamaProvider {
                 GraphBitError::llm_provider(
                     "ollama",
                     format!(
-                        "Request failed: {}. Make sure Ollama is running on {}",
-                        e, self.base_url
+                        "Request failed: {e}. Make sure Ollama is running on {}",
+                        self.base_url
                     ),
                 )
             })?;

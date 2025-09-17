@@ -1008,7 +1008,7 @@ impl WorkflowExecutor {
                     sections.join("\n\n") + "\n\n"
                 };
                 format!(
-                    "Context from prior nodes (auto-injected):\n{sections_block}{directive_line}{context_json_block}"
+                    "Context from prior nodes (auto-injected):\n{sections_block}{directive_line}\n{context_json_block}",
                 )
             };
 
@@ -1030,17 +1030,16 @@ impl WorkflowExecutor {
 
         // DEBUG: Log tool detection
         tracing::info!(
-            "Agent tool detection - has_tools: {}, config keys: {:?}",
-            has_tools,
+            "Agent tool detection - has_tools: {has_tools}, config keys: {:?}",
             node_config.keys().collect::<Vec<_>>()
         );
         if let Some(tool_schemas) = node_config.get("tool_schemas") {
-            tracing::info!("Tool schemas found: {}", tool_schemas);
+            tracing::info!("Tool schemas found: {tool_schemas}");
         }
 
         if has_tools {
             // Execute agent with tool calling orchestration
-            tracing::info!("Executing agent with tools - prompt: '{}'", resolved_prompt);
+            tracing::info!("Executing agent with tools - prompt: '{resolved_prompt}'");
             tracing::info!("ENTERING execute_agent_with_tools function");
 
             let result =
@@ -1067,7 +1066,7 @@ impl WorkflowExecutor {
         node_config: &std::collections::HashMap<String, serde_json::Value>,
         agent: Arc<dyn AgentTrait>,
     ) -> GraphBitResult<serde_json::Value> {
-        tracing::info!("Starting execute_agent_with_tools for agent: {}", _agent_id);
+        tracing::info!("Starting execute_agent_with_tools for agent: {_agent_id}");
         use crate::llm::{LlmRequest, LlmTool};
 
         // Extract tool schemas from node config
@@ -1098,7 +1097,7 @@ impl WorkflowExecutor {
 
         tracing::info!("Created LLM request with {} tools", request.tools.len());
         for (i, tool) in request.tools.iter().enumerate() {
-            tracing::info!("Tool {}: {} - {}", i, tool.name, tool.description);
+            tracing::info!("Tool {i}: {} - {}", tool.name, tool.description);
         }
 
         // Execute LLM request directly to get tool calls
@@ -1116,8 +1115,7 @@ impl WorkflowExecutor {
         );
         for (i, tool_call) in llm_response.tool_calls.iter().enumerate() {
             tracing::info!(
-                "Tool call {}: {} with params: {:?}",
-                i,
+                "Tool call {i}: {} with params: {:?}",
                 tool_call.name,
                 tool_call.parameters
             );
@@ -1173,7 +1171,7 @@ impl WorkflowExecutor {
     async fn execute_delay_node_static(duration_seconds: u64) -> GraphBitResult<serde_json::Value> {
         tokio::time::sleep(tokio::time::Duration::from_secs(duration_seconds)).await;
         Ok(serde_json::Value::String(format!(
-            "Delayed for {duration_seconds} seconds"
+            "Delayed for {duration_seconds} seconds",
         )))
     }
 
@@ -1199,7 +1197,7 @@ impl WorkflowExecutor {
                 Ok(content_json)
             }
             Err(e) => Err(GraphBitError::workflow_execution(format!(
-                "Failed to load document: {e}"
+                "Failed to load document: {e}",
             ))),
         }
     }
@@ -1247,7 +1245,7 @@ impl WorkflowExecutor {
                         .await
                         .map_err(|e| {
                             GraphBitError::workflow_execution(format!(
-                                "Failed to acquire permits for concurrent task {index}: {e}"
+                                "Failed to acquire permits for concurrent task {index}: {e}",
                             ))
                         })?;
 
@@ -1266,7 +1264,7 @@ impl WorkflowExecutor {
             match join_result {
                 Ok(task_result) => results.push(task_result),
                 Err(e) => results.push(Err(GraphBitError::workflow_execution(format!(
-                    "Task join failed: {e}"
+                    "Task join failed: {e}",
                 )))),
             }
         }
@@ -1305,7 +1303,7 @@ impl WorkflowExecutor {
                 match tokio::time::timeout(timeout_duration, task_future).await {
                     Ok(result) => result,
                     Err(_) => Err(GraphBitError::workflow_execution(format!(
-                        "Task execution timed out after {timeout_ms}ms"
+                        "Task execution timed out after {timeout_ms}ms",
                     ))),
                 }
             } else {
@@ -1334,7 +1332,7 @@ impl WorkflowExecutor {
 
                     // No more retries, return the error
                     return Err(GraphBitError::workflow_execution(format!(
-                        "Task failed after {attempt} attempts: {error}"
+                        "Task failed after {attempt} attempts: {error}",
                     )));
                 }
             }
@@ -1382,7 +1380,7 @@ impl WorkflowExecutor {
             agent
         } else {
             return Err(GraphBitError::workflow_execution(format!(
-                "Agent {agent_id} not found. Please register the agent first."
+                "Agent {agent_id} not found. Please register the agent first.",
             )));
         };
 

@@ -147,9 +147,8 @@ impl OpenAiProvider {
                         Ok(params) => params,
                         Err(e) => {
                             tracing::warn!(
-                                "Failed to parse tool call arguments for {}: {}. Arguments: '{}'",
+                                "Failed to parse tool call arguments for {}: {e}. Arguments: '{}'",
                                 tc.function.name,
-                                e,
                                 tc.function.arguments
                             );
                             // Try to create a simple object with the raw arguments
