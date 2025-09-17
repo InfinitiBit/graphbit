@@ -64,7 +64,7 @@ pub enum LlmConfig {
         /// Optional custom base URL
         base_url: Option<String>,
     },
-    /// OpenRouter LLM provider configuration
+    /// `OpenRouter` LLM provider configuration
     OpenRouter {
         /// API key for authentication
         api_key: String,
@@ -72,9 +72,9 @@ pub enum LlmConfig {
         model: String,
         /// Optional custom base URL
         base_url: Option<String>,
-        /// Optional site URL for OpenRouter rankings
+        /// Optional site URL for `OpenRouter` rankings
         site_url: Option<String>,
-        /// Optional site name for OpenRouter rankings
+        /// Optional site name for `OpenRouter` rankings
         site_name: Option<String>,
     },
     /// Custom LLM provider configuration
@@ -133,7 +133,7 @@ impl LlmConfig {
         }
     }
 
-    /// Create OpenRouter configuration
+    /// Create `OpenRouter` configuration
     pub fn openrouter(api_key: impl Into<String>, model: impl Into<String>) -> Self {
         Self::OpenRouter {
             api_key: api_key.into(),
@@ -144,7 +144,7 @@ impl LlmConfig {
         }
     }
 
-    /// Create OpenRouter configuration with site information
+    /// Create `OpenRouter` configuration with site information
     pub fn openrouter_with_site(
         api_key: impl Into<String>,
         model: impl Into<String>,

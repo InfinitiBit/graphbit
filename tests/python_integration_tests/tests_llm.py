@@ -760,12 +760,7 @@ class TestOpenRouterLLM:
     @pytest.fixture
     def openrouter_with_site_config(self, api_key: str) -> Any:
         """Create OpenRouter configuration with site information."""
-        return LlmConfig.openrouter_with_site(
-            api_key,
-            "openai/gpt-4o-mini",
-            "https://github.com/InfinitiBit/graphbit",
-            "GraphBit AI Framework"
-        )
+        return LlmConfig.openrouter_with_site(api_key, "openai/gpt-4o-mini", "https://github.com/InfinitiBit/graphbit", "GraphBit AI Framework")
 
     @pytest.fixture
     def openrouter_client(self, openrouter_gpt4_config: Any) -> Any:
@@ -795,11 +790,7 @@ class TestOpenRouterLLM:
     def test_openrouter_simple_completion(self, openrouter_client: Any) -> None:
         """Test simple completion with OpenRouter."""
         try:
-            response = openrouter_client.complete(
-                "Say 'Hello from OpenRouter!' and nothing else.",
-                max_tokens=50,
-                temperature=0.1
-            )
+            response = openrouter_client.complete("Say 'Hello from OpenRouter!' and nothing else.", max_tokens=50, temperature=0.1)
             assert response is not None
             assert len(response) > 0
             assert "openrouter" in response.lower() or "hello" in response.lower()
@@ -811,11 +802,7 @@ class TestOpenRouterLLM:
         try:
             workflow = Workflow("OpenRouter Test Workflow")
 
-            test_node = Node.agent(
-                name="OpenRouter Test Agent",
-                prompt="Respond with exactly: 'OpenRouter workflow test successful'",
-                agent_id="openrouter_test_agent"
-            )
+            test_node = Node.agent(name="OpenRouter Test Agent", prompt="Respond with exactly: 'OpenRouter workflow test successful'", agent_id="openrouter_test_agent")
 
             workflow.add_node(test_node)
             workflow.validate()
@@ -838,18 +825,12 @@ class TestOpenRouterLLM:
 
             # GPT node
             gpt_node = Node.agent(
-                name="GPT Analyzer",
-                prompt="Analyze this topic in one sentence: 'artificial intelligence'",
-                agent_id="gpt_analyzer",
-                llm_config=LlmConfig.openrouter(api_key, "openai/gpt-4o-mini")
+                name="GPT Analyzer", prompt="Analyze this topic in one sentence: 'artificial intelligence'", agent_id="gpt_analyzer", llm_config=LlmConfig.openrouter(api_key, "openai/gpt-4o-mini")
             )
 
             # Claude node
             claude_node = Node.agent(
-                name="Claude Summarizer",
-                prompt="Summarize this analysis in 5 words: {input}",
-                agent_id="claude_summarizer",
-                llm_config=LlmConfig.openrouter(api_key, "anthropic/claude-3-5-haiku")
+                name="Claude Summarizer", prompt="Summarize this analysis in 5 words: {input}", agent_id="claude_summarizer", llm_config=LlmConfig.openrouter(api_key, "anthropic/claude-3-5-haiku")
             )
 
             workflow.add_node(gpt_node)
