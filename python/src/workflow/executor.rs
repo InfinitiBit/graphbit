@@ -632,10 +632,8 @@ impl Executor {
                                     &node.node_type
                                 {
                                     // Create a simple LLM request for the final response
-                                    let llm_config = context
-                                        .metadata
-                                        .get("llm_config")
-                                        .and_then(|v| {
+                                    let llm_config =
+                                        context.metadata.get("llm_config").and_then(|v| {
                                             serde_json::from_value::<graphbit_core::llm::LlmConfig>(
                                                 v.clone(),
                                             )
@@ -717,14 +715,14 @@ impl Executor {
                                             );
                                         }
                                     }
-                                } else {
-                                    // No LLM configuration available, just keep tool results
-                                    tracing::warn!("No LLM configuration found in context metadata for final response. Using tool results only.");
-                                    context.set_node_output(
-                                        &node.id,
-                                        serde_json::Value::String(tool_results.clone()),
-                                    );
-                                }
+                                    } else {
+                                        // No LLM configuration available, just keep tool results
+                                        tracing::warn!("No LLM configuration found in context metadata for final response. Using tool results only.");
+                                        context.set_node_output(
+                                            &node.id,
+                                            serde_json::Value::String(tool_results.clone()),
+                                        );
+                                    }
                                 }
                             }
                         }

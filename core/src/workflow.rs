@@ -298,7 +298,7 @@ impl WorkflowExecutor {
 
         // 3. No default fallback - require explicit configuration as requested by user
         tracing::error!("No LLM configuration found - neither node-level nor executor-level config provided. System requires explicit configuration.");
-        crate::llm::LlmConfig::Unconfigured { 
+        crate::llm::LlmConfig::Unconfigured {
             message: "No LLM configuration provided. The system requires explicit configuration from program or user input rather than hardcoded defaults.".to_string()
         }
     }
