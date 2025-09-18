@@ -1,4 +1,4 @@
-//! Workflow execution engine for GraphBit
+//! Workflow execution engine for `GraphBit`
 //!
 //! This module provides the main workflow execution capabilities,
 //! orchestrating agents and managing the execution flow.
@@ -130,7 +130,7 @@ impl WorkflowBuilder {
 
 /// Workflow execution engine
 pub struct WorkflowExecutor {
-    /// Registered agents - use RwLock for better read performance
+    /// Registered agents - use `RwLock` for better read performance
     agents: Arc<RwLock<HashMap<crate::types::AgentId, Arc<dyn AgentTrait>>>>,
     /// Simplified concurrency management system
     concurrency_manager: Arc<ConcurrencyManager>,
@@ -140,7 +140,7 @@ pub struct WorkflowExecutor {
     fail_fast: bool,
     /// Default retry configuration for all nodes
     default_retry_config: Option<RetryConfig>,
-    /// Circuit breakers per agent to prevent cascading failures - use RwLock for better performance
+    /// Circuit breakers per agent to prevent cascading failures - use `RwLock` for better performance
     circuit_breakers: Arc<RwLock<HashMap<crate::types::AgentId, CircuitBreaker>>>,
     /// Global circuit breaker configuration
     circuit_breaker_config: CircuitBreakerConfig,

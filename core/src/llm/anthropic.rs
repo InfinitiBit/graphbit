@@ -1,4 +1,4 @@
-//! Anthropic Claude LLM provider implementation
+//! `Anthropic` `Claude` LLM provider implementation
 
 use crate::errors::{GraphBitError, GraphBitResult};
 use crate::llm::providers::LlmProviderTrait;
@@ -9,7 +9,7 @@ use async_trait::async_trait;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
-/// Anthropic Claude API provider
+/// `Anthropic` `Claude` API provider
 pub struct AnthropicProvider {
     client: Client,
     api_key: String,
@@ -18,7 +18,7 @@ pub struct AnthropicProvider {
 }
 
 impl AnthropicProvider {
-    /// Create a new Anthropic provider
+    /// Create a new `Anthropic` provider
     pub fn new(api_key: String, model: String) -> GraphBitResult<Self> {
         let client = Client::new();
         let base_url = "https://api.anthropic.com/v1".to_string();
@@ -31,7 +31,7 @@ impl AnthropicProvider {
         })
     }
 
-    /// Convert GraphBit tool to Anthropic tool format
+    /// Convert `GraphBit` tool to Anthropic tool format
     fn convert_tool(&self, tool: &LlmTool) -> AnthropicTool {
         AnthropicTool {
             name: tool.name.clone(),
@@ -40,7 +40,7 @@ impl AnthropicProvider {
         }
     }
 
-    /// Convert GraphBit messages to Anthropic format
+    /// Convert `GraphBit` messages to Anthropic format
     fn convert_messages(&self, messages: &[LlmMessage]) -> (Option<String>, Vec<AnthropicMessage>) {
         let mut system_prompt = None;
         let mut anthropic_messages = Vec::new();
@@ -74,7 +74,7 @@ impl AnthropicProvider {
         (system_prompt, anthropic_messages)
     }
 
-    /// Parse Anthropic response to GraphBit response
+    /// Parse Anthropic response to `GraphBit` response
     fn parse_response(&self, response: AnthropicResponse) -> GraphBitResult<LlmResponse> {
         let mut content_text = String::new();
         let mut tool_calls = Vec::new();

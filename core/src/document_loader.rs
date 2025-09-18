@@ -1,4 +1,4 @@
-//! Document loading and processing functionality for GraphBit workflows
+//! Document loading and processing functionality for `GraphBit` workflows
 //!
 //! This module provides utilities for loading and extracting content from various
 //! document formats including PDF, TXT, Word, JSON, CSV, XML, and HTML.

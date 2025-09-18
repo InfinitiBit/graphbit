@@ -1,7 +1,7 @@
-//! # GraphBit Core Library
+//! # `GraphBit` Core Library
 //!
 //! The core library provides the foundational types, traits, and algorithms
-//! for building and executing agentic workflows in GraphBit.
+//! for building and executing agentic workflows in `GraphBit`.
 
 // Use jemalloc as the global allocator for better performance
 // Disable for Python bindings to avoid TLS block allocation issues
@@ -47,7 +47,7 @@ pub use workflow::{Workflow, WorkflowBuilder, WorkflowExecutor};
 /// Version information
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-/// Initialize the GraphBit core library with default configuration
+/// Initialize the `GraphBit` core library with default configuration
 pub fn init() -> GraphBitResult<()> {
     // Use try_init to avoid panicking if a global subscriber is already set
     let _ = tracing_subscriber::fmt::try_init();

@@ -1,4 +1,4 @@
-//! LLM provider abstraction for GraphBit
+//! LLM provider abstraction for `GraphBit`
 //!
 //! This module provides a unified interface for working with different
 //! LLM providers while maintaining strong type safety and validation.

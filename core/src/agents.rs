@@ -1,4 +1,4 @@
-//! Agent system for GraphBit
+//! Agent system for `GraphBit`
 //!
 //! This module provides the agent abstraction and implementations for
 //! executing tasks within the workflow automation framework.

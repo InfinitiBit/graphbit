@@ -1,4 +1,4 @@
-//! Graph-based workflow system for GraphBit
+//! Graph-based workflow system for `GraphBit`
 //!
 //! This module provides a directed graph structure for defining and executing
 //! agentic workflows with proper dependency management and parallel execution.
@@ -19,7 +19,7 @@ pub struct WorkflowGraph {
     /// Graph structure
     #[serde(skip)]
     graph: DiGraph<WorkflowNode, WorkflowEdge>,
-    /// Mapping from NodeId to graph indices
+    /// Mapping from `NodeId` to graph indices
     #[serde(skip)]
     node_map: HashMap<NodeId, NodeIndex>,
     /// Serializable representation of nodes
@@ -65,7 +65,7 @@ impl WorkflowGraph {
     }
 
     /// Rebuild the graph structure from serialized data
-    /// This must be called after deserialization since graph and node_map are not serialized
+    /// This must be called after deserialization since graph and `node_map` are not serialized
     pub fn rebuild_graph(&mut self) -> GraphBitResult<()> {
         // Clear existing graph structures
         self.graph = DiGraph::new();

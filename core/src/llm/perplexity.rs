@@ -1,4 +1,4 @@
-//! Perplexity AI LLM provider implementation
+//! `Perplexity` AI LLM provider implementation
 
 use crate::errors::{GraphBitError, GraphBitResult};
 use crate::llm::providers::LlmProviderTrait;
@@ -9,7 +9,7 @@ use async_trait::async_trait;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
-/// Perplexity AI provider
+/// `Perplexity` AI provider
 pub struct PerplexityProvider {
     client: Client,
     api_key: String,
@@ -18,7 +18,7 @@ pub struct PerplexityProvider {
 }
 
 impl PerplexityProvider {
-    /// Create a new Perplexity provider
+    /// Create a new `Perplexity` provider
     pub fn new(api_key: String, model: String) -> GraphBitResult<Self> {
         // Optimized client with connection pooling for better performance
         let client = Client::builder()
@@ -43,7 +43,7 @@ impl PerplexityProvider {
         })
     }
 
-    /// Create a new Perplexity provider with custom base URL
+    /// Create a new `Perplexity` provider with custom base URL
     pub fn with_base_url(api_key: String, model: String, base_url: String) -> GraphBitResult<Self> {
         let client = Client::builder()
             .timeout(std::time::Duration::from_secs(60))
@@ -66,7 +66,7 @@ impl PerplexityProvider {
         })
     }
 
-    /// Convert GraphBit message to Perplexity message format (OpenAI-compatible)
+    /// Convert `GraphBit` message to `Perplexity` message format (`OpenAI`-compatible)
     fn convert_message(&self, message: &LlmMessage) -> PerplexityMessage {
         PerplexityMessage {
             role: match message.role {
@@ -97,7 +97,7 @@ impl PerplexityProvider {
         }
     }
 
-    /// Convert GraphBit tool to Perplexity tool format (OpenAI-compatible)
+    /// Convert `GraphBit` tool to `Perplexity` tool format (`OpenAI`-compatible)
     fn convert_tool(&self, tool: &LlmTool) -> PerplexityTool {
         PerplexityTool {
             r#type: "function".to_string(),
@@ -109,7 +109,7 @@ impl PerplexityProvider {
         }
     }
 
-    /// Parse Perplexity response to GraphBit response
+    /// Parse `Perplexity` response to `GraphBit` response
     fn parse_response(&self, response: PerplexityResponse) -> GraphBitResult<LlmResponse> {
         let choice =
             response.choices.into_iter().next().ok_or_else(|| {
@@ -230,7 +230,7 @@ impl LlmProviderTrait for PerplexityProvider {
     }
 
     fn supports_function_calling(&self) -> bool {
-        // Perplexity models support function calling through OpenAI-compatible interface
+        // `Perplexity` models support function calling through `OpenAI`-compatible interface
         true
     }
 
@@ -249,7 +249,7 @@ impl LlmProviderTrait for PerplexityProvider {
     }
 
     fn cost_per_token(&self) -> Option<(f64, f64)> {
-        // Cost per token in USD (input, output) based on Perplexity pricing
+        // Cost per token in USD (input, output) based on `Perplexity` pricing
         match self.model.as_str() {
             "pplx-7b-online" => Some((0.0000002, 0.0000002)),
             "pplx-70b-online" => Some((0.000001, 0.000001)),
@@ -266,7 +266,7 @@ impl LlmProviderTrait for PerplexityProvider {
     }
 }
 
-// Perplexity API types (OpenAI-compatible)
+// `Perplexity` API types (`OpenAI`-compatible)
 #[derive(Debug, Serialize)]
 struct PerplexityRequest {
     model: String,
