@@ -77,6 +77,15 @@ pub enum LlmConfig {
         /// Optional site name for `OpenRouter` rankings
         site_name: Option<String>,
     },
+    /// `Google Gemini` LLM provider configuration
+    Google {
+        /// API key for authentication
+        api_key: String,
+        /// Model name to use (e.g., "gemini-2.5-pro", "gemini-2.5-flash", "gemini-1.5-pro")
+        model: String,
+        /// Optional custom base URL
+        base_url: Option<String>,
+    },
     /// Custom LLM provider configuration
     Custom {
         /// Provider type identifier
@@ -160,6 +169,15 @@ impl LlmConfig {
         }
     }
 
+    /// Create `Google Gemini` configuration
+    pub fn google(api_key: impl Into<String>, model: impl Into<String>) -> Self {
+        Self::Google {
+            api_key: api_key.into(),
+            model: model.into(),
+            base_url: None,
+        }
+    }
+
     /// Create `Ollama` configuration
     pub fn ollama(model: impl Into<String>) -> Self {
         Self::Ollama {
@@ -186,6 +204,7 @@ impl LlmConfig {
             LlmConfig::Ollama { .. } => "ollama",
             LlmConfig::Perplexity { .. } => "perplexity",
             LlmConfig::OpenRouter { .. } => "openrouter",
+            LlmConfig::Google { .. } => "google",
             LlmConfig::Custom { provider_type, .. } => provider_type,
         }
     }
@@ -200,6 +219,7 @@ impl LlmConfig {
             LlmConfig::Ollama { model, .. } => model,
             LlmConfig::Perplexity { model, .. } => model,
             LlmConfig::OpenRouter { model, .. } => model,
+            LlmConfig::Google { model, .. } => model,
             LlmConfig::Custom { config, .. } => config
                 .get("model")
                 .and_then(|v| v.as_str())

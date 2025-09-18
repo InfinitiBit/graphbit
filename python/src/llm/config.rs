@@ -127,6 +127,19 @@ impl LlmConfig {
         })
     }
 
+    #[staticmethod]
+    #[pyo3(signature = (api_key, model=None))]
+    fn google(api_key: String, model: Option<String>) -> PyResult<Self> {
+        validate_api_key(&api_key, "Google")?;
+
+        Ok(Self {
+            inner: CoreLlmConfig::google(
+                api_key,
+                model.unwrap_or_else(|| "gemini-2.5-flash".to_string()),
+            ),
+        })
+    }
+
     fn provider(&self) -> String {
         self.inner.provider_name().to_string()
     }

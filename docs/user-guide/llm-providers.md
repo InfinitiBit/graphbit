@@ -7,6 +7,7 @@ GraphBit supports multiple Large Language Model providers through a unified clie
 GraphBit supports these LLM providers:
 - **OpenAI** - GPT models including GPT-4o, GPT-4o-mini
 - **Anthropic** - Claude models including Claude-4-Sonnet
+- **Google** - Gemini models including Gemini 2.5 Pro, Gemini 2.5 Flash, and Gemini 1.5 models
 - **OpenRouter** - Unified access to 400+ models from multiple providers (GPT, Claude, Mistral, etc.)
 - **Perplexity** - Real-time search-enabled models including Sonar models
 - **DeepSeek** - High-performance models including DeepSeek-Chat, DeepSeek-Coder, and DeepSeek-Reasoner
@@ -94,6 +95,50 @@ fast_config = LlmConfig.anthropic(
     api_key=os.getenv("ANTHROPIC_API_KEY"),
     model="claude-3-haiku-20240307"  # For speed and efficiency
 )
+```
+
+### Google Gemini Configuration
+
+Google Gemini provides access to Google's advanced AI models including Gemini 2.5 Pro, Gemini 2.5 Flash, and Gemini 1.5 models. These models offer excellent performance with large context windows (up to 2M tokens) and multimodal capabilities.
+
+```python
+import os
+
+from graphbit import LlmConfig
+
+# Basic Google Gemini configuration
+config = LlmConfig.google(
+    api_key=os.getenv("GOOGLE_API_KEY"),
+    model="gemini-2.5-flash"  # Optional - defaults to gemini-2.5-flash
+)
+
+print(f"Provider: {config.provider()}")  # "google"
+print(f"Model: {config.model()}")        # "gemini-2.5-flash"
+```
+
+#### Available Google Gemini Models
+
+| Model | Context Length | Best For | Performance |
+|-------|---------------|----------|-------------|
+| `gemini-2.5-pro` | 1M tokens | Complex reasoning, analysis | Highest quality |
+| `gemini-2.5-flash` | 1M tokens | Fast responses, general tasks | Balanced speed/quality |
+| `gemini-2.5-flash-lite` | 1M tokens | Simple tasks, high throughput | Fastest |
+| `gemini-2.0-flash` | 1M tokens | Latest generation, balanced | High quality |
+| `gemini-1.5-pro` | 2M tokens | Long documents, complex analysis | Very high quality |
+| `gemini-1.5-flash` | 1M tokens | Fast processing, good quality | Fast |
+| `gemini-1.5-flash-8b` | 1M tokens | Lightweight tasks | Very fast |
+| `gemini-1.0-pro` | 32K tokens | Legacy support | Standard |
+
+#### Getting Your Google API Key
+
+1. Go to [Google AI Studio](https://aistudio.google.com/)
+2. Sign in with your Google account
+3. Click "Get API key" in the left sidebar
+4. Create a new API key or use an existing one
+5. Set the `GOOGLE_API_KEY` environment variable
+
+```bash
+export GOOGLE_API_KEY="your-google-api-key-here"
 ```
 
 ### OpenRouter Configuration

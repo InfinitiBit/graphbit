@@ -857,5 +857,173 @@ class TestOpenRouterLLM:
             pytest.fail(f"Multi-model OpenRouter workflow failed: {e}")
 
 
+class TestGoogleLLM:
+    """Integration tests for Google Gemini LLM models."""
+
+    @pytest.fixture
+    def api_key(self) -> str:
+        """Get Google API key from environment."""
+        api_key = os.getenv("GOOGLE_API_KEY")
+        if not api_key:
+            pytest.skip("GOOGLE_API_KEY not set")
+        return api_key or ""
+
+    @pytest.fixture
+    def google_flash_config(self, api_key: str) -> Any:
+        """Create Google Gemini Flash configuration."""
+        return LlmConfig.google(api_key, "gemini-2.5-flash")
+
+    @pytest.fixture
+    def google_pro_config(self, api_key: str) -> Any:
+        """Create Google Gemini Pro configuration."""
+        return LlmConfig.google(api_key, "gemini-2.5-pro")
+
+    def test_google_config_creation(self, api_key: str) -> None:
+        """Test Google configuration creation."""
+        # Test basic configuration
+        config = LlmConfig.google(api_key, "gemini-2.5-flash")
+        assert config.provider() == "google"
+        assert config.model() == "gemini-2.5-flash"
+
+        # Test with different model
+        config_pro = LlmConfig.google(api_key, "gemini-2.5-pro")
+        assert config_pro.provider() == "google"
+        assert config_pro.model() == "gemini-2.5-pro"
+
+        # Test default model
+        config_default = LlmConfig.google(api_key)
+        assert config_default.provider() == "google"
+        assert config_default.model() == "gemini-2.5-flash"
+
+    def test_google_llm_client_basic(self, google_flash_config: Any) -> None:
+        """Test basic Google LLM client functionality."""
+        client = LlmClient(google_flash_config)
+
+        try:
+            response = client.complete("What is the capital of France?")
+            assert response is not None
+            assert len(response) > 0
+            assert "Paris" in response
+
+        except Exception as e:
+            pytest.fail(f"Google LLM client test failed: {e}")
+
+    def test_google_workflow_execution(self, google_flash_config: Any) -> None:
+        """Test Google LLM in workflow execution."""
+        import time
+
+        # First, test if Google API is available with a simple client call
+        try:
+            from graphbit import LlmClient
+            test_client = LlmClient(google_flash_config)
+            test_response = test_client.complete("test", max_tokens=1)
+            print("✅ Google API is responsive, proceeding with workflow test")
+        except Exception as e:
+            error_msg = str(e)
+            if "500" in error_msg or "503" in error_msg or "INTERNAL" in error_msg or "UNAVAILABLE" in error_msg:
+                pytest.skip(f"Google API is temporarily unavailable (500/503 error): {error_msg}")
+            else:
+                pytest.fail(f"Google API test failed with non-temporary error: {e}")
+
+        workflow = Workflow("Google Test Workflow")
+
+        # Create a simple agent node
+        node = Node.agent(
+            "google_test_node",
+            "Respond with 'Hello from Google Gemini'",
+            "google_test_agent"
+        )
+
+        workflow.add_node(node)
+
+        # Retry logic for temporary API issues during executor creation
+        max_retries = 3
+        executor = None
+
+        for attempt in range(max_retries):
+            try:
+                executor = Executor(google_flash_config)
+                print(f"✅ Executor created successfully on attempt {attempt + 1}")
+                break
+
+            except Exception as e:
+                error_msg = str(e)
+                print(f"Executor creation attempt {attempt + 1} failed: {error_msg}")
+
+                # Check if it's a temporary API error (500, 503, etc.)
+                if "500" in error_msg or "503" in error_msg or "INTERNAL" in error_msg or "UNAVAILABLE" in error_msg:
+                    if attempt < max_retries - 1:
+                        print(f"Temporary API error detected, retrying in {2 ** attempt} seconds...")
+                        time.sleep(2 ** attempt)  # Exponential backoff
+                        continue
+                    else:
+                        pytest.skip(f"Google API consistently unavailable after {max_retries} attempts: {error_msg}")
+                else:
+                    # If it's not a temporary error, fail immediately
+                    pytest.fail(f"Google executor creation failed with non-temporary error: {e}")
+
+        if executor is None:
+            pytest.skip("Could not create executor due to temporary API issues")
+
+        # Now try to execute the workflow
+        try:
+            context = executor.execute(workflow)
+
+            # Check if we got a valid response
+            assert context is not None
+            print("✅ Workflow execution successful!")
+
+        except Exception as e:
+            error_msg = str(e)
+            if "500" in error_msg or "503" in error_msg or "INTERNAL" in error_msg or "UNAVAILABLE" in error_msg:
+                pytest.skip(f"Google API temporarily unavailable during workflow execution: {error_msg}")
+            else:
+                pytest.fail(f"Google workflow execution failed: {e}")
+
+    def test_google_model_comparison(self, api_key: str) -> None:
+        """Test different Google models."""
+        models = ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-1.5-flash"]
+        prompt = "Explain quantum computing in one sentence."
+
+        for model in models:
+            config = LlmConfig.google(api_key, model)
+            client = LlmClient(config)
+
+            try:
+                response = client.complete(prompt)
+                assert response is not None
+                assert len(response) > 0
+                assert "quantum" in response.lower()
+
+            except Exception as e:
+                pytest.fail(f"Google model {model} test failed: {e}")
+
+    def test_google_error_handling(self, api_key: str) -> None:
+        """Test Google LLM error handling."""
+        # Test with invalid model
+        config = LlmConfig.google(api_key, "invalid-model")
+        client = LlmClient(config)
+
+        with pytest.raises(Exception):
+            client.complete("This should fail")
+
+    def test_google_long_context(self, google_pro_config: Any) -> None:
+        """Test Google LLM with longer context."""
+        client = LlmClient(google_pro_config)
+
+        # Create a longer prompt
+        long_text = "The quick brown fox jumps over the lazy dog. " * 100
+        prompt = f"Summarize this text in one sentence: {long_text}"
+
+        try:
+            response = client.complete(prompt)
+            assert response is not None
+            assert len(response) > 0
+            assert len(response) < len(prompt)  # Should be a summary
+
+        except Exception as e:
+            pytest.fail(f"Google long context test failed: {e}")
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

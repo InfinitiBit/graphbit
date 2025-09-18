@@ -5,6 +5,7 @@
 
 pub mod anthropic;
 pub mod deepseek;
+pub mod google;
 pub mod huggingface;
 pub mod ollama;
 pub mod openai;
@@ -326,6 +327,20 @@ impl LlmProviderFactory {
                     Ok(Box::new(openrouter::OpenRouterProvider::new(
                         api_key, model,
                     )?))
+                }
+            }
+            LlmConfig::Google {
+                api_key,
+                model,
+                base_url,
+                ..
+            } => {
+                if let Some(base_url) = base_url {
+                    Ok(Box::new(google::GoogleProvider::with_base_url(
+                        api_key, model, base_url,
+                    )?))
+                } else {
+                    Ok(Box::new(google::GoogleProvider::new(api_key, model)?))
                 }
             }
             LlmConfig::Custom { provider_type, .. } => Err(GraphBitError::config(format!(

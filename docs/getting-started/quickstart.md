@@ -34,6 +34,7 @@ config = LlmConfig.openai(api_key, "gpt-4o-mini")
 
 # Alternative configurations:
 # config = LlmConfig.anthropic(os.getenv("ANTHROPIC_API_KEY"), "claude-sonnet-4-20250514")
+# config = LlmConfig.google(os.getenv("GOOGLE_API_KEY"), "gemini-2.5-flash")
 # config = LlmConfig.ollama("llama3.2")  # Local model, no API key needed
 ```
 
@@ -256,6 +257,12 @@ openai_config = LlmConfig.openai(
 anthropic_config = LlmConfig.anthropic(
     os.getenv("ANTHROPIC_API_KEY"),
     "claude-sonnet-4-20250514"
+)
+
+# Google Gemini Configuration
+google_config = LlmConfig.google(
+    os.getenv("GOOGLE_API_KEY"),
+    "gemini-2.5-flash"
 )
 
 # OpenRouter Configuration (access to 400+ models)

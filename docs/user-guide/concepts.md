@@ -60,8 +60,14 @@ openai_config = LlmConfig.openai(
 
 # Anthropic
 anthropic_config = LlmConfig.anthropic(
-    api_key="your-anthropic-key", 
+    api_key="your-anthropic-key",
     model="claude-sonnet-4-20250514"  # Optional, defaults to claude-sonnet-4-20250514
+)
+
+# Google Gemini
+google_config = LlmConfig.google(
+    api_key="your-google-key",
+    model="gemini-2.5-flash"  # Optional, defaults to gemini-2.5-flash
 )
 
 # OpenRouter (unified access to 400+ models)
