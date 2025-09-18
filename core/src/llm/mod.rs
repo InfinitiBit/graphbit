@@ -5,6 +5,7 @@
 
 pub mod anthropic;
 pub mod deepseek;
+pub mod fireworks;
 pub mod huggingface;
 pub mod ollama;
 pub mod openai;
@@ -326,6 +327,20 @@ impl LlmProviderFactory {
                     Ok(Box::new(openrouter::OpenRouterProvider::new(
                         api_key, model,
                     )?))
+                }
+            }
+            LlmConfig::Fireworks {
+                api_key,
+                model,
+                base_url,
+                ..
+            } => {
+                if let Some(base_url) = base_url {
+                    Ok(Box::new(fireworks::FireworksProvider::with_base_url(
+                        api_key, model, base_url,
+                    )?))
+                } else {
+                    Ok(Box::new(fireworks::FireworksProvider::new(api_key, model)?))
                 }
             }
             LlmConfig::Custom { provider_type, .. } => Err(GraphBitError::config(format!(

@@ -10,6 +10,7 @@ GraphBit supports these LLM providers:
 - **OpenRouter** - Unified access to 400+ models from multiple providers (GPT, Claude, Mistral, etc.)
 - **Perplexity** - Real-time search-enabled models including Sonar models
 - **DeepSeek** - High-performance models including DeepSeek-Chat, DeepSeek-Coder, and DeepSeek-Reasoner
+- **Fireworks AI** - Fast inference for open-source models including Llama, Mixtral, and Qwen
 - **Ollama** - Local model execution with various open-source models
 
 ## Configuration
@@ -233,6 +234,81 @@ reasoning_config = LlmConfig.deepseek(
     api_key=os.getenv("DEEPSEEK_API_KEY"),
     model="deepseek-reasoner"  # For complex reasoning tasks
 )
+```
+
+### Fireworks AI Configuration
+
+Configure Fireworks AI for fast inference with open-source models:
+
+```python
+import os
+
+from graphbit import LlmConfig
+
+# Basic Fireworks AI configuration
+config = LlmConfig.fireworks(
+    api_key=os.getenv("FIREWORKS_API_KEY"),
+    model="accounts/fireworks/models/llama-v3p1-8b-instruct"  # Optional - defaults to llama-v3p1-8b-instruct
+)
+
+print(f"Provider: {config.provider()}")  # "fireworks"
+print(f"Model: {config.model()}")        # "accounts/fireworks/models/llama-v3p1-8b-instruct"
+```
+
+#### Popular Fireworks AI Models
+
+| Model | Best For | Context Length | Performance | Cost |
+|-------|----------|----------------|-------------|------|
+| `accounts/fireworks/models/llama-v3p1-8b-instruct` | General tasks, fast inference | 131K | Fast, efficient | Very low |
+| `accounts/fireworks/models/llama-v3p1-70b-instruct` | Complex reasoning, high quality | 131K | High quality | Low |
+| `accounts/fireworks/models/deepseek-v3p1` | Most complex tasks | 131K | Highest quality | Medium |
+| `accounts/fireworks/models/kimi-k2-instruct-0905` | Multilingual, code generation | 32K | Balanced | Low |
+| `accounts/fireworks/models/qwen3-coder-480b-a35b-instruct` | Reasoning, mathematics | 32K | High quality | Low |
+
+```python
+# Model selection for different use cases
+fast_config = LlmConfig.fireworks(
+    api_key=os.getenv("FIREWORKS_API_KEY"),
+    model="accounts/fireworks/models/llama-v3p1-8b-instruct"  # For fast, efficient tasks
+)
+
+quality_config = LlmConfig.fireworks(
+    api_key=os.getenv("FIREWORKS_API_KEY"),
+    model="accounts/fireworks/models/llama-v3p1-70b-instruct"  # For high-quality responses
+)
+
+coding_config = LlmConfig.fireworks(
+    api_key=os.getenv("FIREWORKS_API_KEY"),
+    model="accounts/fireworks/models/mixtral-8x7b-instruct"  # For code generation
+)
+```
+
+#### Getting Started with Fireworks AI
+
+1. **Sign up** at [fireworks.ai](https://fireworks.ai)
+2. **Get your API key** from the dashboard
+3. **Set environment variable**: `export FIREWORKS_API_KEY="your-api-key"`
+4. **Start using** with GraphBit
+
+```python
+import os
+from graphbit import LlmClient, LlmConfig
+
+# Create configuration
+config = LlmConfig.fireworks(
+    api_key=os.getenv("FIREWORKS_API_KEY"),
+    model="accounts/fireworks/models/llama-v3p1-8b-instruct"
+)
+
+# Create client and generate text
+client = LlmClient(config)
+response = client.complete(
+    prompt="Explain quantum computing in simple terms",
+    max_tokens=200,
+    temperature=0.7
+)
+
+print(response)
 ```
 
 ### Ollama Configuration
