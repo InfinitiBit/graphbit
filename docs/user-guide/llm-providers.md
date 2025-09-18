@@ -11,6 +11,7 @@ GraphBit supports these LLM providers:
 - **Perplexity** - Real-time search-enabled models including Sonar models
 - **DeepSeek** - High-performance models including DeepSeek-Chat, DeepSeek-Coder, and DeepSeek-Reasoner
 - **Fireworks AI** - Fast inference for open-source models including Llama, Mixtral, and Qwen
+- **Replicate** - Cloud platform for running AI models with prediction-based API
 - **Ollama** - Local model execution with various open-source models
 
 ## Configuration
@@ -309,6 +310,148 @@ response = client.complete(
 )
 
 print(response)
+```
+
+### Replicate Configuration
+
+Configure Replicate for running AI models through their cloud platform:
+
+```python
+import os
+
+from graphbit import LlmConfig
+
+# Basic Replicate configuration
+config = LlmConfig.replicate(
+    api_key=os.getenv("REPLICATE_API_KEY"),
+    model="meta/llama-2-70b-chat:02e509c789964a7ea8736978a43525956ef40397be9033abf9fd2badfe68c9e3",
+    max_wait_time=300,  # Optional - maximum wait time in seconds (default: 300)
+    poll_interval=2     # Optional - polling interval in seconds (default: 2)
+)
+
+print(f"Provider: {config.provider()}")  # "replicate"
+print(f"Model: {config.model()}")        # Full model version string
+```
+
+#### Popular Replicate Models
+
+| Model | Best For | Context Length | Performance | Cost |
+|-------|----------|----------------|-------------|------|
+| `meta/llama-2-70b-chat:*` | General conversation, instruction following | 4K | High quality | Medium |
+| `meta/llama-2-13b-chat:*` | Balanced performance and speed | 4K | Good quality, faster | Low |
+| `mistralai/mistral-7b-instruct-v0.1:*` | Fast inference, general tasks | 8K | Fast, efficient | Low |
+| `togethercomputer/redpajama-incite-7b-chat:*` | Open source, customizable | 2K | Moderate | Very low |
+| `replicate/flan-t5-xl:*` | Text-to-text tasks, summarization | 512 | Fast, specialized | Very low |
+
+```python
+# Model selection for different use cases
+conversation_config = LlmConfig.replicate(
+    api_key=os.getenv("REPLICATE_API_KEY"),
+    model="meta/llama-2-70b-chat:02e509c789964a7ea8736978a43525956ef40397be9033abf9fd2badfe68c9e3",
+    max_wait_time=600  # Longer wait for complex models
+)
+
+fast_config = LlmConfig.replicate(
+    api_key=os.getenv("REPLICATE_API_KEY"),
+    model="meta/llama-2-13b-chat:f4e2de70d66816a838a89eeeb621910adffb0dd0baba3976c96980970978018d",
+    max_wait_time=180,  # Shorter wait for faster models
+    poll_interval=1     # More frequent polling
+)
+
+specialized_config = LlmConfig.replicate(
+    api_key=os.getenv("REPLICATE_API_KEY"),
+    model="replicate/flan-t5-xl:7a216605843d87f5426a10d2cc6940485a232336ed04d655ef86b91e020139bb"
+)
+```
+
+#### Getting Started with Replicate
+
+1. **Sign up** at [replicate.com](https://replicate.com)
+2. **Get your API token** from your account settings
+3. **Set environment variable**: `export REPLICATE_API_KEY="your-api-token"`
+4. **Find model versions** on the Replicate website - each model has a specific version ID
+5. **Start using** with GraphBit
+
+```python
+import os
+from graphbit import LlmClient, LlmConfig
+
+# Create configuration with specific model version
+config = LlmConfig.replicate(
+    api_key=os.getenv("REPLICATE_API_KEY"),
+    model="meta/llama-2-70b-chat:02e509c789964a7ea8736978a43525956ef40397be9033abf9fd2badfe68c9e3",
+    max_wait_time=300,
+    poll_interval=2
+)
+
+# Create client and generate text
+client = LlmClient(config)
+response = client.complete(
+    prompt="Explain the benefits of renewable energy",
+    max_tokens=500,
+    temperature=0.7
+)
+
+print(response)
+```
+
+#### Replicate-Specific Considerations
+
+**Model Versions**: Replicate uses specific version IDs for models. Always use the full version string from the Replicate website.
+
+**Prediction Workflow**: Replicate uses a prediction-based API where requests are queued and processed asynchronously. GraphBit handles this automatically by:
+- Creating a prediction
+- Polling for completion
+- Returning the result when ready
+
+**Timing Configuration**: Adjust timing based on model complexity:
+- **Fast models** (7B parameters): `max_wait_time=120`, `poll_interval=1`
+- **Medium models** (13B parameters): `max_wait_time=300`, `poll_interval=2`
+- **Large models** (70B+ parameters): `max_wait_time=600`, `poll_interval=3`
+
+```python
+# Example for different model sizes
+def get_replicate_config(model_size, model_version):
+    """Get optimized Replicate config based on model size"""
+
+    if model_size == "small":
+        return LlmConfig.replicate(
+            api_key=os.getenv("REPLICATE_API_KEY"),
+            model=model_version,
+            max_wait_time=120,
+            poll_interval=1
+        )
+    elif model_size == "medium":
+        return LlmConfig.replicate(
+            api_key=os.getenv("REPLICATE_API_KEY"),
+            model=model_version,
+            max_wait_time=300,
+            poll_interval=2
+        )
+    elif model_size == "large":
+        return LlmConfig.replicate(
+            api_key=os.getenv("REPLICATE_API_KEY"),
+            model=model_version,
+            max_wait_time=600,
+            poll_interval=3
+        )
+    else:
+        # Default configuration
+        return LlmConfig.replicate(
+            api_key=os.getenv("REPLICATE_API_KEY"),
+            model=model_version
+        )
+
+# Usage
+small_model_config = get_replicate_config(
+    "small",
+    "replicate/flan-t5-xl:7a216605843d87f5426a10d2cc6940485a232336ed04d655ef86b91e020139bb"
+)
+
+large_model_config = get_replicate_config(
+    "large",
+    "meta/llama-2-70b-chat:02e509c789964a7ea8736978a43525956ef40397be9033abf9fd2badfe68c9e3"
+)
 ```
 
 ### Ollama Configuration
@@ -707,6 +850,97 @@ def create_openrouter_workflow():
 workflow, executor = create_openrouter_workflow()
 ```
 
+### Replicate Workflow Example
+
+```python
+from graphbit import LlmConfig, Workflow, Node, Executor
+import os
+
+def create_replicate_workflow():
+    """Create workflow using Replicate cloud models"""
+
+    # Configure Replicate with appropriate timing for the model
+    config = LlmConfig.replicate(
+        api_key=os.getenv("REPLICATE_API_KEY"),
+        model="meta/llama-2-70b-chat:02e509c789964a7ea8736978a43525956ef40397be9033abf9fd2badfe68c9e3",
+        max_wait_time=600,  # Longer wait for large models
+        poll_interval=3     # Less frequent polling for efficiency
+    )
+
+    # Create workflow
+    workflow = Workflow("Replicate Cloud Pipeline")
+
+    # Create analyzer optimized for Replicate's async nature
+    analyzer = Node.agent(
+        name="Replicate Content Analyzer",
+        prompt=f"""
+        Analyze the following content thoroughly:
+        - Main themes and key points
+        - Sentiment and emotional tone
+        - Quality and clarity assessment
+        - Actionable insights and recommendations
+
+        Content: {input}
+
+        Provide a comprehensive analysis.
+        """,
+        agent_id="replicate_analyzer"
+    )
+
+    # Create summarizer with faster model for efficiency
+    summarizer = Node.agent(
+        name="Replicate Summarizer",
+        prompt=f"Create a concise executive summary of this analysis: {input}",
+        agent_id="replicate_summarizer",
+        llm_config=LlmConfig.replicate(
+            api_key=os.getenv("REPLICATE_API_KEY"),
+            model="meta/llama-2-13b-chat:f4e2de70d66816a838a89eeeb621910adffb0dd0baba3976c96980970978018d",
+            max_wait_time=300,  # Faster model, shorter wait
+            poll_interval=2
+        )
+    )
+
+    workflow.add_node(analyzer)
+    workflow.add_node(summarizer)
+    workflow.add_edge(analyzer, summarizer)
+    workflow.validate()
+
+    # Create executor with extended timeout for Replicate's async processing
+    executor = Executor(config, timeout_seconds=900)  # 15 minutes for large models
+    return workflow, executor
+
+def create_replicate_fast_workflow():
+    """Create workflow optimized for fast Replicate models"""
+
+    # Configure with smaller, faster model
+    config = LlmConfig.replicate(
+        api_key=os.getenv("REPLICATE_API_KEY"),
+        model="replicate/flan-t5-xl:7a216605843d87f5426a10d2cc6940485a232336ed04d655ef86b91e020139bb",
+        max_wait_time=120,
+        poll_interval=1
+    )
+
+    workflow = Workflow("Fast Replicate Pipeline")
+
+    # Create quick analyzer for fast processing
+    quick_analyzer = Node.agent(
+        name="Quick Replicate Analyzer",
+        prompt=f"Quickly analyze and summarize: {input}",
+        agent_id="quick_replicate_analyzer"
+    )
+
+    workflow.add_node(quick_analyzer)
+    workflow.validate()
+
+    # Shorter timeout for fast models
+    executor = Executor(config, timeout_seconds=180)
+    return workflow, executor
+
+# Usage examples
+workflow, executor = create_replicate_workflow()
+fast_workflow, fast_executor = create_replicate_fast_workflow()
+```
+
 ### Ollama Workflow Example
 
 ```python
@@ -759,13 +993,24 @@ anthropic_executor = Executor(
 )
 
 deepseek_executor = Executor(
-    deepseek_config, 
+    deepseek_config,
     timeout_seconds=90
 )
 
+# Replicate - varies by model size, async processing
+replicate_executor = Executor(
+    replicate_config,
+    timeout_seconds=600  # Longer for large models
+)
+
+# Replicate fast models
+replicate_fast_executor = Executor(
+    replicate_fast_config,
+    timeout_seconds=180
+)
 
 ollama_executor = Executor(
-    ollama_config, 
+    ollama_config,
     timeout_seconds=180
 )
 ```
@@ -874,6 +1119,18 @@ def get_optimal_config(use_case):
             api_key=os.getenv("OPENROUTER_API_KEY"),
             model="anthropic/claude-3-5-sonnet"
         )
+    elif use_case == "cloud_async":
+        return LlmConfig.replicate(
+            api_key=os.getenv("REPLICATE_API_KEY"),
+            model="meta/llama-2-70b-chat:02e509c789964a7ea8736978a43525956ef40397be9033abf9fd2badfe68c9e3",
+            max_wait_time=600
+        )
+    elif use_case == "cloud_fast":
+        return LlmConfig.replicate(
+            api_key=os.getenv("REPLICATE_API_KEY"),
+            model="meta/llama-2-13b-chat:f4e2de70d66816a838a89eeeb621910adffb0dd0baba3976c96980970978018d",
+            max_wait_time=300
+        )
     elif use_case == "local":
         return LlmConfig.ollama(model="llama3.2")
     else:
@@ -898,7 +1155,8 @@ def get_api_key(provider):
         "anthropic": "ANTHROPIC_API_KEY",
         "openrouter": "OPENROUTER_API_KEY",
         "perplexity": "PERPLEXITY_API_KEY",
-        "deepseek": "DEEPSEEK_API_KEY"
+        "deepseek": "DEEPSEEK_API_KEY",
+        "replicate": "REPLICATE_API_KEY"
     }
     
     env_var = key_mapping.get(provider)
@@ -948,6 +1206,11 @@ class LLMManager:
                 config = LlmConfig.deepseek(
                     api_key=get_api_key("deepseek"),
                     model=model
+                )
+            elif provider == "replicate":
+                config = LlmConfig.replicate(
+                    api_key=get_api_key("replicate"),
+                    model=model or "meta/llama-2-70b-chat:02e509c789964a7ea8736978a43525956ef40397be9033abf9fd2badfe68c9e3"
                 )
             elif provider == "ollama":
                 config = LlmConfig.ollama(model=model)

@@ -10,9 +10,13 @@ This directory contains ready-to-run Python scripts demonstrating various GraphB
 ollama serve
 ollama pull llama3.2
 ```
-- For Perplexity (cloud):  
+- For Perplexity (cloud):
 ```bash
 export PERPLEXITY_API_KEY="your-api-key"
+```
+- For Replicate (cloud):
+```bash
+export REPLICATE_API_KEY="your-api-token"
 ```
 
 2. **Run an example:**
@@ -46,6 +50,10 @@ This sets up the GraphBit runtime and logging.
 - **Perplexity (cloud):**
   ```python
   llm_config = LlmConfig.perplexity(api_key, "sonar")
+  ```
+- **Replicate (cloud):**
+  ```python
+  llm_config = LlmConfig.replicate(api_key, "meta/llama-2-70b-chat:version-id")
   ```
 
 ---
@@ -134,6 +142,7 @@ print("Result:", result.variables())
 
 **Explore the scripts in this folder for more advanced patterns:**
 - Real-time web search with Perplexity (`simple_task_perplexity.py`)
+- Cloud AI models with async processing via Replicate (`simple_task_replicate.py`)
 - Memory-optimized large prompt tasks (`memory_task_local_model.py`)
 - Multi-step and dependency-based workflows (`sequential_task_local_model.py`, `complex_workflow_local_model.py`)
 
@@ -159,9 +168,13 @@ _Requires Ollama running locally._
 *Memory-intensive, single-agent task with a large prompt, using Llama 3.2 via Ollama. Provides a deep legal/technical analysis.*  
 _Requires Ollama running locally._
 
-**simple_task_perplexity.py**  
-*Single-agent workflow using Perplexity’s cloud models (with real-time web search). Summarizes recent AI/ML developments.*  
+**simple_task_perplexity.py**
+*Single-agent workflow using Perplexity’s cloud models (with real-time web search). Summarizes recent AI/ML developments.*
 _Requires `PERPLEXITY_API_KEY` environment variable._
+
+**simple_task_replicate.py**
+*Demonstrates GraphBit integration with Replicate's cloud AI platform. Shows basic completion, workflow creation, and batch processing using Llama 2 models.*
+_Requires `REPLICATE_API_KEY` environment variable._
 
 **chatbot**  
 *A conversational AI chatbot with vector database integration for context retrieval and memory storage. Includes a FastAPI backend and Streamlit frontend.*  

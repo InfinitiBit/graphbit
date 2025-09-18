@@ -81,6 +81,19 @@ class TestLlmConfig:
         assert config.provider() == "perplexity"
         assert config.model() == "sonar"
 
+    def test_llm_config_replicate(self):
+        """Test creating Replicate LLM configuration."""
+        api_key = get_api_key("replicate")
+        config = LlmConfig.replicate(
+            api_key=api_key,
+            model="meta/llama-2-70b-chat:02e509c789964a7ea8736978a43525956ef40397be9033abf9fd2badfe68c9e3",
+            max_wait_time=300,
+            poll_interval=2
+        )
+        assert config is not None
+        assert config.provider() == "replicate"
+        assert config.model() == "meta/llama-2-70b-chat:02e509c789964a7ea8736978a43525956ef40397be9033abf9fd2badfe68c9e3"
+
 
 class TestLlmClient:
     """Test LLM client functionality."""

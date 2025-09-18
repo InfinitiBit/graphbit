@@ -142,6 +142,26 @@ impl LlmConfig {
         })
     }
 
+    #[staticmethod]
+    #[pyo3(signature = (api_key, model, max_wait_time=None, poll_interval=None))]
+    fn replicate(
+        api_key: String,
+        model: String,
+        max_wait_time: Option<u64>,
+        poll_interval: Option<u64>,
+    ) -> PyResult<Self> {
+        validate_api_key(&api_key, "Replicate")?;
+
+        Ok(Self {
+            inner: CoreLlmConfig::replicate_with_timing(
+                api_key,
+                model,
+                max_wait_time,
+                poll_interval,
+            ),
+        })
+    }
+
     fn provider(&self) -> String {
         self.inner.provider_name().to_string()
     }

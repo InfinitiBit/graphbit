@@ -12,6 +12,7 @@ pub mod openai;
 pub mod openrouter;
 pub mod perplexity;
 pub mod providers;
+pub mod replicate;
 pub mod response;
 
 pub use providers::{LlmConfig, LlmProvider, LlmProviderTrait};
@@ -342,6 +343,33 @@ impl LlmProviderFactory {
                 } else {
                     Ok(Box::new(fireworks::FireworksProvider::new(api_key, model)?))
                 }
+            }
+            LlmConfig::Replicate {
+                api_key,
+                model,
+                base_url,
+                max_wait_time,
+                poll_interval,
+                ..
+            } => {
+                let mut provider = if let Some(base_url) = base_url {
+                    replicate::ReplicateProvider::with_base_url(api_key, model, base_url)?
+                } else {
+                    replicate::ReplicateProvider::new(api_key, model)?
+                };
+
+                // Apply custom timing if provided
+                if max_wait_time.is_some() || poll_interval.is_some() {
+                    let max_wait = max_wait_time
+                        .map(std::time::Duration::from_secs)
+                        .unwrap_or(std::time::Duration::from_secs(300));
+                    let poll_interval = poll_interval
+                        .map(std::time::Duration::from_secs)
+                        .unwrap_or(std::time::Duration::from_secs(2));
+                    provider = provider.with_timing(max_wait, poll_interval);
+                }
+
+                Ok(Box::new(provider))
             }
             LlmConfig::Custom { provider_type, .. } => Err(GraphBitError::config(format!(
                 "Unsupported custom provider: {provider_type}",

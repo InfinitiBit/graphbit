@@ -86,6 +86,19 @@ pub enum LlmConfig {
         /// Optional custom base URL
         base_url: Option<String>,
     },
+    /// `Replicate` AI LLM provider configuration
+    Replicate {
+        /// API key for authentication
+        api_key: String,
+        /// Model name/version to use (e.g., "meta/llama-2-70b-chat:02e509c789964a7ea8736978a43525956ef40397be9033abf9fd2badfe68c9e3")
+        model: String,
+        /// Optional custom base URL
+        base_url: Option<String>,
+        /// Maximum wait time for predictions (in seconds)
+        max_wait_time: Option<u64>,
+        /// Poll interval for checking prediction status (in seconds)
+        poll_interval: Option<u64>,
+    },
     /// Custom LLM provider configuration
     Custom {
         /// Provider type identifier
@@ -178,6 +191,33 @@ impl LlmConfig {
         }
     }
 
+    /// Create `Replicate` configuration
+    pub fn replicate(api_key: impl Into<String>, model: impl Into<String>) -> Self {
+        Self::Replicate {
+            api_key: api_key.into(),
+            model: model.into(),
+            base_url: None,
+            max_wait_time: None,
+            poll_interval: None,
+        }
+    }
+
+    /// Create `Replicate` configuration with custom timing
+    pub fn replicate_with_timing(
+        api_key: impl Into<String>,
+        model: impl Into<String>,
+        max_wait_time: Option<u64>,
+        poll_interval: Option<u64>,
+    ) -> Self {
+        Self::Replicate {
+            api_key: api_key.into(),
+            model: model.into(),
+            base_url: None,
+            max_wait_time,
+            poll_interval,
+        }
+    }
+
     /// Create `Ollama` configuration
     pub fn ollama(model: impl Into<String>) -> Self {
         Self::Ollama {
@@ -205,6 +245,7 @@ impl LlmConfig {
             LlmConfig::Perplexity { .. } => "perplexity",
             LlmConfig::OpenRouter { .. } => "openrouter",
             LlmConfig::Fireworks { .. } => "fireworks",
+            LlmConfig::Replicate { .. } => "replicate",
             LlmConfig::Custom { provider_type, .. } => provider_type,
         }
     }
@@ -220,6 +261,7 @@ impl LlmConfig {
             LlmConfig::Perplexity { model, .. } => model,
             LlmConfig::OpenRouter { model, .. } => model,
             LlmConfig::Fireworks { model, .. } => model,
+            LlmConfig::Replicate { model, .. } => model,
             LlmConfig::Custom { config, .. } => config
                 .get("model")
                 .and_then(|v| v.as_str())
