@@ -1,7 +1,7 @@
 use graphbit_core::llm::response::{FinishReason, LlmResponse, LlmUsage};
 use graphbit_core::llm::{LlmConfig, LlmMessage, LlmProviderFactory, LlmRequest, LlmRole};
 
-// DeepSeek Provider Tests
+// `DeepSeek` Provider Tests
 #[tokio::test]
 async fn test_deepseek_provider_creation() {
     let provider = LlmProviderFactory::create_provider(LlmConfig::DeepSeek {
@@ -56,7 +56,7 @@ async fn test_deepseek_message_formatting() {
 
 // Tool-calling tests removed per request
 
-// Perplexity Provider Tests
+// `Perplexity` Provider Tests
 #[tokio::test]
 async fn test_perplexity_provider_creation() {
     let provider = LlmProviderFactory::create_provider(LlmConfig::Perplexity {

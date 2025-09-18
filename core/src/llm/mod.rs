@@ -1,4 +1,4 @@
-//! LLM provider abstraction for GraphBit
+//! LLM provider abstraction for `GraphBit`
 //!
 //! This module provides a unified interface for working with different
 //! LLM providers while maintaining strong type safety and validation.
@@ -329,8 +329,7 @@ impl LlmProviderFactory {
                 }
             }
             LlmConfig::Custom { provider_type, .. } => Err(GraphBitError::config(format!(
-                "Unsupported custom provider: {}",
-                provider_type
+                "Unsupported custom provider: {provider_type}",
             ))),
             LlmConfig::Unconfigured { message } => Err(GraphBitError::config(format!(
                 "LLM provider not configured: {}",

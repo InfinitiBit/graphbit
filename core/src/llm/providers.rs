@@ -10,7 +10,7 @@ use std::collections::HashMap;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "provider")]
 pub enum LlmConfig {
-    /// OpenAI LLM provider configuration
+    /// `OpenAI` LLM provider configuration
     OpenAI {
         /// API key for authentication
         api_key: String,
@@ -21,7 +21,7 @@ pub enum LlmConfig {
         /// Optional organization ID
         organization: Option<String>,
     },
-    /// Anthropic LLM provider configuration
+    /// `Anthropic` LLM provider configuration
     Anthropic {
         /// API key for authentication
         api_key: String,
@@ -30,7 +30,7 @@ pub enum LlmConfig {
         /// Optional custom base URL
         base_url: Option<String>,
     },
-    /// DeepSeek LLM provider configuration
+    /// `DeepSeek` LLM provider configuration
     DeepSeek {
         /// API key for authentication
         api_key: String,
@@ -39,7 +39,7 @@ pub enum LlmConfig {
         /// Optional custom base URL
         base_url: Option<String>,
     },
-    /// HuggingFace LLM provider configuration
+    /// `HuggingFace` LLM provider configuration
     HuggingFace {
         /// API key for authentication
         api_key: String,
@@ -48,14 +48,14 @@ pub enum LlmConfig {
         /// Optional custom base URL
         base_url: Option<String>,
     },
-    /// Ollama LLM provider configuration
+    /// `Ollama` LLM provider configuration
     Ollama {
         /// Model name to use
         model: String,
         /// Optional custom base URL
         base_url: Option<String>,
     },
-    /// Perplexity LLM provider configuration
+    /// `Perplexity` LLM provider configuration
     Perplexity {
         /// API key for authentication
         api_key: String,
@@ -64,7 +64,7 @@ pub enum LlmConfig {
         /// Optional custom base URL
         base_url: Option<String>,
     },
-    /// OpenRouter LLM provider configuration
+    /// `OpenRouter` LLM provider configuration
     OpenRouter {
         /// API key for authentication
         api_key: String,
@@ -72,9 +72,9 @@ pub enum LlmConfig {
         model: String,
         /// Optional custom base URL
         base_url: Option<String>,
-        /// Optional site URL for OpenRouter rankings
+        /// Optional site URL for `OpenRouter` rankings
         site_url: Option<String>,
-        /// Optional site name for OpenRouter rankings
+        /// Optional site name for `OpenRouter` rankings
         site_name: Option<String>,
     },
     /// Custom LLM provider configuration
@@ -92,7 +92,7 @@ pub enum LlmConfig {
 }
 
 impl LlmConfig {
-    /// Create OpenAI configuration
+    /// Create `OpenAI` configuration
     pub fn openai(api_key: impl Into<String>, model: impl Into<String>) -> Self {
         Self::OpenAI {
             api_key: api_key.into(),
@@ -102,7 +102,7 @@ impl LlmConfig {
         }
     }
 
-    /// Create Anthropic configuration
+    /// Create `Anthropic` configuration
     pub fn anthropic(api_key: impl Into<String>, model: impl Into<String>) -> Self {
         Self::Anthropic {
             api_key: api_key.into(),
@@ -111,7 +111,7 @@ impl LlmConfig {
         }
     }
 
-    /// Create DeepSeek configuration
+    /// Create `DeepSeek` configuration
     pub fn deepseek(api_key: impl Into<String>, model: impl Into<String>) -> Self {
         Self::DeepSeek {
             api_key: api_key.into(),
@@ -120,7 +120,7 @@ impl LlmConfig {
         }
     }
 
-    /// Create HuggingFace configuration
+    /// Create `HuggingFace` configuration
     pub fn huggingface(api_key: impl Into<String>, model: impl Into<String>) -> Self {
         Self::HuggingFace {
             api_key: api_key.into(),
@@ -129,7 +129,7 @@ impl LlmConfig {
         }
     }
 
-    /// Create Perplexity configuration
+    /// Create `Perplexity` configuration
     pub fn perplexity(api_key: impl Into<String>, model: impl Into<String>) -> Self {
         Self::Perplexity {
             api_key: api_key.into(),
@@ -138,7 +138,7 @@ impl LlmConfig {
         }
     }
 
-    /// Create OpenRouter configuration
+    /// Create `OpenRouter` configuration
     pub fn openrouter(api_key: impl Into<String>, model: impl Into<String>) -> Self {
         Self::OpenRouter {
             api_key: api_key.into(),
@@ -149,7 +149,7 @@ impl LlmConfig {
         }
     }
 
-    /// Create OpenRouter configuration with site information
+    /// Create `OpenRouter` configuration with site information
     pub fn openrouter_with_site(
         api_key: impl Into<String>,
         model: impl Into<String>,
@@ -165,7 +165,7 @@ impl LlmConfig {
         }
     }
 
-    /// Create Ollama configuration
+    /// Create `Ollama` configuration
     pub fn ollama(model: impl Into<String>) -> Self {
         Self::Ollama {
             model: model.into(),
@@ -173,7 +173,7 @@ impl LlmConfig {
         }
     }
 
-    /// Create Ollama configuration with custom base URL
+    /// Create `Ollama` configuration with custom base URL
     pub fn ollama_with_base_url(model: impl Into<String>, base_url: impl Into<String>) -> Self {
         Self::Ollama {
             model: model.into(),
