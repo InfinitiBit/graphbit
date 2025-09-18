@@ -68,7 +68,7 @@ impl DeepSeekProvider {
     }
 
     /// Convert `GraphBit` message to `DeepSeek` message format
-    fn convert_message(&self, message: &LlmMessage) -> DeepSeekMessage {
+    fn convert_message(message: &LlmMessage) -> DeepSeekMessage {
         DeepSeekMessage {
             role: match message.role {
                 LlmRole::User => "user".to_string(),
@@ -99,7 +99,7 @@ impl DeepSeekProvider {
     }
 
     /// Convert `GraphBit` tool to `DeepSeek` tool format
-    fn convert_tool(&self, tool: &LlmTool) -> DeepSeekTool {
+    fn convert_tool(tool: &LlmTool) -> DeepSeekTool {
         DeepSeekTool {
             r#type: "function".to_string(),
             function: DeepSeekFunctionDef {
@@ -169,13 +169,19 @@ impl LlmProviderTrait for DeepSeekProvider {
         let messages: Vec<DeepSeekMessage> = request
             .messages
             .iter()
-            .map(|m| self.convert_message(m))
+            .map(|m| Self::convert_message(m))
             .collect();
 
         let tools: Option<Vec<DeepSeekTool>> = if request.tools.is_empty() {
             None
         } else {
-            Some(request.tools.iter().map(|t| self.convert_tool(t)).collect())
+            Some(
+                request
+                    .tools
+                    .iter()
+                    .map(|t| Self::convert_tool(t))
+                    .collect(),
+            )
         };
 
         let body = DeepSeekRequest {

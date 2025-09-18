@@ -7,6 +7,7 @@ use async_trait::async_trait;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::fmt::Write;
 
 /// `HuggingFace` API provider
 pub struct HuggingFaceProvider {
@@ -43,22 +44,22 @@ impl HuggingFaceProvider {
     }
 
     /// Convert `GraphBit` messages to `HuggingFace` chat format
-    fn format_messages_for_chat(&self, messages: &[LlmMessage]) -> String {
+    fn format_messages_for_chat(messages: &[LlmMessage]) -> String {
         let mut formatted = String::new();
 
         for message in messages {
             match message.role {
                 LlmRole::System => {
-                    formatted.push_str(&format!("System: {}\n", message.content));
+                    write!(formatted, "System: {}\n", message.content).unwrap();
                 }
                 LlmRole::User => {
-                    formatted.push_str(&format!("User: {}\n", message.content));
+                    write!(formatted, "User: {}\n", message.content).unwrap();
                 }
                 LlmRole::Assistant => {
-                    formatted.push_str(&format!("Assistant: {}\n", message.content));
+                    write!(formatted, "Assistant: {}\n", message.content).unwrap();
                 }
                 LlmRole::Tool => {
-                    formatted.push_str(&format!("Tool: {}\n", message.content));
+                    write!(formatted, "Tool: {}\n", message.content).unwrap();
                 }
             }
         }
@@ -113,7 +114,7 @@ impl LlmProviderTrait for HuggingFaceProvider {
         let url = self.base_url.clone() + "/" + &self.model;
 
         // Format messages for `HuggingFace`
-        let inputs = self.format_messages_for_chat(&request.messages);
+        let inputs = Self::format_messages_for_chat(&request.messages);
 
         let mut parameters = HashMap::new();
         if let Some(max_tokens) = request.max_tokens {
@@ -202,7 +203,7 @@ impl LlmProviderTrait for HuggingFaceProvider {
     }
 
     fn cost_per_token(&self) -> Option<(f64, f64)> {
-        // HuggingFace inference API pricing varies by model
+        // `HuggingFace` inference API pricing varies by model
         // This would need to be updated based on actual pricing
         Some((0.0001, 0.0001)) // Placeholder values
     }

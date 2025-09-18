@@ -57,7 +57,7 @@ impl OllamaProvider {
     }
 
     /// Convert `GraphBit` message to `Ollama` message format
-    fn convert_message(&self, message: &LlmMessage) -> OllamaMessage {
+    fn convert_message(message: &LlmMessage) -> OllamaMessage {
         OllamaMessage {
             role: match message.role {
                 LlmRole::User => "user".to_string(),
@@ -86,7 +86,7 @@ impl OllamaProvider {
     }
 
     /// Convert `GraphBit` tool to `Ollama` tool format
-    fn convert_tool(&self, tool: &LlmTool) -> OllamaTool {
+    fn convert_tool(tool: &LlmTool) -> OllamaTool {
         OllamaTool {
             r#type: "function".to_string(),
             function: OllamaFunctionDef {
@@ -253,13 +253,19 @@ impl LlmProviderTrait for OllamaProvider {
         let messages: Vec<OllamaMessage> = request
             .messages
             .iter()
-            .map(|m| self.convert_message(m))
+            .map(|m| Self::convert_message(m))
             .collect();
 
         let tools: Option<Vec<OllamaTool>> = if request.tools.is_empty() {
             None
         } else {
-            Some(request.tools.iter().map(|t| self.convert_tool(t)).collect())
+            Some(
+                request
+                    .tools
+                    .iter()
+                    .map(|t| Self::convert_tool(t))
+                    .collect(),
+            )
         };
 
         let mut options = serde_json::Map::new();

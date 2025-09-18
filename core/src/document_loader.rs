@@ -490,7 +490,7 @@ pub fn validate_document_source(source_path: &str, document_type: &str) -> Graph
         return Err(GraphBitError::validation(
             "document_loader",
             format!(
-                "Unsupported document type: {document_type}. Supported types: {supported_types:?}"
+                "Unsupported document type: {document_type}. Supported types: {supported_types:?}",
             ),
         ));
     }

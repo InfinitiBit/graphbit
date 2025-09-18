@@ -31,8 +31,8 @@ impl AnthropicProvider {
         })
     }
 
-    /// Convert `GraphBit` tool to Anthropic tool format
-    fn convert_tool(&self, tool: &LlmTool) -> AnthropicTool {
+    /// Convert `GraphBit` tool to `Anthropic` tool format
+    fn convert_tool(tool: &LlmTool) -> AnthropicTool {
         AnthropicTool {
             name: tool.name.clone(),
             description: tool.description.clone(),
@@ -41,7 +41,7 @@ impl AnthropicProvider {
     }
 
     /// Convert `GraphBit` messages to `Anthropic` format
-    fn convert_messages(&self, messages: &[LlmMessage]) -> (Option<String>, Vec<AnthropicMessage>) {
+    fn convert_messages(messages: &[LlmMessage]) -> (Option<String>, Vec<AnthropicMessage>) {
         let mut system_prompt = None;
         let mut anthropic_messages = Vec::new();
 
@@ -74,7 +74,7 @@ impl AnthropicProvider {
         (system_prompt, anthropic_messages)
     }
 
-    /// Parse Anthropic response to `GraphBit` response
+    /// Parse `Anthropic` response to `GraphBit` response
     fn parse_response(&self, response: AnthropicResponse) -> GraphBitResult<LlmResponse> {
         let mut content_text = String::new();
         let mut tool_calls = Vec::new();
@@ -144,7 +144,7 @@ impl LlmProviderTrait for AnthropicProvider {
     async fn complete(&self, request: LlmRequest) -> GraphBitResult<LlmResponse> {
         let url = format!("{}/messages", self.base_url);
 
-        let (system_prompt, messages) = self.convert_messages(&request.messages);
+        let (system_prompt, messages) = Self::convert_messages(&request.messages);
 
         // Convert tools to Anthropic format
         let tools: Option<Vec<AnthropicTool>> = if request.tools.is_empty() {
@@ -152,7 +152,13 @@ impl LlmProviderTrait for AnthropicProvider {
             None
         } else {
             tracing::info!("Converting {} tools for Anthropic", request.tools.len());
-            Some(request.tools.iter().map(|t| self.convert_tool(t)).collect())
+            Some(
+                request
+                    .tools
+                    .iter()
+                    .map(|t| Self::convert_tool(t))
+                    .collect(),
+            )
         };
 
         let body = AnthropicRequest {
