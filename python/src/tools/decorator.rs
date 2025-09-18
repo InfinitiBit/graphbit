@@ -240,13 +240,14 @@ fn map_python_type_to_json_schema(type_str: &str) -> &'static str {
 #[pyfunction]
 #[pyo3(signature = (_description=None))]
 pub(crate) fn tool(_description: Option<String>, py: Python<'_>) -> PyResult<PyObject> {
-    // Create a Python function that will act as the decorator
+    // Create a simple decorator that just returns the function
+    // The actual registration happens when the node processes the tools
     let decorator_func = py.eval(
-        c"lambda func: func", // For now, just return the function as-is
+        c"lambda func: func", // Simple pass-through decorator
         None,
         None,
     )?;
-
+    
     Ok(decorator_func.into_pyobject(py)?.into_any().unbind())
 }
 
