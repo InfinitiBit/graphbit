@@ -1706,3 +1706,417 @@ fn test_cosine_similarity_additional_edge_cases() {
     assert!(result.is_ok());
     assert_eq!(result.unwrap(), 0.0);
 }
+
+// ===== ADDITIONAL TESTS FOR 100% FUNCTION COVERAGE =====
+
+#[test]
+fn test_openai_provider_max_batch_size_override() {
+    // Test OpenAI provider's overridden max_batch_size method (line 339)
+    use graphbit_core::embeddings::{EmbeddingConfig, EmbeddingProvider, OpenAIEmbeddingProvider, EmbeddingProviderTrait};
+
+    let config = EmbeddingConfig {
+        provider: EmbeddingProvider::OpenAI,
+        api_key: "test-key".to_string(),
+        model: "text-embedding-ada-002".to_string(),
+        base_url: None,
+        timeout_seconds: None,
+        max_batch_size: None,
+        extra_params: HashMap::new(),
+    };
+
+    let provider = OpenAIEmbeddingProvider::new(config).unwrap();
+
+    // Test that OpenAI provider returns 2048 (not the default 100)
+    assert_eq!(provider.max_batch_size(), 2048);
+}
+
+#[test]
+fn test_huggingface_provider_max_batch_size_override() {
+    // Test HuggingFace provider's overridden max_batch_size method (line 499)
+    use graphbit_core::embeddings::{EmbeddingConfig, EmbeddingProvider, HuggingFaceEmbeddingProvider, EmbeddingProviderTrait};
+
+    let config = EmbeddingConfig {
+        provider: EmbeddingProvider::HuggingFace,
+        api_key: "test-key".to_string(),
+        model: "sentence-transformers/all-MiniLM-L6-v2".to_string(),
+        base_url: None,
+        timeout_seconds: None,
+        max_batch_size: None,
+        extra_params: HashMap::new(),
+    };
+
+    let provider = HuggingFaceEmbeddingProvider::new(config).unwrap();
+
+    // Test that HuggingFace provider returns 100 (same as default, but explicitly overridden)
+    assert_eq!(provider.max_batch_size(), 100);
+}
+
+#[test]
+fn test_embedding_structs_debug_trait() {
+    // Test Debug trait implementations for all structs
+    use graphbit_core::embeddings::*;
+
+    // Test EmbeddingConfig Debug
+    let config = EmbeddingConfig {
+        provider: EmbeddingProvider::OpenAI,
+        api_key: "test-key".to_string(),
+        model: "test-model".to_string(),
+        base_url: None,
+        timeout_seconds: None,
+        max_batch_size: None,
+        extra_params: HashMap::new(),
+    };
+    let debug_str = format!("{:?}", config);
+    assert!(debug_str.contains("EmbeddingConfig"));
+    assert!(debug_str.contains("test-model"));
+
+    // Test EmbeddingProvider Debug
+    let provider_debug = format!("{:?}", EmbeddingProvider::OpenAI);
+    assert!(provider_debug.contains("OpenAI"));
+
+    // Test EmbeddingInput Debug
+    let input = EmbeddingInput::Single("test".to_string());
+    let input_debug = format!("{:?}", input);
+    assert!(input_debug.contains("Single"));
+
+    // Test EmbeddingRequest Debug
+    let request = EmbeddingRequest {
+        input: EmbeddingInput::Single("test".to_string()),
+        user: None,
+        params: HashMap::new(),
+    };
+    let request_debug = format!("{:?}", request);
+    assert!(request_debug.contains("EmbeddingRequest"));
+}
+
+#[test]
+fn test_embedding_structs_clone_trait() {
+    // Test Clone trait implementations for all structs
+    use graphbit_core::embeddings::*;
+
+    // Test EmbeddingConfig Clone
+    let config = EmbeddingConfig {
+        provider: EmbeddingProvider::OpenAI,
+        api_key: "test-key".to_string(),
+        model: "test-model".to_string(),
+        base_url: None,
+        timeout_seconds: None,
+        max_batch_size: None,
+        extra_params: HashMap::new(),
+    };
+    let cloned_config = config.clone();
+    assert_eq!(cloned_config.api_key, config.api_key);
+    assert_eq!(cloned_config.model, config.model);
+
+    // Test EmbeddingProvider Clone
+    let provider = EmbeddingProvider::OpenAI;
+    let cloned_provider = provider.clone();
+    assert_eq!(cloned_provider, provider);
+
+    // Test EmbeddingInput Clone
+    let input = EmbeddingInput::Single("test".to_string());
+    let cloned_input = input.clone();
+    assert_eq!(cloned_input.len(), input.len());
+
+    // Test EmbeddingRequest Clone
+    let request = EmbeddingRequest {
+        input: EmbeddingInput::Single("test".to_string()),
+        user: None,
+        params: HashMap::new(),
+    };
+    let cloned_request = request.clone();
+    assert_eq!(cloned_request.input.len(), request.input.len());
+}
+
+#[test]
+fn test_embedding_response_structs_comprehensive() {
+    // Test all response-related structs and their derived traits
+    use graphbit_core::embeddings::*;
+
+    // Test EmbeddingUsage
+    let usage = EmbeddingUsage {
+        prompt_tokens: 10,
+        total_tokens: 15,
+    };
+    let usage_debug = format!("{:?}", usage);
+    assert!(usage_debug.contains("EmbeddingUsage"));
+    assert!(usage_debug.contains("10"));
+
+    let cloned_usage = usage.clone();
+    assert_eq!(cloned_usage.prompt_tokens, usage.prompt_tokens);
+    assert_eq!(cloned_usage.total_tokens, usage.total_tokens);
+
+    // Test serialization/deserialization
+    let usage_json = serde_json::to_string(&usage).unwrap();
+    let deserialized_usage: EmbeddingUsage = serde_json::from_str(&usage_json).unwrap();
+    assert_eq!(deserialized_usage.prompt_tokens, usage.prompt_tokens);
+
+    // Test EmbeddingResponse
+    let response = EmbeddingResponse {
+        embeddings: vec![vec![1.0, 2.0, 3.0]],
+        model: "test-model".to_string(),
+        usage: usage.clone(),
+        metadata: HashMap::new(),
+    };
+    let response_debug = format!("{:?}", response);
+    assert!(response_debug.contains("EmbeddingResponse"));
+
+    let cloned_response = response.clone();
+    assert_eq!(cloned_response.model, response.model);
+    assert_eq!(cloned_response.embeddings.len(), response.embeddings.len());
+
+    // Test serialization/deserialization
+    let response_json = serde_json::to_string(&response).unwrap();
+    let deserialized_response: EmbeddingResponse = serde_json::from_str(&response_json).unwrap();
+    assert_eq!(deserialized_response.model, response.model);
+}
+
+#[test]
+fn test_embedding_batch_structs_comprehensive() {
+    // Test batch-related structs and their derived traits
+    use graphbit_core::embeddings::*;
+
+    // Test EmbeddingBatchRequest
+    let batch_request = EmbeddingBatchRequest {
+        requests: vec![
+            EmbeddingRequest {
+                input: EmbeddingInput::Single("test1".to_string()),
+                user: None,
+                params: HashMap::new(),
+            },
+            EmbeddingRequest {
+                input: EmbeddingInput::Single("test2".to_string()),
+                user: None,
+                params: HashMap::new(),
+            },
+        ],
+        max_concurrency: Some(5),
+        timeout_ms: Some(30000),
+    };
+
+    let batch_debug = format!("{:?}", batch_request);
+    assert!(batch_debug.contains("EmbeddingBatchRequest"));
+
+    let cloned_batch = batch_request.clone();
+    assert_eq!(cloned_batch.requests.len(), batch_request.requests.len());
+    assert_eq!(cloned_batch.max_concurrency, batch_request.max_concurrency);
+
+    // Test serialization/deserialization
+    let batch_json = serde_json::to_string(&batch_request).unwrap();
+    let deserialized_batch: EmbeddingBatchRequest = serde_json::from_str(&batch_json).unwrap();
+    assert_eq!(deserialized_batch.requests.len(), batch_request.requests.len());
+
+    // Test EmbeddingBatchStats
+    let batch_stats = EmbeddingBatchStats {
+        successful_requests: 2,
+        failed_requests: 0,
+        avg_response_time_ms: 150.5,
+        total_embeddings: 2,
+        total_tokens: 20,
+    };
+
+    let stats_debug = format!("{:?}", batch_stats);
+    assert!(stats_debug.contains("EmbeddingBatchStats"));
+
+    let cloned_stats = batch_stats.clone();
+    assert_eq!(cloned_stats.successful_requests, batch_stats.successful_requests);
+    assert_eq!(cloned_stats.avg_response_time_ms, batch_stats.avg_response_time_ms);
+
+    // Test serialization/deserialization
+    let stats_json = serde_json::to_string(&batch_stats).unwrap();
+    let deserialized_stats: EmbeddingBatchStats = serde_json::from_str(&stats_json).unwrap();
+    assert_eq!(deserialized_stats.successful_requests, batch_stats.successful_requests);
+}
+
+#[test]
+fn test_embedding_provider_structs_debug_clone() {
+    // Test provider structs Debug and Clone traits
+    use graphbit_core::embeddings::*;
+
+    // Test OpenAIEmbeddingProvider Debug and Clone
+    let openai_config = EmbeddingConfig {
+        provider: EmbeddingProvider::OpenAI,
+        api_key: "test-key".to_string(),
+        model: "text-embedding-ada-002".to_string(),
+        base_url: None,
+        timeout_seconds: None,
+        max_batch_size: None,
+        extra_params: HashMap::new(),
+    };
+
+    let openai_provider = OpenAIEmbeddingProvider::new(openai_config).unwrap();
+    let openai_debug = format!("{:?}", openai_provider);
+    assert!(openai_debug.contains("OpenAIEmbeddingProvider"));
+
+    let cloned_openai = openai_provider.clone();
+    assert_eq!(cloned_openai.model_name(), openai_provider.model_name());
+
+    // Test HuggingFaceEmbeddingProvider Debug and Clone
+    let hf_config = EmbeddingConfig {
+        provider: EmbeddingProvider::HuggingFace,
+        api_key: "test-key".to_string(),
+        model: "sentence-transformers/all-MiniLM-L6-v2".to_string(),
+        base_url: None,
+        timeout_seconds: None,
+        max_batch_size: None,
+        extra_params: HashMap::new(),
+    };
+
+    let hf_provider = HuggingFaceEmbeddingProvider::new(hf_config).unwrap();
+    let hf_debug = format!("{:?}", hf_provider);
+    assert!(hf_debug.contains("HuggingFaceEmbeddingProvider"));
+
+    let cloned_hf = hf_provider.clone();
+    assert_eq!(cloned_hf.model_name(), hf_provider.model_name());
+}
+
+#[test]
+fn test_embedding_input_serde_untagged() {
+    // Test the #[serde(untagged)] behavior of EmbeddingInput
+    use graphbit_core::embeddings::EmbeddingInput;
+
+    // Test Single variant serialization
+    let single = EmbeddingInput::Single("test text".to_string());
+    let single_json = serde_json::to_string(&single).unwrap();
+    assert_eq!(single_json, "\"test text\"");
+
+    // Test Multiple variant serialization
+    let multiple = EmbeddingInput::Multiple(vec!["text1".to_string(), "text2".to_string()]);
+    let multiple_json = serde_json::to_string(&multiple).unwrap();
+    assert_eq!(multiple_json, "[\"text1\",\"text2\"]");
+
+    // Test deserialization of string (should become Single)
+    let deserialized_single: EmbeddingInput = serde_json::from_str("\"test text\"").unwrap();
+    match deserialized_single {
+        EmbeddingInput::Single(text) => assert_eq!(text, "test text"),
+        _ => panic!("Expected Single variant"),
+    }
+
+    // Test deserialization of array (should become Multiple)
+    let deserialized_multiple: EmbeddingInput = serde_json::from_str("[\"text1\",\"text2\"]").unwrap();
+    match deserialized_multiple {
+        EmbeddingInput::Multiple(texts) => {
+            assert_eq!(texts.len(), 2);
+            assert_eq!(texts[0], "text1");
+            assert_eq!(texts[1], "text2");
+        },
+        _ => panic!("Expected Multiple variant"),
+    }
+}
+
+#[test]
+fn test_embedding_provider_serde_rename_all() {
+    // Test the #[serde(rename_all = "lowercase")] behavior of EmbeddingProvider
+    use graphbit_core::embeddings::EmbeddingProvider;
+
+    // Test OpenAI serialization (should be lowercase)
+    let openai_json = serde_json::to_string(&EmbeddingProvider::OpenAI).unwrap();
+    assert_eq!(openai_json, "\"openai\"");
+
+    // Test HuggingFace serialization (should be lowercase)
+    let hf_json = serde_json::to_string(&EmbeddingProvider::HuggingFace).unwrap();
+    assert_eq!(hf_json, "\"huggingface\"");
+
+    // Test deserialization (case sensitive)
+    let deserialized_openai: EmbeddingProvider = serde_json::from_str("\"openai\"").unwrap();
+    assert_eq!(deserialized_openai, EmbeddingProvider::OpenAI);
+
+    let deserialized_hf: EmbeddingProvider = serde_json::from_str("\"huggingface\"").unwrap();
+    assert_eq!(deserialized_hf, EmbeddingProvider::HuggingFace);
+
+    // Test that uppercase variants fail
+    let uppercase_result: Result<EmbeddingProvider, _> = serde_json::from_str("\"OpenAI\"");
+    assert!(uppercase_result.is_err());
+}
+
+#[tokio::test]
+async fn test_embedding_batch_response_comprehensive() {
+    // Test EmbeddingBatchResponse with both success and error cases
+    use graphbit_core::embeddings::*;
+    use graphbit_core::errors::GraphBitError;
+
+    let success_response = EmbeddingResponse {
+        embeddings: vec![vec![1.0, 2.0, 3.0]],
+        model: "test-model".to_string(),
+        usage: EmbeddingUsage {
+            prompt_tokens: 5,
+            total_tokens: 5,
+        },
+        metadata: HashMap::new(),
+    };
+
+    let error = GraphBitError::llm("Test error".to_string());
+
+    let batch_response = EmbeddingBatchResponse {
+        responses: vec![
+            Ok(success_response.clone()),
+            Err(error),
+        ],
+        total_duration_ms: 1000,
+        stats: EmbeddingBatchStats {
+            successful_requests: 1,
+            failed_requests: 1,
+            avg_response_time_ms: 500.0,
+            total_embeddings: 1,
+            total_tokens: 5,
+        },
+    };
+
+    // Test Debug trait
+    let debug_str = format!("{:?}", batch_response);
+    assert!(debug_str.contains("EmbeddingBatchResponse"));
+
+    // Test Clone trait
+    let cloned_batch = batch_response.clone();
+    assert_eq!(cloned_batch.responses.len(), batch_response.responses.len());
+    assert_eq!(cloned_batch.total_duration_ms, batch_response.total_duration_ms);
+
+    // Test serialization (this tests the Result<EmbeddingResponse, GraphBitError> serialization)
+    let batch_json = serde_json::to_string(&batch_response).unwrap();
+    assert!(!batch_json.is_empty());
+
+    // Test deserialization
+    let deserialized_batch: EmbeddingBatchResponse = serde_json::from_str(&batch_json).unwrap();
+    assert_eq!(deserialized_batch.responses.len(), batch_response.responses.len());
+    assert_eq!(deserialized_batch.total_duration_ms, batch_response.total_duration_ms);
+}
+
+#[test]
+fn test_all_struct_field_access() {
+    // Test that all struct fields are accessible (covers field access functions)
+    use graphbit_core::embeddings::*;
+
+    // Test EmbeddingConfig field access
+    let mut extra_params = HashMap::new();
+    extra_params.insert("test_param".to_string(), serde_json::Value::String("test_value".to_string()));
+
+    let config = EmbeddingConfig {
+        provider: EmbeddingProvider::OpenAI,
+        api_key: "test-key".to_string(),
+        model: "test-model".to_string(),
+        base_url: Some("https://custom.api.com".to_string()),
+        timeout_seconds: Some(60),
+        max_batch_size: Some(50),
+        extra_params: extra_params.clone(),
+    };
+
+    // Access all fields
+    assert_eq!(config.provider, EmbeddingProvider::OpenAI);
+    assert_eq!(config.api_key, "test-key");
+    assert_eq!(config.model, "test-model");
+    assert_eq!(config.base_url, Some("https://custom.api.com".to_string()));
+    assert_eq!(config.timeout_seconds, Some(60));
+    assert_eq!(config.max_batch_size, Some(50));
+    assert_eq!(config.extra_params.len(), 1);
+
+    // Test EmbeddingRequest field access
+    let request = EmbeddingRequest {
+        input: EmbeddingInput::Single("test".to_string()),
+        user: Some("test-user".to_string()),
+        params: extra_params.clone(),
+    };
+
+    assert_eq!(request.input.len(), 1);
+    assert_eq!(request.user, Some("test-user".to_string()));
+    assert_eq!(request.params.len(), 1);
+}
