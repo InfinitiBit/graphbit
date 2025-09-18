@@ -77,7 +77,7 @@ impl OpenAiProvider {
     }
 
     /// Convert GraphBit message to OpenAI message format
-    fn convert_message(&self, message: &LlmMessage) -> OpenAiMessage {
+    fn convert_message(message: &LlmMessage) -> OpenAiMessage {
         OpenAiMessage {
             role: match message.role {
                 LlmRole::User => "user".to_string(),
@@ -108,7 +108,7 @@ impl OpenAiProvider {
     }
 
     /// Convert GraphBit tool to OpenAI tool format
-    fn convert_tool(&self, tool: &LlmTool) -> OpenAiTool {
+    fn convert_tool(tool: &LlmTool) -> OpenAiTool {
         OpenAiTool {
             r#type: "function".to_string(),
             function: OpenAiFunctionDef {
@@ -209,13 +209,19 @@ impl LlmProviderTrait for OpenAiProvider {
         let messages: Vec<OpenAiMessage> = request
             .messages
             .iter()
-            .map(|m| self.convert_message(m))
+            .map(|m| Self::convert_message(m))
             .collect();
 
         let tools: Option<Vec<OpenAiTool>> = if request.tools.is_empty() {
             None
         } else {
-            Some(request.tools.iter().map(|t| self.convert_tool(t)).collect())
+            Some(
+                request
+                    .tools
+                    .iter()
+                    .map(|t| Self::convert_tool(t))
+                    .collect(),
+            )
         };
 
         let body = OpenAiRequest {

@@ -468,7 +468,7 @@ impl WorkflowExecutor {
             );
         }
 
-        let nodes = self.collect_executable_nodes(&workflow.graph)?;
+        let nodes = Self::collect_executable_nodes(&workflow.graph)?;
         if nodes.is_empty() {
             context.complete();
             return Ok(context);
@@ -1429,7 +1429,7 @@ impl WorkflowExecutor {
     }
 
     /// Helper method to collect nodes in executable order
-    fn collect_executable_nodes(&self, graph: &WorkflowGraph) -> GraphBitResult<Vec<WorkflowNode>> {
+    fn collect_executable_nodes(graph: &WorkflowGraph) -> GraphBitResult<Vec<WorkflowNode>> {
         // Simple topological sort - can be enhanced for better parallelism
         let nodes: Vec<WorkflowNode> = graph.get_nodes().values().cloned().collect();
         Ok(nodes)
