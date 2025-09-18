@@ -56,6 +56,132 @@ async fn test_deepseek_message_formatting() {
 
 // Tool-calling tests removed per request
 
+// `Fireworks AI` Provider Tests
+#[tokio::test]
+async fn test_fireworks_provider_creation() {
+    let provider = LlmProviderFactory::create_provider(LlmConfig::Fireworks {
+        api_key: "test-key".to_string(),
+        model: "accounts/fireworks/models/llama-v3p1-8b-instruct".to_string(),
+        base_url: None,
+    })
+    .unwrap();
+
+    assert_eq!(provider.provider_name(), "fireworks");
+    assert_eq!(
+        provider.model_name(),
+        "accounts/fireworks/models/llama-v3p1-8b-instruct"
+    );
+    assert!(provider.supports_function_calling());
+    assert_eq!(provider.max_context_length(), Some(131_072));
+
+    // Test cost per token
+    let (input_cost, output_cost) = provider.cost_per_token().unwrap();
+    assert_eq!(input_cost, 0.000_000_2);
+    assert_eq!(output_cost, 0.000_000_2);
+}
+
+#[tokio::test]
+async fn test_fireworks_model_configs() {
+    let test_models = vec![
+        (
+            "accounts/fireworks/models/llama-v3p1-8b-instruct",
+            Some(131_072),
+            Some((0.000_000_2, 0.000_000_2)),
+        ),
+        (
+            "accounts/fireworks/models/llama-v3p1-70b-instruct",
+            Some(131_072),
+            Some((0.000_000_9, 0.000_000_9)),
+        ),
+        (
+            "accounts/fireworks/models/llama-v3p1-405b-instruct",
+            Some(131_072),
+            Some((0.000_003, 0.000_003)),
+        ),
+        (
+            "accounts/fireworks/models/llama-v3-8b-instruct",
+            Some(8192),
+            None,
+        ),
+        (
+            "accounts/fireworks/models/llama-v3-70b-instruct",
+            Some(8192),
+            None,
+        ),
+        (
+            "accounts/fireworks/models/mixtral-8x7b-instruct",
+            Some(32_768),
+            Some((0.000_000_5, 0.000_000_5)),
+        ),
+        (
+            "accounts/fireworks/models/mixtral-8x22b-instruct",
+            Some(32_768),
+            Some((0.000_000_9, 0.000_000_9)),
+        ),
+        ("unknown-model", None, None),
+    ];
+
+    for (model, context_length, cost) in test_models {
+        let provider = LlmProviderFactory::create_provider(LlmConfig::Fireworks {
+            api_key: "test-key".to_string(),
+            model: model.to_string(),
+            base_url: None,
+        })
+        .unwrap();
+
+        assert_eq!(provider.max_context_length(), context_length);
+        assert_eq!(provider.cost_per_token(), cost);
+    }
+}
+
+#[tokio::test]
+async fn test_fireworks_message_formatting() {
+    let _provider = LlmProviderFactory::create_provider(LlmConfig::Fireworks {
+        api_key: "test-key".to_string(),
+        model: "accounts/fireworks/models/llama-v3p1-8b-instruct".to_string(),
+        base_url: None,
+    })
+    .unwrap();
+
+    let request = LlmRequest::with_messages(vec![])
+        .with_message(LlmMessage::system("system prompt"))
+        .with_message(LlmMessage::user("user message"))
+        .with_message(LlmMessage::assistant("assistant message"))
+        .with_max_tokens(100)
+        .with_temperature(0.7)
+        .with_top_p(0.9);
+
+    assert_eq!(request.messages.len(), 3);
+    assert!(request
+        .messages
+        .iter()
+        .any(|m| matches!(m.role, LlmRole::System)));
+    assert!(request
+        .messages
+        .iter()
+        .any(|m| matches!(m.role, LlmRole::User)));
+    assert!(request
+        .messages
+        .iter()
+        .any(|m| matches!(m.role, LlmRole::Assistant)));
+}
+
+#[tokio::test]
+async fn test_fireworks_with_custom_base_url() {
+    let provider = LlmProviderFactory::create_provider(LlmConfig::Fireworks {
+        api_key: "test-key".to_string(),
+        model: "accounts/fireworks/models/llama-v3p1-8b-instruct".to_string(),
+        base_url: Some("https://custom.fireworks.ai/v1".to_string()),
+    })
+    .unwrap();
+
+    assert_eq!(provider.provider_name(), "fireworks");
+    assert_eq!(
+        provider.model_name(),
+        "accounts/fireworks/models/llama-v3p1-8b-instruct"
+    );
+}
+
 // `Perplexity` Provider Tests
 #[tokio::test]
 async fn test_perplexity_provider_creation() {

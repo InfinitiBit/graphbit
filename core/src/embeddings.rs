@@ -600,10 +600,8 @@ impl EmbeddingService {
                             Ok(_) => break,     // Successfully acquired slot
                             Err(_) => continue, // Retry
                         }
-                    } else {
-                        // Brief yield to avoid busy waiting
-                        tokio::task::yield_now().await;
                     }
+                    tokio::task::yield_now().await;
                 }
 
                 // Execute the request

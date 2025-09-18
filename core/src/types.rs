@@ -1049,10 +1049,8 @@ impl ConcurrencyManager {
                     Ok(_) => break,     // Successfully acquired
                     Err(_) => continue, // Retry - another thread modified the count
                 }
-            } else {
-                // At capacity, wait for notification
-                wait_queue.notified().await;
             }
+            wait_queue.notified().await;
         }
 
         // Update statistics

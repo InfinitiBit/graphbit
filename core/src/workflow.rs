@@ -280,11 +280,10 @@ impl WorkflowExecutor {
                     config.provider_name()
                 );
                 return config;
-            } else {
-                tracing::warn!(
-                    "Failed to deserialize node-level LLM config, falling back to executor config"
-                );
             }
+            tracing::warn!(
+                "Failed to deserialize node-level LLM config, falling back to executor config"
+            );
         }
 
         // 2. Fall back to executor-level config (medium priority)

@@ -86,6 +86,15 @@ pub enum LlmConfig {
         /// Optional custom base URL
         base_url: Option<String>,
     },
+    /// `Fireworks AI` LLM provider configuration
+    Fireworks {
+        /// API key for authentication
+        api_key: String,
+        /// Model name to use
+        model: String,
+        /// Optional custom base URL
+        base_url: Option<String>,
+    },
     /// Custom LLM provider configuration
     Custom {
         /// Provider type identifier
@@ -178,6 +187,15 @@ impl LlmConfig {
         }
     }
 
+    /// Create `Fireworks AI` configuration
+    pub fn fireworks(api_key: impl Into<String>, model: impl Into<String>) -> Self {
+        Self::Fireworks {
+            api_key: api_key.into(),
+            model: model.into(),
+            base_url: None,
+        }
+    }
+
     /// Create `Ollama` configuration
     pub fn ollama(model: impl Into<String>) -> Self {
         Self::Ollama {
@@ -205,6 +223,7 @@ impl LlmConfig {
             LlmConfig::Perplexity { .. } => "perplexity",
             LlmConfig::OpenRouter { .. } => "openrouter",
             LlmConfig::Google { .. } => "google",
+            LlmConfig::Fireworks { .. } => "fireworks",
             LlmConfig::Custom { provider_type, .. } => provider_type,
         }
     }
@@ -220,6 +239,7 @@ impl LlmConfig {
             LlmConfig::Perplexity { model, .. } => model,
             LlmConfig::OpenRouter { model, .. } => model,
             LlmConfig::Google { model, .. } => model,
+            LlmConfig::Fireworks { model, .. } => model,
             LlmConfig::Custom { config, .. } => config
                 .get("model")
                 .and_then(|v| v.as_str())

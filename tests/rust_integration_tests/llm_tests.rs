@@ -652,6 +652,7 @@ async fn test_llm_provider_factory_multiple_providers() {
     let configs = vec![
         LlmConfig::openai("key1", "gpt-3.5-turbo"),
         LlmConfig::anthropic("key2", "claude-3"),
+        LlmConfig::fireworks("key3", "accounts/fireworks/models/llama-v3p1-8b-instruct"),
         LlmConfig::ollama("llama3.2"),
     ];
 
@@ -659,10 +660,11 @@ async fn test_llm_provider_factory_multiple_providers() {
     assert!(providers_result.is_ok());
 
     let providers = providers_result.unwrap();
-    assert_eq!(providers.len(), 3);
+    assert_eq!(providers.len(), 4);
     assert_eq!(providers[0].provider_name(), "openai");
     assert_eq!(providers[1].provider_name(), "anthropic");
-    assert_eq!(providers[2].provider_name(), "ollama");
+    assert_eq!(providers[2].provider_name(), "fireworks");
+    assert_eq!(providers[3].provider_name(), "ollama");
 }
 
 #[tokio::test]

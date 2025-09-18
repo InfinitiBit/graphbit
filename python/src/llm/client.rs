@@ -188,7 +188,8 @@ impl LlmClient {
             }
             graphbit_core::llm::providers::LlmConfig::OpenAI { .. }
             | graphbit_core::llm::providers::LlmConfig::Anthropic { .. }
-            | graphbit_core::llm::providers::LlmConfig::Perplexity { .. } => {
+            | graphbit_core::llm::providers::LlmConfig::Perplexity { .. }
+            | graphbit_core::llm::providers::LlmConfig::Fireworks { .. } => {
                 // Cloud APIs are typically faster
                 client_config.request_timeout = Duration::from_secs(60);
             }

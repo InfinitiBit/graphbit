@@ -129,6 +129,21 @@ impl LlmConfig {
 
     #[staticmethod]
     #[pyo3(signature = (api_key, model=None))]
+    fn fireworks(api_key: String, model: Option<String>) -> PyResult<Self> {
+        validate_api_key(&api_key, "Fireworks")?;
+
+        Ok(Self {
+            inner: CoreLlmConfig::fireworks(
+                api_key,
+                model.unwrap_or_else(|| {
+                    "accounts/fireworks/models/llama-v3p1-8b-instruct".to_string()
+                }),
+            ),
+        })
+    }
+
+    #[staticmethod]
+    #[pyo3(signature = (api_key, model=None))]
     fn google(api_key: String, model: Option<String>) -> PyResult<Self> {
         validate_api_key(&api_key, "Google")?;
 
