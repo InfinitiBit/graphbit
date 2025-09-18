@@ -140,7 +140,7 @@ psycopg2 = {version = ">=2.9.0", optional = true}
 pydantic-ai = {version = ">=0.0.5", optional = true}
 pymilvus = {version = ">=2.3.0", optional = true}
 pymongo = {version = ">=4.0.0", optional = true}
-python = ">=3.10,<3.13"
+python = ">=3.10,<=3.13.6"
 python-dotenv = ">=1.0.0"
 qdrant-client = {version = ">=1.7.0", optional = true}
 requests = {version = ">=2.25.0", optional = true}
