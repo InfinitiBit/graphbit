@@ -346,6 +346,10 @@ impl LlmProviderFactory {
             LlmConfig::Custom { provider_type, .. } => Err(GraphBitError::config(format!(
                 "Unsupported custom provider: {provider_type}",
             ))),
+            LlmConfig::Unconfigured { message } => Err(GraphBitError::config(format!(
+                "LLM provider not configured: {}",
+                message
+            ))),
         }
     }
 

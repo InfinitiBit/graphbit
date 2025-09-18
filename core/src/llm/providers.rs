@@ -93,6 +93,11 @@ pub enum LlmConfig {
         /// Custom configuration parameters
         config: HashMap<String, serde_json::Value>,
     },
+    /// Unconfigured state - requires explicit configuration
+    Unconfigured {
+        /// Error message explaining the configuration requirement
+        message: String,
+    },
 }
 
 impl LlmConfig {
@@ -206,6 +211,7 @@ impl LlmConfig {
             LlmConfig::OpenRouter { .. } => "openrouter",
             LlmConfig::Fireworks { .. } => "fireworks",
             LlmConfig::Custom { provider_type, .. } => provider_type,
+            LlmConfig::Unconfigured { .. } => "unconfigured",
         }
     }
 
@@ -224,16 +230,16 @@ impl LlmConfig {
                 .get("model")
                 .and_then(|v| v.as_str())
                 .unwrap_or("unknown"),
+            LlmConfig::Unconfigured { .. } => "none",
         }
     }
 }
 
 impl Default for LlmConfig {
-    /// Default configuration uses Ollama with llama3.2 model for local development
+    /// Default configuration requires explicit setup - no hardcoded provider defaults
     fn default() -> Self {
-        Self::Ollama {
-            model: "llama3.2".to_string(),
-            base_url: None,
+        Self::Unconfigured {
+            message: "LLM provider not configured. Please explicitly set an LLM configuration using LlmConfig::openai(), LlmConfig::anthropic(), etc.".to_string(),
         }
     }
 }
