@@ -1,4 +1,4 @@
-//! DeepSeek LLM provider implementation
+//! `DeepSeek` LLM provider implementation
 
 use crate::errors::{GraphBitError, GraphBitResult};
 use crate::llm::providers::LlmProviderTrait;
@@ -9,7 +9,7 @@ use async_trait::async_trait;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
-/// DeepSeek API provider
+/// `DeepSeek` API provider
 pub struct DeepSeekProvider {
     client: Client,
     api_key: String,
@@ -18,7 +18,7 @@ pub struct DeepSeekProvider {
 }
 
 impl DeepSeekProvider {
-    /// Create a new DeepSeek provider
+    /// Create a new `DeepSeek` provider
     pub fn new(api_key: String, model: String) -> GraphBitResult<Self> {
         // Optimized client with connection pooling for better performance
         let client = Client::builder()
@@ -30,7 +30,7 @@ impl DeepSeekProvider {
             .map_err(|e| {
                 GraphBitError::llm_provider(
                     "deepseek",
-                    format!("Failed to create HTTP client: {}", e),
+                    format!("Failed to create HTTP client: {e}"),
                 )
             })?;
         let base_url = "https://api.deepseek.com/v1".to_string();
@@ -43,7 +43,7 @@ impl DeepSeekProvider {
         })
     }
 
-    /// Create a new DeepSeek provider with custom base URL
+    /// Create a new `DeepSeek` provider with custom base URL
     pub fn with_base_url(api_key: String, model: String, base_url: String) -> GraphBitResult<Self> {
         // Use same optimized client settings
         let client = Client::builder()
@@ -55,7 +55,7 @@ impl DeepSeekProvider {
             .map_err(|e| {
                 GraphBitError::llm_provider(
                     "deepseek",
-                    format!("Failed to create HTTP client: {}", e),
+                    format!("Failed to create HTTP client: {e}"),
                 )
             })?;
 
@@ -67,7 +67,7 @@ impl DeepSeekProvider {
         })
     }
 
-    /// Convert GraphBit message to DeepSeek message format
+    /// Convert `GraphBit` message to `DeepSeek` message format
     fn convert_message(&self, message: &LlmMessage) -> DeepSeekMessage {
         DeepSeekMessage {
             role: match message.role {
@@ -98,7 +98,7 @@ impl DeepSeekProvider {
         }
     }
 
-    /// Convert GraphBit tool to DeepSeek tool format
+    /// Convert `GraphBit` tool to `DeepSeek` tool format
     fn convert_tool(&self, tool: &LlmTool) -> DeepSeekTool {
         DeepSeekTool {
             r#type: "function".to_string(),
@@ -110,7 +110,7 @@ impl DeepSeekProvider {
         }
     }
 
-    /// Parse DeepSeek response to GraphBit response
+    /// Parse `DeepSeek` response to `GraphBit` response
     fn parse_response(&self, response: DeepSeekResponse) -> GraphBitResult<LlmResponse> {
         let choice = response
             .choices
@@ -208,9 +208,7 @@ impl LlmProviderTrait for DeepSeekProvider {
             .json(&request_json)
             .send()
             .await
-            .map_err(|e| {
-                GraphBitError::llm_provider("deepseek", format!("Request failed: {}", e))
-            })?;
+            .map_err(|e| GraphBitError::llm_provider("deepseek", format!("Request failed: {e}")))?;
 
         if !response.status().is_success() {
             let error_text = response
@@ -219,19 +217,19 @@ impl LlmProviderTrait for DeepSeekProvider {
                 .unwrap_or_else(|_| "Unknown error".to_string());
             return Err(GraphBitError::llm_provider(
                 "deepseek",
-                format!("API error: {}", error_text),
+                format!("API error: {error_text}"),
             ));
         }
 
         let deepseek_response: DeepSeekResponse = response.json().await.map_err(|e| {
-            GraphBitError::llm_provider("deepseek", format!("Failed to parse response: {}", e))
+            GraphBitError::llm_provider("deepseek", format!("Failed to parse response: {e}"))
         })?;
 
         self.parse_response(deepseek_response)
     }
 
     fn supports_function_calling(&self) -> bool {
-        // DeepSeek models support function calling
+        // `DeepSeek` models support function calling
         matches!(
             self.model.as_str(),
             "deepseek-chat" | "deepseek-coder" | "deepseek-reasoner"
@@ -249,7 +247,7 @@ impl LlmProviderTrait for DeepSeekProvider {
     }
 
     fn cost_per_token(&self) -> Option<(f64, f64)> {
-        // Cost per token in USD (input, output) - DeepSeek is very competitive
+        // Cost per token in USD (input, output) - `DeepSeek` is very competitive
         match self.model.as_str() {
             "deepseek-chat" => Some((0.000_000_14, 0.000_000_28)), // $0.14/$0.28 per 1M tokens
             "deepseek-coder" => Some((0.000_000_14, 0.000_000_28)), // $0.14/$0.28 per 1M tokens
@@ -260,7 +258,7 @@ impl LlmProviderTrait for DeepSeekProvider {
     }
 }
 
-// DeepSeek API types (similar to OpenAI since DeepSeek follows OpenAI API format)
+// `DeepSeek` API types (similar to `OpenAI` since `DeepSeek` follows `OpenAI` API format)
 #[derive(Debug, Serialize)]
 struct DeepSeekRequest {
     model: String,

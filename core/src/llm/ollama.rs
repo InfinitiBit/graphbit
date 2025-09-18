@@ -1,4 +1,4 @@
-//! Ollama LLM provider implementation
+//! `Ollama` LLM provider implementation
 
 use crate::errors::{GraphBitError, GraphBitResult};
 use crate::llm::providers::LlmProviderTrait;
@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-/// Ollama API provider with performance optimizations
+/// `Ollama` API provider with performance optimizations
 pub struct OllamaProvider {
     client: Client,
     model: String,
@@ -21,16 +21,13 @@ pub struct OllamaProvider {
 }
 
 impl OllamaProvider {
-    /// Create a new Ollama provider
+    /// Create a new `Ollama` provider
     pub fn new(model: String) -> GraphBitResult<Self> {
         let client = Client::builder()
             .timeout(std::time::Duration::from_secs(120)) // Reasonable timeout
             .build()
             .map_err(|e| {
-                GraphBitError::llm_provider(
-                    "ollama",
-                    format!("Failed to create HTTP client: {}", e),
-                )
+                GraphBitError::llm_provider("ollama", format!("Failed to create HTTP client: {e}"))
             })?;
         let base_url = "http://localhost:11434".to_string();
 
@@ -42,16 +39,13 @@ impl OllamaProvider {
         })
     }
 
-    /// Create a new Ollama provider with custom base URL
+    /// Create a new `Ollama` provider with custom base URL
     pub fn with_base_url(model: String, base_url: String) -> GraphBitResult<Self> {
         let client = Client::builder()
             .timeout(std::time::Duration::from_secs(120))
             .build()
             .map_err(|e| {
-                GraphBitError::llm_provider(
-                    "ollama",
-                    format!("Failed to create HTTP client: {}", e),
-                )
+                GraphBitError::llm_provider("ollama", format!("Failed to create HTTP client: {e}"))
             })?;
 
         Ok(Self {
@@ -62,7 +56,7 @@ impl OllamaProvider {
         })
     }
 
-    /// Convert GraphBit message to Ollama message format
+    /// Convert `GraphBit` message to `Ollama` message format
     fn convert_message(&self, message: &LlmMessage) -> OllamaMessage {
         OllamaMessage {
             role: match message.role {
@@ -91,7 +85,7 @@ impl OllamaProvider {
         }
     }
 
-    /// Convert GraphBit tool to Ollama tool format
+    /// Convert `GraphBit` tool to `Ollama` tool format
     fn convert_tool(&self, tool: &LlmTool) -> OllamaTool {
         OllamaTool {
             r#type: "function".to_string(),
@@ -103,7 +97,7 @@ impl OllamaProvider {
         }
     }
 
-    /// Parse Ollama response to GraphBit response
+    /// Parse `Ollama` response to `GraphBit` response
     fn parse_response(&self, response: OllamaResponse) -> GraphBitResult<LlmResponse> {
         let content = response.message.content;
         let tool_calls = response
@@ -118,14 +112,14 @@ impl OllamaProvider {
             })
             .collect();
 
-        // Ollama uses "stop" for completion
+        // `Ollama` uses "stop" for completion
         let finish_reason = if response.done {
             FinishReason::Stop
         } else {
             FinishReason::Length
         };
 
-        // Ollama doesn't provide detailed token usage, so we estimate
+        // `Ollama` doesn't provide detailed token usage, so we estimate
         let prompt_tokens = response.prompt_eval_count.unwrap_or(0);
         let completion_tokens = response.eval_count.unwrap_or(0);
         let usage = LlmUsage::new(prompt_tokens, completion_tokens);
@@ -137,7 +131,7 @@ impl OllamaProvider {
             .with_id(format!("ollama_{}", uuid::Uuid::new_v4())))
     }
 
-    /// Check if Ollama is available
+    /// Check if `Ollama` is available
     pub async fn check_availability(&self) -> GraphBitResult<bool> {
         let url = format!("{}/api/tags", self.base_url);
 
@@ -155,8 +149,8 @@ impl OllamaProvider {
             GraphBitError::llm_provider(
                 "ollama",
                 format!(
-                    "Failed to fetch models: {}. Make sure Ollama is running on {}",
-                    e, self.base_url
+                    "Failed to fetch models: {e}. Make sure Ollama is running on {}",
+                    self.base_url
                 ),
             )
         })?;
@@ -169,7 +163,7 @@ impl OllamaProvider {
         }
 
         let models_response: OllamaModelsResponse = response.json().await.map_err(|e| {
-            GraphBitError::llm_provider("ollama", format!("Failed to parse models response: {}", e))
+            GraphBitError::llm_provider("ollama", format!("Failed to parse models response: {e}"))
         })?;
 
         Ok(models_response.models.into_iter().map(|m| m.name).collect())
@@ -209,7 +203,7 @@ impl OllamaProvider {
             .map_err(|e| {
                 GraphBitError::llm_provider(
                     "ollama",
-                    format!("Failed to pull model '{}': {}", self.model, e),
+                    format!("Failed to pull model '{}': {e}", self.model),
                 )
             })?;
 
@@ -312,8 +306,8 @@ impl LlmProviderTrait for OllamaProvider {
                 GraphBitError::llm_provider(
                     "ollama",
                     format!(
-                        "Request failed: {}. Make sure Ollama is running on {}",
-                        e, self.base_url
+                        "Request failed: {e}. Make sure Ollama is running on {}",
+                        self.base_url
                     ),
                 )
             })?;
@@ -323,19 +317,19 @@ impl LlmProviderTrait for OllamaProvider {
             let error_text = response.text().await.unwrap_or_default();
             return Err(GraphBitError::llm_provider(
                 "ollama",
-                format!("HTTP {}: {}", status, error_text),
+                format!("HTTP {status}: {error_text}"),
             ));
         }
 
         let ollama_response: OllamaResponse = response.json().await.map_err(|e| {
-            GraphBitError::llm_provider("ollama", format!("Failed to parse response: {}", e))
+            GraphBitError::llm_provider("ollama", format!("Failed to parse response: {e}"))
         })?;
 
         self.parse_response(ollama_response)
     }
 
     fn supports_function_calling(&self) -> bool {
-        // Ollama supports function calling for some models
+        // `Ollama` supports function calling for some models
         true
     }
 
@@ -356,12 +350,12 @@ impl LlmProviderTrait for OllamaProvider {
     }
 
     fn cost_per_token(&self) -> Option<(f64, f64)> {
-        // Ollama is typically free for local usage
+        // `Ollama` is typically free for local usage
         Some((0.0, 0.0))
     }
 }
 
-// Ollama API request structures
+// `Ollama` API request structures
 #[derive(Debug, Serialize)]
 struct OllamaRequest {
     model: String,

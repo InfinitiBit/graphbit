@@ -1,4 +1,4 @@
-//! Error handling for GraphBit Core
+//! Error handling for `GraphBit` Core
 //!
 //! This module provides a comprehensive error handling system that covers
 //! all potential failure modes in the agentic workflow framework.
@@ -6,10 +6,10 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-/// Result type alias for GraphBit operations
+/// Result type alias for `GraphBit` operations
 pub type GraphBitResult<T> = Result<T, GraphBitError>;
 
-/// Comprehensive error types for the GraphBit framework
+/// Comprehensive error types for the `GraphBit` framework
 #[derive(Error, Debug, Clone, Serialize, Deserialize)]
 pub enum GraphBitError {
     /// Configuration related errors

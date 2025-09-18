@@ -1,6 +1,6 @@
-//! OpenRouter LLM provider implementation
+//! `OpenRouter` LLM provider implementation
 //!
-//! OpenRouter provides unified access to multiple AI models through a single API.
+//! `OpenRouter` provides unified access to multiple AI models through a single API.
 //! It supports OpenAI-compatible endpoints with additional features like model routing
 //! and provider preferences.
 
@@ -13,7 +13,7 @@ use async_trait::async_trait;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
-/// OpenRouter API provider
+/// `OpenRouter` API provider
 pub struct OpenRouterProvider {
     client: Client,
     api_key: String,
@@ -24,7 +24,7 @@ pub struct OpenRouterProvider {
 }
 
 impl OpenRouterProvider {
-    /// Create a new OpenRouter provider
+    /// Create a new `OpenRouter` provider
     pub fn new(api_key: String, model: String) -> GraphBitResult<Self> {
         // Optimized client with connection pooling for better performance
         let client = Client::builder()
@@ -36,7 +36,7 @@ impl OpenRouterProvider {
             .map_err(|e| {
                 GraphBitError::llm_provider(
                     "openrouter",
-                    format!("Failed to create HTTP client: {}", e),
+                    format!("Failed to create HTTP client: {e}"),
                 )
             })?;
         let base_url = "https://openrouter.ai/api/v1".to_string();
@@ -51,7 +51,7 @@ impl OpenRouterProvider {
         })
     }
 
-    /// Create a new OpenRouter provider with custom base URL
+    /// Create a new `OpenRouter` provider with custom base URL
     pub fn with_base_url(api_key: String, model: String, base_url: String) -> GraphBitResult<Self> {
         // Use same optimized client settings
         let client = Client::builder()
@@ -63,7 +63,7 @@ impl OpenRouterProvider {
             .map_err(|e| {
                 GraphBitError::llm_provider(
                     "openrouter",
-                    format!("Failed to create HTTP client: {}", e),
+                    format!("Failed to create HTTP client: {e}"),
                 )
             })?;
 
@@ -77,7 +77,7 @@ impl OpenRouterProvider {
         })
     }
 
-    /// Create a new OpenRouter provider with site information for rankings
+    /// Create a new `OpenRouter` provider with site information for rankings
     pub fn with_site_info(
         api_key: String,
         model: String,
@@ -90,7 +90,7 @@ impl OpenRouterProvider {
         Ok(provider)
     }
 
-    /// Convert GraphBit message to OpenRouter message format (OpenAI-compatible)
+    /// Convert `GraphBit` message to `OpenRouter` message format (OpenAI-compatible)
     fn convert_message(&self, message: &LlmMessage) -> OpenRouterMessage {
         OpenRouterMessage {
             role: match message.role {
@@ -121,7 +121,7 @@ impl OpenRouterProvider {
         }
     }
 
-    /// Convert GraphBit tool to OpenRouter tool format (OpenAI-compatible)
+    /// Convert `GraphBit` tool to `OpenRouter` tool format (OpenAI-compatible)
     fn convert_tool(&self, tool: &LlmTool) -> OpenRouterTool {
         OpenRouterTool {
             r#type: "function".to_string(),
@@ -133,7 +133,7 @@ impl OpenRouterProvider {
         }
     }
 
-    /// Parse OpenRouter response to GraphBit response
+    /// Parse `OpenRouter` response to `GraphBit` response
     fn parse_response(&self, response: OpenRouterResponse) -> GraphBitResult<LlmResponse> {
         let choice =
             response.choices.into_iter().next().ok_or_else(|| {
@@ -229,7 +229,7 @@ impl LlmProviderTrait for OpenRouterProvider {
             .header("Authorization", format!("Bearer {}", self.api_key))
             .header("Content-Type", "application/json");
 
-        // Add optional site information for OpenRouter rankings
+        // Add optional site information for `OpenRouter` rankings
         if let Some(ref site_url) = self.site_url {
             request_builder = request_builder.header("HTTP-Referer", site_url);
         }
@@ -242,7 +242,7 @@ impl LlmProviderTrait for OpenRouterProvider {
             .send()
             .await
             .map_err(|e| {
-                GraphBitError::llm_provider("openrouter", format!("Request failed: {}", e))
+                GraphBitError::llm_provider("openrouter", format!("Request failed: {e}"))
             })?;
 
         if !response.status().is_success() {
@@ -252,25 +252,25 @@ impl LlmProviderTrait for OpenRouterProvider {
                 .unwrap_or_else(|_| "Unknown error".to_string());
             return Err(GraphBitError::llm_provider(
                 "openrouter",
-                format!("API error: {}", error_text),
+                format!("API error: {error_text}"),
             ));
         }
 
         let openrouter_response: OpenRouterResponse = response.json().await.map_err(|e| {
-            GraphBitError::llm_provider("openrouter", format!("Failed to parse response: {}", e))
+            GraphBitError::llm_provider("openrouter", format!("Failed to parse response: {e}"))
         })?;
 
         self.parse_response(openrouter_response)
     }
 
     fn supports_function_calling(&self) -> bool {
-        // OpenRouter supports function calling through OpenAI-compatible interface
-        // Most models on OpenRouter support this, but it depends on the specific model
+        // `OpenRouter` supports function calling through OpenAI-compatible interface
+        // Most models on `OpenRouter` support this, but it depends on the specific model
         true
     }
 
     fn max_context_length(&self) -> Option<u32> {
-        // Context length varies by model on OpenRouter
+        // Context length varies by model on `OpenRouter`
         // Common models and their approximate context lengths
         match self.model.as_str() {
             // OpenAI models
@@ -304,7 +304,7 @@ impl LlmProviderTrait for OpenRouterProvider {
     }
 
     fn cost_per_token(&self) -> Option<(f64, f64)> {
-        // Cost per token in USD (input, output) - varies by model on OpenRouter
+        // Cost per token in USD (input, output) - varies by model on `OpenRouter`
         // These are approximate costs and may change
         match self.model.as_str() {
             // OpenAI models (approximate OpenRouter pricing)
@@ -326,7 +326,7 @@ impl LlmProviderTrait for OpenRouterProvider {
     }
 }
 
-// OpenRouter API types (OpenAI-compatible with some extensions)
+// `OpenRouter` API types (OpenAI-compatible with some extensions)
 #[derive(Debug, Serialize)]
 struct OpenRouterRequest {
     model: String,
