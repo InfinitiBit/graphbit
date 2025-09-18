@@ -30,7 +30,7 @@ impl PerplexityProvider {
             .map_err(|e| {
                 GraphBitError::llm_provider(
                     "perplexity",
-                    format!("Failed to create HTTP client: {}", e),
+                    format!("Failed to create HTTP client: {e}"),
                 )
             })?;
         let base_url = "https://api.perplexity.ai".to_string();
@@ -54,7 +54,7 @@ impl PerplexityProvider {
             .map_err(|e| {
                 GraphBitError::llm_provider(
                     "perplexity",
-                    format!("Failed to create HTTP client: {}", e),
+                    format!("Failed to create HTTP client: {e}"),
                 )
             })?;
 
@@ -67,7 +67,7 @@ impl PerplexityProvider {
     }
 
     /// Convert `GraphBit` message to `Perplexity` message format (`OpenAI`-compatible)
-    fn convert_message(&self, message: &LlmMessage) -> PerplexityMessage {
+    fn convert_message(message: &LlmMessage) -> PerplexityMessage {
         PerplexityMessage {
             role: match message.role {
                 LlmRole::User => "user".to_string(),
@@ -98,7 +98,7 @@ impl PerplexityProvider {
     }
 
     /// Convert `GraphBit` tool to `Perplexity` tool format (`OpenAI`-compatible)
-    fn convert_tool(&self, tool: &LlmTool) -> PerplexityTool {
+    fn convert_tool(tool: &LlmTool) -> PerplexityTool {
         PerplexityTool {
             r#type: "function".to_string(),
             function: PerplexityFunctionDef {
@@ -167,13 +167,19 @@ impl LlmProviderTrait for PerplexityProvider {
         let messages: Vec<PerplexityMessage> = request
             .messages
             .iter()
-            .map(|m| self.convert_message(m))
+            .map(|m| Self::convert_message(m))
             .collect();
 
         let tools: Option<Vec<PerplexityTool>> = if request.tools.is_empty() {
             None
         } else {
-            Some(request.tools.iter().map(|t| self.convert_tool(t)).collect())
+            Some(
+                request
+                    .tools
+                    .iter()
+                    .map(|t| Self::convert_tool(t))
+                    .collect(),
+            )
         };
 
         let body = PerplexityRequest {
@@ -208,7 +214,7 @@ impl LlmProviderTrait for PerplexityProvider {
             .send()
             .await
             .map_err(|e| {
-                GraphBitError::llm_provider("perplexity", format!("Request failed: {}", e))
+                GraphBitError::llm_provider("perplexity", format!("Request failed: {e}"))
             })?;
 
         if !response.status().is_success() {
@@ -223,7 +229,7 @@ impl LlmProviderTrait for PerplexityProvider {
         }
 
         let perplexity_response: PerplexityResponse = response.json().await.map_err(|e| {
-            GraphBitError::llm_provider("perplexity", format!("Failed to parse response: {}", e))
+            GraphBitError::llm_provider("perplexity", format!("Failed to parse response: {e}"))
         })?;
 
         self.parse_response(perplexity_response)
@@ -239,10 +245,10 @@ impl LlmProviderTrait for PerplexityProvider {
             "pplx-7b-online" | "pplx-70b-online" => Some(4096),
             "pplx-7b-chat" | "pplx-70b-chat" => Some(8192),
             "llama-2-70b-chat" => Some(4096),
-            "codellama-34b-instruct" => Some(16384),
-            "mistral-7b-instruct" => Some(16384),
+            "codellama-34b-instruct" => Some(16_384),
+            "mistral-7b-instruct" => Some(16_384),
             "sonar" | "sonar-reasoning" => Some(8192),
-            "sonar-deep-research" => Some(32768),
+            "sonar-deep-research" => Some(32_768),
             _ if self.model.starts_with("sonar") => Some(8192),
             _ => Some(4096), // Conservative default
         }
@@ -251,16 +257,16 @@ impl LlmProviderTrait for PerplexityProvider {
     fn cost_per_token(&self) -> Option<(f64, f64)> {
         // Cost per token in USD (input, output) based on `Perplexity` pricing
         match self.model.as_str() {
-            "pplx-7b-online" => Some((0.0000002, 0.0000002)),
-            "pplx-70b-online" => Some((0.000001, 0.000001)),
-            "pplx-7b-chat" => Some((0.0000002, 0.0000002)),
-            "pplx-70b-chat" => Some((0.000001, 0.000001)),
-            "llama-2-70b-chat" => Some((0.000001, 0.000001)),
-            "codellama-34b-instruct" => Some((0.00000035, 0.00000140)),
-            "mistral-7b-instruct" => Some((0.0000002, 0.0000002)),
-            "sonar" => Some((0.000001, 0.000001)),
-            "sonar-reasoning" => Some((0.000002, 0.000002)),
-            "sonar-deep-research" => Some((0.000005, 0.000005)),
+            "pplx-7b-online" => Some((0.000_000_2, 0.000_000_2)),
+            "pplx-70b-online" => Some((0.000_001, 0.000_001)),
+            "pplx-7b-chat" => Some((0.000_000_2, 0.000_000_2)),
+            "pplx-70b-chat" => Some((0.000_001, 0.000_001)),
+            "llama-2-70b-chat" => Some((0.000_001, 0.000_001)),
+            "codellama-34b-instruct" => Some((0.000_000_35, 0.000_001_40)),
+            "mistral-7b-instruct" => Some((0.000_000_2, 0.000_000_2)),
+            "sonar" => Some((0.000_001, 0.000_001)),
+            "sonar-reasoning" => Some((0.000_002, 0.000_002)),
+            "sonar-deep-research" => Some((0.000_005, 0.000_005)),
             _ => None,
         }
     }

@@ -199,7 +199,7 @@ impl OpenAIEmbeddingProvider {
                 config.timeout_seconds.unwrap_or(30),
             ))
             .build()
-            .map_err(|e| GraphBitError::llm(format!("Failed to create HTTP client: {}", e)))?;
+            .map_err(|e| GraphBitError::llm(format!("Failed to create HTTP client: {e}")))?;
 
         Ok(Self { config, client })
     }
@@ -254,7 +254,7 @@ impl EmbeddingProviderTrait for OpenAIEmbeddingProvider {
             .json(&body)
             .send()
             .await
-            .map_err(|e| GraphBitError::llm(format!("Failed to send request to OpenAI: {}", e)))?;
+            .map_err(|e| GraphBitError::llm(format!("Failed to send request to OpenAI: {e}")))?;
 
         if !response.status().is_success() {
             let error_text = response
@@ -262,15 +262,14 @@ impl EmbeddingProviderTrait for OpenAIEmbeddingProvider {
                 .await
                 .unwrap_or_else(|_| "Unknown error".to_string());
             return Err(GraphBitError::llm(format!(
-                "OpenAI API error: {}",
-                error_text
+                "OpenAI API error: {error_text}"
             )));
         }
 
         let response_json: serde_json::Value = response
             .json()
             .await
-            .map_err(|e| GraphBitError::llm(format!("Failed to parse OpenAI response: {}", e)))?;
+            .map_err(|e| GraphBitError::llm(format!("Failed to parse OpenAI response: {e}")))?;
 
         // Parse embeddings
         let embeddings_data = response_json["data"]
@@ -362,7 +361,7 @@ impl HuggingFaceEmbeddingProvider {
                 config.timeout_seconds.unwrap_or(60),
             ))
             .build()
-            .map_err(|e| GraphBitError::llm(format!("Failed to create HTTP client: {}", e)))?;
+            .map_err(|e| GraphBitError::llm(format!("Failed to create HTTP client: {e}")))?;
 
         Ok(Self { config, client })
     }
@@ -415,7 +414,7 @@ impl EmbeddingProviderTrait for HuggingFaceEmbeddingProvider {
             .send()
             .await
             .map_err(|e| {
-                GraphBitError::llm(format!("Failed to send request to HuggingFace: {}", e))
+                GraphBitError::llm(format!("Failed to send request to HuggingFace: {e}"))
             })?;
 
         if !response.status().is_success() {
@@ -424,13 +423,12 @@ impl EmbeddingProviderTrait for HuggingFaceEmbeddingProvider {
                 .await
                 .unwrap_or_else(|_| "Unknown error".to_string());
             return Err(GraphBitError::llm(format!(
-                "HuggingFace API error: {}",
-                error_text
+                "HuggingFace API error: {error_text}"
             )));
         }
 
         let response_json: serde_json::Value = response.json().await.map_err(|e| {
-            GraphBitError::llm(format!("Failed to parse HuggingFace response: {}", e))
+            GraphBitError::llm(format!("Failed to parse HuggingFace response: {e}"))
         })?;
 
         // Parse embeddings - `HuggingFace` returns arrays directly
@@ -656,7 +654,7 @@ impl EmbeddingService {
                 },
                 Err(e) => {
                     failed += 1;
-                    Err(GraphBitError::llm(format!("Task execution failed: {}", e)))
+                    Err(GraphBitError::llm(format!("Task execution failed: {e}")))
                 }
             })
             .collect();

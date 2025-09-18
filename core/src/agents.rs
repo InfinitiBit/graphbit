@@ -139,8 +139,7 @@ impl Agent {
         let test_request = LlmRequest::new("test").with_max_tokens(1);
         if let Err(e) = llm_provider.complete(test_request).await {
             return Err(crate::errors::GraphBitError::config(format!(
-                "LLM configuration validation failed: {}",
-                e
+                "LLM configuration validation failed: {e}"
             )));
         }
 
@@ -168,23 +167,20 @@ impl Agent {
                 tool_name,
                 parameters,
             } => {
-                format!("Tool call: {} with parameters: {}", tool_name, parameters)
+                format!("Tool call: {tool_name} with parameters: {parameters}")
             }
             MessageContent::ToolResponse {
                 tool_name,
                 result,
                 success,
             } => {
-                format!(
-                    "Tool {} response (success: {}): {}",
-                    tool_name, success, result
-                )
+                format!("Tool {tool_name} response (success: {success}): {result}")
             }
             MessageContent::Error {
                 error_code,
                 error_message,
             } => {
-                format!("Error {}: {}", error_code, error_message)
+                format!("Error {error_code}: {error_message}")
             }
         };
 

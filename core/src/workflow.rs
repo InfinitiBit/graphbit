@@ -400,7 +400,7 @@ impl WorkflowExecutor {
 
                     // Create default agent configuration for this workflow
                     let mut default_config = crate::agents::AgentConfig::new(
-                        format!("Agent_{}", agent_id_str),
+                        format!("Agent_{agent_id_str}"),
                         "Auto-generated agent for workflow execution",
                         resolved_llm_config,
                     )
@@ -416,12 +416,11 @@ impl WorkflowExecutor {
                         Ok(agent) => {
                             let mut agents_guard = self.agents.write().await;
                             agents_guard.insert(agent_id.clone(), Arc::new(agent));
-                            tracing::debug!("Auto-registered agent: {}", agent_id);
+                            tracing::debug!("Auto-registered agent: {agent_id}");
                         }
                         Err(e) => {
                             return Err(GraphBitError::workflow_execution(format!(
-                                "Failed to create agent '{}': {}. This may be due to invalid API key or configuration.",
-                                agent_id_str, e
+                                "Failed to create agent '{agent_id_str}': {e}. This may be due to invalid API key or configuration.",
                             )));
                         }
                     }
@@ -467,7 +466,7 @@ impl WorkflowExecutor {
             );
         }
 
-        let nodes = self.collect_executable_nodes(&workflow.graph)?;
+        let nodes = Self::collect_executable_nodes(&workflow.graph)?;
         if nodes.is_empty() {
             context.complete();
             return Ok(context);
@@ -514,8 +513,8 @@ impl WorkflowExecutor {
                                 .await
                                 .map_err(|e| {
                                     GraphBitError::workflow_execution(format!(
-                                        "Failed to acquire permits for node {}: {}",
-                                        node.id, e
+                                        "Failed to acquire permits for node {}: {e}",
+                                        node.id
                                     ))
                                 })?,
                         )
@@ -584,7 +583,7 @@ impl WorkflowExecutor {
                             // Fallback to generic naming if node not found (shouldn't happen)
                             if let Ok(output_str) = serde_json::to_string(&node_result.output) {
                                 ctx.set_variable(
-                                    format!("node_result_{}", total_executed),
+                                    format!("node_result_{total_executed}"),
                                     serde_json::Value::String(output_str),
                                 );
                                 tracing::debug!(
@@ -614,7 +613,7 @@ impl WorkflowExecutor {
                     Err(e) => {
                         if self.fail_fast {
                             should_fail_fast = true;
-                            failure_message = format!("Task execution failed: {}", e);
+                            failure_message = format!("Task execution failed: {e}");
                             break;
                         }
                         total_executed += 1;
@@ -922,7 +921,7 @@ impl WorkflowExecutor {
                         _ => value.to_string(),
                     };
                     // Original titled section
-                    sections.push(format!("=== {} ===\n{}", title, value_str));
+                    sections.push(format!("=== {title} ===\n{value_str}"));
 
                     // Always add to JSON context by id as a fallback key
                     parents_json.insert(pid.to_string(), value.clone());
@@ -951,7 +950,7 @@ impl WorkflowExecutor {
                             .collect::<Vec<_>>()
                             .join(" ")
                             .to_uppercase();
-                        sections.push(format!("{}:\n{}", generic_label, value_str));
+                        sections.push(format!("{generic_label}:\n{value_str}"));
                     }
                 } else {
                     // Debug: could not find value for this parent id/name
@@ -974,7 +973,7 @@ impl WorkflowExecutor {
             } else {
                 let pretty = serde_json::to_string_pretty(&serde_json::Value::Object(parents_json))
                     .unwrap_or("{}".to_string());
-                format!("\n[Context JSON]\n{}\n\n", pretty)
+                format!("\n[Context JSON]\n{pretty}\n\n")
             };
 
             // Debug: summarize what we built
@@ -997,12 +996,11 @@ impl WorkflowExecutor {
                     sections.join("\n\n") + "\n\n"
                 };
                 format!(
-                    "Context from prior nodes (auto-injected):\n{}{}\n{}",
-                    sections_block, directive_line, context_json_block
+                    "Context from prior nodes (auto-injected):\n{sections_block}{directive_line}\n{context_json_block}",
                 )
             };
 
-            let combined = format!("{}[Task]\n{}", implicit_preamble, prompt_template);
+            let combined = format!("{implicit_preamble}[Task]\n{prompt_template}");
             let resolved = Self::resolve_template_variables(&combined, &ctx);
             // Debug log the resolved prompt (trimmed) to verify implicit context presence
             let preview: String = resolved.chars().take(400).collect();
@@ -1020,17 +1018,16 @@ impl WorkflowExecutor {
 
         // DEBUG: Log tool detection
         tracing::info!(
-            "Agent tool detection - has_tools: {}, config keys: {:?}",
-            has_tools,
+            "Agent tool detection - has_tools: {has_tools}, config keys: {:?}",
             node_config.keys().collect::<Vec<_>>()
         );
         if let Some(tool_schemas) = node_config.get("tool_schemas") {
-            tracing::info!("Tool schemas found: {}", tool_schemas);
+            tracing::info!("Tool schemas found: {tool_schemas}");
         }
 
         if has_tools {
             // Execute agent with tool calling orchestration
-            tracing::info!("Executing agent with tools - prompt: '{}'", resolved_prompt);
+            tracing::info!("Executing agent with tools - prompt: '{resolved_prompt}'");
             tracing::info!("ENTERING execute_agent_with_tools function");
 
             let result =
@@ -1057,7 +1054,7 @@ impl WorkflowExecutor {
         node_config: &std::collections::HashMap<String, serde_json::Value>,
         agent: Arc<dyn AgentTrait>,
     ) -> GraphBitResult<serde_json::Value> {
-        tracing::info!("Starting execute_agent_with_tools for agent: {}", _agent_id);
+        tracing::info!("Starting execute_agent_with_tools for agent: {_agent_id}");
         use crate::llm::{LlmRequest, LlmTool};
 
         // Extract tool schemas from node config
@@ -1088,7 +1085,7 @@ impl WorkflowExecutor {
 
         tracing::info!("Created LLM request with {} tools", request.tools.len());
         for (i, tool) in request.tools.iter().enumerate() {
-            tracing::info!("Tool {}: {} - {}", i, tool.name, tool.description);
+            tracing::info!("Tool {i}: {} - {}", tool.name, tool.description);
         }
 
         // Execute LLM request directly to get tool calls
@@ -1106,8 +1103,7 @@ impl WorkflowExecutor {
         );
         for (i, tool_call) in llm_response.tool_calls.iter().enumerate() {
             tracing::info!(
-                "Tool call {}: {} with params: {:?}",
-                i,
+                "Tool call {i}: {} with params: {:?}",
                 tool_call.name,
                 tool_call.parameters
             );
@@ -1123,7 +1119,7 @@ impl WorkflowExecutor {
             // Instead of executing tools in Rust, return a structured response that indicates
             // tool calls need to be executed by the Python layer
             let tool_calls_json = serde_json::to_value(&llm_response.tool_calls).map_err(|e| {
-                GraphBitError::workflow_execution(format!("Failed to serialize tool calls: {}", e))
+                GraphBitError::workflow_execution(format!("Failed to serialize tool calls: {e}"))
             })?;
 
             // Return a structured response that the Python layer can interpret
@@ -1163,8 +1159,7 @@ impl WorkflowExecutor {
     async fn execute_delay_node_static(duration_seconds: u64) -> GraphBitResult<serde_json::Value> {
         tokio::time::sleep(tokio::time::Duration::from_secs(duration_seconds)).await;
         Ok(serde_json::Value::String(format!(
-            "Delayed for {} seconds",
-            duration_seconds
+            "Delayed for {duration_seconds} seconds",
         )))
     }
 
@@ -1190,8 +1185,7 @@ impl WorkflowExecutor {
                 Ok(content_json)
             }
             Err(e) => Err(GraphBitError::workflow_execution(format!(
-                "Failed to load document: {}",
-                e
+                "Failed to load document: {e}",
             ))),
         }
     }
@@ -1239,8 +1233,7 @@ impl WorkflowExecutor {
                         .await
                         .map_err(|e| {
                             GraphBitError::workflow_execution(format!(
-                                "Failed to acquire permits for concurrent task {}: {}",
-                                index, e
+                                "Failed to acquire permits for concurrent task {index}: {e}",
                             ))
                         })?;
 
@@ -1259,8 +1252,7 @@ impl WorkflowExecutor {
             match join_result {
                 Ok(task_result) => results.push(task_result),
                 Err(e) => results.push(Err(GraphBitError::workflow_execution(format!(
-                    "Task join failed: {}",
-                    e
+                    "Task join failed: {e}",
                 )))),
             }
         }
@@ -1299,8 +1291,7 @@ impl WorkflowExecutor {
                 match tokio::time::timeout(timeout_duration, task_future).await {
                     Ok(result) => result,
                     Err(_) => Err(GraphBitError::workflow_execution(format!(
-                        "Task execution timed out after {}ms",
-                        timeout_ms
+                        "Task execution timed out after {timeout_ms}ms",
                     ))),
                 }
             } else {
@@ -1329,8 +1320,7 @@ impl WorkflowExecutor {
 
                     // No more retries, return the error
                     return Err(GraphBitError::workflow_execution(format!(
-                        "Task failed after {} attempts: {}",
-                        attempt, error
+                        "Task failed after {attempt} attempts: {error}",
                     )));
                 }
             }
@@ -1378,8 +1368,7 @@ impl WorkflowExecutor {
             agent
         } else {
             return Err(GraphBitError::workflow_execution(format!(
-                "Agent {} not found. Please register the agent first.",
-                agent_id
+                "Agent {agent_id} not found. Please register the agent first.",
             )));
         };
 
@@ -1401,10 +1390,9 @@ impl WorkflowExecutor {
 
                     // Execute the agent task directly using the execute method for better performance
                     agent_clone.execute(message).await.map_err(|e| {
-                        GraphBitError::workflow_execution(format!(
-                            "Agent task {} failed: {}",
-                            index, e
-                        ))
+                        GraphBitError::workflow_execution(
+                            format!("Agent task {index} failed: {e}",),
+                        )
                     })
                 })
             })
@@ -1418,8 +1406,7 @@ impl WorkflowExecutor {
             match task_result {
                 Ok(result) => task_results.push(result),
                 Err(e) => task_results.push(Err(GraphBitError::workflow_execution(format!(
-                    "Task join failed: {}",
-                    e
+                    "Task join failed: {e}"
                 )))),
             }
         }
@@ -1428,7 +1415,7 @@ impl WorkflowExecutor {
     }
 
     /// Helper method to collect nodes in executable order
-    fn collect_executable_nodes(&self, graph: &WorkflowGraph) -> GraphBitResult<Vec<WorkflowNode>> {
+    fn collect_executable_nodes(graph: &WorkflowGraph) -> GraphBitResult<Vec<WorkflowNode>> {
         // Simple topological sort - can be enhanced for better parallelism
         let nodes: Vec<WorkflowNode> = graph.get_nodes().values().cloned().collect();
         Ok(nodes)
@@ -1548,7 +1535,7 @@ impl WorkflowExecutor {
 
         // Replace simple variables for backward compatibility
         for (key, value) in &context.variables {
-            let placeholder = format!("{{{}}}", key);
+            let placeholder = format!("{{{key}}}");
             if let Ok(value_str) = serde_json::to_string(value) {
                 let value_str = value_str.trim_matches('"');
                 result = result.replace(&placeholder, value_str);

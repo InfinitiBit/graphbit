@@ -86,12 +86,12 @@ impl WorkflowGraph {
             let from_index = self
                 .node_map
                 .get(from)
-                .ok_or_else(|| GraphBitError::graph(format!("Source node {} not found", from)))?;
+                .ok_or_else(|| GraphBitError::graph(format!("Source node {from} not found")))?;
 
             let to_index = self
                 .node_map
                 .get(to)
-                .ok_or_else(|| GraphBitError::graph(format!("Target node {} not found", to)))?;
+                .ok_or_else(|| GraphBitError::graph(format!("Target node {to} not found")))?;
 
             self.graph.add_edge(*from_index, *to_index, edge.clone());
         }
@@ -111,8 +111,7 @@ impl WorkflowGraph {
                 .map(|n| n.name.clone())
                 .unwrap_or_else(|| "<unknown>".to_string());
             return Err(GraphBitError::graph(format!(
-                "Node already exists: id={} (existing name='{}', incoming name='{}'). Hint: create a fresh Node instance; do not add the same Node object twice.",
-                node_id, existing_name, incoming_name
+                "Node already exists: id={node_id} (existing name='{existing_name}', incoming name='{incoming_name}'). Hint: create a fresh Node instance; do not add the same Node object twice."
             )));
         }
 
@@ -131,12 +130,12 @@ impl WorkflowGraph {
         let from_index = self
             .node_map
             .get(&from)
-            .ok_or_else(|| GraphBitError::graph(format!("Source node {} not found", from)))?;
+            .ok_or_else(|| GraphBitError::graph(format!("Source node {from} not found")))?;
 
         let to_index = self
             .node_map
             .get(&to)
-            .ok_or_else(|| GraphBitError::graph(format!("Target node {} not found", to)))?;
+            .ok_or_else(|| GraphBitError::graph(format!("Target node {to} not found")))?;
 
         self.graph.add_edge(*from_index, *to_index, edge.clone());
         self.edges.push((from, to, edge));
@@ -152,7 +151,7 @@ impl WorkflowGraph {
         let graph_index = self
             .node_map
             .remove(node_id)
-            .ok_or_else(|| GraphBitError::graph(format!("Node {} not found", node_id)))?;
+            .ok_or_else(|| GraphBitError::graph(format!("Node {node_id} not found")))?;
 
         self.graph.remove_node(graph_index);
         self.nodes.remove(node_id);
@@ -350,14 +349,12 @@ impl WorkflowGraph {
         for (from, to, _) in &self.edges {
             if !self.nodes.contains_key(from) {
                 return Err(GraphBitError::graph(format!(
-                    "Edge references non-existent source node: {}",
-                    from
+                    "Edge references non-existent source node: {from}"
                 )));
             }
             if !self.nodes.contains_key(to) {
                 return Err(GraphBitError::graph(format!(
-                    "Edge references non-existent target node: {}",
-                    to
+                    "Edge references non-existent target node: {to}"
                 )));
             }
         }
@@ -391,10 +388,10 @@ impl WorkflowGraph {
                 for (aid, entries) in duplicates {
                     let detail = entries
                         .into_iter()
-                        .map(|(id, name)| format!("{{id={}, name='{}'}}", id, name))
+                        .map(|(id, name)| format!("{{id={id}, name='{name}'}}"))
                         .collect::<Vec<_>>()
                         .join(", ");
-                    parts.push(format!("agent_id='{}' used by: [{}]", aid, detail));
+                    parts.push(format!("agent_id='{aid}' used by: [{detail}]"));
                 }
                 return Err(GraphBitError::graph(format!(
                     "Duplicate agent_id detected. Each agent_id must be unique across the workflow. Conflicts: {}",
@@ -432,7 +429,7 @@ impl WorkflowGraph {
                         .map(|id| id.to_string())
                         .collect::<Vec<_>>()
                         .join(", ");
-                    parts.push(format!("name='{}' used by node ids: [{}]", name, ids_str));
+                    parts.push(format!("name='{name}' used by node ids: [{ids_str}]"));
                 }
                 return Err(GraphBitError::graph(format!(
                     "Duplicate node names not allowed (enforce_unique_node_names=true). Conflicts: {}",
@@ -607,8 +604,7 @@ impl WorkflowNode {
                 let supported_types = ["pdf", "txt", "docx", "json", "csv", "xml", "html"];
                 if !supported_types.contains(&document_type.to_lowercase().as_str()) {
                     return Err(GraphBitError::graph(format!(
-                        "Unsupported document type: {}. Supported types: {:?}",
-                        document_type, supported_types
+                        "Unsupported document type: {document_type}. Supported types: {supported_types:?}"
                     )));
                 }
             }

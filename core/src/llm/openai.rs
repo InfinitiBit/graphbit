@@ -29,10 +29,7 @@ impl OpenAiProvider {
             .tcp_keepalive(std::time::Duration::from_secs(60))
             .build()
             .map_err(|e| {
-                GraphBitError::llm_provider(
-                    "openai",
-                    format!("Failed to create HTTP client: {}", e),
-                )
+                GraphBitError::llm_provider("openai", format!("Failed to create HTTP client: {e}"))
             })?;
         let base_url = "https://api.openai.com/v1".to_string();
 
@@ -55,10 +52,7 @@ impl OpenAiProvider {
             .tcp_keepalive(std::time::Duration::from_secs(60))
             .build()
             .map_err(|e| {
-                GraphBitError::llm_provider(
-                    "openai",
-                    format!("Failed to create HTTP client: {}", e),
-                )
+                GraphBitError::llm_provider("openai", format!("Failed to create HTTP client: {e}"))
             })?;
 
         Ok(Self {
@@ -77,7 +71,7 @@ impl OpenAiProvider {
     }
 
     /// Convert `GraphBit` message to `OpenAI` message format
-    fn convert_message(&self, message: &LlmMessage) -> OpenAiMessage {
+    fn convert_message(message: &LlmMessage) -> OpenAiMessage {
         OpenAiMessage {
             role: match message.role {
                 LlmRole::User => "user".to_string(),
@@ -108,7 +102,7 @@ impl OpenAiProvider {
     }
 
     /// Convert `GraphBit` tool to `OpenAI` tool format
-    fn convert_tool(&self, tool: &LlmTool) -> OpenAiTool {
+    fn convert_tool(tool: &LlmTool) -> OpenAiTool {
         OpenAiTool {
             r#type: "function".to_string(),
             function: OpenAiFunctionDef {
@@ -152,9 +146,8 @@ impl OpenAiProvider {
                         Ok(params) => params,
                         Err(e) => {
                             tracing::warn!(
-                                "Failed to parse tool call arguments for {}: {}. Arguments: '{}'",
+                                "Failed to parse tool call arguments for {}: {e}. Arguments: '{}'",
                                 tc.function.name,
-                                e,
                                 tc.function.arguments
                             );
                             // Try to create a simple object with the raw arguments
@@ -209,13 +202,19 @@ impl LlmProviderTrait for OpenAiProvider {
         let messages: Vec<OpenAiMessage> = request
             .messages
             .iter()
-            .map(|m| self.convert_message(m))
+            .map(|m| Self::convert_message(m))
             .collect();
 
         let tools: Option<Vec<OpenAiTool>> = if request.tools.is_empty() {
             None
         } else {
-            Some(request.tools.iter().map(|t| self.convert_tool(t)).collect())
+            Some(
+                request
+                    .tools
+                    .iter()
+                    .map(|t| Self::convert_tool(t))
+                    .collect(),
+            )
         };
 
         let body = OpenAiRequest {
@@ -254,7 +253,7 @@ impl LlmProviderTrait for OpenAiProvider {
         let response = req_builder
             .send()
             .await
-            .map_err(|e| GraphBitError::llm_provider("openai", format!("Request failed: {}", e)))?;
+            .map_err(|e| GraphBitError::llm_provider("openai", format!("Request failed: {e}")))?;
 
         if !response.status().is_success() {
             let error_text = response
@@ -263,12 +262,12 @@ impl LlmProviderTrait for OpenAiProvider {
                 .unwrap_or_else(|_| "Unknown error".to_string());
             return Err(GraphBitError::llm_provider(
                 "openai",
-                format!("API error: {}", error_text),
+                format!("API error: {error_text}"),
             ));
         }
 
         let openai_response: OpenAiResponse = response.json().await.map_err(|e| {
-            GraphBitError::llm_provider("openai", format!("Failed to parse response: {}", e))
+            GraphBitError::llm_provider("openai", format!("Failed to parse response: {e}"))
         })?;
 
         self.parse_response(openai_response)
@@ -286,12 +285,12 @@ impl LlmProviderTrait for OpenAiProvider {
     fn max_context_length(&self) -> Option<u32> {
         match self.model.as_str() {
             "gpt-4" => Some(8192),
-            "gpt-4-32k" => Some(32768),
-            "gpt-4-turbo" => Some(128000),
-            "gpt-4o" => Some(128000),
-            "gpt-4o-mini" => Some(128000),
+            "gpt-4-32k" => Some(32_768),
+            "gpt-4-turbo" => Some(128_000),
+            "gpt-4o" => Some(128_000),
+            "gpt-4o-mini" => Some(128_000),
             "gpt-3.5-turbo" => Some(4096),
-            "gpt-3.5-turbo-16k" => Some(16384),
+            "gpt-3.5-turbo-16k" => Some(16_384),
             _ => None,
         }
     }
@@ -299,13 +298,13 @@ impl LlmProviderTrait for OpenAiProvider {
     fn cost_per_token(&self) -> Option<(f64, f64)> {
         // Cost per token in USD (input, output) as of late 2023
         match self.model.as_str() {
-            "gpt-4" => Some((0.00003, 0.00006)),
-            "gpt-4-32k" => Some((0.00006, 0.00012)),
-            "gpt-4-turbo" => Some((0.00001, 0.00003)),
-            "gpt-4o" => Some((0.000005, 0.000015)),
-            "gpt-4o-mini" => Some((0.00000015, 0.0000006)),
-            "gpt-3.5-turbo" => Some((0.0000015, 0.000002)),
-            "gpt-3.5-turbo-16k" => Some((0.000003, 0.000004)),
+            "gpt-4" => Some((0.000_03, 0.000_06)),
+            "gpt-4-32k" => Some((0.000_06, 0.000_12)),
+            "gpt-4-turbo" => Some((0.000_01, 0.000_03)),
+            "gpt-4o" => Some((0.000_005, 0.000_015)),
+            "gpt-4o-mini" => Some((0.000_000_15, 0.000_000_6)),
+            "gpt-3.5-turbo" => Some((0.000_001_5, 0.000_002)),
+            "gpt-3.5-turbo-16k" => Some((0.000_003, 0.000_004)),
             _ => None,
         }
     }

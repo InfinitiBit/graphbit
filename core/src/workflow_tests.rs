@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::graph::{EdgeType, NodeType, WorkflowEdge, WorkflowGraph, WorkflowNode};
+    use crate::graph::{NodeType, WorkflowNode};
     use crate::types::AgentId;
     use crate::types::{NodeId, WorkflowContext, WorkflowId};
     use crate::workflow::Workflow;
@@ -246,16 +246,14 @@ mod tests {
         let err = workflow
             .validate()
             .expect_err("validation should fail for duplicate agent_id");
-        let msg = format!("{}", err);
+        let msg = format!("{err}");
         assert!(
             msg.contains("Duplicate agent_id detected"),
-            "unexpected error: {}",
-            msg
+            "unexpected error: {msg}"
         );
         assert!(
             msg.contains("SAME_AGENT"),
-            "error should mention the conflicting agent_id; got: {}",
-            msg
+            "error should mention the conflicting agent_id; got: {msg}"
         );
     }
 
@@ -323,16 +321,14 @@ mod tests {
         let err = workflow
             .validate()
             .expect_err("validation should fail with name enforcement");
-        let msg = format!("{}", err);
+        let msg = format!("{err}");
         assert!(
             msg.contains("Duplicate node names not allowed"),
-            "unexpected error: {}",
-            msg
+            "unexpected error: {msg}"
         );
         assert!(
             msg.contains("name='Same'"),
-            "error should mention duplicated name; got: {}",
-            msg
+            "error should mention duplicated name; got: {msg}"
         );
     }
 
@@ -355,16 +351,14 @@ mod tests {
         let err = workflow
             .add_node(node_clone)
             .expect_err("second add should fail");
-        let msg = format!("{}", err);
+        let msg = format!("{err}");
         assert!(
             msg.contains("Node already exists: id="),
-            "unexpected msg: {}",
-            msg
+            "unexpected msg: {msg}"
         );
         assert!(
             msg.contains("Hint: create a fresh Node instance"),
-            "should include hint; got: {}",
-            msg
+            "should include hint; got: {msg}"
         );
     }
 }

@@ -30,7 +30,7 @@ impl DeepSeekProvider {
             .map_err(|e| {
                 GraphBitError::llm_provider(
                     "deepseek",
-                    format!("Failed to create HTTP client: {}", e),
+                    format!("Failed to create HTTP client: {e}"),
                 )
             })?;
         let base_url = "https://api.deepseek.com/v1".to_string();
@@ -55,7 +55,7 @@ impl DeepSeekProvider {
             .map_err(|e| {
                 GraphBitError::llm_provider(
                     "deepseek",
-                    format!("Failed to create HTTP client: {}", e),
+                    format!("Failed to create HTTP client: {e}"),
                 )
             })?;
 
@@ -68,7 +68,7 @@ impl DeepSeekProvider {
     }
 
     /// Convert `GraphBit` message to `DeepSeek` message format
-    fn convert_message(&self, message: &LlmMessage) -> DeepSeekMessage {
+    fn convert_message(message: &LlmMessage) -> DeepSeekMessage {
         DeepSeekMessage {
             role: match message.role {
                 LlmRole::User => "user".to_string(),
@@ -99,7 +99,7 @@ impl DeepSeekProvider {
     }
 
     /// Convert `GraphBit` tool to `DeepSeek` tool format
-    fn convert_tool(&self, tool: &LlmTool) -> DeepSeekTool {
+    fn convert_tool(tool: &LlmTool) -> DeepSeekTool {
         DeepSeekTool {
             r#type: "function".to_string(),
             function: DeepSeekFunctionDef {
@@ -169,13 +169,19 @@ impl LlmProviderTrait for DeepSeekProvider {
         let messages: Vec<DeepSeekMessage> = request
             .messages
             .iter()
-            .map(|m| self.convert_message(m))
+            .map(|m| Self::convert_message(m))
             .collect();
 
         let tools: Option<Vec<DeepSeekTool>> = if request.tools.is_empty() {
             None
         } else {
-            Some(request.tools.iter().map(|t| self.convert_tool(t)).collect())
+            Some(
+                request
+                    .tools
+                    .iter()
+                    .map(|t| Self::convert_tool(t))
+                    .collect(),
+            )
         };
 
         let body = DeepSeekRequest {
@@ -208,9 +214,7 @@ impl LlmProviderTrait for DeepSeekProvider {
             .json(&request_json)
             .send()
             .await
-            .map_err(|e| {
-                GraphBitError::llm_provider("deepseek", format!("Request failed: {}", e))
-            })?;
+            .map_err(|e| GraphBitError::llm_provider("deepseek", format!("Request failed: {e}")))?;
 
         if !response.status().is_success() {
             let error_text = response
@@ -219,12 +223,12 @@ impl LlmProviderTrait for DeepSeekProvider {
                 .unwrap_or_else(|_| "Unknown error".to_string());
             return Err(GraphBitError::llm_provider(
                 "deepseek",
-                format!("API error: {}", error_text),
+                format!("API error: {error_text}"),
             ));
         }
 
         let deepseek_response: DeepSeekResponse = response.json().await.map_err(|e| {
-            GraphBitError::llm_provider("deepseek", format!("Failed to parse response: {}", e))
+            GraphBitError::llm_provider("deepseek", format!("Failed to parse response: {e}"))
         })?;
 
         self.parse_response(deepseek_response)
@@ -240,10 +244,10 @@ impl LlmProviderTrait for DeepSeekProvider {
 
     fn max_context_length(&self) -> Option<u32> {
         match self.model.as_str() {
-            "deepseek-chat" => Some(128000),
-            "deepseek-coder" => Some(128000),
-            "deepseek-reasoner" => Some(128000),
-            _ if self.model.starts_with("deepseek-") => Some(128000),
+            "deepseek-chat" => Some(128_000),
+            "deepseek-coder" => Some(128_000),
+            "deepseek-reasoner" => Some(128_000),
+            _ if self.model.starts_with("deepseek-") => Some(128_000),
             _ => None,
         }
     }
@@ -251,10 +255,10 @@ impl LlmProviderTrait for DeepSeekProvider {
     fn cost_per_token(&self) -> Option<(f64, f64)> {
         // Cost per token in USD (input, output) - `DeepSeek` is very competitive
         match self.model.as_str() {
-            "deepseek-chat" => Some((0.00000014, 0.00000028)), // $0.14/$0.28 per 1M tokens
-            "deepseek-coder" => Some((0.00000014, 0.00000028)), // $0.14/$0.28 per 1M tokens
-            "deepseek-reasoner" => Some((0.00000055, 0.0000022)), // $0.55/$2.19 per 1M tokens
-            _ if self.model.starts_with("deepseek-") => Some((0.00000014, 0.00000028)),
+            "deepseek-chat" => Some((0.000_000_14, 0.000_000_28)), // $0.14/$0.28 per 1M tokens
+            "deepseek-coder" => Some((0.000_000_14, 0.000_000_28)), // $0.14/$0.28 per 1M tokens
+            "deepseek-reasoner" => Some((0.000_000_55, 0.000_002_2)), // $0.55/$2.19 per 1M tokens
+            _ if self.model.starts_with("deepseek-") => Some((0.000_000_14, 0.000_000_28)),
             _ => None,
         }
     }

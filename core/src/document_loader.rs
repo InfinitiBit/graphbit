@@ -78,7 +78,7 @@ impl DocumentLoader {
         if !supported_types.contains(&document_type.to_lowercase().as_str()) {
             return Err(GraphBitError::validation(
                 "document_loader",
-                format!("Unsupported document type: {}", document_type),
+                format!("Unsupported document type: {document_type}"),
             ));
         }
 
@@ -90,8 +90,7 @@ impl DocumentLoader {
             return Err(GraphBitError::validation(
                 "document_loader",
                 format!(
-                    "Invalid URL format: {}. Only HTTP and HTTPS URLs are supported",
-                    source_path
+                    "Invalid URL format: {source_path}. Only HTTP and HTTPS URLs are supported"
                 ),
             ));
         } else {
@@ -113,7 +112,7 @@ impl DocumentLoader {
         if !path.exists() {
             return Err(GraphBitError::validation(
                 "document_loader",
-                format!("File not found: {}", file_path),
+                format!("File not found: {file_path}"),
             ));
         }
 
@@ -121,7 +120,7 @@ impl DocumentLoader {
         let metadata = std::fs::metadata(path).map_err(|e| {
             GraphBitError::validation(
                 "document_loader",
-                format!("Failed to read file metadata: {}", e),
+                format!("Failed to read file metadata: {e}"),
             )
         })?;
 
@@ -130,8 +129,8 @@ impl DocumentLoader {
             return Err(GraphBitError::validation(
                 "document_loader",
                 format!(
-                    "File size ({} bytes) exceeds maximum allowed size ({} bytes)",
-                    file_size, self.config.max_file_size
+                    "File size ({file_size} bytes) exceeds maximum allowed size ({} bytes)",
+                    self.config.max_file_size
                 ),
             ));
         }
@@ -149,8 +148,7 @@ impl DocumentLoader {
                 return Err(GraphBitError::validation(
                     "document_loader",
                     format!(
-                        "Unsupported document type: {}. Supported types: {:?}",
-                        document_type,
+                        "Unsupported document type: {document_type}. Supported types: {:?}",
                         Self::supported_types()
                     ),
                 ))
@@ -187,7 +185,7 @@ impl DocumentLoader {
         if !url.starts_with("http://") && !url.starts_with("https://") {
             return Err(GraphBitError::validation(
                 "document_loader",
-                format!("Invalid URL format: {}", url),
+                format!("Invalid URL format: {url}"),
             ));
         }
 
@@ -199,23 +197,20 @@ impl DocumentLoader {
             .map_err(|e| {
                 GraphBitError::validation(
                     "document_loader",
-                    format!("Failed to create HTTP client: {}", e),
+                    format!("Failed to create HTTP client: {e}"),
                 )
             })?;
 
         // Fetch the document
         let response = client.get(url).send().await.map_err(|e| {
-            GraphBitError::validation(
-                "document_loader",
-                format!("Failed to fetch URL {}: {}", url, e),
-            )
+            GraphBitError::validation("document_loader", format!("Failed to fetch URL {url}: {e}"))
         })?;
 
         // Check response status
         if !response.status().is_success() {
             return Err(GraphBitError::validation(
                 "document_loader",
-                format!("HTTP error {}: {}", response.status(), url),
+                format!("HTTP error {}: {url}", response.status()),
             ));
         }
 
@@ -225,8 +220,8 @@ impl DocumentLoader {
                 return Err(GraphBitError::validation(
                     "document_loader",
                     format!(
-                        "Remote file size ({} bytes) exceeds maximum allowed size ({} bytes)",
-                        content_length, self.config.max_file_size
+                        "Remote file size ({content_length} bytes) exceeds maximum allowed size ({} bytes)",
+                        self.config.max_file_size
                     ),
                 ));
             }
@@ -244,7 +239,7 @@ impl DocumentLoader {
         let content_bytes = response.bytes().await.map_err(|e| {
             GraphBitError::validation(
                 "document_loader",
-                format!("Failed to read response body: {}", e),
+                format!("Failed to read response body: {e}"),
             )
         })?;
 
@@ -266,25 +261,19 @@ impl DocumentLoader {
                 .map_err(|e| {
                     GraphBitError::validation(
                         "document_loader",
-                        format!("Failed to decode text content: {}", e),
+                        format!("Failed to decode text content: {e}"),
                     )
                 })?,
             "pdf" | "docx" => {
                 return Err(GraphBitError::validation(
                     "document_loader",
-                    format!(
-                        "URL loading for {} documents is not yet supported",
-                        document_type
-                    ),
+                    format!("URL loading for {document_type} documents is not yet supported"),
                 ));
             }
             _ => {
                 return Err(GraphBitError::validation(
                     "document_loader",
-                    format!(
-                        "Unsupported document type for URL loading: {}",
-                        document_type
-                    ),
+                    format!("Unsupported document type for URL loading: {document_type}"),
                 ));
             }
         };
@@ -297,13 +286,13 @@ impl DocumentLoader {
                     serde_json::from_str(&content).map_err(|e| {
                         GraphBitError::validation(
                             "document_loader",
-                            format!("Invalid JSON content: {}", e),
+                            format!("Invalid JSON content: {e}"),
                         )
                     })?;
                 serde_json::to_string_pretty(&json_value).map_err(|e| {
                     GraphBitError::validation(
                         "document_loader",
-                        format!("Failed to format JSON: {}", e),
+                        format!("Failed to format JSON: {e}"),
                     )
                 })?
             }
@@ -338,10 +327,7 @@ impl DocumentLoader {
     /// Extract content from plain text files
     async fn extract_text_content(&self, file_path: &str) -> GraphBitResult<String> {
         let content = std::fs::read_to_string(file_path).map_err(|e| {
-            GraphBitError::validation(
-                "document_loader",
-                format!("Failed to read text file: {}", e),
-            )
+            GraphBitError::validation("document_loader", format!("Failed to read text file: {e}"))
         })?;
         Ok(content)
     }
@@ -349,27 +335,24 @@ impl DocumentLoader {
     /// Extract content from JSON files
     async fn extract_json_content(&self, file_path: &str) -> GraphBitResult<String> {
         let content = std::fs::read_to_string(file_path).map_err(|e| {
-            GraphBitError::validation(
-                "document_loader",
-                format!("Failed to read JSON file: {}", e),
-            )
+            GraphBitError::validation("document_loader", format!("Failed to read JSON file: {e}"))
         })?;
 
         // Validate JSON and optionally format it
         let json_value: serde_json::Value = serde_json::from_str(&content).map_err(|e| {
-            GraphBitError::validation("document_loader", format!("Invalid JSON content: {}", e))
+            GraphBitError::validation("document_loader", format!("Invalid JSON content: {e}"))
         })?;
 
         // Return formatted JSON for better readability
         serde_json::to_string_pretty(&json_value).map_err(|e| {
-            GraphBitError::validation("document_loader", format!("Failed to format JSON: {}", e))
+            GraphBitError::validation("document_loader", format!("Failed to format JSON: {e}"))
         })
     }
 
     /// Extract content from CSV files
     async fn extract_csv_content(&self, file_path: &str) -> GraphBitResult<String> {
         let content = std::fs::read_to_string(file_path).map_err(|e| {
-            GraphBitError::validation("document_loader", format!("Failed to read CSV file: {}", e))
+            GraphBitError::validation("document_loader", format!("Failed to read CSV file: {e}"))
         })?;
 
         // For now, return the raw CSV content
@@ -380,7 +363,7 @@ impl DocumentLoader {
     /// Extract content from XML files
     async fn extract_xml_content(&self, file_path: &str) -> GraphBitResult<String> {
         let content = std::fs::read_to_string(file_path).map_err(|e| {
-            GraphBitError::validation("document_loader", format!("Failed to read XML file: {}", e))
+            GraphBitError::validation("document_loader", format!("Failed to read XML file: {e}"))
         })?;
 
         // For now, return the raw XML content
@@ -391,10 +374,7 @@ impl DocumentLoader {
     /// Extract content from HTML files
     async fn extract_html_content(&self, file_path: &str) -> GraphBitResult<String> {
         let content = std::fs::read_to_string(file_path).map_err(|e| {
-            GraphBitError::validation(
-                "document_loader",
-                format!("Failed to read HTML file: {}", e),
-            )
+            GraphBitError::validation("document_loader", format!("Failed to read HTML file: {e}"))
         })?;
 
         // For now, return the raw HTML content
@@ -407,7 +387,7 @@ impl DocumentLoader {
         use lopdf::Document;
 
         let doc = Document::load(file_path).map_err(|e| {
-            GraphBitError::validation("document_loader", format!("Failed to open PDF file: {}", e))
+            GraphBitError::validation("document_loader", format!("Failed to open PDF file: {e}"))
         })?;
 
         let mut text_content = String::new();
@@ -436,25 +416,16 @@ impl DocumentLoader {
         use std::io::Read;
 
         let mut file = File::open(file_path).map_err(|e| {
-            GraphBitError::validation(
-                "document_loader",
-                format!("Failed to open DOCX file: {}", e),
-            )
+            GraphBitError::validation("document_loader", format!("Failed to open DOCX file: {e}"))
         })?;
 
         let mut buffer = Vec::new();
         file.read_to_end(&mut buffer).map_err(|e| {
-            GraphBitError::validation(
-                "document_loader",
-                format!("Failed to read DOCX file: {}", e),
-            )
+            GraphBitError::validation("document_loader", format!("Failed to read DOCX file: {e}"))
         })?;
 
         let docx = docx_rs::read_docx(&buffer).map_err(|e| {
-            GraphBitError::validation(
-                "document_loader",
-                format!("Failed to parse DOCX file: {}", e),
-            )
+            GraphBitError::validation("document_loader", format!("Failed to parse DOCX file: {e}"))
         })?;
 
         let mut text_content = String::new();
@@ -515,8 +486,7 @@ pub fn validate_document_source(source_path: &str, document_type: &str) -> Graph
         return Err(GraphBitError::validation(
             "document_loader",
             format!(
-                "Unsupported document type: {}. Supported types: {:?}",
-                document_type, supported_types
+                "Unsupported document type: {document_type}. Supported types: {supported_types:?}",
             ),
         ));
     }
@@ -527,7 +497,7 @@ pub fn validate_document_source(source_path: &str, document_type: &str) -> Graph
         if !path.exists() {
             return Err(GraphBitError::validation(
                 "document_loader",
-                format!("File not found: {}", source_path),
+                format!("File not found: {source_path}"),
             ));
         }
     }

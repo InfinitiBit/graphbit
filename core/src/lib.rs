@@ -51,6 +51,6 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub fn init() -> GraphBitResult<()> {
     // Use try_init to avoid panicking if a global subscriber is already set
     let _ = tracing_subscriber::fmt::try_init();
-    tracing::info!("GraphBit Core v{} initialized", VERSION);
+    tracing::info!("GraphBit Core v{VERSION} initialized");
     Ok(())
 }
