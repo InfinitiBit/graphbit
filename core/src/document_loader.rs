@@ -56,6 +56,7 @@ pub struct DocumentLoader {
 
 impl DocumentLoader {
     /// Create a new document loader with default configuration
+    #[must_use]
     pub fn new() -> Self {
         Self {
             config: DocumentLoaderConfig::default(),
@@ -63,7 +64,8 @@ impl DocumentLoader {
     }
 
     /// Create a new document loader with custom configuration
-    pub fn with_config(config: DocumentLoaderConfig) -> Self {
+    #[must_use]
+    pub const fn with_config(config: DocumentLoaderConfig) -> Self {
         Self { config }
     }
 
@@ -457,6 +459,7 @@ impl DocumentLoader {
     }
 
     /// Get supported document types
+    #[must_use]
     pub fn supported_types() -> Vec<&'static str> {
         vec!["txt", "pdf", "docx", "json", "csv", "xml", "html"]
     }
@@ -469,6 +472,7 @@ impl Default for DocumentLoader {
 }
 
 /// Helper function to determine document type from file extension
+#[must_use]
 pub fn detect_document_type(file_path: &str) -> Option<String> {
     let supported_types = DocumentLoader::supported_types();
     Path::new(file_path)

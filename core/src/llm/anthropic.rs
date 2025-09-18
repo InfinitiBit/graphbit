@@ -108,7 +108,7 @@ impl AnthropicProvider {
         }
 
         let finish_reason = match response.stop_reason.as_deref() {
-            Some("end_turn") | Some("stop_sequence") => FinishReason::Stop,
+            Some("end_turn" | "stop_sequence") => FinishReason::Stop,
             Some("max_tokens") => FinishReason::Length,
             Some("tool_use") => FinishReason::Other("tool_use".into()),
             Some(other) => FinishReason::Other(other.to_string()),

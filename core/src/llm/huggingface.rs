@@ -111,7 +111,7 @@ impl LlmProviderTrait for HuggingFaceProvider {
     }
 
     async fn complete(&self, request: LlmRequest) -> GraphBitResult<LlmResponse> {
-        let url = format!("{}/{}", self.base_url, self.model);
+        let url = self.base_url.clone() + "/" + &self.model;
 
         // Format messages for `HuggingFace`
         let inputs = Self::format_messages_for_chat(&request.messages);
@@ -159,7 +159,7 @@ impl LlmProviderTrait for HuggingFaceProvider {
         let response = self
             .client
             .post(&url)
-            .header("Authorization", format!("Bearer {}", self.api_key))
+            .header("Authorization", "Bearer ".to_string() + &self.api_key)
             .header("Content-Type", "application/json")
             .json(&body)
             .send()

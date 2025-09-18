@@ -14,12 +14,12 @@ async fn test_deepseek_provider_creation() {
     assert_eq!(provider.provider_name(), "deepseek");
     assert_eq!(provider.model_name(), "deepseek-chat");
     assert!(provider.supports_function_calling());
-    assert_eq!(provider.max_context_length(), Some(128000));
+    assert_eq!(provider.max_context_length(), Some(128_000));
 
     // Test cost per token
     let (input_cost, output_cost) = provider.cost_per_token().unwrap();
-    assert_eq!(input_cost, 0.00000014);
-    assert_eq!(output_cost, 0.00000028);
+    assert_eq!(input_cost, 0.000_000_14);
+    assert_eq!(output_cost, 0.000_000_28);
 }
 
 #[tokio::test]
@@ -73,23 +73,27 @@ async fn test_perplexity_provider_creation() {
 
     // Test cost per token
     let (input_cost, output_cost) = provider.cost_per_token().unwrap();
-    assert_eq!(input_cost, 0.0000002);
-    assert_eq!(output_cost, 0.0000002);
+    assert_eq!(input_cost, 0.000_000_2);
+    assert_eq!(output_cost, 0.000_000_2);
 }
 
 #[tokio::test]
 async fn test_perplexity_model_configs() {
     let test_models = vec![
-        ("pplx-7b-online", 4096, (0.0000002, 0.0000002)),
-        ("pplx-70b-online", 4096, (0.000001, 0.000001)),
-        ("pplx-7b-chat", 8192, (0.0000002, 0.0000002)),
-        ("pplx-70b-chat", 8192, (0.000001, 0.000001)),
-        ("llama-2-70b-chat", 4096, (0.000001, 0.000001)),
-        ("codellama-34b-instruct", 16384, (0.00000035, 0.00000140)),
-        ("mistral-7b-instruct", 16384, (0.0000002, 0.0000002)),
-        ("sonar", 8192, (0.000001, 0.000001)),
-        ("sonar-reasoning", 8192, (0.000002, 0.000002)),
-        ("sonar-deep-research", 32768, (0.000005, 0.000005)),
+        ("pplx-7b-online", 4096, (0.000_000_2, 0.000_000_2)),
+        ("pplx-70b-online", 4096, (0.000_001, 0.000_001)),
+        ("pplx-7b-chat", 8192, (0.000_000_2, 0.000_000_2)),
+        ("pplx-70b-chat", 8192, (0.000_001, 0.000_001)),
+        ("llama-2-70b-chat", 4096, (0.000_001, 0.000_001)),
+        (
+            "codellama-34b-instruct",
+            16384,
+            (0.000_000_35, 0.000_001_40),
+        ),
+        ("mistral-7b-instruct", 16384, (0.000_000_2, 0.000_000_2)),
+        ("sonar", 8192, (0.000_001, 0.000_001)),
+        ("sonar-reasoning", 8192, (0.000_002, 0.000_002)),
+        ("sonar-deep-research", 32768, (0.000_005, 0.000_005)),
     ];
 
     for (model, context_length, (input_cost, output_cost)) in test_models {

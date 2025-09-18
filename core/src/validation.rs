@@ -21,6 +21,7 @@ pub struct ValidationResult {
 
 impl ValidationResult {
     /// Create a successful validation result
+    #[must_use]
     pub fn success() -> Self {
         Self {
             is_valid: true,
@@ -30,6 +31,7 @@ impl ValidationResult {
     }
 
     /// Create a failed validation result
+    #[must_use]
     pub fn failure(errors: Vec<ValidationError>) -> Self {
         Self {
             is_valid: false,
@@ -39,6 +41,7 @@ impl ValidationResult {
     }
 
     /// Add metadata to the result
+    #[must_use]
     pub fn with_metadata(mut self, key: String, value: serde_json::Value) -> Self {
         self.metadata.insert(key, value);
         self
@@ -92,12 +95,14 @@ impl ValidationError {
     }
 
     /// Add expected value information
+    #[must_use]
     pub fn with_expected(mut self, expected: impl Into<String>) -> Self {
         self.expected = Some(expected.into());
         self
     }
 
     /// Add actual value information
+    #[must_use]
     pub fn with_actual(mut self, actual: impl Into<String>) -> Self {
         self.actual = Some(actual.into());
         self
@@ -132,18 +137,21 @@ impl ValidationRule {
     }
 
     /// Add JSON schema validation
+    #[must_use]
     pub fn with_schema(mut self, schema: serde_json::Value) -> Self {
         self.schema = Some(schema);
         self
     }
 
     /// Add custom validator function
+    #[must_use]
     pub fn with_validator(mut self, validator_function: impl Into<String>) -> Self {
         self.validator_function = Some(validator_function.into());
         self
     }
 
     /// Add configuration
+    #[must_use]
     pub fn with_config(mut self, key: String, value: serde_json::Value) -> Self {
         self.config.insert(key, value);
         self
@@ -158,6 +166,7 @@ pub struct TypeValidator {
 
 impl TypeValidator {
     /// Create a new type validator
+    #[must_use]
     pub fn new() -> Self {
         Self {
             custom_validators: HashMap::with_capacity(8),
@@ -175,6 +184,7 @@ impl TypeValidator {
     }
 
     /// Validate data against a JSON schema
+    #[must_use]
     pub fn validate_against_schema(
         &self,
         data: &str,
@@ -351,6 +361,7 @@ impl TypeValidator {
     }
 
     /// Validate data against a validation rule
+    #[must_use]
     pub fn validate_against_rule(&self, data: &str, rule: &ValidationRule) -> ValidationResult {
         let mut result = ValidationResult::success();
 

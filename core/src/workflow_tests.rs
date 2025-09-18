@@ -233,7 +233,7 @@ mod tests {
             "B",
             "second agent",
             NodeType::Agent {
-                agent_id: shared_agent.clone(),
+                agent_id: shared_agent,
                 prompt_template: "p2".to_string(),
             },
         );

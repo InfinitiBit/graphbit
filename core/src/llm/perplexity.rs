@@ -224,7 +224,7 @@ impl LlmProviderTrait for PerplexityProvider {
                 .unwrap_or_else(|_| "Unknown error".to_string());
             return Err(GraphBitError::llm_provider(
                 "perplexity",
-                format!("API error: {}", error_text),
+                format!("API error: {error_text}"),
             ));
         }
 

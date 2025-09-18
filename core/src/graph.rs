@@ -42,6 +42,7 @@ pub struct WorkflowGraph {
 
 impl WorkflowGraph {
     /// Create a new empty workflow graph
+    #[must_use]
     pub fn new() -> Self {
         Self {
             graph: DiGraph::new(),
@@ -65,7 +66,7 @@ impl WorkflowGraph {
     }
 
     /// Rebuild the graph structure from serialized data
-    /// This must be called after deserialization since graph and `node_map` are not serialized
+    /// This must be called after deserialization since `graph` and `node_map` are not serialized
     pub fn rebuild_graph(&mut self) -> GraphBitResult<()> {
         // Clear existing graph structures
         self.graph = DiGraph::new();
@@ -104,7 +105,7 @@ impl WorkflowGraph {
         let node_id = node.id.clone();
 
         if self.nodes.contains_key(&node_id) {
-            let incoming_name = node.name.clone();
+            let incoming_name = node.name;
             let existing_name = self
                 .nodes
                 .get(&node_id)
@@ -168,23 +169,27 @@ impl WorkflowGraph {
 
     /// Get a node by ID
     #[inline]
+    #[must_use]
     pub fn get_node(&self, node_id: &NodeId) -> Option<&WorkflowNode> {
         self.nodes.get(node_id)
     }
 
     /// Get all nodes
     #[inline]
-    pub fn get_nodes(&self) -> &HashMap<NodeId, WorkflowNode> {
+    #[must_use]
+    pub const fn get_nodes(&self) -> &HashMap<NodeId, WorkflowNode> {
         &self.nodes
     }
 
     /// Get all edges
     #[inline]
+    #[must_use]
     pub fn get_edges(&self) -> &[(NodeId, NodeId, WorkflowEdge)] {
         &self.edges
     }
 
     /// Check if the graph contains cycles
+    #[must_use]
     pub fn has_cycles(&self) -> bool {
         is_cyclic_directed(&self.graph)
     }
@@ -447,23 +452,27 @@ impl WorkflowGraph {
     }
 
     /// Get metadata
+    #[must_use]
     pub fn get_metadata(&self, key: &str) -> Option<&serde_json::Value> {
         self.metadata.get(key)
     }
 
     /// Get number of nodes
     #[inline]
+    #[must_use]
     pub fn node_count(&self) -> usize {
         self.nodes.len()
     }
 
     /// Get number of edges
     #[inline]
+    #[must_use]
     pub fn edge_count(&self) -> usize {
         self.edges.len()
     }
 
     /// Get node ID by name
+    #[must_use]
     pub fn get_node_id_by_name(&self, name: &str) -> Option<NodeId> {
         self.nodes
             .values()
@@ -525,36 +534,42 @@ impl WorkflowNode {
     }
 
     /// Set node configuration
+    #[must_use]
     pub fn with_config(mut self, key: String, value: serde_json::Value) -> Self {
         self.config.insert(key, value);
         self
     }
 
     /// Set input schema
+    #[must_use]
     pub fn with_input_schema(mut self, schema: serde_json::Value) -> Self {
         self.input_schema = Some(schema);
         self
     }
 
     /// Set output schema
+    #[must_use]
     pub fn with_output_schema(mut self, schema: serde_json::Value) -> Self {
         self.output_schema = Some(schema);
         self
     }
 
     /// Set retry configuration
+    #[must_use]
     pub fn with_retry_config(mut self, retry_config: RetryConfig) -> Self {
         self.retry_config = retry_config;
         self
     }
 
     /// Set timeout
-    pub fn with_timeout(mut self, timeout_seconds: u64) -> Self {
+    #[must_use]
+    pub const fn with_timeout(mut self, timeout_seconds: u64) -> Self {
         self.timeout_seconds = Some(timeout_seconds);
         self
     }
 
     /// Add tags
+    #[must_use]
     pub fn with_tags(mut self, tags: Vec<String>) -> Self {
         self.tags = tags;
         self
@@ -621,19 +636,19 @@ impl WorkflowNode {
 pub enum NodeType {
     /// Agent execution node
     Agent {
-        /// Unique identifier for the agent
+        /// Unique identifier of the agent to execute
         agent_id: crate::types::AgentId,
         /// Template for the prompt to send to the agent
         prompt_template: String,
     },
     /// Conditional branching node
     Condition {
-        /// Boolean expression to evaluate
+        /// Boolean expression to evaluate for branching
         expression: String,
     },
     /// Data transformation node
     Transform {
-        /// Transformation logic to apply
+        /// Transformation logic or script to apply
         transformation: String,
     },
     /// Parallel execution splitter
@@ -647,11 +662,11 @@ pub enum NodeType {
     },
     /// HTTP request node
     HttpRequest {
-        /// Target URL for the request
+        /// Target URL for the HTTP request
         url: String,
-        /// HTTP method (GET, POST, etc.)
+        /// HTTP method (GET, POST, PUT, DELETE, etc.)
         method: String,
-        /// HTTP headers to include
+        /// HTTP headers to include in the request
         headers: HashMap<String, String>,
     },
     /// Custom function node
@@ -661,11 +676,11 @@ pub enum NodeType {
     },
     /// Document loading node
     DocumentLoader {
-        /// Type of document to load
+        /// Type of document to load (pdf, txt, html, etc.)
         document_type: String,
-        /// Path to the source document
+        /// Path or URL to the document source
         source_path: String,
-        /// Optional encoding specification
+        /// Optional character encoding for text documents
         encoding: Option<String>,
     },
 }
@@ -685,6 +700,7 @@ pub struct WorkflowEdge {
 
 impl WorkflowEdge {
     /// Create a new data flow edge
+    #[must_use]
     pub fn data_flow() -> Self {
         Self {
             edge_type: EdgeType::DataFlow,
@@ -695,6 +711,7 @@ impl WorkflowEdge {
     }
 
     /// Create a new control flow edge
+    #[must_use]
     pub fn control_flow() -> Self {
         Self {
             edge_type: EdgeType::ControlFlow,
@@ -715,12 +732,14 @@ impl WorkflowEdge {
     }
 
     /// Add a transformation to the edge
+    #[must_use]
     pub fn with_transform(mut self, transform: impl Into<String>) -> Self {
         self.transform = Some(transform.into());
         self
     }
 
     /// Add metadata to the edge
+    #[must_use]
     pub fn with_metadata(mut self, key: String, value: serde_json::Value) -> Self {
         self.metadata.insert(key, value);
         self

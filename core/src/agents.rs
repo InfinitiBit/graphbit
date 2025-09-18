@@ -55,31 +55,36 @@ impl AgentConfig {
     }
 
     /// Add capabilities
+    #[must_use]
     pub fn with_capabilities(mut self, capabilities: Vec<AgentCapability>) -> Self {
         self.capabilities = capabilities;
         self
     }
 
     /// Set system prompt
+    #[must_use]
     pub fn with_system_prompt(mut self, prompt: impl Into<String>) -> Self {
         self.system_prompt = prompt.into();
         self
     }
 
     /// Set max tokens
-    pub fn with_max_tokens(mut self, max_tokens: u32) -> Self {
+    #[must_use]
+    pub const fn with_max_tokens(mut self, max_tokens: u32) -> Self {
         self.max_tokens = Some(max_tokens);
         self
     }
 
     /// Set temperature
-    pub fn with_temperature(mut self, temperature: f32) -> Self {
+    #[must_use]
+    pub const fn with_temperature(mut self, temperature: f32) -> Self {
         self.temperature = Some(temperature);
         self
     }
 
     /// Set agent ID explicitly
-    pub fn with_id(mut self, id: AgentId) -> Self {
+    #[must_use]
+    pub const fn with_id(mut self, id: AgentId) -> Self {
         self.id = id;
         self
     }
@@ -278,37 +283,43 @@ impl AgentBuilder {
     }
 
     /// Set description
+    #[must_use]
     pub fn description(mut self, description: impl Into<String>) -> Self {
         self.config.description = description.into();
         self
     }
 
     /// Add capabilities
+    #[must_use]
     pub fn capabilities(mut self, capabilities: Vec<AgentCapability>) -> Self {
         self.config.capabilities = capabilities;
         self
     }
 
     /// Set system prompt
+    #[must_use]
     pub fn system_prompt(mut self, prompt: impl Into<String>) -> Self {
         self.config.system_prompt = prompt.into();
         self
     }
 
     /// Set max tokens
-    pub fn max_tokens(mut self, max_tokens: u32) -> Self {
+    #[must_use]
+    pub const fn max_tokens(mut self, max_tokens: u32) -> Self {
         self.config.max_tokens = Some(max_tokens);
         self
     }
 
     /// Set temperature
-    pub fn temperature(mut self, temperature: f32) -> Self {
+    #[must_use]
+    pub const fn temperature(mut self, temperature: f32) -> Self {
         self.config.temperature = Some(temperature);
         self
     }
 
     /// Set a specific agent ID (overrides the auto-generated ID)
-    pub fn with_id(mut self, id: AgentId) -> Self {
+    #[must_use]
+    pub const fn with_id(mut self, id: AgentId) -> Self {
         self.config.id = id;
         self
     }

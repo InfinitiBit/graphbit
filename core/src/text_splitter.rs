@@ -44,14 +44,14 @@ impl Default for TextSplitterConfig {
 pub enum SplitterStrategy {
     /// Split by character count
     Character {
-        /// Maximum size of each chunk in characters
+        /// Maximum number of characters per chunk
         chunk_size: usize,
         /// Number of characters to overlap between chunks
         chunk_overlap: usize,
     },
     /// Split by token count (word-based)
     Token {
-        /// Maximum size of each chunk in tokens
+        /// Maximum number of tokens per chunk
         chunk_size: usize,
         /// Number of tokens to overlap between chunks
         chunk_overlap: usize,
@@ -60,7 +60,7 @@ pub enum SplitterStrategy {
     },
     /// Split by sentence boundaries
     Sentence {
-        /// Maximum size of each chunk in characters
+        /// Maximum number of characters per chunk
         chunk_size: usize,
         /// Number of characters to overlap between chunks
         chunk_overlap: usize,
@@ -69,41 +69,41 @@ pub enum SplitterStrategy {
     },
     /// Recursive splitting with multiple separators
     Recursive {
-        /// Maximum size of each chunk in characters
+        /// Maximum number of characters per chunk
         chunk_size: usize,
         /// Number of characters to overlap between chunks
         chunk_overlap: usize,
-        /// Optional custom separator patterns
+        /// Optional custom separator patterns for splitting
         separators: Option<Vec<String>>,
     },
     /// Split by paragraphs
     Paragraph {
-        /// Maximum size of each chunk in characters
+        /// Maximum number of characters per chunk
         chunk_size: usize,
         /// Number of characters to overlap between chunks
         chunk_overlap: usize,
-        /// Minimum length required for a paragraph
+        /// Minimum length required for a paragraph to be considered
         min_paragraph_length: Option<usize>,
     },
     /// Split by semantic similarity (requires embeddings)
     Semantic {
-        /// Maximum size of each chunk in characters
+        /// Maximum number of characters per chunk
         max_chunk_size: usize,
-        /// Similarity threshold for grouping content
+        /// Similarity threshold for grouping related content
         similarity_threshold: f32,
     },
     /// Split Markdown documents preserving structure
     Markdown {
-        /// Maximum size of each chunk in characters
+        /// Maximum number of characters per chunk
         chunk_size: usize,
         /// Number of characters to overlap between chunks
         chunk_overlap: usize,
-        /// Whether to split by header boundaries
+        /// Whether to split at header boundaries
         split_by_headers: bool,
     },
     /// Split code files preserving syntax
     Code {
-        /// Maximum size of each chunk in characters
+        /// Maximum number of characters per chunk
         chunk_size: usize,
         /// Number of characters to overlap between chunks
         chunk_overlap: usize,
@@ -112,9 +112,9 @@ pub enum SplitterStrategy {
     },
     /// Custom regex-based splitting
     Regex {
-        /// Regex pattern for splitting
+        /// Regular expression pattern for splitting
         pattern: String,
-        /// Maximum size of each chunk in characters
+        /// Maximum number of characters per chunk
         chunk_size: usize,
         /// Number of characters to overlap between chunks
         chunk_overlap: usize,
@@ -138,6 +138,7 @@ pub struct TextChunk {
 
 impl TextChunk {
     /// Create a new text chunk
+    #[must_use]
     pub fn new(content: String, start_index: usize, end_index: usize, chunk_index: usize) -> Self {
         let mut metadata = HashMap::new();
         metadata.insert(
@@ -155,6 +156,7 @@ impl TextChunk {
     }
 
     /// Add metadata to the chunk
+    #[must_use]
     pub fn with_metadata(mut self, key: String, value: serde_json::Value) -> Self {
         self.metadata.insert(key, value);
         self
