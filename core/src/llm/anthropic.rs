@@ -41,7 +41,7 @@ impl AnthropicProvider {
     }
 
     /// Convert GraphBit messages to Anthropic format
-    fn convert_messages(&self, messages: &[LlmMessage]) -> (Option<String>, Vec<AnthropicMessage>) {
+    fn convert_messages(messages: &[LlmMessage]) -> (Option<String>, Vec<AnthropicMessage>) {
         let mut system_prompt = None;
         let mut anthropic_messages = Vec::new();
 
@@ -144,7 +144,7 @@ impl LlmProviderTrait for AnthropicProvider {
     async fn complete(&self, request: LlmRequest) -> GraphBitResult<LlmResponse> {
         let url = format!("{}/messages", self.base_url);
 
-        let (system_prompt, messages) = self.convert_messages(&request.messages);
+        let (system_prompt, messages) = Self::convert_messages(&request.messages);
 
         // Convert tools to Anthropic format
         let tools: Option<Vec<AnthropicTool>> = if request.tools.is_empty() {

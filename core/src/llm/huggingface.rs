@@ -43,7 +43,7 @@ impl HuggingFaceProvider {
     }
 
     /// Convert GraphBit messages to HuggingFace chat format
-    fn format_messages_for_chat(&self, messages: &[LlmMessage]) -> String {
+    fn format_messages_for_chat(messages: &[LlmMessage]) -> String {
         let mut formatted = String::new();
 
         for message in messages {
@@ -113,7 +113,7 @@ impl LlmProviderTrait for HuggingFaceProvider {
         let url = format!("{}/{}", self.base_url, self.model);
 
         // Format messages for HuggingFace
-        let inputs = self.format_messages_for_chat(&request.messages);
+        let inputs = Self::format_messages_for_chat(&request.messages);
 
         let mut parameters = HashMap::new();
         if let Some(max_tokens) = request.max_tokens {
