@@ -21,28 +21,28 @@ pub mod workflow_execution_integration;
 /// Integration tests for workflow execution functionality
 pub mod workflow_tests;
 
-/// Check if a valid OpenAI API key is available
+/// Check if a valid `OpenAI` API key is available
 pub fn has_openai_api_key() -> bool {
     std::env::var("OPENAI_API_KEY")
         .map(|key| !key.is_empty() && key != "test-api-key-placeholder")
         .unwrap_or(false)
 }
 
-/// Check if a valid Anthropic API key is available
+/// Check if a valid `Anthropic` API key is available
 pub fn has_anthropic_api_key() -> bool {
     std::env::var("ANTHROPIC_API_KEY")
         .map(|key| !key.is_empty() && key != "test-api-key-placeholder")
         .unwrap_or(false)
 }
 
-/// Check if a valid HuggingFace API key is available
+/// Check if a valid `HuggingFace` API key is available
 pub fn has_huggingface_api_key() -> bool {
     std::env::var("HUGGINGFACE_API_KEY")
         .map(|key| !key.is_empty() && key != "test-api-key-placeholder")
         .unwrap_or(false)
 }
 
-/// Check if Ollama is available (by checking if the service is running)
+/// Check if `Ollama` is available (by checking if the service is running)
 pub async fn has_ollama_available() -> bool {
     // Try to connect to default Ollama endpoint
     let client = reqwest::Client::new();
@@ -54,7 +54,7 @@ pub async fn has_ollama_available() -> bool {
         .is_ok()
 }
 
-/// Get OpenAI API key or skip test if not available
+/// Get `OpenAI` API key or skip test if not available
 pub fn get_openai_api_key_or_skip() -> String {
     match std::env::var("OPENAI_API_KEY") {
         Ok(key) if !key.is_empty() && key != "test-api-key-placeholder" => key,
@@ -65,7 +65,7 @@ pub fn get_openai_api_key_or_skip() -> String {
     }
 }
 
-/// Get Anthropic API key or skip test if not available
+/// Get `Anthropic` API key or skip test if not available
 pub fn get_anthropic_api_key_or_skip() -> String {
     match std::env::var("ANTHROPIC_API_KEY") {
         Ok(key) if !key.is_empty() && key != "test-api-key-placeholder" => key,
@@ -76,7 +76,7 @@ pub fn get_anthropic_api_key_or_skip() -> String {
     }
 }
 
-/// Get HuggingFace API key or skip test if not available
+/// Get `HuggingFace` API key or skip test if not available
 pub fn get_huggingface_api_key_or_skip() -> String {
     match std::env::var("HUGGINGFACE_API_KEY") {
         Ok(key) if !key.is_empty() && key != "test-api-key-placeholder" => key,

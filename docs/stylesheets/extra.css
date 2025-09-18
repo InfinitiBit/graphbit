@@ -161,12 +161,61 @@
   margin-left: auto;
 }
 
-/* Search container with theme toggle */
-.md-header__search-container {
+/* Style the link as a block and add hover effect */
+.gh-link {
+  display: inline-block;
+  text-decoration: none;
+  color: inherit;
+  border-radius: 8px;
+  padding: 4px;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.gh-link:hover {
+  color: black;
+}
+
+.gh {
   display: flex;
   align-items: center;
+  gap: 0.7rem;
+  margin-left: auto;
+  width: 250px;
+  height: 60px;
+}
+
+.gh-repo-icon {
+  margin-left: 1rem;
+  width: 38px;   /* size of the box */
+  height: 30px;  /* same as width for square */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gh-repo-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Make GitHub source section vertical */
+.md-header_source {
+  display: flex;
+  flex-direction: column;   /* stack items top-to-bottom */
+  align-items: flex-start;  /* align left */
+  gap: 0.1rem;              /* small spacing between repo name + stats */
+  font-size: 18px;          /* smaller text size */
+  height: 50px;
+}
+
+/* GitHub stats container */
+.md-source__facts {
+  display: flex;
   gap: 0.5rem;
-  position: relative;
+  margin-top: 0.05rem;
+  font-weight: 500;
+  font-size: 13px;
+  align-items: center;
 }
 
 /* Theme toggle positioning */
