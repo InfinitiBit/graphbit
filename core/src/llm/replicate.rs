@@ -182,11 +182,8 @@ impl ReplicateProvider {
     fn model_supports_function_calling(&self) -> bool {
         // List of known function calling models on Replicate
         let function_calling_models = [
-            "lucataco/glaive-function-calling-v1",
-            "homanp/llama-2-13b-function-calling",
             "lucataco/hermes-2-pro-llama-3-8b",
             "lucataco/dolphin-2.9-llama3-8b",
-            "ibm-granite/granite-3.3-8b-instruct",
         ];
 
         function_calling_models
@@ -330,7 +327,7 @@ impl LlmProviderTrait for ReplicateProvider {
         if self.model.contains("llama-2-13b") {
             Some(4096)
         } else if self.model.contains("glaive-function-calling") {
-            Some(8192)
+            Some(10_192)
         } else if self.model.contains("hermes-2-pro") {
             Some(8192)
         } else if self.model.contains("dolphin") {
