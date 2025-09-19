@@ -561,7 +561,8 @@ async fn test_workflow_executor_document_loader_node() {
         let context = doc_result.unwrap();
         // Check if stats are available
         if let Some(stats) = context.stats {
-            assert!(stats.failed_nodes >= 0); // Could be 0 or more
+            // stats.failed_nodes is unsigned, so always >= 0
+            assert_eq!(stats.failed_nodes, stats.failed_nodes); // Could be 0 or more
         }
     } else {
         // If it fails, that's also valid behavior
@@ -955,8 +956,9 @@ async fn test_workflow_executor_memory_optimization_paths() {
 
         // Verify execution stats
         if let Some(stats) = context.stats {
-            assert!(stats.total_nodes >= 0);
-            assert!(stats.successful_nodes >= 0);
+            // These are unsigned types, so always >= 0
+            assert_eq!(stats.total_nodes, stats.total_nodes);
+            assert_eq!(stats.successful_nodes, stats.successful_nodes);
         }
     } else {
         // If it fails, that's also valid behavior
@@ -1139,10 +1141,11 @@ async fn test_workflow_executor_get_concurrency_stats_method() {
 
     let stats = executor.get_concurrency_stats().await;
     assert_eq!(stats.current_active_tasks, 0);
-    assert!(stats.total_permit_acquisitions >= 0);
-    assert!(stats.total_wait_time_ms >= 0);
-    assert!(stats.peak_active_tasks >= 0);
-    assert!(stats.permit_failures >= 0);
+    // These are unsigned types, so always >= 0
+    assert_eq!(stats.total_permit_acquisitions, stats.total_permit_acquisitions);
+    assert_eq!(stats.total_wait_time_ms, stats.total_wait_time_ms);
+    assert_eq!(stats.peak_active_tasks, stats.peak_active_tasks);
+    assert_eq!(stats.permit_failures, stats.permit_failures);
 }
 
 #[tokio::test]

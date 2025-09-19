@@ -24,7 +24,11 @@ async fn test_openai_llm() {
     assert!(result.is_ok());
 
     let response = result.unwrap();
-    assert!(matches!(response.finish_reason, llm::FinishReason::Stop));
+    // With max_tokens(10), the response might be truncated, so accept both Stop and Length
+    assert!(
+        matches!(response.finish_reason, llm::FinishReason::Stop | llm::FinishReason::Length),
+        "Expected Stop or Length finish reason, got: {:?}", response.finish_reason
+    );
 }
 
 #[tokio::test]
@@ -66,7 +70,11 @@ async fn test_anthropic_llm() {
     assert!(result.is_ok());
 
     let response = result.unwrap();
-    assert!(matches!(response.finish_reason, llm::FinishReason::Stop));
+    // With max_tokens(10), the response might be truncated, so accept both Stop and Length
+    assert!(
+        matches!(response.finish_reason, llm::FinishReason::Stop | llm::FinishReason::Length),
+        "Expected Stop or Length finish reason, got: {:?}", response.finish_reason
+    );
 }
 
 #[tokio::test]
@@ -107,7 +115,11 @@ async fn test_huggingface_llm() {
     assert!(result.is_ok());
 
     let response = result.unwrap();
-    assert!(matches!(response.finish_reason, llm::FinishReason::Stop));
+    // With max_tokens(10), the response might be truncated, so accept both Stop and Length
+    assert!(
+        matches!(response.finish_reason, llm::FinishReason::Stop | llm::FinishReason::Length),
+        "Expected Stop or Length finish reason, got: {:?}", response.finish_reason
+    );
 }
 
 #[tokio::test]
@@ -245,5 +257,9 @@ async fn test_ollama_llm() {
     assert!(result.is_ok());
 
     let response = result.unwrap();
-    assert!(matches!(response.finish_reason, llm::FinishReason::Stop));
+    // With max_tokens(10), the response might be truncated, so accept both Stop and Length
+    assert!(
+        matches!(response.finish_reason, llm::FinishReason::Stop | llm::FinishReason::Length),
+        "Expected Stop or Length finish reason, got: {:?}", response.finish_reason
+    );
 }

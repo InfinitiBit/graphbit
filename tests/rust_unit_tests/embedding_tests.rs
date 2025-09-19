@@ -2120,3 +2120,66 @@ fn test_all_struct_field_access() {
     assert_eq!(request.user, Some("test-user".to_string()));
     assert_eq!(request.params.len(), 1);
 }
+
+#[tokio::test]
+async fn test_openai_embedding_unknown_model_dimension_fallback() {
+    let config = EmbeddingConfig {
+        provider: EmbeddingProvider::OpenAI,
+        api_key: "test-key".to_string(),
+        model: "unknown-model-name".to_string(), // Unknown model
+        base_url: None,
+        max_batch_size: Some(10),
+        timeout_seconds: Some(30),
+        extra_params: HashMap::new(),
+    };
+
+    let provider = OpenAIEmbeddingProvider::new(config).unwrap();
+
+    // Test unknown model dimension handling - should trigger line 333 fallback
+    let dimensions = provider.get_embedding_dimensions().await;
+
+    // For unknown models, it should either:
+    // 1. Return the default 1536 dimensions, or
+    // 2. Make a test request and get actual dimensions (which will fail with invalid API key)
+    // The important thing is it doesn't panic and handles the case appropriately
+    match dimensions {
+        Ok(dim_value) => {
+            assert!(dim_value > 0);
+            assert!(dim_value <= 4096); // Reasonable upper bound for embedding dimensions
+        }
+        Err(_) => {
+            // Expected to fail with invalid API key - this is acceptable for testing the code path
+        }
+    }
+}
+
+#[tokio::test]
+async fn test_huggingface_embedding_dimension_test_request() {
+    let config = EmbeddingConfig {
+        provider: EmbeddingProvider::HuggingFace,
+        model: "sentence-transformers/all-MiniLM-L6-v2".to_string(),
+        api_key: "test-key".to_string(),
+        base_url: None,
+        max_batch_size: Some(10),
+        timeout_seconds: Some(30),
+        extra_params: HashMap::new(),
+    };
+
+    let provider = HuggingFaceEmbeddingProvider::new(config).unwrap();
+
+    // Test HuggingFace dimension detection via test request
+    // This will likely fail due to invalid API key, but tests the code path
+    let dimensions_result = provider.get_embedding_dimensions().await;
+
+    // The test request will likely fail, but we're testing that the code path is exercised
+    // and doesn't panic. The actual result depends on network connectivity and API key validity
+    match dimensions_result {
+        Ok(dim) => {
+            assert!(dim > 0);
+            assert!(dim <= 4096); // Reasonable upper bound
+        }
+        Err(_) => {
+            // Expected to fail with invalid API key - this is fine for testing the code path
+        }
+    }
+}

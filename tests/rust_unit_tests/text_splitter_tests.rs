@@ -807,7 +807,7 @@ fn test_recursive_splitter_recursive_split_edge_cases() {
     assert!(!chunks.is_empty());
 
     // Test text with only separators - this might result in empty chunks being filtered out
-    let chunks = splitter.split_text("\n\n\n\n").unwrap();
+    let _chunks = splitter.split_text("\n\n\n\n").unwrap();
     // The result might be empty if all parts are empty after splitting
     // This is acceptable behavior
 }

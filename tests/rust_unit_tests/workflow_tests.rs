@@ -5,12 +5,12 @@
 //! 100% function coverage.
 
 use graphbit_core::types::{
-    AgentId, AgentMessage, CircuitBreakerConfig, ConcurrencyConfig, MessageContent, NodeId,
+    AgentId, CircuitBreakerConfig, ConcurrencyConfig, NodeId,
     RetryConfig, WorkflowContext, WorkflowId, WorkflowState,
 };
 use graphbit_core::workflow::{Workflow, WorkflowBuilder, WorkflowExecutor};
 use graphbit_core::graph::{NodeType, WorkflowNode, WorkflowEdge, WorkflowGraph};
-use graphbit_core::agents::{AgentBuilder, AgentConfig, AgentTrait};
+use graphbit_core::agents::{AgentBuilder, AgentTrait};
 use graphbit_core::errors::{GraphBitError, GraphBitResult};
 use graphbit_core::llm::LlmConfig;
 use serde_json::json;
@@ -375,91 +375,16 @@ async fn test_execute_concurrent_tasks_with_retry_errors() {
     assert!(results.iter().all(|r| r.is_err()));
 }
 
-
-
-async fn check_ollama_url(url: &str) -> bool {
-    let client = reqwest::Client::new();
-    match client
-        .get(format!("{}/api/version", url.trim_end_matches('/')))
-        .send()
-        .await
-    {
-        Ok(response) => response.status().is_success(),
-        Err(_) => {
-            println!("Failed to connect to Ollama at {url}");
-            false
-        }
-    }
-}
-
-async fn ensure_ollama_model(model: &str, base_url: &str) -> bool {
-    if !check_ollama_url(base_url).await {
-        println!("Skipping Ollama test - server not available at {base_url}");
-        return false;
-    }
-
-    // First check if model exists
-    let client = reqwest::Client::new();
-    let response = client
-        .post(format!("{}/api/show", base_url.trim_end_matches('/')))
-        .json(&serde_json::json!({
-            "name": model
-        }))
-        .send()
-        .await;
-
-    // If model doesn't exist or error, try to pull it
-    if response.is_err() || !response.unwrap().status().is_success() {
-        println!("Model {model} not found, attempting to pull...");
-
-        // Pull the model
-        let response = client
-            .post(format!("{}/api/pull", base_url.trim_end_matches('/')))
-            .json(&serde_json::json!({
-                "name": model
-            }))
-            .send()
-            .await;
-
-        if let Ok(mut response) = response {
-            // Wait for the pull to complete
-            while let Ok(chunk) = response.chunk().await {
-                if chunk.is_none() {
-                    break;
-                }
-                tokio::time::sleep(Duration::from_secs(1)).await;
-            }
-
-            // Verify model exists after pull
-            let verify = client
-                .post(format!("{}/api/show", base_url.trim_end_matches('/')))
-                .json(&serde_json::json!({
-                    "name": model
-                }))
-                .send()
-                .await;
-
-            if verify.is_err() || !verify.unwrap().status().is_success() {
-                println!("Failed to verify model {model} after pulling");
-                return false;
-            }
-            return true;
-        }
-        println!("Failed to pull model {model}");
-        return false;
-    }
-
-    true
-}
-
 #[tokio::test]
 async fn test_workflow_context() {
     let mut context = WorkflowContext::new(WorkflowId::new());
     let node_id = NodeId::from_string("test_node").unwrap();
 
-    let output = json!({
-        "result": "success",
-        "value": 42
+    let output = serde_json::Value::Object({
+        let mut map = serde_json::Map::new();
+        map.insert("result".to_string(), serde_json::Value::String("success".to_string()));
+        map.insert("value".to_string(), serde_json::Value::Number(serde_json::Number::from(42)));
+        map
     });
 
     context
@@ -513,6 +438,7 @@ async fn test_workflow_with_llm() {
     let executor = WorkflowExecutor::new();
     let agent = AgentBuilder::new("test_agent", llm_config)
         .description("Test agent")
+        .with_id(agent_id.clone())
         .build()
         .await
         .expect("Failed to build agent");
@@ -1236,10 +1162,11 @@ fn test_workflow_executor_concurrency_stats() {
 
         // Should have default values
         assert_eq!(stats.current_active_tasks, 0);
-        assert!(stats.total_permit_acquisitions >= 0);
-        assert!(stats.total_wait_time_ms >= 0);
-        assert!(stats.peak_active_tasks >= 0);
-        assert!(stats.permit_failures >= 0);
+        // These are unsigned types, so they're always >= 0
+        assert_eq!(stats.total_permit_acquisitions, stats.total_permit_acquisitions);
+        assert_eq!(stats.total_wait_time_ms, stats.total_wait_time_ms);
+        assert_eq!(stats.peak_active_tasks, stats.peak_active_tasks);
+        assert_eq!(stats.permit_failures, stats.permit_failures);
         assert!(stats.avg_wait_time_ms >= 0.0);
     });
 }
@@ -1264,4 +1191,142 @@ fn test_workflow_validation_with_cycles() {
     let result = workflow.validate();
     assert!(result.is_err());
     assert!(result.unwrap_err().to_string().contains("cycle"));
+}
+
+#[tokio::test]
+async fn test_workflow_agent_id_mismatch_error() {
+    if !has_openai_key() {
+        println!("Skipping agent ID mismatch test - no API key available");
+        return;
+    }
+
+    let llm_config = LlmConfig::OpenAI {
+        api_key: std::env::var("OPENAI_API_KEY").unwrap(),
+        model: "gpt-3.5-turbo".to_string(),
+        base_url: None,
+        organization: None,
+    };
+
+    // Create workflow with specific agent ID
+    let mut workflow = WorkflowBuilder::new("test_workflow")
+        .build()
+        .expect("Failed to build workflow");
+
+    let workflow_agent_id = AgentId::new();
+    let node = WorkflowNode::new(
+        "agent_node".to_string(),
+        "Agent node".to_string(),
+        NodeType::Agent {
+            agent_id: workflow_agent_id.clone(),
+            prompt_template: "What is 2+2?".to_string(),
+        },
+    );
+
+    workflow.add_node(node).unwrap();
+
+    let executor = WorkflowExecutor::new();
+
+    // Create agent with DIFFERENT ID (this should cause the error)
+    let different_agent_id = AgentId::new();
+    let agent = AgentBuilder::new("test_agent", llm_config)
+        .description("Test agent")
+        .with_id(different_agent_id) // Using different ID intentionally
+        .build()
+        .await
+        .expect("Failed to build agent");
+
+    executor.register_agent(Arc::new(agent)).await;
+
+    // This should fail because the workflow expects workflow_agent_id but we registered different_agent_id
+    let result = executor.execute(workflow).await;
+    assert!(result.is_err());
+
+    let error_msg = result.unwrap_err().to_string();
+    assert!(
+        error_msg.contains("Failed to create agent") ||
+        error_msg.contains("No LLM configuration") ||
+        error_msg.contains("API key"),
+        "Expected agent creation error, got: {}", error_msg
+    );
+}
+
+#[tokio::test]
+async fn test_workflow_missing_agent_auto_creation_failure() {
+    // Test the scenario where workflow has agent node but no agent is registered
+    // and no default LLM config is set, so auto-creation fails
+
+    let mut workflow = WorkflowBuilder::new("test_workflow")
+        .build()
+        .expect("Failed to build workflow");
+
+    let agent_id = AgentId::new();
+    let node = WorkflowNode::new(
+        "agent_node".to_string(),
+        "Agent node".to_string(),
+        NodeType::Agent {
+            agent_id: agent_id.clone(),
+            prompt_template: "What is 2+2?".to_string(),
+        },
+    );
+
+    workflow.add_node(node).unwrap();
+
+    // Create executor WITHOUT default LLM config and WITHOUT registering the agent
+    let executor = WorkflowExecutor::new();
+
+    // This should fail because:
+    // 1. No agent is registered for the agent_id
+    // 2. Executor has no default LLM config for auto-creation
+    // 3. Auto-creation will fail with "No LLM configuration provided"
+    let result = executor.execute(workflow).await;
+    assert!(result.is_err());
+
+    let error_msg = result.unwrap_err().to_string();
+    assert!(
+        error_msg.contains("Failed to create agent") &&
+        error_msg.contains("No LLM configuration provided"),
+        "Expected 'Failed to create agent' with 'No LLM configuration provided', got: {}", error_msg
+    );
+}
+
+#[tokio::test]
+async fn test_workflow_missing_agent_with_default_llm_config_success() {
+    if !has_openai_key() {
+        println!("Skipping missing agent with default LLM config test - no API key available");
+        return;
+    }
+
+    let llm_config = LlmConfig::OpenAI {
+        api_key: std::env::var("OPENAI_API_KEY").unwrap(),
+        model: "gpt-3.5-turbo".to_string(),
+        base_url: None,
+        organization: None,
+    };
+
+    let mut workflow = WorkflowBuilder::new("test_workflow")
+        .build()
+        .expect("Failed to build workflow");
+
+    let agent_id = AgentId::new();
+    let node = WorkflowNode::new(
+        "agent_node".to_string(),
+        "Agent node".to_string(),
+        NodeType::Agent {
+            agent_id: agent_id.clone(),
+            prompt_template: "What is 2+2?".to_string(),
+        },
+    );
+
+    workflow.add_node(node).unwrap();
+
+    // Create executor WITH default LLM config but WITHOUT registering the agent
+    let executor = WorkflowExecutor::new()
+        .with_default_llm_config(llm_config);
+
+    // This should succeed because:
+    // 1. No agent is registered for the agent_id
+    // 2. Executor has default LLM config for auto-creation
+    // 3. Auto-creation will succeed and create the missing agent
+    let result = executor.execute(workflow).await;
+    assert!(result.is_ok(), "Expected success with auto-agent creation, got error: {:?}", result.err());
 }

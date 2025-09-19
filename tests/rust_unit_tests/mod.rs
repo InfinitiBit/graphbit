@@ -2,6 +2,7 @@ mod agent_comprehensive_tests;
 mod agent_tests;
 mod concurrency_comprehensive_tests;
 mod document_loader_unit_tests;
+mod document_loader_comprehensive_tests;
 mod document_tests;
 mod embedding_tests;
 mod error_comprehensive_tests;
