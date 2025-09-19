@@ -924,5 +924,72 @@ class TestFireworksLLM:
             pytest.fail(f"Fireworks AI workflow failed: {e}")
 
 
+class TestXaiLLM:
+    """Integration tests for xAI Grok models."""
+
+    @pytest.fixture
+    def api_key(self) -> str:
+        """Get xAI API key from environment."""
+        api_key = os.getenv("XAI_API_KEY")
+        if not api_key:
+            pytest.skip("XAI_API_KEY not set")
+        return api_key or ""
+
+    @pytest.fixture
+    def xai_config(self, api_key: str) -> Any:
+        """Create xAI configuration."""
+        return LlmConfig.xai(api_key, "grok-4")
+
+    @pytest.fixture
+    def xai_client(self, xai_config: Any) -> Any:
+        """Create xAI client."""
+        return LlmClient(xai_config)
+
+    def test_xai_config_creation(self, xai_config: Any) -> None:
+        """Test xAI config creation and properties."""
+        assert xai_config.provider() == "xai"
+        assert xai_config.model() == "grok-4"
+
+    def test_xai_client_creation(self, xai_client: Any) -> None:
+        """Test xAI client creation."""
+        assert xai_client is not None
+
+    @pytest.mark.asyncio
+    async def test_xai_basic_completion(self, xai_client: Any) -> None:
+        """Test basic completion with xAI Grok."""
+        try:
+            response = await xai_client.complete_async(prompt="What is the capital of France?", max_tokens=50, temperature=0.1)
+
+            assert response is not None
+            assert len(response) > 0
+            assert "paris" in response.lower()
+
+        except Exception as e:
+            pytest.fail(f"xAI completion failed: {e}")
+
+    @pytest.mark.asyncio
+    async def test_xai_workflow_integration(self, xai_config: Any) -> None:
+        """Test xAI integration with workflow execution."""
+        try:
+            # Create a simple workflow with xAI
+            workflow = Workflow()
+
+            node = Node(name="xai_test", prompt="Explain quantum computing in one sentence.", llm_config=xai_config, max_tokens=100, temperature=0.3)
+
+            workflow.add_node(node)
+            workflow.validate()
+
+            executor = Executor(xai_config)
+            context = await executor.execute_async(workflow)
+
+            result = context.get_variable("xai_test_result")
+            assert result is not None
+            assert len(result) > 0
+            assert any(word in result.lower() for word in ["quantum", "computing", "computer"])
+
+        except Exception as e:
+            pytest.fail(f"xAI workflow failed: {e}")
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

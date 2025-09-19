@@ -142,6 +142,16 @@ impl LlmConfig {
         })
     }
 
+    #[staticmethod]
+    #[pyo3(signature = (api_key, model=None))]
+    fn xai(api_key: String, model: Option<String>) -> PyResult<Self> {
+        validate_api_key(&api_key, "xAI")?;
+
+        Ok(Self {
+            inner: CoreLlmConfig::xai(api_key, model.unwrap_or_else(|| "grok-4".to_string())),
+        })
+    }
+
     fn provider(&self) -> String {
         self.inner.provider_name().to_string()
     }
