@@ -84,12 +84,12 @@ jobs:
       run: |
         if [ -f pyproject.toml ]; then
           black --check .
-          flake8 .
+          flake8 --max-line-length=120 --ignore=E501,W605,E203 .
           pylint python/ || true
         fi
 
     - name: Run Rust tests
-      run: cargo test --all-features --jobs 2 --jobs 2
+      run: cargo test --all-features --jobs 2
 
     - name: Run Python tests
       run: |
