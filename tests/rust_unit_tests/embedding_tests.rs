@@ -188,7 +188,7 @@ async fn test_embedding_provider_traits() {
 
 #[tokio::test]
 async fn test_embedding_provider_factory_edge_cases() {
-    // Test OpenAI provider creation
+    // Test `OpenAI` provider creation
     let openai_config = EmbeddingConfig {
         provider: EmbeddingProvider::OpenAI,
         api_key: "test-key".to_string(),
@@ -205,7 +205,7 @@ async fn test_embedding_provider_factory_edge_cases() {
     assert_eq!(provider.provider_name(), "openai");
     assert_eq!(provider.model_name(), "text-embedding-ada-002");
 
-    // Test HuggingFace provider creation
+    // Test `HuggingFace` provider creation
     let hf_config = EmbeddingConfig {
         provider: EmbeddingProvider::HuggingFace,
         api_key: "test-hf-key".to_string(),
@@ -228,7 +228,7 @@ async fn test_embedding_provider_factory_edge_cases() {
 
 #[tokio::test]
 async fn test_openai_provider_config_validation() {
-    // Test invalid provider type for OpenAI
+    // Test invalid provider type for `OpenAI`
     let invalid_config = EmbeddingConfig {
         provider: EmbeddingProvider::HuggingFace, // Wrong provider type
         api_key: "test-key".to_string(),
@@ -249,7 +249,7 @@ async fn test_openai_provider_config_validation() {
 
 #[tokio::test]
 async fn test_huggingface_provider_config_validation() {
-    // Test invalid provider type for HuggingFace
+    // Test invalid provider type for `HuggingFace`
     let invalid_config = EmbeddingConfig {
         provider: EmbeddingProvider::OpenAI, // Wrong provider type
         api_key: "test-key".to_string(),
@@ -420,7 +420,7 @@ fn test_cosine_similarity_edge_cases() {
 
 #[tokio::test]
 async fn test_embedding_dimensions_for_different_models() {
-    // Test OpenAI models
+    // Test `OpenAI` models
     let ada_config = EmbeddingConfig {
         provider: EmbeddingProvider::OpenAI,
         api_key: "test-key".to_string(),

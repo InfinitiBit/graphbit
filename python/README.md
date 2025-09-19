@@ -59,6 +59,8 @@ Configuration for LLM providers.
 openai_config = graphbit.LlmConfig.openai(api_key, "gpt-4")
 
 anthropic_config = graphbit.LlmConfig.anthropic(api_key, "claude-3-sonnet-20240229")
+
+fireworks_config = graphbit.LlmConfig.fireworks(api_key, "accounts/fireworks/models/llama-v3p1-8b-instruct")
 ```
 
 ### EmbeddingConfig & EmbeddingClient

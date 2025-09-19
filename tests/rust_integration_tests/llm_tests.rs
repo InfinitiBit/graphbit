@@ -1,6 +1,6 @@
 //! LLM Provider Integration Tests
 //!
-//! Tests for LLM providers including OpenAI, Anthropic, HuggingFace, and Ollama
+//! Tests for LLM providers including `OpenAI`, `Anthropic`, `HuggingFace`, and `Ollama`
 //! with both mocked and real API interactions.
 
 use graphbit_core::llm::*;
@@ -395,7 +395,7 @@ async fn test_huggingface_real_api_call() {
         }
         Err(e) => {
             println!("HuggingFace API call failed: {e:?}");
-            // Note: HuggingFace API might be less reliable, so we don't fail the test
+            // Note: `HuggingFace` API might be less reliable, so we don't fail the test
             println!("HuggingFace API call failed (this might be expected): {e:?}");
         }
     }
@@ -405,7 +405,7 @@ async fn test_huggingface_real_api_call() {
 async fn test_ollama_local_api_call() {
     graphbit_core::init().expect("Failed to initialize GraphBit");
 
-    // Check if Ollama is available locally
+    // Check if `Ollama` is available locally
     if !super::has_ollama_available().await {
         println!("Skipping Ollama test - service not available locally");
         return;
@@ -430,7 +430,7 @@ async fn test_ollama_local_api_call() {
         Err(e) => {
             // Only print the error, do not reference response.content in the error case.
             println!("Ollama test failed: {e:?}");
-            // Ollama might not have the model available, so we log but don't fail
+            // `Ollama` might not have the model available, so we log but don't fail
             println!("Ollama test failed (model might not be available): {e:?}");
         }
     }
@@ -506,7 +506,7 @@ async fn test_multiple_provider_comparison() {
     let mut successful_providers = Vec::new();
     let test_prompt = "Explain AI in exactly 10 words.";
 
-    // Test OpenAI if available
+    // Test `OpenAI` if available
     if super::has_openai_api_key() {
         let api_key = std::env::var("OPENAI_API_KEY").unwrap();
         let config = LlmConfig::openai(api_key, "gpt-3.5-turbo");
@@ -521,7 +521,7 @@ async fn test_multiple_provider_comparison() {
         }
     }
 
-    // Test Anthropic if available
+    // Test `Anthropic` if available
     if super::has_anthropic_api_key() {
         let api_key = std::env::var("ANTHROPIC_API_KEY").unwrap();
         let config = LlmConfig::anthropic(api_key, "claude-3-haiku-20240307");
@@ -536,7 +536,7 @@ async fn test_multiple_provider_comparison() {
         }
     }
 
-    // Test Ollama if available
+    // Test `Ollama` if available
     if super::has_ollama_available().await {
         let config = LlmConfig::ollama("llama3.2");
         let provider = LlmProviderFactory::create_provider(config).unwrap();
@@ -652,6 +652,7 @@ async fn test_llm_provider_factory_multiple_providers() {
     let configs = vec![
         LlmConfig::openai("key1", "gpt-3.5-turbo"),
         LlmConfig::anthropic("key2", "claude-3"),
+        LlmConfig::fireworks("key3", "accounts/fireworks/models/llama-v3p1-8b-instruct"),
         LlmConfig::ollama("llama3.2"),
     ];
 
@@ -659,10 +660,11 @@ async fn test_llm_provider_factory_multiple_providers() {
     assert!(providers_result.is_ok());
 
     let providers = providers_result.unwrap();
-    assert_eq!(providers.len(), 3);
+    assert_eq!(providers.len(), 4);
     assert_eq!(providers[0].provider_name(), "openai");
     assert_eq!(providers[1].provider_name(), "anthropic");
-    assert_eq!(providers[2].provider_name(), "ollama");
+    assert_eq!(providers[2].provider_name(), "fireworks");
+    assert_eq!(providers[3].provider_name(), "ollama");
 }
 
 #[tokio::test]

@@ -516,22 +516,27 @@ impl Executor {
     ) -> Result<graphbit_core::types::WorkflowContext, graphbit_core::errors::GraphBitError> {
         let executor = match config.mode {
             ExecutionMode::HighThroughput => {
-                CoreWorkflowExecutor::new_high_throughput().with_default_llm_config(llm_config)
+                CoreWorkflowExecutor::new_high_throughput().with_default_llm_config(llm_config.clone())
             }
             ExecutionMode::LowLatency => CoreWorkflowExecutor::new_low_latency()
-                .with_default_llm_config(llm_config)
+                .with_default_llm_config(llm_config.clone())
                 .without_retries()
                 .with_fail_fast(true),
             ExecutionMode::MemoryOptimized => {
-                CoreWorkflowExecutor::new_high_throughput().with_default_llm_config(llm_config)
+                CoreWorkflowExecutor::new_high_throughput().with_default_llm_config(llm_config.clone())
             }
             ExecutionMode::Balanced => {
-                CoreWorkflowExecutor::new_high_throughput().with_default_llm_config(llm_config)
+                CoreWorkflowExecutor::new_high_throughput().with_default_llm_config(llm_config.clone())
             }
         };
 
         // Execute the workflow
         let mut context = executor.execute(workflow.clone()).await?;
+
+        // Store LLM config in context metadata for tool call handling
+        if let Ok(llm_config_json) = serde_json::to_value(&llm_config) {
+            context.metadata.insert("llm_config".to_string(), llm_config_json);
+        }
 
         // Check if any node outputs contain tool_calls_required responses and handle them
         context = Self::handle_tool_calls_in_context(context, &workflow).await?;
@@ -632,21 +637,20 @@ impl Executor {
                                     &node.node_type
                                 {
                                     // Create a simple LLM request for the final response
-                                    let llm_config = context
-                                        .metadata
-                                        .get("llm_config")
-                                        .and_then(|v| {
+                                    let llm_config =
+                                        context.metadata.get("llm_config").and_then(|v| {
                                             serde_json::from_value::<graphbit_core::llm::LlmConfig>(
                                                 v.clone(),
                                             )
                                             .ok()
-                                        })
-                                        .unwrap_or_default();
+                                        });
 
-                                    // Create the LLM provider using the factory
-                                    match graphbit_core::llm::LlmProviderFactory::create_provider(
-                                        llm_config.clone(),
-                                    ) {
+                                    // Only proceed if we have an explicit LLM configuration
+                                    if let Some(llm_config) = llm_config {
+                                        // Create the LLM provider using the factory
+                                        match graphbit_core::llm::LlmProviderFactory::create_provider(
+                                            llm_config.clone(),
+                                        ) {
                                         Ok(provider_trait) => {
                                             let llm_provider =
                                                 LlmProvider::new(provider_trait, llm_config);
@@ -715,6 +719,14 @@ impl Executor {
                                                 serde_json::Value::String(tool_results.clone()),
                                             );
                                         }
+                                    }
+                                    } else {
+                                        // No LLM configuration available, just keep tool results
+                                        tracing::warn!("No LLM configuration found in context metadata for final response. Using tool results only.");
+                                        context.set_node_output(
+                                            &node.id,
+                                            serde_json::Value::String(tool_results.clone()),
+                                        );
                                     }
                                 }
                             }

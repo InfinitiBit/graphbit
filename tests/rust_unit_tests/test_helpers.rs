@@ -38,7 +38,7 @@ pub fn has_deepseek_key() -> bool {
 }
 
 #[allow(dead_code)]
-// Ollama Helper
+// `Ollama` Helper
 pub async fn is_ollama_available() -> bool {
     let client = reqwest::Client::new();
     match client

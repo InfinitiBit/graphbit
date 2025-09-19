@@ -196,7 +196,7 @@ impl std::fmt::Display for FinishReason {
             FinishReason::ToolCalls => write!(f, "tool_calls"),
             FinishReason::ContentFilter => write!(f, "content_filter"),
             FinishReason::Error => write!(f, "error"),
-            FinishReason::Other(reason) => write!(f, "{}", reason),
+            FinishReason::Other(reason) => write!(f, "{reason}"),
         }
     }
 }
