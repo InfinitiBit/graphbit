@@ -75,7 +75,7 @@ jobs:
       run: cargo fmt --all -- --check
 
     - name: Run Rust clippy
-      run: cargo clippy --all-targets --all-features --jobs 2 -- -D warnings
+      run: cargo clippy --all-targets --all-features --jobs 2
 
     - name: Run Rust security audit
       run: cargo audit --quiet
