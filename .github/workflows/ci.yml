@@ -2,7 +2,7 @@ name: CI Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches: [ workflow/ci ]
 
 permissions:
   contents: read
@@ -104,7 +104,7 @@ jobs:
         cargo tarpaulin --out Xml --output-dir target/coverage --jobs 2 --timeout 300 || echo "Coverage generation failed"
 
     - name: Upload coverage to Codecov
-      if: github.ref == 'refs/heads/main'
+      if: github.ref == 'refs/heads/workflow/ci'
       uses: codecov/codecov-action@v3
       with:
         files: ./coverage.xml,./target/coverage/cobertura.xml
@@ -122,9 +122,9 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.11", "3.12"]
+        python-version: ["3.10", "3.11", "3.12"]
         exclude:
-          # Only test latest Python versions for speed
+          # Optimize matrix for speed - exclude some combinations
           - os: windows-latest
             python-version: "3.12"
           - os: macos-latest
@@ -209,23 +209,41 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Essential builds only - most common platforms
+          # Linux builds
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             platform: linux-x64
             arch: x64
+            packages: [appimage, deb, rpm]
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            platform: linux-arm64
+            arch: arm64
+            packages: [appimage, deb, rpm]
+          
+          # Windows builds
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             platform: windows-x64
             arch: x64
+            packages: [user, system]
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
+            platform: windows-arm64
+            arch: arm64
+            packages: [user, system]
+          
+          # macOS builds
           - os: macos-latest
             target: x86_64-apple-darwin
             platform: macos-x64
             arch: x64
+            packages: [native]
           - os: macos-latest
             target: aarch64-apple-darwin
             platform: macos-arm64
             arch: arm64
+            packages: [native]
 
     steps:
     - name: Checkout code
@@ -272,15 +290,66 @@ jobs:
     - name: Build platform-specific packages
       run: |
         echo "Building packages for ${{ matrix.platform }} (${{ matrix.arch }})"
+        echo "Package types: ${{ matrix.packages }}"
         
         # Create platform-specific build directory
         mkdir -p dist/${{ matrix.platform }}
         
-        # Skip complex package creation for speed - just copy basic artifacts
+        # Copy basic artifacts
         echo "Copying built artifacts to platform directory..."
         cp -r dist/*.whl dist/${{ matrix.platform }}/ 2>/dev/null || true
         cp -r dist/*.tar.gz dist/${{ matrix.platform }}/ 2>/dev/null || true
         cp target/${{ matrix.target }}/release/libgraphbit* dist/${{ matrix.platform }}/ 2>/dev/null || true
+        
+        # Create platform-specific packages
+        if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+          # Linux packages
+          echo "Creating Linux packages for ${{ matrix.arch }}..."
+          
+          if [[ "${{ matrix.packages }}" == *"appimage"* ]]; then
+            echo "Creating AppImage for ${{ matrix.arch }}..."
+            # Add AppImage creation logic here
+            touch dist/${{ matrix.platform }}/graphbit-${{ matrix.arch }}.AppImage
+          fi
+          
+          if [[ "${{ matrix.packages }}" == *"deb"* ]]; then
+            echo "Creating .deb package for ${{ matrix.arch }}..."
+            # Add .deb creation logic here
+            touch dist/${{ matrix.platform }}/graphbit-${{ matrix.arch }}.deb
+          fi
+          
+          if [[ "${{ matrix.packages }}" == *"rpm"* ]]; then
+            echo "Creating RPM package for ${{ matrix.arch }}..."
+            # Add RPM creation logic here
+            touch dist/${{ matrix.platform }}/graphbit-${{ matrix.arch }}.rpm
+          fi
+          
+        elif [ "${{ matrix.os }}" = "windows-latest" ]; then
+          # Windows packages
+          echo "Creating Windows packages for ${{ matrix.arch }}..."
+          
+          if [[ "${{ matrix.packages }}" == *"user"* ]]; then
+            echo "Creating Windows ${{ matrix.arch }} User package..."
+            # Add Windows User package creation logic here
+            touch dist/${{ matrix.platform }}/graphbit-${{ matrix.arch }}-user.msi
+          fi
+          
+          if [[ "${{ matrix.packages }}" == *"system"* ]]; then
+            echo "Creating Windows ${{ matrix.arch }} System package..."
+            # Add Windows System package creation logic here
+            touch dist/${{ matrix.platform }}/graphbit-${{ matrix.arch }}-system.msi
+          fi
+          
+        elif [ "${{ matrix.os }}" = "macos-latest" ]; then
+          # macOS packages
+          echo "Creating macOS packages for ${{ matrix.arch }}..."
+          
+          if [[ "${{ matrix.packages }}" == *"native"* ]]; then
+            echo "Creating Mac ${{ matrix.arch }} package..."
+            # Add Mac native package creation logic here
+            touch dist/${{ matrix.platform }}/graphbit-${{ matrix.arch }}.pkg
+          fi
+        fi
 
     - name: Generate build provenance
       uses: actions/attest-build-provenance@v1
@@ -314,7 +383,7 @@ jobs:
   macos-universal:
     name: Build Mac Universal Package
     needs: [validation, build]
-    if: always() && github.ref == 'refs/heads/main'
+    if: always() && github.ref == 'refs/heads/workflow/ci'
     runs-on: macos-latest
 
     steps:
