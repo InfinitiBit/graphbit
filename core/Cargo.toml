@@ -3,14 +3,17 @@ pyo3 = {workspace = true, optional = true}
 anyhow.workspace = true
 async-trait.workspace = true
 chrono.workspace = true
+csv.workspace = true
 docx-rs.workspace = true
 futures.workspace = true
 lazy_static.workspace = true
 lopdf.workspace = true
+quick-xml.workspace = true
 petgraph.workspace = true
 rand.workspace = true
 regex.workspace = true
 reqwest.workspace = true
+scraper.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true

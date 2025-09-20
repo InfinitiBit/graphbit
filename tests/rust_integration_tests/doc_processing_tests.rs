@@ -87,8 +87,9 @@ async fn test_csv_document_loading() {
 
     assert!(result.is_ok());
     let document = result.unwrap();
-    assert!(document.content.contains("Name,Age,City"));
-    assert!(document.content.contains("John Doe"));
+    assert!(document.content.contains("CSV Document Content"));
+    assert!(document.content.contains("Columns (3): Name, Age, City"));
+    assert!(document.content.contains("Name: John Doe"));
     assert_eq!(document.document_type, "csv");
 }
 
@@ -813,9 +814,9 @@ async fn test_document_content_preservation() {
 
     assert!(result.is_ok());
     let document = result.unwrap();
-    assert!(document.content.contains("<?xml version=\"1.0\""));
-    assert!(document.content.contains("<emphasis>emphasis</emphasis>"));
-    assert!(document.content.contains("    <title>")); // Preserves indentation
+    assert!(document.content.contains("XML Document Content"));
+    assert!(document.content.contains("Element: document"));
+    assert!(document.content.contains("Text: Test Document"));
 }
 
 #[tokio::test]
