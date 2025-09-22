@@ -1,12 +1,13 @@
-import re
-import os
 import asyncio
 import concurrent.futures
+import os
+import re
 from typing import Dict, List, Tuple
+
 from dotenv import load_dotenv
 
 import graphbit
-from graphbit import LlmConfig, LlmClient, DocumentLoader, DocumentLoaderConfig, TextSplitter, TextSplitterConfig
+from graphbit import DocumentLoader, DocumentLoaderConfig, LlmClient, LlmConfig, TextSplitter, TextSplitterConfig
 
 from .const import ConfigConstants
 
@@ -14,15 +15,13 @@ load_dotenv()
 
 # SECTION HEADERS in display order
 SECTION_HEADERS = ConfigConstants.SECTION_HEADERS
-HEADER_REGEX = r'(' + '|'.join(SECTION_HEADERS) + r')'
+HEADER_REGEX = r"(" + "|".join(SECTION_HEADERS) + r")"
+
 
 def extract_text_from_pdf(pdf_path: str) -> str:
     """Extract text from PDF using GraphBit's document loader."""
     # Configure document loader for PDF processing
-    config = DocumentLoaderConfig(
-        max_file_size=50_000_000,  # 50MB limit
-        preserve_formatting=True   # Keep formatting for better section detection
-    )
+    config = DocumentLoaderConfig(max_file_size=50_000_000, preserve_formatting=True)  # 50MB limit  # Keep formatting for better section detection
 
     # Initialize document loader
     loader = DocumentLoader(config)
@@ -32,12 +31,13 @@ def extract_text_from_pdf(pdf_path: str) -> str:
 
     return document_content.content
 
+
 def split_into_sections(text: str) -> Dict[str, str]:
     matches = list(re.finditer(HEADER_REGEX, text, re.IGNORECASE))
     sections = {}
     for i, match in enumerate(matches):
         start = match.start()
-        end = matches[i+1].start() if i+1 < len(matches) else len(text)
+        end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
         section_title = match.group(0).strip().title()
         section_text = text[start:end].strip()
         # Combine if section already found
@@ -46,6 +46,7 @@ def split_into_sections(text: str) -> Dict[str, str]:
         else:
             sections[section_title] = section_text
     return sections
+
 
 def chunk_text(text: str, max_words: int = ConfigConstants.MAX_CHUNK_WORDS) -> List[str]:
     """Split text into chunks using GraphBit's text splitter with semantic awareness."""
@@ -62,11 +63,7 @@ def chunk_text(text: str, max_words: int = ConfigConstants.MAX_CHUNK_WORDS) -> L
     try:
         # Use recursive splitter for better semantic coherence
         # This preserves sentence and paragraph boundaries
-        config = TextSplitterConfig.recursive(
-            chunk_size=chunk_size,
-            chunk_overlap=chunk_overlap,
-            separators=["\n\n", "\n", ". ", " "]  # Prioritize paragraph, sentence, then word boundaries
-        )
+        config = TextSplitterConfig.recursive(chunk_size=chunk_size, chunk_overlap=chunk_overlap, separators=["\n\n", "\n", ". ", " "])  # Prioritize paragraph, sentence, then word boundaries
 
         # Configure for better context preservation
         config.set_trim_whitespace(True)
@@ -89,6 +86,7 @@ def chunk_text(text: str, max_words: int = ConfigConstants.MAX_CHUNK_WORDS) -> L
         print(f"Warning: GraphBit splitter failed ({str(e)}), using fallback chunking")
         return simple_word_chunking(text, max_words)
 
+
 def simple_word_chunking(text: str, max_words: int) -> List[str]:
     """
     Fallback chunking method using simple word-based splitting.
@@ -97,10 +95,11 @@ def simple_word_chunking(text: str, max_words: int) -> List[str]:
     words = text.split()
     chunks = []
     for i in range(0, len(words), max_words):
-        chunk = " ".join(words[i:i+max_words])
+        chunk = " ".join(words[i : i + max_words])
         if len(chunk) > ConfigConstants.MIN_CHUNK_LENGTH:
             chunks.append(chunk)
     return chunks
+
 
 def normalize_unicode_text(text: str) -> str:
     """
@@ -115,26 +114,26 @@ def normalize_unicode_text(text: str) -> str:
     import unicodedata
 
     # Normalize Unicode to NFC form (canonical decomposition followed by canonical composition)
-    text = unicodedata.normalize('NFC', text)
+    text = unicodedata.normalize("NFC", text)
 
     # Replace problematic Unicode characters with ASCII equivalents
     replacements = {
-        '—': '--',      # Em dash
-        '–': '-',       # En dash
-        ''': "'",       # Left single quotation mark
-        ''': "'",       # Right single quotation mark
-        '"': '"',       # Left double quotation mark
-        '"': '"',       # Right double quotation mark
-        '…': '...',     # Horizontal ellipsis
-        '•': '*',       # Bullet
-        '→': '->',      # Right arrow
-        '←': '<-',      # Left arrow
-        '≥': '>=',      # Greater than or equal
-        '≤': '<=',      # Less than or equal
-        '≠': '!=',      # Not equal
-        '±': '+/-',     # Plus-minus
-        '×': 'x',       # Multiplication sign
-        '÷': '/',       # Division sign
+        "—": "--",  # Em dash
+        "–": "-",  # En dash
+        """: "'",       # Left single quotation mark
+        """: "'",  # Right single quotation mark
+        '"': '"',  # Left double quotation mark
+        '"': '"',  # Right double quotation mark
+        "…": "...",  # Horizontal ellipsis
+        "•": "*",  # Bullet
+        "→": "->",  # Right arrow
+        "←": "<-",  # Left arrow
+        "≥": ">=",  # Greater than or equal
+        "≤": "<=",  # Less than or equal
+        "≠": "!=",  # Not equal
+        "±": "+/-",  # Plus-minus
+        "×": "x",  # Multiplication sign
+        "÷": "/",  # Division sign
     }
 
     for unicode_char, ascii_replacement in replacements.items():
@@ -142,9 +141,10 @@ def normalize_unicode_text(text: str) -> str:
 
     # Remove any remaining problematic characters that might cause boundary issues
     # Keep only printable ASCII and common whitespace
-    cleaned_text = ''.join(char for char in text if ord(char) < 127 or char.isspace())
+    cleaned_text = "".join(char for char in text if ord(char) < 127 or char.isspace())
 
     return cleaned_text
+
 
 def chunk_text_with_context(text: str, section_title: str = "", max_words: int = ConfigConstants.MAX_CHUNK_WORDS) -> List[str]:
     """
@@ -175,10 +175,10 @@ def chunk_text_with_context(text: str, section_title: str = "", max_words: int =
     chunk_size = max_words * 6  # Average 6 chars per word including spaces
 
     # Adaptive overlap based on section type
-    if section_title.lower() in ['abstract', 'conclusion']:
+    if section_title.lower() in ["abstract", "conclusion"]:
         # Smaller overlap for summary sections
         chunk_overlap = min(chunk_size // 20, 100)
-    elif section_title.lower() in ['methods', 'methodology', 'results']:
+    elif section_title.lower() in ["methods", "methodology", "results"]:
         # Larger overlap for detailed sections to preserve procedural context
         chunk_overlap = min(chunk_size // 8, 300)
     else:
@@ -188,21 +188,17 @@ def chunk_text_with_context(text: str, section_title: str = "", max_words: int =
     try:
         # Research paper-specific separators prioritizing academic structure
         separators = [
-            "\n\n\n",      # Major section breaks
-            "\n\n",        # Paragraph breaks
-            "\n",          # Line breaks
-            ". ",          # Sentence endings
-            "; ",          # Clause separators
-            ", ",          # Phrase separators
-            " "            # Word boundaries
+            "\n\n\n",  # Major section breaks
+            "\n\n",  # Paragraph breaks
+            "\n",  # Line breaks
+            ". ",  # Sentence endings
+            "; ",  # Clause separators
+            ", ",  # Phrase separators
+            " ",  # Word boundaries
         ]
 
         # Configure recursive splitter for academic content
-        config = TextSplitterConfig.recursive(
-            chunk_size=chunk_size,
-            chunk_overlap=chunk_overlap,
-            separators=separators
-        )
+        config = TextSplitterConfig.recursive(chunk_size=chunk_size, chunk_overlap=chunk_overlap, separators=separators)
 
         # Optimize for academic text
         config.set_trim_whitespace(True)
@@ -236,6 +232,7 @@ def chunk_text_with_context(text: str, section_title: str = "", max_words: int =
         print(f"Warning: GraphBit splitter failed ({str(e)}), falling back to simple chunking")
         # return chunk_text(text, max_words)
 
+
 def summarize_section(section_title: str, section_text: str) -> str:
     """Summarize a section of a research paper using GraphBit LLM client."""
     prompt = f"Give detailed summary of the following section of a research paper titled '{section_title}':\n\n{section_text}\n\nSummary:"
@@ -252,12 +249,10 @@ def summarize_section(section_title: str, section_text: str) -> str:
     llm_client = LlmClient(config)
 
     # Generate summary
-    summary = llm_client.complete(
-        prompt=prompt,
-        max_tokens=ConfigConstants.LLM_MAX_TOKENS,
-        temperature=ConfigConstants.LLM_TEMPERATURE
-    )
+    summary = llm_client.complete(prompt=prompt, max_tokens=ConfigConstants.LLM_MAX_TOKENS, temperature=ConfigConstants.LLM_TEMPERATURE)
+    print(f"Summary: A")
     return summary
+
 
 def summarize_section_worker(section_data: Tuple[str, str]) -> Tuple[str, str]:
     """
@@ -270,10 +265,11 @@ def summarize_section_worker(section_data: Tuple[str, str]) -> Tuple[str, str]:
         Tuple of (section_title, summary)
     """
     title, content = section_data
-    truncated_content = content[:ConfigConstants.MAX_SECTION_LENGTH]
+    truncated_content = content[: ConfigConstants.MAX_SECTION_LENGTH]
 
     try:
         # Add timeout protection for individual section summarization
+        print(title)
         summary = summarize_section(title, truncated_content)
         return title, summary
     except Exception as e:
@@ -282,15 +278,16 @@ def summarize_section_worker(section_data: Tuple[str, str]) -> Tuple[str, str]:
         print(f"Warning: Summarization failed for section '{title}': {e}")
         return title, fallback_summary
 
+
 def summarize_pdf_sections_parallel(pdf_path: str, max_workers: int = 3):
     """
     Extract text from PDF, split into sections, and generate summaries in parallel.
 
     Args:
-        pdf    
+        pdf
     # Embedding Configuration
     EMBEDDING_MODEL = "text-embedding-3-small"
-    
+
     # Cache Configuration
     CACHE_DIR = "examples/research-paper-summarizer-agent/cache"
     _path: Path to the PDF file
@@ -315,10 +312,7 @@ def summarize_pdf_sections_parallel(pdf_path: str, max_workers: int = 3):
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         # Submit all summarization tasks
         print("4")
-        future_to_section = {
-            executor.submit(summarize_section_worker, (title, content)): title
-            for title, content in section_items
-        }
+        future_to_section = {executor.submit(summarize_section_worker, (title, content)): title for title, content in section_items}
 
         print("5")
         # Collect results as they complete
@@ -335,6 +329,7 @@ def summarize_pdf_sections_parallel(pdf_path: str, max_workers: int = 3):
     print("6")
     return summaries, sections
 
+
 def summarize_pdf_sections(pdf_path: str):
     """
     Extract text from PDF, split into sections, and generate summaries.
@@ -342,13 +337,10 @@ def summarize_pdf_sections(pdf_path: str):
     """
     return summarize_pdf_sections_parallel(pdf_path, max_workers=3)
 
+
 def answer_question(retrieved_context: str, user_question: str) -> str:
     """Answer a question based on retrieved context using GraphBit LLM client."""
-    prompt = (
-        f"You are an AI research assistant. Given the following excerpts from a research paper:\n\n"
-        f"{retrieved_context}\n\n"
-        f"Answer the user's question:\n{user_question}\n\nAnswer:"
-    )
+    prompt = f"You are an AI research assistant. Given the following excerpts from a research paper:\n\n" f"{retrieved_context}\n\n" f"Answer the user's question:\n{user_question}\n\nAnswer:"
 
     # Initialize GraphBit
     graphbit.init()
@@ -362,9 +354,5 @@ def answer_question(retrieved_context: str, user_question: str) -> str:
     llm_client = LlmClient(config)
 
     # Generate answer
-    response = llm_client.complete(
-        prompt=prompt,
-        max_tokens=ConfigConstants.LLM_MAX_TOKENS,
-        temperature=0.2
-    )
+    response = llm_client.complete(prompt=prompt, max_tokens=ConfigConstants.LLM_MAX_TOKENS, temperature=0.2)
     return response

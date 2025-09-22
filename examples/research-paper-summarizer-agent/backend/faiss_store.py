@@ -1,10 +1,11 @@
 import os
+
 import faiss
 import numpy as np
 from dotenv import load_dotenv
 
 import graphbit
-from graphbit import EmbeddingConfig, EmbeddingClient
+from graphbit import EmbeddingClient, EmbeddingConfig
 
 from .const import ConfigConstants
 
@@ -18,6 +19,7 @@ if not openai_api_key:
 
 embedding_config = EmbeddingConfig.openai(openai_api_key, ConfigConstants.EMBEDDING_MODEL)
 embedder = EmbeddingClient(embedding_config)
+
 
 def embed_chunks_batch(chunk_dict, batch_size=20):
     """
@@ -43,7 +45,7 @@ def embed_chunks_batch(chunk_dict, batch_size=20):
     # Process chunks in batches
     chunk_vectors = []
     for i in range(0, len(all_chunks), batch_size):
-        batch = all_chunks[i:i + batch_size]
+        batch = all_chunks[i : i + batch_size]
 
         # Process batch - for now, still individual calls but structured for future batch API
         batch_vectors = []
@@ -55,15 +57,18 @@ def embed_chunks_batch(chunk_dict, batch_size=20):
 
     return chunk_titles, np.array(chunk_vectors)
 
+
 def embed_chunks(chunk_dict):
     """Generate embeddings for text chunks using GraphBit embedding client with batch optimization."""
     return embed_chunks_batch(chunk_dict, batch_size=20)
+
 
 def create_faiss_index(vectors):
     dim = vectors.shape[1]
     index = faiss.IndexFlatL2(dim)
     index.add(vectors)
     return index
+
 
 def search_faiss_index(index, query, chunk_titles, chunk_dict, k=ConfigConstants.TOP_K_RESULTS):
     """Search FAISS index for similar chunks using GraphBit embedding client."""

@@ -6,14 +6,16 @@ summaries, chunks, embeddings, and FAISS indices to improve performance
 on repeated access to the same documents.
 """
 
-import os
 import hashlib
 import json
+import os
+
 import faiss
 
 from ..const import ConfigConstants
 
 CACHE_DIR = ConfigConstants.CACHE_DIR
+
 
 def hash_pdf(pdf_path: str) -> str:
     """
@@ -30,6 +32,7 @@ def hash_pdf(pdf_path: str) -> str:
         for chunk in iter(lambda: f.read(4096), b""):
             hasher.update(chunk)
     return hasher.hexdigest()
+
 
 def save_to_cache(hash_id: str, summaries: dict, chunk_dict: dict, chunk_titles: list, faiss_index) -> None:
     """
@@ -55,6 +58,7 @@ def save_to_cache(hash_id: str, summaries: dict, chunk_dict: dict, chunk_titles:
         json.dump(chunk_titles, f, indent=2, ensure_ascii=False)
 
     faiss.write_index(faiss_index, os.path.join(folder, "faiss.index"))
+
 
 def load_from_cache(hash_id: str) -> tuple:
     """
@@ -120,11 +124,13 @@ def clear_cache(hash_id: str = None) -> bool:
             folder = os.path.join(CACHE_DIR, hash_id)
             if os.path.exists(folder):
                 import shutil
+
                 shutil.rmtree(folder)
                 return True
         else:
             if os.path.exists(CACHE_DIR):
                 import shutil
+
                 shutil.rmtree(CACHE_DIR)
                 os.makedirs(CACHE_DIR, exist_ok=True)
                 return True
