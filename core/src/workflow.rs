@@ -473,7 +473,7 @@ impl WorkflowExecutor {
         }
 
         // Execute nodes in dependency-aware batches (parents before children)
-        let batches = Self::create_dependency_batches(&workflow.graph)?;
+        let batches = Self::create_dependency_batches(&workflow.graph).await?;
         tracing::info!(
             batch_count = batches.len(),
             "Planned dependency-aware batches"
@@ -709,10 +709,10 @@ impl WorkflowExecutor {
                     .await
                 }
                 NodeType::Condition { expression } => {
-                    Self::execute_condition_node_static(expression)
+                    Self::execute_condition_node_static(expression).await
                 }
                 NodeType::Transform { transformation } => {
-                    Self::execute_transform_node_static(transformation, context.clone())
+                    Self::execute_transform_node_static(transformation, context.clone()).await
                 }
                 NodeType::Delay { duration_seconds } => {
                     Self::execute_delay_node_static(*duration_seconds).await
@@ -1128,13 +1128,13 @@ impl WorkflowExecutor {
     }
 
     /// Execute a condition node (static version)
-    fn execute_condition_node_static(_expression: &str) -> GraphBitResult<serde_json::Value> {
+    async fn execute_condition_node_static(_expression: &str) -> GraphBitResult<serde_json::Value> {
         // Simple condition evaluation (in a real implementation, you'd use a proper expression evaluator)
         Ok(serde_json::Value::Bool(true))
     }
 
     /// Execute a transform node (static version)
-    fn execute_transform_node_static(
+    async fn execute_transform_node_static(
         _transformation: &str,
         _context: Arc<Mutex<WorkflowContext>>,
     ) -> GraphBitResult<serde_json::Value> {
@@ -1427,7 +1427,9 @@ impl WorkflowExecutor {
     }
 
     /// Create batches that strictly respect dependencies: only direct-ready nodes per layer
-    fn create_dependency_batches(graph: &WorkflowGraph) -> GraphBitResult<Vec<Vec<WorkflowNode>>> {
+    async fn create_dependency_batches(
+        graph: &WorkflowGraph,
+    ) -> GraphBitResult<Vec<Vec<WorkflowNode>>> {
         use std::collections::HashSet;
 
         let mut graph_clone = graph.clone();

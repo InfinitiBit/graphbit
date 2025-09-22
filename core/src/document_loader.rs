@@ -94,14 +94,14 @@ impl DocumentLoader {
                 ),
             ));
         } else {
-            self.load_from_file(source_path, document_type)?
+            self.load_from_file(source_path, document_type).await?
         };
 
         Ok(content)
     }
 
     /// Load document from file path
-    fn load_from_file(
+    async fn load_from_file(
         &self,
         file_path: &str,
         document_type: &str,
@@ -137,13 +137,13 @@ impl DocumentLoader {
 
         // Extract content based on document type
         let content = match document_type.to_lowercase().as_str() {
-            "txt" => Self::extract_text_content(file_path)?,
-            "pdf" => Self::extract_pdf_content(file_path)?,
-            "docx" => Self::extract_docx_content(file_path)?,
-            "json" => Self::extract_json_content(file_path)?,
-            "csv" => Self::extract_csv_content(file_path)?,
-            "xml" => Self::extract_xml_content(file_path)?,
-            "html" => Self::extract_html_content(file_path)?,
+            "txt" => Self::extract_text_content(file_path).await?,
+            "pdf" => Self::extract_pdf_content(file_path).await?,
+            "docx" => Self::extract_docx_content(file_path).await?,
+            "json" => Self::extract_json_content(file_path).await?,
+            "csv" => Self::extract_csv_content(file_path).await?,
+            "xml" => Self::extract_xml_content(file_path).await?,
+            "html" => Self::extract_html_content(file_path).await?,
             _ => {
                 return Err(GraphBitError::validation(
                     "document_loader",
@@ -325,7 +325,7 @@ impl DocumentLoader {
     }
 
     /// Extract content from plain text files
-    fn extract_text_content(file_path: &str) -> GraphBitResult<String> {
+    async fn extract_text_content(file_path: &str) -> GraphBitResult<String> {
         let content = std::fs::read_to_string(file_path).map_err(|e| {
             GraphBitError::validation("document_loader", format!("Failed to read text file: {e}"))
         })?;
@@ -333,7 +333,7 @@ impl DocumentLoader {
     }
 
     /// Extract content from JSON files
-    fn extract_json_content(file_path: &str) -> GraphBitResult<String> {
+    async fn extract_json_content(file_path: &str) -> GraphBitResult<String> {
         let content = std::fs::read_to_string(file_path).map_err(|e| {
             GraphBitError::validation("document_loader", format!("Failed to read JSON file: {e}"))
         })?;
@@ -350,7 +350,7 @@ impl DocumentLoader {
     }
 
     /// Extract content from CSV files
-    fn extract_csv_content(file_path: &str) -> GraphBitResult<String> {
+    async fn extract_csv_content(file_path: &str) -> GraphBitResult<String> {
         let content = std::fs::read_to_string(file_path).map_err(|e| {
             GraphBitError::validation("document_loader", format!("Failed to read CSV file: {e}"))
         })?;
@@ -361,7 +361,7 @@ impl DocumentLoader {
     }
 
     /// Extract content from XML files
-    fn extract_xml_content(file_path: &str) -> GraphBitResult<String> {
+    async fn extract_xml_content(file_path: &str) -> GraphBitResult<String> {
         let content = std::fs::read_to_string(file_path).map_err(|e| {
             GraphBitError::validation("document_loader", format!("Failed to read XML file: {e}"))
         })?;
@@ -372,7 +372,7 @@ impl DocumentLoader {
     }
 
     /// Extract content from HTML files
-    fn extract_html_content(file_path: &str) -> GraphBitResult<String> {
+    async fn extract_html_content(file_path: &str) -> GraphBitResult<String> {
         let content = std::fs::read_to_string(file_path).map_err(|e| {
             GraphBitError::validation("document_loader", format!("Failed to read HTML file: {e}"))
         })?;
@@ -383,7 +383,7 @@ impl DocumentLoader {
     }
 
     /// Extract content from PDF files
-    fn extract_pdf_content(file_path: &str) -> GraphBitResult<String> {
+    async fn extract_pdf_content(file_path: &str) -> GraphBitResult<String> {
         use lopdf::Document;
 
         let doc = Document::load(file_path).map_err(|e| {
@@ -411,7 +411,7 @@ impl DocumentLoader {
     }
 
     /// Extract content from DOCX files
-    fn extract_docx_content(file_path: &str) -> GraphBitResult<String> {
+    async fn extract_docx_content(file_path: &str) -> GraphBitResult<String> {
         use std::fs::File;
         use std::io::Read;
 
