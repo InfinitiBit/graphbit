@@ -166,7 +166,7 @@ fn test_agent_message_creation_and_metadata() {
     let message_with_metadata = message
         .with_metadata("priority".to_string(), json!("high"))
         .with_metadata("source".to_string(), json!("user_input"))
-        .with_metadata("timestamp".to_string(), json!(1234567890));
+        .with_metadata("timestamp".to_string(), json!(1_234_567_890));
 
     assert_eq!(message_with_metadata.metadata.len(), 3);
     assert_eq!(
