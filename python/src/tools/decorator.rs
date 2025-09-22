@@ -247,7 +247,7 @@ pub(crate) fn tool(_description: Option<String>, py: Python<'_>) -> PyResult<PyO
         None,
         None,
     )?;
-    
+
     Ok(decorator_func.into_pyobject(py)?.into_any().unbind())
 }
 

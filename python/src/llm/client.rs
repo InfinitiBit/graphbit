@@ -188,6 +188,7 @@ impl LlmClient {
             }
             graphbit_core::llm::providers::LlmConfig::OpenAI { .. }
             | graphbit_core::llm::providers::LlmConfig::Anthropic { .. }
+            | graphbit_core::llm::providers::LlmConfig::AzureOpenAI { .. }
             | graphbit_core::llm::providers::LlmConfig::Perplexity { .. }
             | graphbit_core::llm::providers::LlmConfig::Fireworks { .. } => {
                 // Cloud APIs are typically faster

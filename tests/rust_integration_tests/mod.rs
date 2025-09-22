@@ -5,6 +5,7 @@
 //! and end-to-end scenarios.
 
 pub mod agent_tests;
+pub mod azure_openai_integration_tests;
 pub mod concurrency_tests;
 pub mod doc_processing_tests;
 /// Integration tests for document loading functionality
@@ -40,6 +41,18 @@ pub fn has_huggingface_api_key() -> bool {
     std::env::var("HUGGINGFACE_API_KEY")
         .map(|key| !key.is_empty() && key != "test-api-key-placeholder")
         .unwrap_or(false)
+}
+
+/// Check if valid Azure OpenAI credentials are available
+pub fn has_azure_openai_credentials() -> bool {
+    let api_key = std::env::var("AZURE_OPENAI_API_KEY").unwrap_or_default();
+    let endpoint = std::env::var("AZURE_OPENAI_ENDPOINT").unwrap_or_default();
+    let deployment = std::env::var("AZURE_OPENAI_DEPLOYMENT").unwrap_or_default();
+
+    !api_key.is_empty()
+        && !endpoint.is_empty()
+        && !deployment.is_empty()
+        && api_key != "test-api-key-placeholder"
 }
 
 /// Check if `Ollama` is available (by checking if the service is running)
@@ -87,6 +100,26 @@ pub fn get_huggingface_api_key_or_skip() -> String {
     }
 }
 
+/// Get Azure OpenAI credentials or skip test if not available
+pub fn get_azure_openai_credentials_or_skip() -> (String, String, String, String) {
+    let api_key = std::env::var("AZURE_OPENAI_API_KEY").unwrap_or_default();
+    let endpoint = std::env::var("AZURE_OPENAI_ENDPOINT").unwrap_or_default();
+    let deployment = std::env::var("AZURE_OPENAI_DEPLOYMENT").unwrap_or_default();
+    let api_version =
+        std::env::var("AZURE_OPENAI_API_VERSION").unwrap_or_else(|_| "2024-10-21".to_string());
+
+    if api_key.is_empty()
+        || endpoint.is_empty()
+        || deployment.is_empty()
+        || api_key == "test-api-key-placeholder"
+    {
+        println!("Skipping test - no valid Azure OpenAI credentials found");
+        panic!("TEST_SKIP");
+    }
+
+    (api_key, endpoint, deployment, api_version)
+}
+
 /// Get API key from environment or provide test default (for non-API tests)
 pub fn get_test_api_key() -> String {
     std::env::var("OPENAI_API_KEY")
@@ -126,6 +159,12 @@ macro_rules! skip_if_no_api {
     (huggingface) => {
         if !$crate::has_huggingface_api_key() {
             println!("Skipping test - no valid HUGGINGFACE_API_KEY found");
+            return;
+        }
+    };
+    (azure_openai) => {
+        if !$crate::has_azure_openai_credentials() {
+            println!("Skipping test - no valid Azure OpenAI credentials found");
             return;
         }
     };
