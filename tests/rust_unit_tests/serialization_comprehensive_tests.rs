@@ -290,7 +290,7 @@ fn test_agent_message_serialization() {
             MessageContent::Text("Hello, world!".to_string()),
         )
         .with_metadata("priority".to_string(), json!("high"))
-        .with_metadata("timestamp".to_string(), json!(1234567890)),
+        .with_metadata("timestamp".to_string(), json!(1_234_567_890)),
         AgentMessage::new(
             sender.clone(),
             Some(recipient.clone()),
