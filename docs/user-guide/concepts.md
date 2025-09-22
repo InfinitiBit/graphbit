@@ -64,10 +64,22 @@ anthropic_config = LlmConfig.anthropic(
     model="claude-sonnet-4-20250514"  # Optional, defaults to claude-sonnet-4-20250514
 )
 
+# OpenRouter (unified access to 400+ models)
+openrouter_config = LlmConfig.openrouter(
+    api_key="your-openrouter-key",
+    model="openai/gpt-4o-mini"  # Optional, defaults to openai/gpt-4o-mini
+)
+
 # DeepSeek
 deepseek_config = LlmConfig.deepseek(
     api_key="your-deepseek-key",
     model="deepseek-chat"  # Optional, defaults to deepseek-chat
+)
+
+# Fireworks AI
+fireworks_config = LlmConfig.fireworks(
+    api_key="your-fireworks-key",
+    model="accounts/fireworks/models/llama-v3p1-8b-instruct"  # Optional, defaults to llama-v3p1-8b-instruct
 )
 
 # Ollama (local models)

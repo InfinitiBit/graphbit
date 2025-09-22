@@ -1,6 +1,6 @@
-//! Python bindings for document loading functionality
+//! Python bindings for document loading functionality.
 //!
-//! This module provides Python bindings for GraphBit's document loader,
+//! This module provides Python bindings for `GraphBit`'s document loader,
 //! supporting multiple formats including PDF, DOCX, TXT, JSON, CSV, XML, and HTML.
 
 use pyo3::prelude::*;

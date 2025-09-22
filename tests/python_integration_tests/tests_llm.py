@@ -736,5 +736,260 @@ class TestLLMPerformance:
             pytest.fail(f"Response time consistency test failed: {e}")
 
 
+class TestOpenRouterLLM:
+    """Integration tests for OpenRouter LLM models."""
+
+    @pytest.fixture
+    def api_key(self) -> str:
+        """Get OpenRouter API key from environment."""
+        api_key = os.getenv("OPENROUTER_API_KEY")
+        if not api_key:
+            pytest.skip("OPENROUTER_API_KEY not set")
+        return api_key or ""
+
+    @pytest.fixture
+    def openrouter_gpt4_config(self, api_key: str) -> Any:
+        """Create OpenRouter GPT-4 configuration."""
+        return LlmConfig.openrouter(api_key, "openai/gpt-4o-mini")
+
+    @pytest.fixture
+    def openrouter_claude_config(self, api_key: str) -> Any:
+        """Create OpenRouter Claude configuration."""
+        return LlmConfig.openrouter(api_key, "anthropic/claude-3-5-haiku")
+
+    @pytest.fixture
+    def openrouter_with_site_config(self, api_key: str) -> Any:
+        """Create OpenRouter configuration with site information."""
+        return LlmConfig.openrouter_with_site(api_key, "openai/gpt-4o-mini", "https://github.com/InfinitiBit/graphbit", "GraphBit AI Framework")
+
+    @pytest.fixture
+    def openrouter_client(self, openrouter_gpt4_config: Any) -> Any:
+        """Create OpenRouter client."""
+        return LlmClient(openrouter_gpt4_config)
+
+    def test_openrouter_gpt4_config_creation(self, openrouter_gpt4_config: Any) -> None:
+        """Test OpenRouter GPT-4 config creation and properties."""
+        assert openrouter_gpt4_config.provider() == "openrouter"
+        assert openrouter_gpt4_config.model() == "openai/gpt-4o-mini"
+
+    def test_openrouter_claude_config_creation(self, openrouter_claude_config: Any) -> None:
+        """Test OpenRouter Claude config creation and properties."""
+        assert openrouter_claude_config.provider() == "openrouter"
+        assert openrouter_claude_config.model() == "anthropic/claude-3-5-haiku"
+
+    def test_openrouter_with_site_config_creation(self, openrouter_with_site_config: Any) -> None:
+        """Test OpenRouter config with site information."""
+        assert openrouter_with_site_config.provider() == "openrouter"
+        assert openrouter_with_site_config.model() == "openai/gpt-4o-mini"
+
+    def test_openrouter_client_creation(self, openrouter_client: Any) -> None:
+        """Test OpenRouter client creation."""
+        assert openrouter_client is not None
+        assert hasattr(openrouter_client, "complete")
+
+    def test_openrouter_simple_completion(self, openrouter_client: Any) -> None:
+        """Test simple completion with OpenRouter."""
+        try:
+            response = openrouter_client.complete("Say 'Hello from OpenRouter!' and nothing else.", max_tokens=50, temperature=0.1)
+            assert response is not None
+            assert len(response) > 0
+            assert "openrouter" in response.lower() or "hello" in response.lower()
+        except Exception as e:
+            pytest.fail(f"OpenRouter completion failed: {e}")
+
+    def test_openrouter_workflow_execution(self, openrouter_gpt4_config: Any) -> None:
+        """Test workflow execution with OpenRouter."""
+        try:
+            workflow = Workflow("OpenRouter Test Workflow")
+
+            test_node = Node.agent(name="OpenRouter Test Agent", prompt="Respond with exactly: 'OpenRouter workflow test successful'", agent_id="openrouter_test_agent")
+
+            workflow.add_node(test_node)
+            workflow.validate()
+
+            executor = Executor(openrouter_gpt4_config, debug=True)
+            context = executor.execute(workflow)
+
+            assert context.is_completed()
+            result = context.get_variable(f"node_result_{test_node.node_id}")
+            assert result is not None
+            assert len(result) > 0
+
+        except Exception as e:
+            pytest.fail(f"OpenRouter workflow execution failed: {e}")
+
+    def test_openrouter_multi_model_workflow(self, api_key: str) -> None:
+        """Test workflow with multiple OpenRouter models."""
+        try:
+            workflow = Workflow("Multi-Model OpenRouter Workflow")
+
+            # GPT node
+            gpt_node = Node.agent(
+                name="GPT Analyzer", prompt="Analyze this topic in one sentence: 'artificial intelligence'", agent_id="gpt_analyzer", llm_config=LlmConfig.openrouter(api_key, "openai/gpt-4o-mini")
+            )
+
+            # Claude node
+            claude_node = Node.agent(
+                name="Claude Summarizer", prompt="Summarize this analysis in 5 words: {input}", agent_id="claude_summarizer", llm_config=LlmConfig.openrouter(api_key, "anthropic/claude-3-5-haiku")
+            )
+
+            workflow.add_node(gpt_node)
+            workflow.add_node(claude_node)
+            workflow.add_edge(gpt_node, claude_node)
+            workflow.validate()
+
+            # Use default config for executor
+            default_config = LlmConfig.openrouter(api_key, "openai/gpt-4o-mini")
+            executor = Executor(default_config, debug=True)
+            context = executor.execute(workflow)
+
+            assert context.is_completed()
+
+            gpt_result = context.get_variable(f"node_result_{gpt_node.node_id}")
+            claude_result = context.get_variable(f"node_result_{claude_node.node_id}")
+
+            assert gpt_result is not None
+            assert claude_result is not None
+            assert len(gpt_result) > 0
+            assert len(claude_result) > 0
+
+        except Exception as e:
+            pytest.fail(f"Multi-model OpenRouter workflow failed: {e}")
+
+
+class TestFireworksLLM:
+    """Integration tests for Fireworks AI LLM models."""
+
+    @pytest.fixture
+    def api_key(self) -> str:
+        """Get Fireworks AI API key from environment."""
+        api_key = os.getenv("FIREWORKS_API_KEY")
+        if not api_key:
+            pytest.skip("FIREWORKS_API_KEY not set")
+        return api_key or ""
+
+    @pytest.fixture
+    def fireworks_config(self, api_key: str) -> Any:
+        """Create Fireworks AI configuration."""
+        return LlmConfig.fireworks(api_key, "accounts/fireworks/models/llama-v3p1-8b-instruct")
+
+    @pytest.fixture
+    def fireworks_client(self, fireworks_config: Any) -> Any:
+        """Create Fireworks AI client."""
+        return LlmClient(fireworks_config)
+
+    def test_fireworks_config_creation(self, fireworks_config: Any) -> None:
+        """Test Fireworks AI config creation and properties."""
+        assert fireworks_config.provider() == "fireworks"
+        assert fireworks_config.model() == "accounts/fireworks/models/llama-v3p1-8b-instruct"
+
+    def test_fireworks_client_creation(self, fireworks_client: Any) -> None:
+        """Test Fireworks AI client creation."""
+        assert fireworks_client is not None
+
+    @pytest.mark.asyncio
+    async def test_fireworks_basic_completion(self, fireworks_client: Any) -> None:
+        """Test basic completion with Fireworks AI."""
+        try:
+            response = await fireworks_client.complete_async(prompt="What is the capital of France?", max_tokens=50, temperature=0.1)
+
+            assert response is not None
+            assert len(response) > 0
+            assert "Paris" in response or "paris" in response.lower()
+
+        except Exception as e:
+            pytest.fail(f"Fireworks AI completion failed: {e}")
+
+    @pytest.mark.asyncio
+    async def test_fireworks_workflow_integration(self, fireworks_config: Any) -> None:
+        """Test Fireworks AI integration with workflow execution."""
+        try:
+            # Create a simple workflow with Fireworks AI
+            workflow = Workflow()
+
+            node = Node(name="fireworks_test", prompt="Explain quantum computing in one sentence.", llm_config=fireworks_config, max_tokens=100, temperature=0.3)
+
+            workflow.add_node(node)
+            workflow.validate()
+
+            executor = Executor(fireworks_config)
+            context = await executor.execute_async(workflow)
+
+            result = context.get_variable("fireworks_test_result")
+            assert result is not None
+            assert len(result) > 0
+            assert any(word in result.lower() for word in ["quantum", "computing", "computer"])
+
+        except Exception as e:
+            pytest.fail(f"Fireworks AI workflow failed: {e}")
+
+
+class TestXaiLLM:
+    """Integration tests for xAI Grok models."""
+
+    @pytest.fixture
+    def api_key(self) -> str:
+        """Get xAI API key from environment."""
+        api_key = os.getenv("XAI_API_KEY")
+        if not api_key:
+            pytest.skip("XAI_API_KEY not set")
+        return api_key or ""
+
+    @pytest.fixture
+    def xai_config(self, api_key: str) -> Any:
+        """Create xAI configuration."""
+        return LlmConfig.xai(api_key, "grok-4")
+
+    @pytest.fixture
+    def xai_client(self, xai_config: Any) -> Any:
+        """Create xAI client."""
+        return LlmClient(xai_config)
+
+    def test_xai_config_creation(self, xai_config: Any) -> None:
+        """Test xAI config creation and properties."""
+        assert xai_config.provider() == "xai"
+        assert xai_config.model() == "grok-4"
+
+    def test_xai_client_creation(self, xai_client: Any) -> None:
+        """Test xAI client creation."""
+        assert xai_client is not None
+
+    @pytest.mark.asyncio
+    async def test_xai_basic_completion(self, xai_client: Any) -> None:
+        """Test basic completion with xAI Grok."""
+        try:
+            response = await xai_client.complete_async(prompt="What is the capital of France?", max_tokens=50, temperature=0.1)
+
+            assert response is not None
+            assert len(response) > 0
+            assert "paris" in response.lower()
+
+        except Exception as e:
+            pytest.fail(f"xAI completion failed: {e}")
+
+    @pytest.mark.asyncio
+    async def test_xai_workflow_integration(self, xai_config: Any) -> None:
+        """Test xAI integration with workflow execution."""
+        try:
+            # Create a simple workflow with xAI
+            workflow = Workflow()
+
+            node = Node(name="xai_test", prompt="Explain quantum computing in one sentence.", llm_config=xai_config, max_tokens=100, temperature=0.3)
+
+            workflow.add_node(node)
+            workflow.validate()
+
+            executor = Executor(xai_config)
+            context = await executor.execute_async(workflow)
+
+            result = context.get_variable("xai_test_result")
+            assert result is not None
+            assert len(result) > 0
+            assert any(word in result.lower() for word in ["quantum", "computing", "computer"])
+
+        except Exception as e:
+            pytest.fail(f"xAI workflow failed: {e}")
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

@@ -94,6 +94,64 @@ impl LlmConfig {
         })
     }
 
+    #[staticmethod]
+    #[pyo3(signature = (api_key, model=None))]
+    fn openrouter(api_key: String, model: Option<String>) -> PyResult<Self> {
+        validate_api_key(&api_key, "OpenRouter")?;
+
+        Ok(Self {
+            inner: CoreLlmConfig::openrouter(
+                api_key,
+                model.unwrap_or_else(|| "openai/gpt-4o-mini".to_string()),
+            ),
+        })
+    }
+
+    #[staticmethod]
+    #[pyo3(signature = (api_key, model=None, site_url=None, site_name=None))]
+    fn openrouter_with_site(
+        api_key: String,
+        model: Option<String>,
+        site_url: Option<String>,
+        site_name: Option<String>,
+    ) -> PyResult<Self> {
+        validate_api_key(&api_key, "OpenRouter")?;
+
+        Ok(Self {
+            inner: CoreLlmConfig::openrouter_with_site(
+                api_key,
+                model.unwrap_or_else(|| "openai/gpt-4o-mini".to_string()),
+                site_url,
+                site_name,
+            ),
+        })
+    }
+
+    #[staticmethod]
+    #[pyo3(signature = (api_key, model=None))]
+    fn fireworks(api_key: String, model: Option<String>) -> PyResult<Self> {
+        validate_api_key(&api_key, "Fireworks")?;
+
+        Ok(Self {
+            inner: CoreLlmConfig::fireworks(
+                api_key,
+                model.unwrap_or_else(|| {
+                    "accounts/fireworks/models/llama-v3p1-8b-instruct".to_string()
+                }),
+            ),
+        })
+    }
+
+    #[staticmethod]
+    #[pyo3(signature = (api_key, model=None))]
+    fn xai(api_key: String, model: Option<String>) -> PyResult<Self> {
+        validate_api_key(&api_key, "xAI")?;
+
+        Ok(Self {
+            inner: CoreLlmConfig::xai(api_key, model.unwrap_or_else(|| "grok-4".to_string())),
+        })
+    }
+
     fn provider(&self) -> String {
         self.inner.provider_name().to_string()
     }

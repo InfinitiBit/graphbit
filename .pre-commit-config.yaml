@@ -143,15 +143,6 @@ repos:
   - id: typos
     exclude: ^(site/|Cargo\.lock|poetry\.lock|CHANGELOG\.md)$
 
-
-
-  # Dockerfile Linting (if any Dockerfiles exist)
-- repo: https://github.com/hadolint/hadolint
-  rev: v2.13.1-beta
-  hooks:
-  - id: hadolint-docker
-    files: ^.*Dockerfile.*$
-
   # Shell Script Linting
 - repo: https://github.com/shellcheck-py/shellcheck-py
   rev: v0.10.0.1

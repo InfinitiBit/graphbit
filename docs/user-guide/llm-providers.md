@@ -7,8 +7,11 @@ GraphBit supports multiple Large Language Model providers through a unified clie
 GraphBit supports these LLM providers:
 - **OpenAI** - GPT models including GPT-4o, GPT-4o-mini
 - **Anthropic** - Claude models including Claude-4-Sonnet
+- **OpenRouter** - Unified access to 400+ models from multiple providers (GPT, Claude, Mistral, etc.)
 - **Perplexity** - Real-time search-enabled models including Sonar models
 - **DeepSeek** - High-performance models including DeepSeek-Chat, DeepSeek-Coder, and DeepSeek-Reasoner
+- **Fireworks AI** - Fast inference for open-source models including Llama, Mixtral, and Qwen
+- **xAI** - Grok models with real-time information and advanced reasoning capabilities
 - **Ollama** - Local model execution with various open-source models
 
 ## Configuration
@@ -95,6 +98,69 @@ fast_config = LlmConfig.anthropic(
 )
 ```
 
+### OpenRouter Configuration
+
+OpenRouter provides unified access to 400+ AI models through a single API, including models from OpenAI, Anthropic, Google, Meta, Mistral, and many others. This allows you to easily switch between different models and providers without changing your code.
+
+```python
+import os
+
+from graphbit import LlmConfig
+
+# Basic OpenRouter configuration
+config = LlmConfig.openrouter(
+    api_key=os.getenv("OPENROUTER_API_KEY"),
+    model="openai/gpt-4o-mini"  # Optional - defaults to openai/gpt-4o-mini
+)
+
+print(f"Provider: {config.provider()}")  # "openrouter"
+print(f"Model: {config.model()}")        # "openai/gpt-4o-mini"
+```
+
+#### Popular OpenRouter Models
+
+| Model | Provider | Best For | Context Length |
+|-------|----------|----------|----------------|
+| `openai/gpt-4o` | OpenAI | Complex reasoning, latest features | 128K |
+| `openai/gpt-4o-mini` | OpenAI | Balanced performance and cost | 128K |
+| `anthropic/claude-3-5-sonnet` | Anthropic | Advanced reasoning, coding | 200K |
+| `anthropic/claude-3-5-haiku` | Anthropic | Fast responses, simple tasks | 200K |
+| `google/gemini-pro-1.5` | Google | Large context, multimodal | 1M |
+| `meta-llama/llama-3.1-405b-instruct` | Meta | Open source, high performance | 131K |
+| `mistralai/mistral-large` | Mistral | Multilingual, reasoning | 128K |
+
+```python
+# Model selection examples
+openai_config = LlmConfig.openrouter(
+    api_key=os.getenv("OPENROUTER_API_KEY"),
+    model="openai/gpt-4o"  # Access OpenAI models through OpenRouter
+)
+
+claude_config = LlmConfig.openrouter(
+    api_key=os.getenv("OPENROUTER_API_KEY"),
+    model="anthropic/claude-3-5-sonnet"  # Access Claude models
+)
+
+llama_config = LlmConfig.openrouter(
+    api_key=os.getenv("OPENROUTER_API_KEY"),
+    model="meta-llama/llama-3.1-405b-instruct"  # Access open source models
+)
+```
+
+#### OpenRouter with Site Information
+
+For better rankings and analytics on OpenRouter, you can provide your site information:
+
+```python
+# Configuration with site information for OpenRouter rankings
+config = LlmConfig.openrouter_with_site(
+    api_key=os.getenv("OPENROUTER_API_KEY"),
+    model="openai/gpt-4o-mini",
+    site_url="https://graphbit.ai",  # Optional - your site URL
+    site_name="GraphBit AI Framework"  # Optional - your site name
+)
+```
+
 ### Perplexity Configuration
 
 Configure Perplexity provider to access real-time search-enabled models:
@@ -169,6 +235,156 @@ reasoning_config = LlmConfig.deepseek(
     api_key=os.getenv("DEEPSEEK_API_KEY"),
     model="deepseek-reasoner"  # For complex reasoning tasks
 )
+```
+
+### Fireworks AI Configuration
+
+Configure Fireworks AI for fast inference with open-source models:
+
+```python
+import os
+
+from graphbit import LlmConfig
+
+# Basic Fireworks AI configuration
+config = LlmConfig.fireworks(
+    api_key=os.getenv("FIREWORKS_API_KEY"),
+    model="accounts/fireworks/models/llama-v3p1-8b-instruct"  # Optional - defaults to llama-v3p1-8b-instruct
+)
+
+print(f"Provider: {config.provider()}")  # "fireworks"
+print(f"Model: {config.model()}")        # "accounts/fireworks/models/llama-v3p1-8b-instruct"
+```
+
+#### Popular Fireworks AI Models
+
+| Model | Best For | Context Length | Performance | Cost |
+|-------|----------|----------------|-------------|------|
+| `accounts/fireworks/models/llama-v3p1-8b-instruct` | General tasks, fast inference | 131K | Fast, efficient | Very low |
+| `accounts/fireworks/models/llama-v3p1-70b-instruct` | Complex reasoning, high quality | 131K | High quality | Low |
+| `accounts/fireworks/models/deepseek-v3p1` | Most complex tasks | 131K | Highest quality | Medium |
+| `accounts/fireworks/models/kimi-k2-instruct-0905` | Multilingual, code generation | 32K | Balanced | Low |
+| `accounts/fireworks/models/qwen3-coder-480b-a35b-instruct` | Reasoning, mathematics | 32K | High quality | Low |
+
+```python
+# Model selection for different use cases
+fast_config = LlmConfig.fireworks(
+    api_key=os.getenv("FIREWORKS_API_KEY"),
+    model="accounts/fireworks/models/llama-v3p1-8b-instruct"  # For fast, efficient tasks
+)
+
+quality_config = LlmConfig.fireworks(
+    api_key=os.getenv("FIREWORKS_API_KEY"),
+    model="accounts/fireworks/models/llama-v3p1-70b-instruct"  # For high-quality responses
+)
+
+coding_config = LlmConfig.fireworks(
+    api_key=os.getenv("FIREWORKS_API_KEY"),
+    model="accounts/fireworks/models/mixtral-8x7b-instruct"  # For code generation
+)
+```
+
+#### Getting Started with Fireworks AI
+
+1. **Sign up** at [fireworks.ai](https://fireworks.ai)
+2. **Get your API key** from the dashboard
+3. **Set environment variable**: `export FIREWORKS_API_KEY="your-api-key"`
+4. **Start using** with GraphBit
+
+```python
+import os
+from graphbit import LlmClient, LlmConfig
+
+# Create configuration
+config = LlmConfig.fireworks(
+    api_key=os.getenv("FIREWORKS_API_KEY"),
+    model="accounts/fireworks/models/llama-v3p1-8b-instruct"
+)
+
+# Create client and generate text
+client = LlmClient(config)
+response = client.complete(
+    prompt="Explain quantum computing in simple terms",
+    max_tokens=200,
+    temperature=0.7
+)
+
+print(response)
+```
+
+### xAI Configuration
+
+Configure xAI for Grok models with real-time information and advanced reasoning:
+
+```python
+import os
+
+from graphbit import LlmConfig
+
+# Basic xAI configuration
+config = LlmConfig.xai(
+    api_key=os.getenv("XAI_API_KEY"),
+    model="grok-4"  # Optional - defaults to grok-4
+)
+
+print(f"Provider: {config.provider()}")  # "xai"
+print(f"Model: {config.model()}")        # "grok-4"
+```
+
+#### Popular xAI Grok Models
+
+| Model | Best For | Context Length | Performance | Cost |
+|-------|----------|----------------|-------------|------|
+| `grok-4` | Complex reasoning, latest features | 256K | Highest quality | Medium |
+| `grok-4-0709` | Stable version of Grok-4 | 256K | High quality | Medium |
+| `grok-code-fast-1` | Code generation, fast inference | 256K | Fast, efficient | Very low |
+| `grok-3` | General tasks, balanced performance | 131K | Good quality | Medium |
+| `grok-3-mini` | Quick tasks, cost-effective | 131K | Fast, efficient | Very low |
+
+```python
+# Model selection for different use cases
+reasoning_config = LlmConfig.xai(
+    api_key=os.getenv("XAI_API_KEY"),
+    model="grok-4"  # For complex reasoning and latest features
+)
+
+coding_config = LlmConfig.xai(
+    api_key=os.getenv("XAI_API_KEY"),
+    model="grok-code-fast-1"  # For fast code generation
+)
+
+efficient_config = LlmConfig.xai(
+    api_key=os.getenv("XAI_API_KEY"),
+    model="grok-3-mini"  # For cost-effective tasks
+)
+```
+
+#### Getting Started with xAI
+
+1. **Sign up** at [x.ai](https://x.ai)
+2. **Get your API key** from the developer console
+3. **Set environment variable**: `export XAI_API_KEY="your-api-key"`
+4. **Start using** with GraphBit
+
+```python
+import os
+from graphbit import LlmClient, LlmConfig
+
+# Create configuration
+config = LlmConfig.xai(
+    api_key=os.getenv("XAI_API_KEY"),
+    model="grok-4"
+)
+
+# Create client and generate text
+client = LlmClient(config)
+response = client.complete(
+    prompt="Explain quantum computing with real-time examples",
+    max_tokens=200,
+    temperature=0.7
+)
+
+print(response)
 ```
 
 ### Ollama Configuration
@@ -512,6 +728,61 @@ def create_deepseek_coding_workflow():
 workflow, executor = create_deepseek_workflow()
 ```
 
+### OpenRouter Workflow Example
+
+```python
+from graphbit import LlmConfig, Workflow, Node, Executor
+import os
+
+def create_openrouter_workflow():
+    """Create workflow using OpenRouter with multiple models"""
+
+    # Configure OpenRouter with a high-performance model
+    config = LlmConfig.openrouter(
+        api_key=os.getenv("OPENROUTER_API_KEY"),
+        model="anthropic/claude-3-5-sonnet"  # Use Claude through OpenRouter
+    )
+
+    workflow = Workflow("OpenRouter Multi-Model Pipeline")
+
+    # Create analyzer using Claude for complex reasoning
+    analyzer = Node.agent(
+        name="Claude Content Analyzer",
+        prompt=f"""
+        Analyze this content comprehensively:
+        - Main themes and topics
+        - Sentiment and tone
+        - Key insights and takeaways
+        - Potential improvements
+
+        Content: {input}
+        """,
+        agent_id="claude_analyzer"
+    )
+
+    # Create summarizer using a different model for comparison
+    summarizer = Node.agent(
+        name="GPT Summarizer",
+        prompt=f"Create a concise summary of this analysis: {input}",
+        agent_id="gpt_summarizer",
+        llm_config=LlmConfig.openrouter(
+            api_key=os.getenv("OPENROUTER_API_KEY"),
+            model="openai/gpt-4o-mini"  # Use GPT for summarization
+        )
+    )
+
+    workflow.add_node(analyzer)
+    workflow.add_node(summarizer)
+    workflow.add_edge(analyzer, summarizer)
+    workflow.validate()
+
+    executor = Executor(config, timeout_seconds=120)
+    return workflow, executor
+
+# Usage
+workflow, executor = create_openrouter_workflow()
+```
+
 ### Ollama Workflow Example
 
 ```python
@@ -674,6 +945,11 @@ def get_optimal_config(use_case):
             api_key=os.getenv("DEEPSEEK_API_KEY"),
             model="deepseek-reasoner"
         )
+    elif use_case == "multi_model":
+        return LlmConfig.openrouter(
+            api_key=os.getenv("OPENROUTER_API_KEY"),
+            model="anthropic/claude-3-5-sonnet"
+        )
     elif use_case == "local":
         return LlmConfig.ollama(model="llama3.2")
     else:
@@ -696,6 +972,8 @@ def get_api_key(provider):
     key_mapping = {
         "openai": "OPENAI_API_KEY",
         "anthropic": "ANTHROPIC_API_KEY",
+        "openrouter": "OPENROUTER_API_KEY",
+        "perplexity": "PERPLEXITY_API_KEY",
         "deepseek": "DEEPSEEK_API_KEY"
     }
     

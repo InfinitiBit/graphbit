@@ -1,4 +1,8 @@
-//! `Perplexity` AI LLM provider implementation
+//! `OpenRouter` LLM provider implementation
+//!
+//! `OpenRouter` provides unified access to multiple AI models through a single API.
+//! It supports OpenAI-compatible endpoints with additional features like model routing
+//! and provider preferences.
 
 use crate::errors::{GraphBitError, GraphBitResult};
 use crate::llm::providers::LlmProviderTrait;
@@ -9,42 +13,47 @@ use async_trait::async_trait;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
-/// `Perplexity` AI provider
-pub struct PerplexityProvider {
+/// `OpenRouter` API provider
+pub struct OpenRouterProvider {
     client: Client,
     api_key: String,
     model: String,
     base_url: String,
+    site_url: Option<String>,
+    site_name: Option<String>,
 }
 
-impl PerplexityProvider {
-    /// Create a new `Perplexity` provider
+impl OpenRouterProvider {
+    /// Create a new `OpenRouter` provider
     pub fn new(api_key: String, model: String) -> GraphBitResult<Self> {
         // Optimized client with connection pooling for better performance
         let client = Client::builder()
             .timeout(std::time::Duration::from_secs(60))
-            .pool_max_idle_per_host(10)
+            .pool_max_idle_per_host(10) // Increased connection pool size
             .pool_idle_timeout(std::time::Duration::from_secs(30))
             .tcp_keepalive(std::time::Duration::from_secs(60))
             .build()
             .map_err(|e| {
                 GraphBitError::llm_provider(
-                    "perplexity",
+                    "openrouter",
                     format!("Failed to create HTTP client: {e}"),
                 )
             })?;
-        let base_url = "https://api.perplexity.ai".to_string();
+        let base_url = "https://openrouter.ai/api/v1".to_string();
 
         Ok(Self {
             client,
             api_key,
             model,
             base_url,
+            site_url: None,
+            site_name: None,
         })
     }
 
-    /// Create a new `Perplexity` provider with custom base URL
+    /// Create a new `OpenRouter` provider with custom base URL
     pub fn with_base_url(api_key: String, model: String, base_url: String) -> GraphBitResult<Self> {
+        // Use same optimized client settings
         let client = Client::builder()
             .timeout(std::time::Duration::from_secs(60))
             .pool_max_idle_per_host(10)
@@ -53,7 +62,7 @@ impl PerplexityProvider {
             .build()
             .map_err(|e| {
                 GraphBitError::llm_provider(
-                    "perplexity",
+                    "openrouter",
                     format!("Failed to create HTTP client: {e}"),
                 )
             })?;
@@ -63,12 +72,27 @@ impl PerplexityProvider {
             api_key,
             model,
             base_url,
+            site_url: None,
+            site_name: None,
         })
     }
 
-    /// Convert `GraphBit` message to `Perplexity` message format (`OpenAI`-compatible)
-    fn convert_message(message: &LlmMessage) -> PerplexityMessage {
-        PerplexityMessage {
+    /// Create a new `OpenRouter` provider with site information for rankings
+    pub fn with_site_info(
+        api_key: String,
+        model: String,
+        site_url: Option<String>,
+        site_name: Option<String>,
+    ) -> GraphBitResult<Self> {
+        let mut provider = Self::new(api_key, model)?;
+        provider.site_url = site_url;
+        provider.site_name = site_name;
+        Ok(provider)
+    }
+
+    /// Convert `GraphBit` message to `OpenRouter` message format (`OpenAI`-compatible)
+    fn convert_message(message: &LlmMessage) -> OpenRouterMessage {
+        OpenRouterMessage {
             role: match message.role {
                 LlmRole::User => "user".to_string(),
                 LlmRole::Assistant => "assistant".to_string(),
@@ -83,10 +107,10 @@ impl PerplexityProvider {
                     message
                         .tool_calls
                         .iter()
-                        .map(|tc| PerplexityToolCall {
+                        .map(|tc| OpenRouterToolCall {
                             id: tc.id.clone(),
                             r#type: "function".to_string(),
-                            function: PerplexityFunction {
+                            function: OpenRouterFunction {
                                 name: tc.name.clone(),
                                 arguments: tc.parameters.to_string(),
                             },
@@ -97,11 +121,11 @@ impl PerplexityProvider {
         }
     }
 
-    /// Convert `GraphBit` tool to `Perplexity` tool format (`OpenAI`-compatible)
-    fn convert_tool(tool: &LlmTool) -> PerplexityTool {
-        PerplexityTool {
+    /// Convert `GraphBit` tool to `OpenRouter` tool format (`OpenAI`-compatible)
+    fn convert_tool(tool: &LlmTool) -> OpenRouterTool {
+        OpenRouterTool {
             r#type: "function".to_string(),
-            function: PerplexityFunctionDef {
+            function: OpenRouterFunctionDef {
                 name: tool.name.clone(),
                 description: tool.description.clone(),
                 parameters: tool.parameters.clone(),
@@ -109,14 +133,14 @@ impl PerplexityProvider {
         }
     }
 
-    /// Parse `Perplexity` response to `GraphBit` response
-    fn parse_response(&self, response: PerplexityResponse) -> GraphBitResult<LlmResponse> {
+    /// Parse `OpenRouter` response to `GraphBit` response
+    fn parse_response(&self, response: OpenRouterResponse) -> GraphBitResult<LlmResponse> {
         let choice =
             response.choices.into_iter().next().ok_or_else(|| {
-                GraphBitError::llm_provider("perplexity", "No choices in response")
+                GraphBitError::llm_provider("openrouter", "No choices in response")
             })?;
 
-        let content = choice.message.content;
+        let content = choice.message.content.unwrap_or_default();
         let tool_calls = choice
             .message
             .tool_calls
@@ -138,10 +162,11 @@ impl PerplexityProvider {
             None => FinishReason::Stop,
         };
 
-        let usage = LlmUsage::new(
-            response.usage.prompt_tokens,
-            response.usage.completion_tokens,
-        );
+        let usage = if let Some(usage) = response.usage {
+            LlmUsage::new(usage.prompt_tokens, usage.completion_tokens)
+        } else {
+            LlmUsage::new(0, 0)
+        };
 
         Ok(LlmResponse::new(content, &self.model)
             .with_tool_calls(tool_calls)
@@ -152,9 +177,9 @@ impl PerplexityProvider {
 }
 
 #[async_trait]
-impl LlmProviderTrait for PerplexityProvider {
+impl LlmProviderTrait for OpenRouterProvider {
     fn provider_name(&self) -> &str {
-        "perplexity"
+        "openrouter"
     }
 
     fn model_name(&self) -> &str {
@@ -164,13 +189,13 @@ impl LlmProviderTrait for PerplexityProvider {
     async fn complete(&self, request: LlmRequest) -> GraphBitResult<LlmResponse> {
         let url = format!("{}/chat/completions", self.base_url);
 
-        let messages: Vec<PerplexityMessage> = request
+        let messages: Vec<OpenRouterMessage> = request
             .messages
             .iter()
             .map(|m| Self::convert_message(m))
             .collect();
 
-        let tools: Option<Vec<PerplexityTool>> = if request.tools.is_empty() {
+        let tools: Option<Vec<OpenRouterTool>> = if request.tools.is_empty() {
             None
         } else {
             Some(
@@ -182,7 +207,7 @@ impl LlmProviderTrait for PerplexityProvider {
             )
         };
 
-        let body = PerplexityRequest {
+        let body = OpenRouterRequest {
             model: self.model.clone(),
             messages,
             max_tokens: request.max_tokens,
@@ -204,17 +229,26 @@ impl LlmProviderTrait for PerplexityProvider {
             }
         }
 
-        let response = self
+        let mut request_builder = self
             .client
             .post(&url)
             .header("Authorization", format!("Bearer {}", self.api_key))
-            .header("Content-Type", "application/json")
-            .header("Accept", "application/json")
+            .header("Content-Type", "application/json");
+
+        // Add optional site information for `OpenRouter` rankings
+        if let Some(ref site_url) = self.site_url {
+            request_builder = request_builder.header("HTTP-Referer", site_url);
+        }
+        if let Some(ref site_name) = self.site_name {
+            request_builder = request_builder.header("X-Title", site_name);
+        }
+
+        let response = request_builder
             .json(&request_json)
             .send()
             .await
             .map_err(|e| {
-                GraphBitError::llm_provider("perplexity", format!("Request failed: {e}"))
+                GraphBitError::llm_provider("openrouter", format!("Request failed: {e}"))
             })?;
 
         if !response.status().is_success() {
@@ -223,60 +257,86 @@ impl LlmProviderTrait for PerplexityProvider {
                 .await
                 .unwrap_or_else(|_| "Unknown error".to_string());
             return Err(GraphBitError::llm_provider(
-                "perplexity",
-                format!("API error: {}", error_text),
+                "openrouter",
+                format!("API error: {error_text}"),
             ));
         }
 
-        let perplexity_response: PerplexityResponse = response.json().await.map_err(|e| {
-            GraphBitError::llm_provider("perplexity", format!("Failed to parse response: {e}"))
+        let openrouter_response: OpenRouterResponse = response.json().await.map_err(|e| {
+            GraphBitError::llm_provider("openrouter", format!("Failed to parse response: {e}"))
         })?;
 
-        self.parse_response(perplexity_response)
+        self.parse_response(openrouter_response)
     }
 
     fn supports_function_calling(&self) -> bool {
-        // `Perplexity` models support function calling through `OpenAI`-compatible interface
+        // `OpenRouter` supports function calling through OpenAI-compatible interface
+        // Most models on `OpenRouter` support this, but it depends on the specific model
         true
     }
 
     fn max_context_length(&self) -> Option<u32> {
+        // Context length varies by model on `OpenRouter`
+        // Common models and their approximate context lengths
         match self.model.as_str() {
-            "pplx-7b-online" | "pplx-70b-online" => Some(4096),
-            "pplx-7b-chat" | "pplx-70b-chat" => Some(8192),
-            "llama-2-70b-chat" => Some(4096),
-            "codellama-34b-instruct" => Some(16_384),
-            "mistral-7b-instruct" => Some(16_384),
-            "sonar" | "sonar-reasoning" => Some(8192),
-            "sonar-deep-research" => Some(32_768),
-            _ if self.model.starts_with("sonar") => Some(8192),
-            _ => Some(4096), // Conservative default
+            // `OpenAI` models
+            "openai/gpt-4o" | "openai/gpt-4o-mini" => Some(128_000),
+            "openai/gpt-4-turbo" => Some(128_000),
+            "openai/gpt-4" => Some(8192),
+            "openai/gpt-3.5-turbo" => Some(16_385),
+
+            // `Anthropic` models
+            "anthropic/claude-3-5-sonnet" | "anthropic/claude-3-5-haiku" => Some(200_000),
+            "anthropic/claude-3-opus"
+            | "anthropic/claude-3-sonnet"
+            | "anthropic/claude-3-haiku" => Some(200_000),
+
+            // `Google` models
+            "google/gemini-pro" => Some(32_768),
+            "google/gemini-pro-1.5" => Some(1_000_000),
+
+            // `Meta` models
+            "meta-llama/llama-3.1-405b-instruct" => Some(131_072),
+            "meta-llama/llama-3.1-70b-instruct" => Some(131_072),
+            "meta-llama/llama-3.1-8b-instruct" => Some(131_072),
+
+            // `Mistral` models
+            "mistralai/mistral-large" => Some(128_000),
+            "mistralai/mistral-medium" => Some(32_768),
+
+            // Default for unknown models
+            _ => Some(4096),
         }
     }
 
     fn cost_per_token(&self) -> Option<(f64, f64)> {
-        // Cost per token in USD (input, output) based on `Perplexity` pricing
+        // Cost per token in USD (input, output) - varies by model on `OpenRouter`
+        // These are approximate costs and may change
         match self.model.as_str() {
-            "pplx-7b-online" => Some((0.000_000_2, 0.000_000_2)),
-            "pplx-70b-online" => Some((0.000_001, 0.000_001)),
-            "pplx-7b-chat" => Some((0.000_000_2, 0.000_000_2)),
-            "pplx-70b-chat" => Some((0.000_001, 0.000_001)),
-            "llama-2-70b-chat" => Some((0.000_001, 0.000_001)),
-            "codellama-34b-instruct" => Some((0.000_000_35, 0.000_001_40)),
-            "mistral-7b-instruct" => Some((0.000_000_2, 0.000_000_2)),
-            "sonar" => Some((0.000_001, 0.000_001)),
-            "sonar-reasoning" => Some((0.000_002, 0.000_002)),
-            "sonar-deep-research" => Some((0.000_005, 0.000_005)),
+            // `OpenAI` models (approximate OpenRouter pricing)
+            "openai/gpt-4o" => Some((0.000_002_5, 0.000_01)),
+            "openai/gpt-4o-mini" => Some((0.000_000_15, 0.000_000_6)),
+            "openai/gpt-4-turbo" => Some((0.000_01, 0.000_03)),
+            "openai/gpt-4" => Some((0.000_03, 0.000_06)),
+            "openai/gpt-3.5-turbo" => Some((0.000_000_5, 0.000_001_5)),
+
+            // `Anthropic` models
+            "anthropic/claude-3-5-sonnet" => Some((0.000_003, 0.000_015)),
+            "anthropic/claude-3-opus" => Some((0.000_015, 0.000_075)),
+            "anthropic/claude-3-sonnet" => Some((0.000_003, 0.000_015)),
+            "anthropic/claude-3-haiku" => Some((0.000_000_25, 0.000_001_25)),
+
+            // Many other models on OpenRouter are free or very low cost
             _ => None,
         }
     }
 }
 
-// `Perplexity` API types (`OpenAI`-compatible)
+// `OpenRouter` API types (OpenAI-compatible with some extensions)
 #[derive(Debug, Serialize)]
-struct PerplexityRequest {
+struct OpenRouterRequest {
     model: String,
-    messages: Vec<PerplexityMessage>,
+    messages: Vec<OpenRouterMessage>,
     #[serde(skip_serializing_if = "Option::is_none")]
     max_tokens: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -284,60 +344,67 @@ struct PerplexityRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     top_p: Option<f32>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    tools: Option<Vec<PerplexityTool>>,
+    tools: Option<Vec<OpenRouterTool>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     tool_choice: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct PerplexityMessage {
+struct OpenRouterMessage {
     role: String,
     content: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    tool_calls: Option<Vec<PerplexityToolCall>>,
+    tool_calls: Option<Vec<OpenRouterToolCall>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct PerplexityToolCall {
+struct OpenRouterToolCall {
     id: String,
     r#type: String,
-    function: PerplexityFunction,
+    function: OpenRouterFunction,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct PerplexityFunction {
+struct OpenRouterFunction {
     name: String,
     arguments: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
-struct PerplexityTool {
+struct OpenRouterTool {
     r#type: String,
-    function: PerplexityFunctionDef,
+    function: OpenRouterFunctionDef,
 }
 
 #[derive(Debug, Clone, Serialize)]
-struct PerplexityFunctionDef {
+struct OpenRouterFunctionDef {
     name: String,
     description: String,
     parameters: serde_json::Value,
 }
 
 #[derive(Debug, Deserialize)]
-struct PerplexityResponse {
+struct OpenRouterResponse {
     id: String,
-    choices: Vec<PerplexityChoice>,
-    usage: PerplexityUsage,
+    choices: Vec<OpenRouterChoice>,
+    usage: Option<OpenRouterUsage>,
 }
 
 #[derive(Debug, Deserialize)]
-struct PerplexityChoice {
-    message: PerplexityMessage,
+struct OpenRouterChoice {
+    message: OpenRouterResponseMessage,
     finish_reason: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
-struct PerplexityUsage {
+struct OpenRouterResponseMessage {
+    content: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tool_calls: Option<Vec<OpenRouterToolCall>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct OpenRouterUsage {
     prompt_tokens: u32,
     completion_tokens: u32,
 }
