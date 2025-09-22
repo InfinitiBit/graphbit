@@ -825,7 +825,7 @@ async fn test_document_loader_performance() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
 
     // Create documents of varying sizes
-    let sizes = [1024, 10240, 102400]; // 1KB, 10KB, 100KB
+    let sizes = [1024, 10_240, 102_400]; // 1KB, 10KB, 100KB
     let mut file_paths = Vec::new();
 
     for (i, size) in sizes.iter().enumerate() {
