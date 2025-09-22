@@ -13,6 +13,7 @@ pub mod openrouter;
 pub mod perplexity;
 pub mod providers;
 pub mod response;
+pub mod xai;
 
 pub use providers::{LlmConfig, LlmProvider, LlmProviderTrait};
 pub use response::{FinishReason, LlmResponse, LlmUsage};
@@ -341,6 +342,20 @@ impl LlmProviderFactory {
                     )?))
                 } else {
                     Ok(Box::new(fireworks::FireworksProvider::new(api_key, model)?))
+                }
+            }
+            LlmConfig::Xai {
+                api_key,
+                model,
+                base_url,
+                ..
+            } => {
+                if let Some(base_url) = base_url {
+                    Ok(Box::new(xai::XaiProvider::with_base_url(
+                        api_key, model, base_url,
+                    )?))
+                } else {
+                    Ok(Box::new(xai::XaiProvider::new(api_key, model)?))
                 }
             }
             LlmConfig::Custom { provider_type, .. } => Err(GraphBitError::config(format!(
