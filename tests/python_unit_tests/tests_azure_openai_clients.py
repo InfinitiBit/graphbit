@@ -7,10 +7,7 @@ import os
 
 import pytest
 
-try:
-    from graphbit import LlmClient, LlmConfig
-except ImportError:
-    pytest.skip("GraphBit not available", allow_module_level=True)
+from graphbit import LlmClient, LlmConfig
 
 
 def get_azure_openai_test_config():
