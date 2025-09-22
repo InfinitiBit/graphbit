@@ -23,5 +23,5 @@ GraphBit is designed for **enterprises, research institutions, and AI teams** th
 
 - **Website:** [infinitibit.com](https://www.infinitibit.com)  
 - **Headquarters:** Heiglhofstraße 90, 81377 München, Germany ([Clutch](https://clutch.co/profile/infinitibit-gmbh))  
-- **Email:** [info@infinitibit.com](mailto:info@infinitibit.com)  
+- **Email:** [contact@graphbit.ai](mailto:contact@graphbit.ai)  
 - **Inquiries & Partnerships:** Reach out via the InfinitiBit contact portal or visit the website for details.

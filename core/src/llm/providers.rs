@@ -77,12 +77,35 @@ pub enum LlmConfig {
         /// Optional site name for `OpenRouter` rankings
         site_name: Option<String>,
     },
+    /// `Fireworks AI` LLM provider configuration
+    Fireworks {
+        /// API key for authentication
+        api_key: String,
+        /// Model name to use
+        model: String,
+        /// Optional custom base URL
+        base_url: Option<String>,
+    },
+    /// `xAI` LLM provider configuration for Grok models
+    Xai {
+        /// API key for authentication
+        api_key: String,
+        /// Model name to use (e.g., "grok-4", "grok-3", "grok-code-fast-1")
+        model: String,
+        /// Optional custom base URL
+        base_url: Option<String>,
+    },
     /// Custom LLM provider configuration
     Custom {
         /// Provider type identifier
         provider_type: String,
         /// Custom configuration parameters
         config: HashMap<String, serde_json::Value>,
+    },
+    /// Unconfigured state - requires explicit configuration
+    Unconfigured {
+        /// Error message explaining the configuration requirement
+        message: String,
     },
 }
 
@@ -160,6 +183,24 @@ impl LlmConfig {
         }
     }
 
+    /// Create `Fireworks AI` configuration
+    pub fn fireworks(api_key: impl Into<String>, model: impl Into<String>) -> Self {
+        Self::Fireworks {
+            api_key: api_key.into(),
+            model: model.into(),
+            base_url: None,
+        }
+    }
+
+    /// Create `xAI` configuration for Grok models
+    pub fn xai(api_key: impl Into<String>, model: impl Into<String>) -> Self {
+        Self::Xai {
+            api_key: api_key.into(),
+            model: model.into(),
+            base_url: None,
+        }
+    }
+
     /// Create `Ollama` configuration
     pub fn ollama(model: impl Into<String>) -> Self {
         Self::Ollama {
@@ -187,7 +228,10 @@ impl LlmConfig {
             LlmConfig::Ollama { .. } => "ollama",
             LlmConfig::Perplexity { .. } => "perplexity",
             LlmConfig::OpenRouter { .. } => "openrouter",
+            LlmConfig::Fireworks { .. } => "fireworks",
+            LlmConfig::Xai { .. } => "xai",
             LlmConfig::Custom { provider_type, .. } => provider_type,
+            LlmConfig::Unconfigured { .. } => "unconfigured",
         }
     }
 
@@ -202,20 +246,22 @@ impl LlmConfig {
             LlmConfig::Ollama { model, .. } => model,
             LlmConfig::Perplexity { model, .. } => model,
             LlmConfig::OpenRouter { model, .. } => model,
+            LlmConfig::Fireworks { model, .. } => model,
+            LlmConfig::Xai { model, .. } => model,
             LlmConfig::Custom { config, .. } => config
                 .get("model")
                 .and_then(|v| v.as_str())
                 .unwrap_or("unknown"),
+            LlmConfig::Unconfigured { .. } => "none",
         }
     }
 }
 
 impl Default for LlmConfig {
-    /// Default configuration uses Ollama with llama3.2 model for local development
+    /// Default configuration requires explicit setup - no hardcoded provider defaults
     fn default() -> Self {
-        Self::Ollama {
-            model: "llama3.2".to_string(),
-            base_url: None,
+        Self::Unconfigured {
+            message: "LLM provider not configured. Please explicitly set an LLM configuration using LlmConfig::openai(), LlmConfig::anthropic(), etc.".to_string(),
         }
     }
 }

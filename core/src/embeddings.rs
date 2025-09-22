@@ -604,7 +604,6 @@ impl EmbeddingService {
                             Err(_) => continue, // Retry
                         }
                     }
-                    // Brief yield to avoid busy waiting
                     tokio::task::yield_now().await;
                 }
 

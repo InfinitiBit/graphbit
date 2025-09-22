@@ -277,7 +277,7 @@ impl WorkflowExecutor {
     }
 
     /// Resolve LLM configuration for a node with hierarchical priority
-    /// Priority: Node-level config > Executor-level config > Default
+    /// Priority: Node-level config > Executor-level config > ERROR (no defaults)
     fn resolve_llm_config_for_node(
         &self,
         node_config: &std::collections::HashMap<String, serde_json::Value>,
@@ -307,13 +307,11 @@ impl WorkflowExecutor {
             return executor_config.clone();
         }
 
-        // 3. Use default configuration (lowest priority)
-        let default_config = crate::llm::LlmConfig::default();
-        tracing::debug!(
-            "Using default LLM configuration: {:?}",
-            default_config.provider_name()
-        );
-        default_config
+        // 3. No default fallback - require explicit configuration as requested by user
+        tracing::error!("No LLM configuration found - neither node-level nor executor-level config provided. System requires explicit configuration.");
+        crate::llm::LlmConfig::Unconfigured {
+            message: "No LLM configuration provided. The system requires explicit configuration from program or user input rather than hardcoded defaults.".to_string()
+        }
     }
 
     /// Get or create circuit breaker for an agent
@@ -384,8 +382,10 @@ impl WorkflowExecutor {
                 if !agent_exists {
                     // Find the node configuration for this agent to extract system_prompt and LLM config
                     let mut system_prompt = String::new();
-                    let mut resolved_llm_config =
-                        self.default_llm_config.clone().unwrap_or_default();
+                    let mut resolved_llm_config = self.default_llm_config.clone()
+                        .unwrap_or_else(|| crate::llm::LlmConfig::Unconfigured {
+                            message: "No LLM configuration provided for agent creation. Please explicitly configure an LLM provider.".to_string()
+                        });
 
                     for node in workflow.graph.get_nodes().values() {
                         if let NodeType::Agent {

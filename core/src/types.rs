@@ -1087,7 +1087,6 @@ impl ConcurrencyManager {
                     Err(_) => continue, // Retry - another thread modified the count
                 }
             }
-            // At capacity, wait for notification
             wait_queue.notified().await;
         }
 
