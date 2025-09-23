@@ -8,7 +8,14 @@ import pytest
 
 from graphbit import ExecutorConfig, ToolExecutor, ToolRegistry
 
-
+# Import WinError for Windows compatibility
+try:
+    from builtins import WindowsError as WinError  # type: ignore
+except ImportError:
+    try:
+        WinError = OSError  # Fallback for non-Windows systems
+    except Exception:  # noqa: BLE001
+        WinError = Exception
 
 
 class TestToolExecutor:
