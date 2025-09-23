@@ -4,14 +4,14 @@
 //! document formats including PDF, TXT, Word, JSON, CSV, XML, and HTML.
 
 use crate::errors::{GraphBitError, GraphBitResult};
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::path::Path;
 use csv::ReaderBuilder;
-use std::io::Cursor;
 use quick_xml::events::Event;
 use quick_xml::Reader;
 use scraper::{Html, Selector};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::io::Cursor;
+use std::path::Path;
 
 /// Document loader configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -371,29 +371,36 @@ impl DocumentLoader {
     }
 
     /// Parse CSV content into structured, readable text format
-    fn parse_csv_to_structured_text(&self, csv_content: &str) -> Result<String, Box<dyn std::error::Error>> {
+    fn parse_csv_to_structured_text(
+        &self,
+        csv_content: &str,
+    ) -> Result<String, Box<dyn std::error::Error>> {
         let mut reader = ReaderBuilder::new()
             .has_headers(true)
             .flexible(true)
             .from_reader(Cursor::new(csv_content));
 
         let mut result = String::new();
-        
+
         // Get headers
         let headers = reader.headers()?.clone();
         let header_count = headers.len();
-        
+
         result.push_str("CSV Document Content:\n");
-        result.push_str(&format!("Columns ({}): {}\n\n", header_count, headers.iter().collect::<Vec<_>>().join(", ")));
-        
+        result.push_str(&format!(
+            "Columns ({}): {}\n\n",
+            header_count,
+            headers.iter().collect::<Vec<_>>().join(", ")
+        ));
+
         // Process records
         let mut row_count = 0;
         for (index, record) in reader.records().enumerate() {
             let record = record?;
             row_count += 1;
-            
+
             result.push_str(&format!("Row {}:\n", index + 1));
-            
+
             for (i, field) in record.iter().enumerate() {
                 if i < header_count {
                     let header = headers.get(i).unwrap_or("Unknown");
@@ -401,15 +408,17 @@ impl DocumentLoader {
                 }
             }
             result.push('\n');
-            
+
             // Limit output for very large CSV files
             if row_count >= 100 {
-                result.push_str(&format!("... and {} more rows (truncated for readability)\n", 
-                    reader.records().count()));
+                result.push_str(&format!(
+                    "... and {} more rows (truncated for readability)\n",
+                    reader.records().count()
+                ));
                 break;
             }
         }
-        
+
         result.push_str(&format!("Total rows processed: {}\n", row_count));
         Ok(result)
     }
@@ -431,27 +440,30 @@ impl DocumentLoader {
     }
 
     /// Parse XML content into structured, readable text format
-    fn parse_xml_to_structured_text(&self, xml_content: &str) -> Result<String, Box<dyn std::error::Error>> {
+    fn parse_xml_to_structured_text(
+        &self,
+        xml_content: &str,
+    ) -> Result<String, Box<dyn std::error::Error>> {
         let mut reader = Reader::from_str(xml_content);
         reader.config_mut().trim_text(true);
-        
+
         let mut result = String::new();
         let mut buf = Vec::new();
         let mut current_path = Vec::new();
         let mut text_content = Vec::new();
-        
+
         result.push_str("XML Document Content:\n\n");
-        
+
         loop {
             match reader.read_event_into(&mut buf) {
                 Ok(Event::Start(ref e)) => {
                     let name = std::str::from_utf8(e.name().as_ref())?.to_string();
                     current_path.push(name.clone());
-                    
+
                     // Add element structure info
                     let indent = "  ".repeat(current_path.len() - 1);
                     result.push_str(&format!("{}Element: {}\n", indent, name));
-                    
+
                     // Handle attributes
                     for attr in e.attributes() {
                         let attr = attr?;
@@ -489,7 +501,7 @@ impl DocumentLoader {
             }
             buf.clear();
         }
-        
+
         result.push_str("\nXML parsing completed.\n");
         Ok(result)
     }
@@ -511,19 +523,25 @@ impl DocumentLoader {
     }
 
     /// Parse HTML content into structured, readable text format
-    fn parse_html_to_structured_text(&self, html_content: &str) -> Result<String, Box<dyn std::error::Error>> {
+    fn parse_html_to_structured_text(
+        &self,
+        html_content: &str,
+    ) -> Result<String, Box<dyn std::error::Error>> {
         let document = Html::parse_document(html_content);
         let mut result = String::new();
-        
+
         result.push_str("HTML Document Content:\n\n");
-        
+
         // Extract title
         if let Ok(title_selector) = Selector::parse("title") {
             if let Some(title) = document.select(&title_selector).next() {
-                result.push_str(&format!("Title: {}\n\n", title.text().collect::<String>().trim()));
+                result.push_str(&format!(
+                    "Title: {}\n\n",
+                    title.text().collect::<String>().trim()
+                ));
             }
         }
-        
+
         // Extract meta description
         if let Ok(meta_selector) = Selector::parse("meta[name='description']") {
             if let Some(meta) = document.select(&meta_selector).next() {
@@ -532,7 +550,7 @@ impl DocumentLoader {
                 }
             }
         }
-        
+
         // Extract headings with hierarchy
         for level in 1..=6 {
             let selector_str = format!("h{}", level);
@@ -546,7 +564,7 @@ impl DocumentLoader {
                 }
             };
         }
-        
+
         // Extract paragraphs
         if let Ok(p_selector) = Selector::parse("p") {
             result.push_str("\nParagraphs:\n");
@@ -557,19 +575,30 @@ impl DocumentLoader {
                 }
             }
         }
-        
+
         // Extract lists
         if let Ok(ul_selector) = Selector::parse("ul, ol") {
             result.push_str("Lists:\n");
             for list in document.select(&ul_selector) {
                 let list_type = list.value().name();
-                result.push_str(&format!("  {} List:\n", if list_type == "ul" { "Unordered" } else { "Ordered" }));
-                
+                result.push_str(&format!(
+                    "  {} List:\n",
+                    if list_type == "ul" {
+                        "Unordered"
+                    } else {
+                        "Ordered"
+                    }
+                ));
+
                 if let Ok(li_selector) = Selector::parse("li") {
                     for (index, item) in list.select(&li_selector).enumerate() {
                         let text = item.text().collect::<String>().trim().to_string();
                         if !text.is_empty() {
-                            let prefix = if list_type == "ul" { "•" } else { &format!("{}.", index + 1) };
+                            let prefix = if list_type == "ul" {
+                                "•"
+                            } else {
+                                &format!("{}.", index + 1)
+                            };
                             result.push_str(&format!("    {} {}\n", prefix, text));
                         }
                     }
@@ -577,7 +606,7 @@ impl DocumentLoader {
                 result.push('\n');
             }
         }
-        
+
         // Extract links
         if let Ok(a_selector) = Selector::parse("a[href]") {
             result.push_str("Links:\n");
@@ -591,36 +620,42 @@ impl DocumentLoader {
             }
             result.push('\n');
         }
-        
+
         // Extract table data
         if let Ok(table_selector) = Selector::parse("table") {
             result.push_str("Tables:\n");
             for (table_index, table) in document.select(&table_selector).enumerate() {
                 result.push_str(&format!("  Table {}:\n", table_index + 1));
-                
+
                 // Extract headers
                 if let Ok(th_selector) = Selector::parse("th") {
-                    let headers: Vec<String> = table.select(&th_selector)
+                    let headers: Vec<String> = table
+                        .select(&th_selector)
                         .map(|th| th.text().collect::<String>().trim().to_string())
                         .filter(|h| !h.is_empty())
                         .collect();
-                    
+
                     if !headers.is_empty() {
                         result.push_str(&format!("    Headers: {}\n", headers.join(" | ")));
                     }
                 }
-                
+
                 // Extract rows
                 if let Ok(tr_selector) = Selector::parse("tr") {
                     for (row_index, row) in table.select(&tr_selector).enumerate() {
                         if let Ok(td_selector) = Selector::parse("td") {
-                            let cells: Vec<String> = row.select(&td_selector)
+                            let cells: Vec<String> = row
+                                .select(&td_selector)
                                 .map(|td| td.text().collect::<String>().trim().to_string())
                                 .filter(|c| !c.is_empty())
                                 .collect();
-                            
+
                             if !cells.is_empty() {
-                                result.push_str(&format!("    Row {}: {}\n", row_index + 1, cells.join(" | ")));
+                                result.push_str(&format!(
+                                    "    Row {}: {}\n",
+                                    row_index + 1,
+                                    cells.join(" | ")
+                                ));
                             }
                         }
                     }
@@ -628,7 +663,7 @@ impl DocumentLoader {
                 result.push('\n');
             }
         }
-        
+
         result.push_str("HTML parsing completed.\n");
         Ok(result)
     }

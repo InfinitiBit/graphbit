@@ -2,7 +2,6 @@ use graphbit_core::document_loader::{DocumentLoader, DocumentLoaderConfig};
 use std::io::Write;
 use tempfile::NamedTempFile;
 
-
 #[tokio::test]
 async fn test_load_json_success_and_invalid() {
     // valid JSON
@@ -40,10 +39,12 @@ async fn test_csv_extraction_comprehensive() {
     let mut tmp = NamedTempFile::new().expect("tmp");
     write!(tmp, "product,price,category\nLaptop,999.99,Electronics\nBook,19.99,Education\nChair,149.50,Furniture").unwrap();
     let path = tmp.path().to_str().unwrap().to_string();
-    
+
     let result = loader.load_document(&path, "csv").await.expect("csv");
     assert!(result.content.contains("CSV Document Content"));
-    assert!(result.content.contains("Columns (3): product, price, category"));
+    assert!(result
+        .content
+        .contains("Columns (3): product, price, category"));
     assert!(result.content.contains("product: Laptop"));
     assert!(result.content.contains("price: 999.99"));
     assert!(result.content.contains("category: Electronics"));
@@ -51,9 +52,13 @@ async fn test_csv_extraction_comprehensive() {
 
     // Test CSV with empty fields
     let mut tmp2 = NamedTempFile::new().expect("tmp");
-    write!(tmp2, "name,email,phone\nJohn,john@email.com,\nJane,,555-1234").unwrap();
+    write!(
+        tmp2,
+        "name,email,phone\nJohn,john@email.com,\nJane,,555-1234"
+    )
+    .unwrap();
     let path2 = tmp2.path().to_str().unwrap().to_string();
-    
+
     let result2 = loader.load_document(&path2, "csv").await.expect("csv");
     assert!(result2.content.contains("name: John"));
     assert!(result2.content.contains("email: john@email.com"));
@@ -64,7 +69,7 @@ async fn test_csv_extraction_comprehensive() {
     let mut tmp3 = NamedTempFile::new().expect("tmp");
     write!(tmp3, "invalid\"csv\"content\nwith\"unmatched\"quotes").unwrap();
     let path3 = tmp3.path().to_str().unwrap().to_string();
-    
+
     let result3 = loader.load_document(&path3, "csv").await.expect("csv");
     // Should fallback to raw content or handle gracefully
     assert!(!result3.content.is_empty());
@@ -76,7 +81,9 @@ async fn test_xml_extraction_comprehensive() {
 
     // Test XML with nested elements and attributes
     let mut tmp = NamedTempFile::new().expect("tmp");
-    write!(tmp, r#"<?xml version="1.0" encoding="UTF-8"?>
+    write!(
+        tmp,
+        r#"<?xml version="1.0" encoding="UTF-8"?>
 <catalog>
     <book id="1" category="fiction">
         <title>The Great Gatsby</title>
@@ -88,9 +95,11 @@ async fn test_xml_extraction_comprehensive() {
         <author>Stephen Hawking</author>
         <price currency="USD">15.99</price>
     </book>
-</catalog>"#).unwrap();
+</catalog>"#
+    )
+    .unwrap();
     let path = tmp.path().to_str().unwrap().to_string();
-    
+
     let result = loader.load_document(&path, "xml").await.expect("xml");
     assert!(result.content.contains("XML Document Content"));
     assert!(result.content.contains("Element: catalog"));
@@ -100,9 +109,13 @@ async fn test_xml_extraction_comprehensive() {
 
     // Test XML with CDATA
     let mut tmp2 = NamedTempFile::new().expect("tmp");
-    write!(tmp2, r#"<root><description><![CDATA[This is <b>bold</b> text]]></description></root>"#).unwrap();
+    write!(
+        tmp2,
+        r#"<root><description><![CDATA[This is <b>bold</b> text]]></description></root>"#
+    )
+    .unwrap();
     let path2 = tmp2.path().to_str().unwrap().to_string();
-    
+
     let result2 = loader.load_document(&path2, "xml").await.expect("xml");
     assert!(result2.content.contains("This is <b>bold</b> text"));
 
@@ -110,7 +123,7 @@ async fn test_xml_extraction_comprehensive() {
     let mut tmp3 = NamedTempFile::new().expect("tmp");
     write!(tmp3, "<root><unclosed>content</root>").unwrap();
     let path3 = tmp3.path().to_str().unwrap().to_string();
-    
+
     let result3 = loader.load_document(&path3, "xml").await.expect("xml");
     // Should fallback to raw content
     assert!(!result3.content.is_empty());
@@ -122,7 +135,9 @@ async fn test_html_extraction_comprehensive() {
 
     // Test HTML with various elements
     let mut tmp = NamedTempFile::new().expect("tmp");
-    write!(tmp, r#"<!DOCTYPE html>
+    write!(
+        tmp,
+        r#"<!DOCTYPE html>
 <html>
 <head>
     <title>Sample Page</title>
@@ -159,16 +174,22 @@ async fn test_html_extraction_comprehensive() {
         </tr>
     </table>
 </body>
-</html>"#).unwrap();
+</html>"#
+    )
+    .unwrap();
     let path = tmp.path().to_str().unwrap().to_string();
-    
+
     let result = loader.load_document(&path, "html").await.expect("html");
     assert!(result.content.contains("HTML Document Content"));
     assert!(result.content.contains("Title: Sample Page"));
-    assert!(result.content.contains("Description: This is a sample page for testing"));
+    assert!(result
+        .content
+        .contains("Description: This is a sample page for testing"));
     assert!(result.content.contains("H1: Main Title"));
     assert!(result.content.contains("H2: Subtitle"));
-    assert!(result.content.contains("This is a paragraph with some text"));
+    assert!(result
+        .content
+        .contains("This is a paragraph with some text"));
     assert!(result.content.contains("First item"));
     assert!(result.content.contains("https://example.com"));
     assert!(result.content.contains("Numbered first"));
@@ -181,15 +202,19 @@ async fn test_html_extraction_comprehensive() {
     let mut tmp2 = NamedTempFile::new().expect("tmp");
     write!(tmp2, "<html><body><p>Simple content</p></body></html>").unwrap();
     let path2 = tmp2.path().to_str().unwrap().to_string();
-    
+
     let result2 = loader.load_document(&path2, "html").await.expect("html");
     assert!(result2.content.contains("Simple content"));
 
     // Test malformed HTML (should still parse gracefully)
     let mut tmp3 = NamedTempFile::new().expect("tmp");
-    write!(tmp3, "<html><body><p>Unclosed paragraph<div>Content</body></html>").unwrap();
+    write!(
+        tmp3,
+        "<html><body><p>Unclosed paragraph<div>Content</body></html>"
+    )
+    .unwrap();
     let path3 = tmp3.path().to_str().unwrap().to_string();
-    
+
     let result3 = loader.load_document(&path3, "html").await.expect("html");
     assert!(result3.content.contains("HTML Document Content"));
     assert!(result3.content.contains("Unclosed paragraph"));
@@ -203,7 +228,7 @@ async fn test_extraction_fallback_behavior() {
     let mut tmp_csv = NamedTempFile::new().expect("tmp");
     write!(tmp_csv, "").unwrap();
     let path_csv = tmp_csv.path().to_str().unwrap().to_string();
-    
+
     let result_csv = loader.load_document(&path_csv, "csv").await.expect("csv");
     assert!(!result_csv.content.is_empty()); // Should handle empty files gracefully
 
@@ -211,7 +236,7 @@ async fn test_extraction_fallback_behavior() {
     let mut tmp_xml = NamedTempFile::new().expect("tmp");
     write!(tmp_xml, "").unwrap();
     let path_xml = tmp_xml.path().to_str().unwrap().to_string();
-    
+
     let result_xml = loader.load_document(&path_xml, "xml").await.expect("xml");
     assert!(!result_xml.content.is_empty()); // Should handle empty files gracefully
 
@@ -219,8 +244,11 @@ async fn test_extraction_fallback_behavior() {
     let mut tmp_html = NamedTempFile::new().expect("tmp");
     write!(tmp_html, "").unwrap();
     let path_html = tmp_html.path().to_str().unwrap().to_string();
-    
-    let result_html = loader.load_document(&path_html, "html").await.expect("html");
+
+    let result_html = loader
+        .load_document(&path_html, "html")
+        .await
+        .expect("html");
     assert!(!result_html.content.is_empty()); // Should handle empty files gracefully
 }
 
@@ -240,7 +268,11 @@ async fn test_load_csv_xml_html_enhanced_parsing() {
     assert!(csv.content.contains("city: NYC"));
 
     let mut tmp_xml = NamedTempFile::new().expect("tmp");
-    write!(tmp_xml, "<root><person name=\"John\"><age>25</age><city>NYC</city></person></root>").unwrap();
+    write!(
+        tmp_xml,
+        "<root><person name=\"John\"><age>25</age><city>NYC</city></person></root>"
+    )
+    .unwrap();
     let path_xml = tmp_xml.path().to_str().unwrap().to_string();
     let xml = loader.load_document(&path_xml, "xml").await.expect("xml");
     // Should contain structured XML content, not raw XML
