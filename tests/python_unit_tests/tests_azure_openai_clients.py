@@ -144,6 +144,7 @@ class TestAzureOpenAIIntegration:
         return LlmClient(azure_config)
 
     @pytest.mark.integration
+    @pytest.mark.skipif(not has_azure_openai_credentials(), reason="Azure OpenAI credentials not available")
     def test_azure_openai_simple_completion(self, azure_client):
         """Test simple text completion with Azure OpenAI."""
         try:
@@ -155,6 +156,7 @@ class TestAzureOpenAIIntegration:
             pytest.fail(f"Azure OpenAI completion failed: {e}")
 
     @pytest.mark.integration
+    @pytest.mark.skipif(not has_azure_openai_credentials(), reason="Azure OpenAI credentials not available")
     @pytest.mark.asyncio
     async def test_azure_openai_async_completion(self, azure_config):
         """Test async completion with Azure OpenAI."""
@@ -168,6 +170,7 @@ class TestAzureOpenAIIntegration:
             pytest.fail(f"Azure OpenAI async completion failed: {e}")
 
     @pytest.mark.integration
+    @pytest.mark.skipif(not has_azure_openai_credentials(), reason="Azure OpenAI credentials not available")
     @pytest.mark.asyncio
     async def test_azure_openai_stream_batch_chat(self, azure_client):
         """Ensure stream, batch, and chat work for Azure OpenAI."""
@@ -189,6 +192,7 @@ class TestAzureOpenAIIntegration:
             pytest.fail(f"Azure OpenAI advanced features failed: {e}")
 
     @pytest.mark.integration
+    @pytest.mark.skipif(not has_azure_openai_credentials(), reason="Azure OpenAI credentials not available")
     def test_azure_openai_with_different_temperatures(self, azure_client):
         """Test Azure OpenAI with different temperature settings."""
         try:
@@ -206,6 +210,7 @@ class TestAzureOpenAIIntegration:
             pytest.fail(f"Azure OpenAI temperature test failed: {e}")
 
     @pytest.mark.integration
+    @pytest.mark.skipif(not has_azure_openai_credentials(), reason="Azure OpenAI credentials not available")
     def test_azure_openai_with_max_tokens(self, azure_client):
         """Test Azure OpenAI with different max_tokens settings."""
         try:

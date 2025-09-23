@@ -55,6 +55,7 @@ def azure_client(azure_config):
 class TestAzureOpenAIBasicFunctionality:
     """Test basic Azure OpenAI functionality."""
 
+    @pytest.mark.skipif(not has_azure_openai_credentials(), reason="Azure OpenAI credentials not available")
     def test_azure_openai_simple_completion(self, azure_client):
         """Test simple text completion with Azure OpenAI."""
         response = azure_client.complete("Say 'Hello' in one word only.", max_tokens=10, temperature=0.0)
@@ -62,6 +63,7 @@ class TestAzureOpenAIBasicFunctionality:
         assert len(response) > 0
         print(f"Azure OpenAI simple completion: {response}")
 
+    @pytest.mark.skipif(not has_azure_openai_credentials(), reason="Azure OpenAI credentials not available")
     @pytest.mark.asyncio
     async def test_azure_openai_async_completion(self, azure_config):
         """Test async completion with Azure OpenAI."""
@@ -71,6 +73,7 @@ class TestAzureOpenAIBasicFunctionality:
         assert len(response) > 0
         print(f"Azure OpenAI async completion: {response}")
 
+    @pytest.mark.skipif(not has_azure_openai_credentials(), reason="Azure OpenAI credentials not available")
     def test_azure_openai_conversation(self, azure_client):
         """Test Azure OpenAI conversation handling."""
         # First message
@@ -87,6 +90,7 @@ class TestAzureOpenAIBasicFunctionality:
 class TestAzureOpenAIAdvancedFeatures:
     """Test advanced Azure OpenAI features."""
 
+    @pytest.mark.skipif(not has_azure_openai_credentials(), reason="Azure OpenAI credentials not available")
     @pytest.mark.asyncio
     async def test_azure_openai_streaming(self, azure_client):
         """Test Azure OpenAI streaming completion."""
@@ -95,6 +99,7 @@ class TestAzureOpenAIAdvancedFeatures:
         assert len(response) > 0
         print(f"Azure OpenAI streaming: {response}")
 
+    @pytest.mark.skipif(not has_azure_openai_credentials(), reason="Azure OpenAI credentials not available")
     @pytest.mark.asyncio
     async def test_azure_openai_batch_processing(self, azure_client):
         """Test Azure OpenAI batch processing."""
@@ -107,6 +112,7 @@ class TestAzureOpenAIAdvancedFeatures:
         assert all(isinstance(r, str) and len(r) > 0 for r in responses)
         print(f"Azure OpenAI batch responses: {responses}")
 
+    @pytest.mark.skipif(not has_azure_openai_credentials(), reason="Azure OpenAI credentials not available")
     @pytest.mark.asyncio
     async def test_azure_openai_chat_optimized(self, azure_client):
         """Test Azure OpenAI chat optimization."""
@@ -122,6 +128,7 @@ class TestAzureOpenAIAdvancedFeatures:
 class TestAzureOpenAIParameterTesting:
     """Test Azure OpenAI with different parameters."""
 
+    @pytest.mark.skipif(not has_azure_openai_credentials(), reason="Azure OpenAI credentials not available")
     def test_azure_openai_temperature_variations(self, azure_client):
         """Test Azure OpenAI with different temperature settings."""
         prompt = "Tell me a creative story in one sentence."
@@ -140,6 +147,7 @@ class TestAzureOpenAIParameterTesting:
         print(f"Low temperature: {response_low}")
         print(f"High temperature: {response_high}")
 
+    @pytest.mark.skipif(not has_azure_openai_credentials(), reason="Azure OpenAI credentials not available")
     def test_azure_openai_max_tokens_variations(self, azure_client):
         """Test Azure OpenAI with different max_tokens settings."""
         prompt = "Explain quantum computing."
@@ -172,11 +180,13 @@ class TestAzureOpenAIErrorHandling:
         with pytest.raises(Exception, match="(?i)(error|failed|invalid|unauthorized|forbidden)"):
             client.complete("Hello, Azure OpenAI!", max_tokens=50)
 
+    @pytest.mark.skipif(not has_azure_openai_credentials(), reason="Azure OpenAI credentials not available")
     def test_azure_openai_empty_prompt(self, azure_client):
         """Test Azure OpenAI with empty prompt."""
         with pytest.raises(Exception, match="(?i)(empty|invalid|error)"):
             azure_client.complete("", max_tokens=50)
 
+    @pytest.mark.skipif(not has_azure_openai_credentials(), reason="Azure OpenAI credentials not available")
     def test_azure_openai_invalid_max_tokens(self, azure_client):
         """Test Azure OpenAI with invalid max_tokens."""
         with pytest.raises(Exception, match="(?i)(invalid|negative|error)"):
@@ -186,6 +196,7 @@ class TestAzureOpenAIErrorHandling:
 class TestAzureOpenAIPerformance:
     """Test Azure OpenAI performance characteristics."""
 
+    @pytest.mark.skipif(not has_azure_openai_credentials(), reason="Azure OpenAI credentials not available")
     @pytest.mark.asyncio
     async def test_azure_openai_concurrent_requests(self, azure_config):
         """Test Azure OpenAI with concurrent requests."""
@@ -205,6 +216,7 @@ class TestAzureOpenAIPerformance:
         for i, response in enumerate(responses):
             print(f"Concurrent response {i+1}: {response}")
 
+    @pytest.mark.skipif(not has_azure_openai_credentials(), reason="Azure OpenAI credentials not available")
     def test_azure_openai_response_time(self, azure_client):
         """Test Azure OpenAI response time (basic timing)."""
         import time

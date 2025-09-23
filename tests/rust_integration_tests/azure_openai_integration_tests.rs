@@ -42,6 +42,7 @@ async fn test_azure_openai_provider_creation() {
 }
 
 #[tokio::test]
+#[ignore] // Requires real Azure OpenAI API credentials
 async fn test_azure_openai_real_api_call() {
     graphbit_core::init().expect("Failed to initialize GraphBit");
 
@@ -78,6 +79,7 @@ async fn test_azure_openai_real_api_call() {
 }
 
 #[tokio::test]
+#[ignore] // Requires real Azure OpenAI API credentials
 async fn test_azure_openai_real_api_with_tools() {
     graphbit_core::init().expect("Failed to initialize GraphBit");
 
@@ -143,6 +145,7 @@ async fn test_azure_openai_real_api_with_tools() {
 }
 
 #[tokio::test]
+#[ignore] // Requires real Azure OpenAI API credentials
 async fn test_azure_openai_with_system_message() {
     graphbit_core::init().expect("Failed to initialize GraphBit");
 
@@ -179,6 +182,7 @@ async fn test_azure_openai_with_system_message() {
 }
 
 #[tokio::test]
+#[ignore] // Requires real Azure OpenAI API credentials
 async fn test_azure_openai_conversation() {
     graphbit_core::init().expect("Failed to initialize GraphBit");
 
@@ -247,6 +251,7 @@ async fn test_azure_openai_error_handling() {
 }
 
 #[tokio::test]
+#[ignore] // Requires real Azure OpenAI API credentials
 async fn test_azure_openai_different_temperatures() {
     graphbit_core::init().expect("Failed to initialize GraphBit");
 
@@ -287,6 +292,7 @@ async fn test_azure_openai_different_temperatures() {
 }
 
 #[tokio::test]
+#[ignore] // Requires real Azure OpenAI API credentials
 async fn test_azure_openai_provider_comparison() {
     graphbit_core::init().expect("Failed to initialize GraphBit");
 
