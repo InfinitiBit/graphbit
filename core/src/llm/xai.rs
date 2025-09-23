@@ -1,4 +1,4 @@
-//! `Perplexity` AI LLM provider implementation
+//! `xAI` LLM provider implementation for Grok models
 
 use crate::errors::{GraphBitError, GraphBitResult};
 use crate::llm::providers::LlmProviderTrait;
@@ -9,31 +9,28 @@ use async_trait::async_trait;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
-/// `Perplexity` AI provider
-pub struct PerplexityProvider {
+/// `xAI` API provider for Grok models
+pub struct XaiProvider {
     client: Client,
     api_key: String,
     model: String,
     base_url: String,
 }
 
-impl PerplexityProvider {
-    /// Create a new `Perplexity` provider
+impl XaiProvider {
+    /// Create a new `xAI` provider
     pub fn new(api_key: String, model: String) -> GraphBitResult<Self> {
         // Optimized client with connection pooling for better performance
         let client = Client::builder()
             .timeout(std::time::Duration::from_secs(60))
-            .pool_max_idle_per_host(10)
+            .pool_max_idle_per_host(10) // Increased connection pool size
             .pool_idle_timeout(std::time::Duration::from_secs(30))
             .tcp_keepalive(std::time::Duration::from_secs(60))
             .build()
             .map_err(|e| {
-                GraphBitError::llm_provider(
-                    "perplexity",
-                    format!("Failed to create HTTP client: {e}"),
-                )
+                GraphBitError::llm_provider("xai", format!("Failed to create HTTP client: {e}"))
             })?;
-        let base_url = "https://api.perplexity.ai".to_string();
+        let base_url = "https://api.x.ai/v1".to_string();
 
         Ok(Self {
             client,
@@ -43,8 +40,9 @@ impl PerplexityProvider {
         })
     }
 
-    /// Create a new `Perplexity` provider with custom base URL
+    /// Create a new `xAI` provider with custom base URL
     pub fn with_base_url(api_key: String, model: String, base_url: String) -> GraphBitResult<Self> {
+        // Use same optimized client settings
         let client = Client::builder()
             .timeout(std::time::Duration::from_secs(60))
             .pool_max_idle_per_host(10)
@@ -52,10 +50,7 @@ impl PerplexityProvider {
             .tcp_keepalive(std::time::Duration::from_secs(60))
             .build()
             .map_err(|e| {
-                GraphBitError::llm_provider(
-                    "perplexity",
-                    format!("Failed to create HTTP client: {e}"),
-                )
+                GraphBitError::llm_provider("xai", format!("Failed to create HTTP client: {e}"))
             })?;
 
         Ok(Self {
@@ -66,16 +61,16 @@ impl PerplexityProvider {
         })
     }
 
-    /// Convert `GraphBit` message to `Perplexity` message format (`OpenAI`-compatible)
-    fn convert_message(message: &LlmMessage) -> PerplexityMessage {
-        PerplexityMessage {
+    /// Convert `GraphBit` message to `xAI` message format
+    fn convert_message(&self, message: &LlmMessage) -> XaiMessage {
+        XaiMessage {
             role: match message.role {
                 LlmRole::User => "user".to_string(),
                 LlmRole::Assistant => "assistant".to_string(),
                 LlmRole::System => "system".to_string(),
                 LlmRole::Tool => "tool".to_string(),
             },
-            content: message.content.clone(),
+            content: Some(message.content.clone()),
             tool_calls: if message.tool_calls.is_empty() {
                 None
             } else {
@@ -83,10 +78,10 @@ impl PerplexityProvider {
                     message
                         .tool_calls
                         .iter()
-                        .map(|tc| PerplexityToolCall {
+                        .map(|tc| XaiToolCall {
                             id: tc.id.clone(),
                             r#type: "function".to_string(),
-                            function: PerplexityFunction {
+                            function: XaiFunction {
                                 name: tc.name.clone(),
                                 arguments: tc.parameters.to_string(),
                             },
@@ -97,11 +92,11 @@ impl PerplexityProvider {
         }
     }
 
-    /// Convert `GraphBit` tool to `Perplexity` tool format (`OpenAI`-compatible)
-    fn convert_tool(tool: &LlmTool) -> PerplexityTool {
-        PerplexityTool {
+    /// Convert `GraphBit` tool to `xAI` tool format
+    fn convert_tool(&self, tool: &LlmTool) -> XaiTool {
+        XaiTool {
             r#type: "function".to_string(),
-            function: PerplexityFunctionDef {
+            function: XaiFunctionDef {
                 name: tool.name.clone(),
                 description: tool.description.clone(),
                 parameters: tool.parameters.clone(),
@@ -109,23 +104,55 @@ impl PerplexityProvider {
         }
     }
 
-    /// Parse `Perplexity` response to `GraphBit` response
-    fn parse_response(&self, response: PerplexityResponse) -> GraphBitResult<LlmResponse> {
-        let choice =
-            response.choices.into_iter().next().ok_or_else(|| {
-                GraphBitError::llm_provider("perplexity", "No choices in response")
-            })?;
+    /// Parse `xAI` response to `GraphBit` response
+    fn parse_response(&self, response: XaiResponse) -> GraphBitResult<LlmResponse> {
+        let choice = response
+            .choices
+            .into_iter()
+            .next()
+            .ok_or_else(|| GraphBitError::llm_provider("xai", "No choices in response"))?;
 
-        let content = choice.message.content;
-        let tool_calls = choice
+        let mut content = choice.message.content.unwrap_or_default();
+        if content.trim().is_empty()
+            && !choice
+                .message
+                .tool_calls
+                .as_ref()
+                .unwrap_or(&vec![])
+                .is_empty()
+        {
+            content = "I'll help you with that using the available tools.".to_string();
+        }
+
+        let tool_calls: Vec<LlmToolCall> = choice
             .message
             .tool_calls
             .unwrap_or_default()
             .into_iter()
-            .map(|tc| LlmToolCall {
-                id: tc.id,
-                name: tc.function.name,
-                parameters: serde_json::from_str(&tc.function.arguments).unwrap_or_default(),
+            .map(|tc| {
+                // Production-grade argument parsing with error handling
+                let parameters = if tc.function.arguments.trim().is_empty() {
+                    serde_json::Value::Object(serde_json::Map::new())
+                } else {
+                    match serde_json::from_str(&tc.function.arguments) {
+                        Ok(params) => params,
+                        Err(e) => {
+                            tracing::warn!(
+                                "Failed to parse tool call arguments for {}: {e}. Arguments: '{}'",
+                                tc.function.name,
+                                tc.function.arguments
+                            );
+                            // Try to create a simple object with the raw arguments
+                            serde_json::json!({ "raw_arguments": tc.function.arguments })
+                        }
+                    }
+                };
+
+                LlmToolCall {
+                    id: tc.id,
+                    name: tc.function.name,
+                    parameters,
+                }
             })
             .collect();
 
@@ -134,14 +161,14 @@ impl PerplexityProvider {
             Some("length") => FinishReason::Length,
             Some("tool_calls") => FinishReason::ToolCalls,
             Some("content_filter") => FinishReason::ContentFilter,
-            Some(other) => FinishReason::Other(other.to_string()),
-            None => FinishReason::Stop,
+            _ => FinishReason::Stop,
         };
 
-        let usage = LlmUsage::new(
-            response.usage.prompt_tokens,
-            response.usage.completion_tokens,
-        );
+        let usage = LlmUsage {
+            prompt_tokens: response.usage.prompt_tokens,
+            completion_tokens: response.usage.completion_tokens,
+            total_tokens: response.usage.prompt_tokens + response.usage.completion_tokens,
+        };
 
         Ok(LlmResponse::new(content, &self.model)
             .with_tool_calls(tool_calls)
@@ -152,9 +179,9 @@ impl PerplexityProvider {
 }
 
 #[async_trait]
-impl LlmProviderTrait for PerplexityProvider {
+impl LlmProviderTrait for XaiProvider {
     fn provider_name(&self) -> &str {
-        "perplexity"
+        "xai"
     }
 
     fn model_name(&self) -> &str {
@@ -164,25 +191,19 @@ impl LlmProviderTrait for PerplexityProvider {
     async fn complete(&self, request: LlmRequest) -> GraphBitResult<LlmResponse> {
         let url = format!("{}/chat/completions", self.base_url);
 
-        let messages: Vec<PerplexityMessage> = request
+        let messages: Vec<XaiMessage> = request
             .messages
             .iter()
-            .map(|m| Self::convert_message(m))
+            .map(|m| self.convert_message(m))
             .collect();
 
-        let tools: Option<Vec<PerplexityTool>> = if request.tools.is_empty() {
+        let tools: Option<Vec<XaiTool>> = if request.tools.is_empty() {
             None
         } else {
-            Some(
-                request
-                    .tools
-                    .iter()
-                    .map(|t| Self::convert_tool(t))
-                    .collect(),
-            )
+            Some(request.tools.iter().map(|t| self.convert_tool(t)).collect())
         };
 
-        let body = PerplexityRequest {
+        let body = XaiRequest {
             model: self.model.clone(),
             messages,
             max_tokens: request.max_tokens,
@@ -209,13 +230,10 @@ impl LlmProviderTrait for PerplexityProvider {
             .post(&url)
             .header("Authorization", format!("Bearer {}", self.api_key))
             .header("Content-Type", "application/json")
-            .header("Accept", "application/json")
             .json(&request_json)
             .send()
             .await
-            .map_err(|e| {
-                GraphBitError::llm_provider("perplexity", format!("Request failed: {e}"))
-            })?;
+            .map_err(|e| GraphBitError::llm_provider("xai", format!("Request failed: {e}")))?;
 
         if !response.status().is_success() {
             let error_text = response
@@ -223,60 +241,54 @@ impl LlmProviderTrait for PerplexityProvider {
                 .await
                 .unwrap_or_else(|_| "Unknown error".to_string());
             return Err(GraphBitError::llm_provider(
-                "perplexity",
+                "xai",
                 format!("API error: {error_text}"),
             ));
         }
 
-        let perplexity_response: PerplexityResponse = response.json().await.map_err(|e| {
-            GraphBitError::llm_provider("perplexity", format!("Failed to parse response: {e}"))
+        let xai_response: XaiResponse = response.json().await.map_err(|e| {
+            GraphBitError::llm_provider("xai", format!("Failed to parse response: {e}"))
         })?;
 
-        self.parse_response(perplexity_response)
+        self.parse_response(xai_response)
     }
 
     fn supports_function_calling(&self) -> bool {
-        // `Perplexity` models support function calling through `OpenAI`-compatible interface
+        // Most Grok models support function calling
         true
     }
 
     fn max_context_length(&self) -> Option<u32> {
+        // Context lengths for Grok models based on xAI documentation
         match self.model.as_str() {
-            "pplx-7b-online" | "pplx-70b-online" => Some(4096),
-            "pplx-7b-chat" | "pplx-70b-chat" => Some(8192),
-            "llama-2-70b-chat" => Some(4096),
-            "codellama-34b-instruct" => Some(16_384),
-            "mistral-7b-instruct" => Some(16_384),
-            "sonar" | "sonar-reasoning" => Some(8192),
-            "sonar-deep-research" => Some(32_768),
-            _ if self.model.starts_with("sonar") => Some(8192),
-            _ => Some(4096), // Conservative default
+            "grok-4" | "grok-4-0709" => Some(256_000),
+            "grok-code-fast-1" => Some(256_000),
+            "grok-3" => Some(131_072),
+            "grok-3-mini" => Some(131_072),
+            "grok-2-vision-1212" => Some(32_768),
+            _ => None, // Unknown model, let the API handle it
         }
     }
 
     fn cost_per_token(&self) -> Option<(f64, f64)> {
-        // Cost per token in USD (input, output) based on `Perplexity` pricing
+        // Costs per token in USD (input, output) for Grok models
+        // Based on xAI pricing documentation
         match self.model.as_str() {
-            "pplx-7b-online" => Some((0.000_000_2, 0.000_000_2)),
-            "pplx-70b-online" => Some((0.000_001, 0.000_001)),
-            "pplx-7b-chat" => Some((0.000_000_2, 0.000_000_2)),
-            "pplx-70b-chat" => Some((0.000_001, 0.000_001)),
-            "llama-2-70b-chat" => Some((0.000_001, 0.000_001)),
-            "codellama-34b-instruct" => Some((0.000_000_35, 0.000_001_40)),
-            "mistral-7b-instruct" => Some((0.000_000_2, 0.000_000_2)),
-            "sonar" => Some((0.000_001, 0.000_001)),
-            "sonar-reasoning" => Some((0.000_002, 0.000_002)),
-            "sonar-deep-research" => Some((0.000_005, 0.000_005)),
-            _ => None,
+            "grok-4" | "grok-4-0709" => Some((0.000_003, 0.000_015)),
+            "grok-code-fast-1" => Some((0.000_000_2, 0.000_001_5)),
+            "grok-3" => Some((0.000_003, 0.000_015)),
+            "grok-3-mini" => Some((0.000_000_3, 0.000_000_5)),
+            "grok-2-vision-1212" => Some((0.000_002, 0.000_010)),
+            _ => None, // Unknown model pricing
         }
     }
 }
 
-// `Perplexity` API types (`OpenAI`-compatible)
+// `xAI` API types
 #[derive(Debug, Serialize)]
-struct PerplexityRequest {
+struct XaiRequest {
     model: String,
-    messages: Vec<PerplexityMessage>,
+    messages: Vec<XaiMessage>,
     #[serde(skip_serializing_if = "Option::is_none")]
     max_tokens: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -284,60 +296,60 @@ struct PerplexityRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     top_p: Option<f32>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    tools: Option<Vec<PerplexityTool>>,
+    tools: Option<Vec<XaiTool>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     tool_choice: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct PerplexityMessage {
+struct XaiMessage {
     role: String,
-    content: String,
+    content: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    tool_calls: Option<Vec<PerplexityToolCall>>,
+    tool_calls: Option<Vec<XaiToolCall>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct PerplexityToolCall {
+struct XaiToolCall {
     id: String,
     r#type: String,
-    function: PerplexityFunction,
+    function: XaiFunction,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct PerplexityFunction {
+struct XaiFunction {
     name: String,
     arguments: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
-struct PerplexityTool {
+struct XaiTool {
     r#type: String,
-    function: PerplexityFunctionDef,
+    function: XaiFunctionDef,
 }
 
 #[derive(Debug, Clone, Serialize)]
-struct PerplexityFunctionDef {
+struct XaiFunctionDef {
     name: String,
     description: String,
     parameters: serde_json::Value,
 }
 
 #[derive(Debug, Deserialize)]
-struct PerplexityResponse {
+struct XaiResponse {
     id: String,
-    choices: Vec<PerplexityChoice>,
-    usage: PerplexityUsage,
+    choices: Vec<XaiChoice>,
+    usage: XaiUsage,
 }
 
 #[derive(Debug, Deserialize)]
-struct PerplexityChoice {
-    message: PerplexityMessage,
+struct XaiChoice {
+    message: XaiMessage,
     finish_reason: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
-struct PerplexityUsage {
+struct XaiUsage {
     prompt_tokens: u32,
     completion_tokens: u32,
 }

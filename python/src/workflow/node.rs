@@ -956,7 +956,7 @@ pub(crate) fn execute_production_tool_calls(
     let mut results = Vec::new();
 
     // Execute each tool call
-    for tool_call in tool_calls {
+    for tool_call in tool_calls.iter() {
         if let (Some(tool_name), Some(parameters)) = (
             tool_call.get("tool_name").and_then(|v| v.as_str()),
             tool_call.get("parameters").and_then(|v| v.as_object()),
