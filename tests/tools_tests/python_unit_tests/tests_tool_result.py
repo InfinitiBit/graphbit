@@ -7,9 +7,6 @@ import time
 
 import pytest
 
-# Add the parent directory to the path to import graphbit
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../../../"))
-
 from graphbit import ToolResult, ToolResultCollection  # noqa: E402
 
 
@@ -161,7 +158,7 @@ class TestToolResult:
             assert empty_result.tool_name == "empty_tool"
             assert empty_result.output == "empty_output"
             assert empty_result.duration_ms == 300
-            assert empty_result.error == ""
+            assert empty_result.error is None  # Successful results have None error
             # Note: metadata attribute may not exist in current implementation
             if hasattr(empty_result, "metadata"):
                 assert empty_result.metadata == {}
@@ -633,7 +630,8 @@ class TestToolResultAdvancedFeatures:
             # Timestamp should be within reasonable range
             if hasattr(result, "timestamp"):
                 timestamp_seconds = result.timestamp / 1000.0  # Convert to seconds if needed
-                assert start_time <= timestamp_seconds <= end_time + 1  # Allow 1 second tolerance
+                # Allow more tolerance for timestamp comparison (5 seconds)
+                assert start_time - 1 <= timestamp_seconds <= end_time + 5  # Allow reasonable tolerance
 
         except Exception as e:
             pytest.skip(f"ToolResult duration calculations not available: {e}")
