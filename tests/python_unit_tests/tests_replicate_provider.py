@@ -5,13 +5,10 @@ import sys
 
 import pytest
 
+from graphbit import LlmClient, LlmConfig
+
 # Add the project root to the Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
-
-try:
-    from graphbit import LlmClient, LlmConfig
-except ImportError as e:
-    pytest.skip(f"GraphBit not available: {e}", allow_module_level=True)
 
 
 class TestReplicateProvider:
