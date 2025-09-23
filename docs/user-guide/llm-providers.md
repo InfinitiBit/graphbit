@@ -196,6 +196,7 @@ reasoning_config = LlmConfig.perplexity(
     api_key=os.getenv("PERPLEXITY_API_KEY"),
     model="sonar-reasoning"  # For complex problem solving
 )
+```
 
 ### DeepSeek Configuration
 
@@ -337,6 +338,7 @@ print(f"Model: {config.model()}")        # "anthropic/claude-4-sonnet"
 You can also provide version separately:
 
 ```python
+
 # Configuration with specific model version
 config = LlmConfig.replicate(
     api_key=os.getenv("REPLICATE_API_KEY"),
