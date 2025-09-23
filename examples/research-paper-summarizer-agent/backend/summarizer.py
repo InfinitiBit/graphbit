@@ -1,12 +1,11 @@
-import asyncio
+"""Summarization module for research papers using GraphBit framework."""
+
 import concurrent.futures
-import os
 import re
 from typing import Dict, List, Tuple
 
 from dotenv import load_dotenv
 
-import graphbit
 from graphbit import DocumentLoader, DocumentLoaderConfig, LlmClient, LlmConfig, TextSplitter, TextSplitterConfig
 
 from .const import ConfigConstants
@@ -33,8 +32,9 @@ def extract_text_from_pdf(pdf_path: str) -> str:
 
 
 def split_into_sections(text: str) -> Dict[str, str]:
+    """Split text into sections based on predefined headers."""
     matches = list(re.finditer(HEADER_REGEX, text, re.IGNORECASE))
-    sections = {}
+    sections: Dict[str, str] = {}
     for i, match in enumerate(matches):
         start = match.start()
         end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
@@ -60,44 +60,24 @@ def chunk_text(text: str, max_words: int = ConfigConstants.MAX_CHUNK_WORDS) -> L
     chunk_size = max_words * 6
     chunk_overlap = min(chunk_size // 10, 200)  # 10% overlap, max 200 chars
 
-    try:
-        # Use recursive splitter for better semantic coherence
-        # This preserves sentence and paragraph boundaries
-        config = TextSplitterConfig.recursive(chunk_size=chunk_size, chunk_overlap=chunk_overlap, separators=["\n\n", "\n", ". ", " "])  # Prioritize paragraph, sentence, then word boundaries
+    # Use recursive splitter for better semantic coherence
+    # This preserves sentence and paragraph boundaries
+    config = TextSplitterConfig.recursive(chunk_size=chunk_size, chunk_overlap=chunk_overlap, separators=["\n\n", "\n", ". ", " "])  # Prioritize paragraph, sentence, then word boundaries
 
-        # Configure for better context preservation
-        config.set_trim_whitespace(True)
-        config.set_preserve_word_boundaries(True)
+    # Configure for better context preservation
+    config.set_trim_whitespace(True)
+    config.set_preserve_word_boundaries(True)
 
-        # Create splitter and split text
-        splitter = TextSplitter(config)
-        text_chunks = splitter.split_text(text)
+    # Create splitter and split text
+    splitter = TextSplitter(config)
+    text_chunks = splitter.split_text(text)
 
-        # Extract content from TextChunk objects and filter by minimum length
-        chunks = []
-        for chunk in text_chunks:
-            if len(chunk.content) > ConfigConstants.MIN_CHUNK_LENGTH:
-                chunks.append(chunk.content)
-
-        return chunks
-
-    except Exception as e:
-        # Fallback to simple word-based chunking if GraphBit splitter fails
-        print(f"Warning: GraphBit splitter failed ({str(e)}), using fallback chunking")
-        return simple_word_chunking(text, max_words)
-
-
-def simple_word_chunking(text: str, max_words: int) -> List[str]:
-    """
-    Fallback chunking method using simple word-based splitting.
-    Used when GraphBit's text splitter encounters Unicode issues.
-    """
-    words = text.split()
+    # Extract content from TextChunk objects and filter by minimum length
     chunks = []
-    for i in range(0, len(words), max_words):
-        chunk = " ".join(words[i : i + max_words])
-        if len(chunk) > ConfigConstants.MIN_CHUNK_LENGTH:
-            chunks.append(chunk)
+    for chunk in text_chunks:
+        if len(chunk.content) > ConfigConstants.MIN_CHUNK_LENGTH:
+            chunks.append(chunk.content)
+
     return chunks
 
 
@@ -120,10 +100,8 @@ def normalize_unicode_text(text: str) -> str:
     replacements = {
         "—": "--",  # Em dash
         "–": "-",  # En dash
-        """: "'",       # Left single quotation mark
-        """: "'",  # Right single quotation mark
-        '"': '"',  # Left double quotation mark
-        '"': '"',  # Right double quotation mark
+        "'": "'",  # single quotation mark
+        '"': '"',  # double quotation mark
         "…": "...",  # Horizontal ellipsis
         "•": "*",  # Bullet
         "→": "->",  # Right arrow
@@ -230,15 +208,12 @@ def chunk_text_with_context(text: str, section_title: str = "", max_words: int =
     except Exception as e:
         # Fallback to simple chunking if GraphBit splitter fails
         print(f"Warning: GraphBit splitter failed ({str(e)}), falling back to simple chunking")
-        # return chunk_text(text, max_words)
+        return chunk_text(text, max_words)
 
 
 def summarize_section(section_title: str, section_text: str) -> str:
     """Summarize a section of a research paper using GraphBit LLM client."""
     prompt = f"Give detailed summary of the following section of a research paper titled '{section_title}':\n\n{section_text}\n\nSummary:"
-
-    # Initialize GraphBit
-    graphbit.init()
 
     # Configure LLM
     openai_api_key = ConfigConstants.OPENAI_API_KEY
@@ -250,20 +225,11 @@ def summarize_section(section_title: str, section_text: str) -> str:
 
     # Generate summary
     summary = llm_client.complete(prompt=prompt, max_tokens=ConfigConstants.LLM_MAX_TOKENS, temperature=ConfigConstants.LLM_TEMPERATURE)
-    print(f"Summary: A")
     return summary
 
 
 def summarize_section_worker(section_data: Tuple[str, str]) -> Tuple[str, str]:
-    """
-    Worker function for parallel section summarization with timeout handling.
-
-    Args:
-        section_data: Tuple of (section_title, section_content)
-
-    Returns:
-        Tuple of (section_title, summary)
-    """
+    """Worker function for parallel section summarization with timeout handling."""
     title, content = section_data
     truncated_content = content[: ConfigConstants.MAX_SECTION_LENGTH]
 
@@ -296,25 +262,18 @@ def summarize_pdf_sections_parallel(pdf_path: str, max_workers: int = 3):
     Returns:
         Tuple of (summaries_dict, sections_dict)
     """
-    print("1")
     text = extract_text_from_pdf(pdf_path)
     sections = split_into_sections(text)
 
-    print("2")
-
     # Prepare section data for parallel processing
     section_items = list(sections.items())
-
-    print("3")
 
     # Use ThreadPoolExecutor for parallel API calls
     summaries = {}
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         # Submit all summarization tasks
-        print("4")
         future_to_section = {executor.submit(summarize_section_worker, (title, content)): title for title, content in section_items}
 
-        print("5")
         # Collect results as they complete
         for future in concurrent.futures.as_completed(future_to_section):
             try:
@@ -326,13 +285,13 @@ def summarize_pdf_sections_parallel(pdf_path: str, max_workers: int = 3):
                 # Fallback to a simple summary
                 summaries[section_title] = f"Summary generation failed for section: {section_title}"
 
-    print("6")
     return summaries, sections
 
 
 def summarize_pdf_sections(pdf_path: str):
     """
     Extract text from PDF, split into sections, and generate summaries.
+
     Uses parallel processing for better performance.
     """
     return summarize_pdf_sections_parallel(pdf_path, max_workers=3)
@@ -341,9 +300,6 @@ def summarize_pdf_sections(pdf_path: str):
 def answer_question(retrieved_context: str, user_question: str) -> str:
     """Answer a question based on retrieved context using GraphBit LLM client."""
     prompt = f"You are an AI research assistant. Given the following excerpts from a research paper:\n\n" f"{retrieved_context}\n\n" f"Answer the user's question:\n{user_question}\n\nAnswer:"
-
-    # Initialize GraphBit
-    graphbit.init()
 
     # Configure LLM
     openai_api_key = ConfigConstants.OPENAI_API_KEY

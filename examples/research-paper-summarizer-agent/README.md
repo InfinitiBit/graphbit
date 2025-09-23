@@ -111,45 +111,29 @@ pip install poetry
 
 ### Running the Application
 
-#### Option 1: Using Poetry (Recommended)
+#### Using Poetry
 
-1. **Start the backend server**:
+1. Start the backend server:
    ```bash
-   # In terminal 1 - from the main graphbit directory
-   cd /path/to/graphbit
-   poetry run python -m uvicorn examples.research-paper-summarizer-agent.backend.main:app --reload --host 0.0.0.0 --port 8000
+   # In terminal 1 
+   cd examples/research-paper-summarizer-agent/backend
+   poetry run python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
    ```
 
-2. **Start the frontend application**:
+2. Start the frontend application:
    ```bash
    # In terminal 2 - from the main graphbit directory
-   cd /path/to/graphbit
-   poetry run streamlit run examples/research-paper-summarizer-agent/frontend/app.py --server.port 8501 --server.address 0.0.0.0
-   ```
-
-#### Option 2: Using the provided startup scripts
-
-1. **Start the backend server**:
-   ```bash
-   # In terminal 1 - from the research-paper-summarizer-agent directory
-   cd examples/research-paper-summarizer-agent
-   python start_backend.py
-   ```
-
-2. **Start the frontend application**:
-   ```bash
-   # In terminal 2 - from the research-paper-summarizer-agent directory
-   cd examples/research-paper-summarizer-agent
-   python start_frontend.py
+   cd examples/research-paper-summarizer-agent/frontend
+   poetry run streamlit run app.py --server.port 8501 --server.address 0.0.0.0
    ```
 
 **Note**: The startup scripts require GraphBit to be properly installed and available in your Python environment.
 
 ### Access the Application
 
-- **Frontend**: http://localhost:8501
-- **Backend API**: http://localhost:8000
-- **API Documentation**: http://localhost:8000/docs
+- Frontend: http://localhost:8501
+- Backend API: http://localhost:8000
+- API Documentation: http://localhost:8000/docs
 
 ## 📖 Usage Guide
 

@@ -32,7 +32,7 @@ class ConfigConstants:
     # PDF Processing Configuration
     MAX_CHUNK_WORDS = 250  # Optimized for faster processing while maintaining quality
     MIN_CHUNK_LENGTH = 50  # Increased minimum to ensure meaningful chunks
-    MAX_SECTION_LENGTH = 15000  # Optimized to reduce LLM processing time
+    MAX_SECTION_LENGTH = 20000  # Optimized to reduce LLM processing time
 
     # Performance Configuration
     MAX_PARALLEL_WORKERS = 8  # Maximum parallel workers for summarization
@@ -40,7 +40,7 @@ class ConfigConstants:
     SUMMARIZATION_TIMEOUT = 30  # Timeout for individual section summarization (seconds)
 
     # Search Configuration
-    TOP_K_RESULTS = 4
+    TOP_K_RESULTS = 6
 
     # Section Headers for PDF parsing
     SECTION_HEADERS = [
@@ -48,18 +48,21 @@ class ConfigConstants:
         r"introduction",
         r"background",
         r"related work",
+        r"dataset",
         r"methods",
         r"methodology",
+        r"benchmark",
         r"experiment",
         r"results",
         r"discussion",
+        r"limitations",
         r"conclusion",
         r"references",
         r"acknowledgments",
     ]
 
     # Logging Configuration
-    LOG_DIR = "logs"
+    LOG_DIR = "examples/research-paper-summarizer-agent/logs"
     LOG_FILE = "paper_summarizer.log"
     LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
 
@@ -68,7 +71,7 @@ class ConfigConstants:
     SERVER_PORT = 8000
 
     # File Upload Configuration
-    MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
+    MAX_FILE_SIZE = 20 * 1024 * 1024  # 20MB
     ALLOWED_EXTENSIONS = [".pdf"]
 
     # Session Configuration
