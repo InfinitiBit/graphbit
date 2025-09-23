@@ -14,7 +14,9 @@ pub(crate) enum PythonBindingError {
     Core(String),
     /// Configuration error with context
     Configuration {
+        /// Error message
         message: String,
+        /// Optional field name
         field: Option<String>,
     },
 
@@ -22,24 +24,34 @@ pub(crate) enum PythonBindingError {
     Network { message: String, retry_count: u32 },
     /// Authentication error with provider context
     Authentication {
+        /// Error message
         message: String,
+        /// Optional provider name
         provider: Option<String>,
     },
     /// Validation error with field-specific details
     Validation {
+        /// Error message
         message: String,
+        /// Field name
         field: String,
+        /// Optional value that caused the error
         value: Option<String>,
     },
     /// Rate limiting error with backoff information
     RateLimit {
+        /// Error message
         message: String,
+        /// Optional retry after seconds
         retry_after: Option<u64>,
     },
     /// Timeout error with operation details
     Timeout {
+        /// Error message
         message: String,
+        /// Operation name
         operation: String,
+        /// Duration in milliseconds
         duration_ms: u64,
     },
 }
