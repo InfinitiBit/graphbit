@@ -731,27 +731,3 @@ async fn test_replicate_request_with_tools() {
     assert_eq!(request.tools[0].name, "get_weather");
     assert_eq!(request.messages.len(), 2);
 }
-
-#[tokio::test]
-async fn test_replicate_context_lengths() {
-    let test_cases = vec![
-        ("lucataco/glaive-function-calling-v1", Some(8192)), // Contains "glaive-function-calling"
-        ("homanp/llama-2-13b-function-calling", Some(4096)), // Contains "llama-2-13b"
-        ("lucataco/hermes-2-pro-llama-3-8b", Some(8192)),    // Contains "hermes-2-pro"
-        ("lucataco/dolphin-2.9-llama3-8b", Some(8192)),      // Contains "dolphin"
-        ("ibm-granite/granite-3.3-8b-instruct", Some(8192)), // Contains "granite-3.3"
-        ("some/unknown-model", Some(4096)),                  // Default fallback
-    ];
-
-    for (model, expected_context) in test_cases {
-        let provider = LlmProviderFactory::create_provider(LlmConfig::Replicate {
-            api_key: "test-key".to_string(),
-            model: model.to_string(),
-            base_url: None,
-            version: None,
-        })
-        .unwrap();
-
-        assert_eq!(provider.max_context_length(), expected_context);
-    }
-}

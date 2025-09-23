@@ -515,19 +515,16 @@ impl Executor {
         config: ExecutionConfig,
     ) -> Result<graphbit_core::types::WorkflowContext, graphbit_core::errors::GraphBitError> {
         let executor = match config.mode {
-            ExecutionMode::HighThroughput => {
-                CoreWorkflowExecutor::new_high_throughput().with_default_llm_config(llm_config.clone())
-            }
+            ExecutionMode::HighThroughput => CoreWorkflowExecutor::new_high_throughput()
+                .with_default_llm_config(llm_config.clone()),
             ExecutionMode::LowLatency => CoreWorkflowExecutor::new_low_latency()
                 .with_default_llm_config(llm_config.clone())
                 .without_retries()
                 .with_fail_fast(true),
-            ExecutionMode::MemoryOptimized => {
-                CoreWorkflowExecutor::new_high_throughput().with_default_llm_config(llm_config.clone())
-            }
-            ExecutionMode::Balanced => {
-                CoreWorkflowExecutor::new_high_throughput().with_default_llm_config(llm_config.clone())
-            }
+            ExecutionMode::MemoryOptimized => CoreWorkflowExecutor::new_high_throughput()
+                .with_default_llm_config(llm_config.clone()),
+            ExecutionMode::Balanced => CoreWorkflowExecutor::new_high_throughput()
+                .with_default_llm_config(llm_config.clone()),
         };
 
         // Execute the workflow
@@ -535,7 +532,9 @@ impl Executor {
 
         // Store LLM config in context metadata for tool call handling
         if let Ok(llm_config_json) = serde_json::to_value(&llm_config) {
-            context.metadata.insert("llm_config".to_string(), llm_config_json);
+            context
+                .metadata
+                .insert("llm_config".to_string(), llm_config_json);
         }
 
         // Check if any node outputs contain tool_calls_required responses and handle them

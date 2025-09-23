@@ -163,6 +163,8 @@ impl LlmConfig {
 
         Ok(Self { inner: config })
     }
+
+    #[staticmethod]
     #[pyo3(signature = (api_key, model=None))]
     fn xai(api_key: String, model: Option<String>) -> PyResult<Self> {
         validate_api_key(&api_key, "xAI")?;

@@ -377,6 +377,11 @@ GraphBit supports tool calling across multiple AI providers. The following table
 | `llama3.1` | ✅ | 8K-128K | General purpose |
 | `codellama` | ✅ | 16K-100K+ | Code generation |
 
+
+---
+
+#### N.B.: Tool calling support for OpenRouter, Fireworks, and Replicate depends on the specific model being used. Check their documentation for more details.
+
 ---
 
 This comprehensive guide covers various aspects of GraphBit's tool calling system. Use it as a reference for building powerful, tool-enabled workflows that can interact with external systems, process data, and perform complex operations through LLM agents.

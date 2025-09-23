@@ -329,28 +329,7 @@ config = LlmConfig.replicate(
 )
 
 print(f"Provider: {config.provider()}")  # "replicate"
-print(f"Model: {config.model()}")        # "lucataco/glaive-function-calling-v1"
-```
-
-#### Available Replicate Models with Tool Calling Support
-
-| Model | Best For | Context Length | Function Calling | Performance |
-|-------|----------|----------------|------------------|-------------|
-| `lucataco/hermes-2-pro-llama-3-8b` | Instruction following, reasoning | 8K | Yes | Fast, efficient |
-| `lucataco/dolphin-2.9-llama3-8b` | General purpose, conversation | 8K | Yes | Balanced |
-
-
-```python
-# Model selection for different use cases
-function_calling_config = LlmConfig.replicate(
-    api_key=os.getenv("REPLICATE_API_KEY"),
-    model="lucataco/dolphin-2.9-llama3-8b:version"  # Best for function calling
-)
-
-general_config = LlmConfig.replicate(
-    api_key=os.getenv("REPLICATE_API_KEY"),
-    model="lucataco/hermes-2-pro-llama-3-8b:version"  # Good for general tasks
-)
+print(f"Model: {config.model()}")        # "anthropic/claude-4-sonnet"
 ```
 
 #### Provide Model Version
