@@ -380,7 +380,7 @@ GraphBit supports tool calling across multiple AI providers. The following table
 
 ---
 
-#### N.B.: Tool calling support for OpenRouter, Fireworks, and Replicate depends on the specific model being used. Check their documentation for more details.
+#### N.B.: Tool calling support for OpenRouter, Fireworks, and Replicate depends on the specific model being used. Check their official documentations for more details.
 
 ---
 
