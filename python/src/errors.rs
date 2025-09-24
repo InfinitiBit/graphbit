@@ -35,14 +35,14 @@ pub(crate) enum PythonBindingError {
         message: String,
         /// Field name
         field: String,
-        /// Optional value
+        /// Optional value that caused the error
         value: Option<String>,
     },
     /// Rate limiting error with backoff information
     RateLimit {
         /// Error message
         message: String,
-        /// Optional retry after duration
+        /// Optional retry after seconds
         retry_after: Option<u64>,
     },
     /// Timeout error with operation details
