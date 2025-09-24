@@ -30,6 +30,17 @@ pub enum LlmConfig {
         /// Optional custom base URL
         base_url: Option<String>,
     },
+    /// `Azure OpenAI` LLM provider configuration
+    AzureOpenAI {
+        /// API key for authentication
+        api_key: String,
+        /// Deployment name to use
+        deployment_name: String,
+        /// `Azure OpenAI` endpoint URL
+        endpoint: String,
+        /// API version to use
+        api_version: String,
+    },
     /// `DeepSeek` LLM provider configuration
     DeepSeek {
         /// API key for authentication
@@ -129,6 +140,35 @@ impl LlmConfig {
         }
     }
 
+    /// Create `Azure OpenAI` configuration
+    pub fn azure_openai(
+        api_key: impl Into<String>,
+        deployment_name: impl Into<String>,
+        endpoint: impl Into<String>,
+        api_version: impl Into<String>,
+    ) -> Self {
+        Self::AzureOpenAI {
+            api_key: api_key.into(),
+            deployment_name: deployment_name.into(),
+            endpoint: endpoint.into(),
+            api_version: api_version.into(),
+        }
+    }
+
+    /// Create `Azure OpenAI` configuration with default API version
+    pub fn azure_openai_with_defaults(
+        api_key: impl Into<String>,
+        deployment_name: impl Into<String>,
+        endpoint: impl Into<String>,
+    ) -> Self {
+        Self::AzureOpenAI {
+            api_key: api_key.into(),
+            deployment_name: deployment_name.into(),
+            endpoint: endpoint.into(),
+            api_version: "2024-10-21".to_string(),
+        }
+    }
+
     /// Create `DeepSeek` configuration
     pub fn deepseek(api_key: impl Into<String>, model: impl Into<String>) -> Self {
         Self::DeepSeek {
@@ -222,6 +262,7 @@ impl LlmConfig {
         match self {
             LlmConfig::OpenAI { .. } => "openai",
             LlmConfig::Anthropic { .. } => "anthropic",
+            LlmConfig::AzureOpenAI { .. } => "azure_openai",
             LlmConfig::DeepSeek { .. } => "deepseek",
             LlmConfig::HuggingFace { .. } => "huggingface",
             LlmConfig::Ollama { .. } => "ollama",
@@ -239,6 +280,9 @@ impl LlmConfig {
         match self {
             LlmConfig::OpenAI { model, .. } => model,
             LlmConfig::Anthropic { model, .. } => model,
+            LlmConfig::AzureOpenAI {
+                deployment_name, ..
+            } => deployment_name,
             LlmConfig::DeepSeek { model, .. } => model,
             LlmConfig::HuggingFace { model, .. } => model,
             LlmConfig::Ollama { model, .. } => model,
