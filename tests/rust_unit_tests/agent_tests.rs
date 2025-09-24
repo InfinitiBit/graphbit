@@ -82,6 +82,7 @@ impl AgentTrait for DummyAgent {
         }
     }
 
+    #[allow(clippy::box_leak)]
     fn llm_provider(&self) -> &graphbit_core::llm::LlmProvider {
         // Create a leaked boxed provider to return a &'static reference without adding deps
         // This intentionally leaks memory in test process only.
