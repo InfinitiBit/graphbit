@@ -10,6 +10,7 @@ use pyo3::prelude::*;
 use pyo3::types::{PyList, PyTuple};
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::fmt::Write;
 
 // Global tool registry for storing Python tool functions
 thread_local! {
@@ -321,12 +322,14 @@ impl Node {
                 )
             };
 
-            summary.push_str(&format!(
-                "{}. {} -> {}\n",
+            writeln!(
+                summary,
+                "{}. {} -> {}",
                 i + 1,
                 result.tool_name,
                 output_text
-            ));
+            )
+            .unwrap();
         }
 
         Ok(summary)

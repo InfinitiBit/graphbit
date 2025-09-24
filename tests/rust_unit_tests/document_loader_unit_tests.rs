@@ -148,17 +148,17 @@ async fn test_html_extraction_comprehensive() {
     <h2>Subtitle</h2>
     <p>This is a paragraph with some text.</p>
     <p>Another paragraph with <a href="https://example.com">a link</a>.</p>
-    
+
     <ul>
         <li>First item</li>
         <li>Second item</li>
     </ul>
-    
+
     <ol>
         <li>Numbered first</li>
         <li>Numbered second</li>
     </ol>
-    
+
     <table>
         <tr>
             <th>Name</th>
