@@ -33,29 +33,64 @@ impl AgentTrait for DummyAgent {
 
     async fn process_message(
         &self,
-        _message: graphbit_core::types::AgentMessage,
+        message: graphbit_core::types::AgentMessage,
         _context: &mut graphbit_core::types::WorkflowContext,
     ) -> GraphBitResult<graphbit_core::types::AgentMessage> {
-        unimplemented!()
+        // Simple echo processing - return the message with modified content
+        let processed_content = match message.content {
+            MessageContent::Text(text) => MessageContent::Text(format!("Processed: {}", text)),
+            MessageContent::Data(data) => MessageContent::Data(data),
+            other => other,
+        };
+
+        Ok(AgentMessage::new(
+            self.id().clone(),
+            message.recipient,
+            processed_content,
+        ))
     }
 
     async fn execute(
         &self,
         _message: graphbit_core::types::AgentMessage,
     ) -> GraphBitResult<serde_json::Value> {
-        unimplemented!()
+        // Simple execution that returns a dummy JSON value
+        let output = serde_json::json!({
+            "agent_id": self.id().to_string(),
+            "status": "completed",
+            "message": "DummyAgent execution completed successfully"
+        });
+
+        Ok(output)
     }
 
     async fn validate_output(
         &self,
-        _output: &str,
+        output: &str,
         _schema: &serde_json::Value,
     ) -> graphbit_core::validation::ValidationResult {
-        unimplemented!()
+        // Basic validation - check if output is not empty
+        if output.is_empty() {
+            let error = graphbit_core::validation::ValidationError::new(
+                "output",
+                "Output is empty",
+                "EMPTY_OUTPUT",
+            );
+            graphbit_core::validation::ValidationResult::failure(vec![error])
+        } else {
+            graphbit_core::validation::ValidationResult::success()
+        }
     }
 
     fn llm_provider(&self) -> &graphbit_core::llm::LlmProvider {
-        unimplemented!()
+        // Create a leaked boxed provider to return a &'static reference without adding deps
+        // This intentionally leaks memory in test process only.
+        let llm_config = graphbit_core::llm::LlmConfig::default();
+        let provider = graphbit_core::llm::LlmProviderFactory::create_provider(llm_config.clone())
+            .expect("Failed to create dummy LLM provider");
+        let llm_provider = graphbit_core::llm::LlmProvider::new(provider, llm_config);
+        let boxed = Box::new(llm_provider);
+        Box::leak(boxed)
     }
 }
 
