@@ -1,4 +1,4 @@
-//! Anthropic Claude LLM provider implementation
+//! `Anthropic` `Claude` LLM provider implementation
 
 use crate::errors::{GraphBitError, GraphBitResult};
 use crate::llm::providers::LlmProviderTrait;
@@ -9,7 +9,7 @@ use async_trait::async_trait;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
-/// Anthropic Claude API provider
+/// `Anthropic` `Claude` API provider
 pub struct AnthropicProvider {
     client: Client,
     api_key: String,
@@ -18,7 +18,7 @@ pub struct AnthropicProvider {
 }
 
 impl AnthropicProvider {
-    /// Create a new Anthropic provider
+    /// Create a new `Anthropic` provider
     pub fn new(api_key: String, model: String) -> GraphBitResult<Self> {
         let client = Client::new();
         let base_url = "https://api.anthropic.com/v1".to_string();
@@ -31,8 +31,8 @@ impl AnthropicProvider {
         })
     }
 
-    /// Convert GraphBit tool to Anthropic tool format
-    fn convert_tool(&self, tool: &LlmTool) -> AnthropicTool {
+    /// Convert `GraphBit` tool to `Anthropic` tool format
+    fn convert_tool(tool: &LlmTool) -> AnthropicTool {
         AnthropicTool {
             name: tool.name.clone(),
             description: tool.description.clone(),
@@ -40,8 +40,8 @@ impl AnthropicProvider {
         }
     }
 
-    /// Convert GraphBit messages to Anthropic format
-    fn convert_messages(&self, messages: &[LlmMessage]) -> (Option<String>, Vec<AnthropicMessage>) {
+    /// Convert `GraphBit` messages to `Anthropic` format
+    fn convert_messages(messages: &[LlmMessage]) -> (Option<String>, Vec<AnthropicMessage>) {
         let mut system_prompt = None;
         let mut anthropic_messages = Vec::new();
 
@@ -74,7 +74,7 @@ impl AnthropicProvider {
         (system_prompt, anthropic_messages)
     }
 
-    /// Parse Anthropic response to GraphBit response
+    /// Parse `Anthropic` response to `GraphBit` response
     fn parse_response(&self, response: AnthropicResponse) -> GraphBitResult<LlmResponse> {
         let mut content_text = String::new();
         let mut tool_calls = Vec::new();
@@ -108,7 +108,7 @@ impl AnthropicProvider {
         }
 
         let finish_reason = match response.stop_reason.as_deref() {
-            Some("end_turn") | Some("stop_sequence") => FinishReason::Stop,
+            Some("end_turn" | "stop_sequence") => FinishReason::Stop,
             Some("max_tokens") => FinishReason::Length,
             Some("tool_use") => FinishReason::Other("tool_use".into()),
             Some(other) => FinishReason::Other(other.to_string()),
@@ -144,7 +144,7 @@ impl LlmProviderTrait for AnthropicProvider {
     async fn complete(&self, request: LlmRequest) -> GraphBitResult<LlmResponse> {
         let url = format!("{}/messages", self.base_url);
 
-        let (system_prompt, messages) = self.convert_messages(&request.messages);
+        let (system_prompt, messages) = Self::convert_messages(&request.messages);
 
         // Convert tools to Anthropic format
         let tools: Option<Vec<AnthropicTool>> = if request.tools.is_empty() {
@@ -152,7 +152,13 @@ impl LlmProviderTrait for AnthropicProvider {
             None
         } else {
             tracing::info!("Converting {} tools for Anthropic", request.tools.len());
-            Some(request.tools.iter().map(|t| self.convert_tool(t)).collect())
+            Some(
+                request
+                    .tools
+                    .iter()
+                    .map(|t| Self::convert_tool(t))
+                    .collect(),
+            )
         };
 
         let body = AnthropicRequest {
@@ -180,7 +186,7 @@ impl LlmProviderTrait for AnthropicProvider {
             .send()
             .await
             .map_err(|e| {
-                GraphBitError::llm_provider("anthropic", format!("Request failed: {}", e))
+                GraphBitError::llm_provider("anthropic", format!("Request failed: {e}"))
             })?;
 
         if !response.status().is_success() {
@@ -190,12 +196,12 @@ impl LlmProviderTrait for AnthropicProvider {
                 .unwrap_or_else(|_| "Unknown error".to_string());
             return Err(GraphBitError::llm_provider(
                 "anthropic",
-                format!("API error: {}", error_text),
+                format!("API error: {error_text}"),
             ));
         }
 
         let anthropic_response: AnthropicResponse = response.json().await.map_err(|e| {
-            GraphBitError::llm_provider("anthropic", format!("Failed to parse response: {}", e))
+            GraphBitError::llm_provider("anthropic", format!("Failed to parse response: {e}"))
         })?;
 
         self.parse_response(anthropic_response)
@@ -203,13 +209,13 @@ impl LlmProviderTrait for AnthropicProvider {
 
     fn max_context_length(&self) -> Option<u32> {
         match self.model.as_str() {
-            "claude-instant-1.2" => Some(100000),
-            "claude-2.0" => Some(100000),
-            "claude-2.1" => Some(200000),
-            "claude-3-sonnet-20240229" => Some(200000),
-            "claude-3-opus-20240229" => Some(200000),
-            "claude-3-haiku-20240307" => Some(200000),
-            _ if self.model.starts_with("claude-3") => Some(200000),
+            "claude-instant-1.2" => Some(100_000),
+            "claude-2.0" => Some(100_000),
+            "claude-2.1" => Some(200_000),
+            "claude-3-sonnet-20240229" => Some(200_000),
+            "claude-3-opus-20240229" => Some(200_000),
+            "claude-3-haiku-20240307" => Some(200_000),
+            _ if self.model.starts_with("claude-3") => Some(200_000),
             _ => None,
         }
     }

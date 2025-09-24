@@ -256,8 +256,11 @@ async fn test_csv_file_loading() {
 
     assert!(result.is_ok());
     let doc = result.unwrap();
-    assert!(doc.content.contains("name,age,city"));
-    assert!(doc.content.contains("John,30,New York"));
+    assert!(doc.content.contains("CSV Document Content"));
+    assert!(doc.content.contains("Columns (3): name, age, city"));
+    assert!(doc.content.contains("name: John"));
+    assert!(doc.content.contains("age: 30"));
+    assert!(doc.content.contains("city: New York"));
     assert_eq!(doc.document_type, "csv");
 }
 
@@ -283,8 +286,9 @@ async fn test_xml_file_loading() {
 
     assert!(result.is_ok());
     let doc = result.unwrap();
-    assert!(doc.content.contains("<root>"));
-    assert!(doc.content.contains("Test Item"));
+    assert!(doc.content.contains("XML Document Content"));
+    assert!(doc.content.contains("Element: name"));
+    assert!(doc.content.contains("Text: Test Item"));
     assert_eq!(doc.document_type, "xml");
 }
 
@@ -312,7 +316,8 @@ async fn test_html_file_loading() {
 
     assert!(result.is_ok());
     let doc = result.unwrap();
-    assert!(doc.content.contains("<html>"));
+    assert!(doc.content.contains("HTML Document Content"));
+    assert!(doc.content.contains("Title: Test Page"));
     assert!(doc.content.contains("Welcome"));
     assert_eq!(doc.document_type, "html");
 }

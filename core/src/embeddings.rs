@@ -1,7 +1,7 @@
-//! Embeddings support for GraphBit
+//! Embeddings support for `GraphBit`
 //!
 //! This module provides a unified interface for working with different
-//! embedding providers including HuggingFace and OpenAI.
+//! embedding providers including `HuggingFace` and `OpenAI`.
 
 use crate::errors::{GraphBitError, GraphBitResult};
 use async_trait::async_trait;
@@ -32,9 +32,9 @@ pub struct EmbeddingConfig {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum EmbeddingProvider {
-    /// OpenAI embedding provider
+    /// `OpenAI` embedding provider
     OpenAI,
-    /// HuggingFace embedding provider
+    /// `HuggingFace` embedding provider
     HuggingFace,
 }
 
@@ -178,7 +178,7 @@ pub trait EmbeddingProviderTrait: Send + Sync {
     }
 }
 
-/// OpenAI embedding provider
+/// `OpenAI` embedding provider
 #[derive(Debug, Clone)]
 pub struct OpenAIEmbeddingProvider {
     config: EmbeddingConfig,
@@ -186,7 +186,7 @@ pub struct OpenAIEmbeddingProvider {
 }
 
 impl OpenAIEmbeddingProvider {
-    /// Create a new OpenAI embedding provider
+    /// Create a new `OpenAI` embedding provider
     pub fn new(config: EmbeddingConfig) -> GraphBitResult<Self> {
         if config.provider != EmbeddingProvider::OpenAI {
             return Err(GraphBitError::config(
@@ -199,7 +199,7 @@ impl OpenAIEmbeddingProvider {
                 config.timeout_seconds.unwrap_or(30),
             ))
             .build()
-            .map_err(|e| GraphBitError::llm(format!("Failed to create HTTP client: {}", e)))?;
+            .map_err(|e| GraphBitError::llm(format!("Failed to create HTTP client: {e}")))?;
 
         Ok(Self { config, client })
     }
@@ -254,7 +254,7 @@ impl EmbeddingProviderTrait for OpenAIEmbeddingProvider {
             .json(&body)
             .send()
             .await
-            .map_err(|e| GraphBitError::llm(format!("Failed to send request to OpenAI: {}", e)))?;
+            .map_err(|e| GraphBitError::llm(format!("Failed to send request to OpenAI: {e}")))?;
 
         if !response.status().is_success() {
             let error_text = response
@@ -262,15 +262,14 @@ impl EmbeddingProviderTrait for OpenAIEmbeddingProvider {
                 .await
                 .unwrap_or_else(|_| "Unknown error".to_string());
             return Err(GraphBitError::llm(format!(
-                "OpenAI API error: {}",
-                error_text
+                "OpenAI API error: {error_text}"
             )));
         }
 
         let response_json: serde_json::Value = response
             .json()
             .await
-            .map_err(|e| GraphBitError::llm(format!("Failed to parse OpenAI response: {}", e)))?;
+            .map_err(|e| GraphBitError::llm(format!("Failed to parse OpenAI response: {e}")))?;
 
         // Parse embeddings
         let embeddings_data = response_json["data"]
@@ -318,7 +317,7 @@ impl EmbeddingProviderTrait for OpenAIEmbeddingProvider {
     }
 
     async fn get_embedding_dimensions(&self) -> GraphBitResult<usize> {
-        // Common OpenAI embedding dimensions
+        // Common `OpenAI` embedding dimensions
         match self.config.model.as_str() {
             "text-embedding-ada-002" => Ok(1536),
             "text-embedding-3-small" => Ok(1536),
@@ -337,11 +336,11 @@ impl EmbeddingProviderTrait for OpenAIEmbeddingProvider {
     }
 
     fn max_batch_size(&self) -> usize {
-        2048 // OpenAI's current limit
+        2048 // `OpenAI`'s current limit
     }
 }
 
-/// HuggingFace embedding provider
+/// `HuggingFace` embedding provider
 #[derive(Debug, Clone)]
 pub struct HuggingFaceEmbeddingProvider {
     config: EmbeddingConfig,
@@ -349,7 +348,7 @@ pub struct HuggingFaceEmbeddingProvider {
 }
 
 impl HuggingFaceEmbeddingProvider {
-    /// Create a new HuggingFace embedding provider
+    /// Create a new `HuggingFace` embedding provider
     pub fn new(config: EmbeddingConfig) -> GraphBitResult<Self> {
         if config.provider != EmbeddingProvider::HuggingFace {
             return Err(GraphBitError::config(
@@ -362,7 +361,7 @@ impl HuggingFaceEmbeddingProvider {
                 config.timeout_seconds.unwrap_or(60),
             ))
             .build()
-            .map_err(|e| GraphBitError::llm(format!("Failed to create HTTP client: {}", e)))?;
+            .map_err(|e| GraphBitError::llm(format!("Failed to create HTTP client: {e}")))?;
 
         Ok(Self { config, client })
     }
@@ -415,7 +414,7 @@ impl EmbeddingProviderTrait for HuggingFaceEmbeddingProvider {
             .send()
             .await
             .map_err(|e| {
-                GraphBitError::llm(format!("Failed to send request to HuggingFace: {}", e))
+                GraphBitError::llm(format!("Failed to send request to HuggingFace: {e}"))
             })?;
 
         if !response.status().is_success() {
@@ -424,16 +423,15 @@ impl EmbeddingProviderTrait for HuggingFaceEmbeddingProvider {
                 .await
                 .unwrap_or_else(|_| "Unknown error".to_string());
             return Err(GraphBitError::llm(format!(
-                "HuggingFace API error: {}",
-                error_text
+                "HuggingFace API error: {error_text}"
             )));
         }
 
         let response_json: serde_json::Value = response.json().await.map_err(|e| {
-            GraphBitError::llm(format!("Failed to parse HuggingFace response: {}", e))
+            GraphBitError::llm(format!("Failed to parse HuggingFace response: {e}"))
         })?;
 
-        // Parse embeddings - HuggingFace returns arrays directly
+        // Parse embeddings - `HuggingFace` returns arrays directly
         let embeddings: Vec<Vec<f32>> = if response_json.is_array() {
             response_json
                 .as_array()
@@ -460,7 +458,7 @@ impl EmbeddingProviderTrait for HuggingFaceEmbeddingProvider {
             ));
         };
 
-        // Estimate token usage (HuggingFace doesn't provide this)
+        // Estimate token usage (`HuggingFace` doesn't provide this)
         let total_chars: usize = inputs.iter().map(|s| s.len()).sum();
         let estimated_tokens = (total_chars / 4) as u32; // Rough estimate
 
@@ -497,7 +495,7 @@ impl EmbeddingProviderTrait for HuggingFaceEmbeddingProvider {
     }
 
     fn max_batch_size(&self) -> usize {
-        100 // Conservative default for HuggingFace
+        100 // Conservative default for `HuggingFace`
     }
 }
 
@@ -602,10 +600,8 @@ impl EmbeddingService {
                             Ok(_) => break,     // Successfully acquired slot
                             Err(_) => continue, // Retry
                         }
-                    } else {
-                        // Brief yield to avoid busy waiting
-                        tokio::task::yield_now().await;
                     }
+                    tokio::task::yield_now().await;
                 }
 
                 // Execute the request
@@ -658,7 +654,7 @@ impl EmbeddingService {
                 },
                 Err(e) => {
                     failed += 1;
-                    Err(GraphBitError::llm(format!("Task execution failed: {}", e)))
+                    Err(GraphBitError::llm(format!("Task execution failed: {e}")))
                 }
             })
             .collect();

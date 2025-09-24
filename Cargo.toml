@@ -87,6 +87,11 @@ resolver = "2"
 anyhow = "1.0"
 async-trait = "0.1.88"
 chrono = {version = "0.4", features = ["serde"]}
+# CSV and XML parsing
+csv = "1.3"
+quick-xml = {version = "0.36", features = ["serialize"]}
+# HTML parsing
+scraper = "0.20"
 # Document processing
 docx-rs = "0.4"
 futures = "0.3"

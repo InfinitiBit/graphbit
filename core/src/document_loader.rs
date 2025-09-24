@@ -1,11 +1,16 @@
-//! Document loading and processing functionality for GraphBit workflows
+//! Document loading and processing functionality for `GraphBit` workflows
 //!
 //! This module provides utilities for loading and extracting content from various
 //! document formats including PDF, TXT, Word, JSON, CSV, XML, and HTML.
 
 use crate::errors::{GraphBitError, GraphBitResult};
+use csv::ReaderBuilder;
+use quick_xml::events::Event;
+use quick_xml::Reader;
+use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::io::Cursor;
 use std::path::Path;
 
 /// Document loader configuration
@@ -78,7 +83,7 @@ impl DocumentLoader {
         if !supported_types.contains(&document_type.to_lowercase().as_str()) {
             return Err(GraphBitError::validation(
                 "document_loader",
-                format!("Unsupported document type: {}", document_type),
+                format!("Unsupported document type: {document_type}"),
             ));
         }
 
@@ -90,8 +95,7 @@ impl DocumentLoader {
             return Err(GraphBitError::validation(
                 "document_loader",
                 format!(
-                    "Invalid URL format: {}. Only HTTP and HTTPS URLs are supported",
-                    source_path
+                    "Invalid URL format: {source_path}. Only HTTP and HTTPS URLs are supported"
                 ),
             ));
         } else {
@@ -113,7 +117,7 @@ impl DocumentLoader {
         if !path.exists() {
             return Err(GraphBitError::validation(
                 "document_loader",
-                format!("File not found: {}", file_path),
+                format!("File not found: {file_path}"),
             ));
         }
 
@@ -121,7 +125,7 @@ impl DocumentLoader {
         let metadata = std::fs::metadata(path).map_err(|e| {
             GraphBitError::validation(
                 "document_loader",
-                format!("Failed to read file metadata: {}", e),
+                format!("Failed to read file metadata: {e}"),
             )
         })?;
 
@@ -130,8 +134,8 @@ impl DocumentLoader {
             return Err(GraphBitError::validation(
                 "document_loader",
                 format!(
-                    "File size ({} bytes) exceeds maximum allowed size ({} bytes)",
-                    file_size, self.config.max_file_size
+                    "File size ({file_size} bytes) exceeds maximum allowed size ({} bytes)",
+                    self.config.max_file_size
                 ),
             ));
         }
@@ -149,8 +153,7 @@ impl DocumentLoader {
                 return Err(GraphBitError::validation(
                     "document_loader",
                     format!(
-                        "Unsupported document type: {}. Supported types: {:?}",
-                        document_type,
+                        "Unsupported document type: {document_type}. Supported types: {:?}",
                         Self::supported_types()
                     ),
                 ))
@@ -187,7 +190,7 @@ impl DocumentLoader {
         if !url.starts_with("http://") && !url.starts_with("https://") {
             return Err(GraphBitError::validation(
                 "document_loader",
-                format!("Invalid URL format: {}", url),
+                format!("Invalid URL format: {url}"),
             ));
         }
 
@@ -199,23 +202,20 @@ impl DocumentLoader {
             .map_err(|e| {
                 GraphBitError::validation(
                     "document_loader",
-                    format!("Failed to create HTTP client: {}", e),
+                    format!("Failed to create HTTP client: {e}"),
                 )
             })?;
 
         // Fetch the document
         let response = client.get(url).send().await.map_err(|e| {
-            GraphBitError::validation(
-                "document_loader",
-                format!("Failed to fetch URL {}: {}", url, e),
-            )
+            GraphBitError::validation("document_loader", format!("Failed to fetch URL {url}: {e}"))
         })?;
 
         // Check response status
         if !response.status().is_success() {
             return Err(GraphBitError::validation(
                 "document_loader",
-                format!("HTTP error {}: {}", response.status(), url),
+                format!("HTTP error {}: {url}", response.status()),
             ));
         }
 
@@ -225,8 +225,8 @@ impl DocumentLoader {
                 return Err(GraphBitError::validation(
                     "document_loader",
                     format!(
-                        "Remote file size ({} bytes) exceeds maximum allowed size ({} bytes)",
-                        content_length, self.config.max_file_size
+                        "Remote file size ({content_length} bytes) exceeds maximum allowed size ({} bytes)",
+                        self.config.max_file_size
                     ),
                 ));
             }
@@ -244,7 +244,7 @@ impl DocumentLoader {
         let content_bytes = response.bytes().await.map_err(|e| {
             GraphBitError::validation(
                 "document_loader",
-                format!("Failed to read response body: {}", e),
+                format!("Failed to read response body: {e}"),
             )
         })?;
 
@@ -266,25 +266,19 @@ impl DocumentLoader {
                 .map_err(|e| {
                     GraphBitError::validation(
                         "document_loader",
-                        format!("Failed to decode text content: {}", e),
+                        format!("Failed to decode text content: {e}"),
                     )
                 })?,
             "pdf" | "docx" => {
                 return Err(GraphBitError::validation(
                     "document_loader",
-                    format!(
-                        "URL loading for {} documents is not yet supported",
-                        document_type
-                    ),
+                    format!("URL loading for {document_type} documents is not yet supported"),
                 ));
             }
             _ => {
                 return Err(GraphBitError::validation(
                     "document_loader",
-                    format!(
-                        "Unsupported document type for URL loading: {}",
-                        document_type
-                    ),
+                    format!("Unsupported document type for URL loading: {document_type}"),
                 ));
             }
         };
@@ -297,13 +291,13 @@ impl DocumentLoader {
                     serde_json::from_str(&content).map_err(|e| {
                         GraphBitError::validation(
                             "document_loader",
-                            format!("Invalid JSON content: {}", e),
+                            format!("Invalid JSON content: {e}"),
                         )
                     })?;
                 serde_json::to_string_pretty(&json_value).map_err(|e| {
                     GraphBitError::validation(
                         "document_loader",
-                        format!("Failed to format JSON: {}", e),
+                        format!("Failed to format JSON: {e}"),
                     )
                 })?
             }
@@ -338,10 +332,7 @@ impl DocumentLoader {
     /// Extract content from plain text files
     async fn extract_text_content(&self, file_path: &str) -> GraphBitResult<String> {
         let content = std::fs::read_to_string(file_path).map_err(|e| {
-            GraphBitError::validation(
-                "document_loader",
-                format!("Failed to read text file: {}", e),
-            )
+            GraphBitError::validation("document_loader", format!("Failed to read text file: {e}"))
         })?;
         Ok(content)
     }
@@ -349,57 +340,332 @@ impl DocumentLoader {
     /// Extract content from JSON files
     async fn extract_json_content(&self, file_path: &str) -> GraphBitResult<String> {
         let content = std::fs::read_to_string(file_path).map_err(|e| {
-            GraphBitError::validation(
-                "document_loader",
-                format!("Failed to read JSON file: {}", e),
-            )
+            GraphBitError::validation("document_loader", format!("Failed to read JSON file: {e}"))
         })?;
 
         // Validate JSON and optionally format it
         let json_value: serde_json::Value = serde_json::from_str(&content).map_err(|e| {
-            GraphBitError::validation("document_loader", format!("Invalid JSON content: {}", e))
+            GraphBitError::validation("document_loader", format!("Invalid JSON content: {e}"))
         })?;
 
         // Return formatted JSON for better readability
         serde_json::to_string_pretty(&json_value).map_err(|e| {
-            GraphBitError::validation("document_loader", format!("Failed to format JSON: {}", e))
+            GraphBitError::validation("document_loader", format!("Failed to format JSON: {e}"))
         })
     }
 
     /// Extract content from CSV files
     async fn extract_csv_content(&self, file_path: &str) -> GraphBitResult<String> {
         let content = std::fs::read_to_string(file_path).map_err(|e| {
-            GraphBitError::validation("document_loader", format!("Failed to read CSV file: {}", e))
+            GraphBitError::validation("document_loader", format!("Failed to read CSV file: {e}"))
         })?;
 
-        // For now, return the raw CSV content
-        // TODO: Could be enhanced to parse CSV and convert to structured format
-        Ok(content)
+        // Enhanced CSV parsing: convert to structured, readable format
+        match self.parse_csv_to_structured_text(&content) {
+            Ok(structured_content) => Ok(structured_content),
+            Err(_) => {
+                // Fallback to raw content if parsing fails
+                Ok(content)
+            }
+        }
+    }
+
+    /// Parse CSV content into structured, readable text format
+    fn parse_csv_to_structured_text(
+        &self,
+        csv_content: &str,
+    ) -> Result<String, Box<dyn std::error::Error>> {
+        let mut reader = ReaderBuilder::new()
+            .has_headers(true)
+            .flexible(true)
+            .from_reader(Cursor::new(csv_content));
+
+        let mut result = String::new();
+
+        // Get headers
+        let headers = reader.headers()?.clone();
+        let header_count = headers.len();
+
+        result.push_str("CSV Document Content:\n");
+        result.push_str(&format!(
+            "Columns ({}): {}\n\n",
+            header_count,
+            headers.iter().collect::<Vec<_>>().join(", ")
+        ));
+
+        // Process records
+        let mut row_count = 0;
+        for (index, record) in reader.records().enumerate() {
+            let record = record?;
+            row_count += 1;
+
+            result.push_str(&format!("Row {}:\n", index + 1));
+
+            for (i, field) in record.iter().enumerate() {
+                if i < header_count {
+                    let header = headers.get(i).unwrap_or("Unknown");
+                    result.push_str(&format!("  {}: {}\n", header, field.trim()));
+                }
+            }
+            result.push('\n');
+
+            // Limit output for very large CSV files
+            if row_count >= 100 {
+                result.push_str(&format!(
+                    "... and {} more rows (truncated for readability)\n",
+                    reader.records().count()
+                ));
+                break;
+            }
+        }
+
+        result.push_str(&format!("Total rows processed: {}\n", row_count));
+        Ok(result)
     }
 
     /// Extract content from XML files
     async fn extract_xml_content(&self, file_path: &str) -> GraphBitResult<String> {
         let content = std::fs::read_to_string(file_path).map_err(|e| {
-            GraphBitError::validation("document_loader", format!("Failed to read XML file: {}", e))
+            GraphBitError::validation("document_loader", format!("Failed to read XML file: {e}"))
         })?;
 
-        // For now, return the raw XML content
-        // TODO: Could be enhanced to parse XML and extract structured data
-        Ok(content)
+        // Enhanced XML parsing: extract structured text content
+        match self.parse_xml_to_structured_text(&content) {
+            Ok(structured_content) => Ok(structured_content),
+            Err(_) => {
+                // Fallback to raw content if parsing fails
+                Ok(content)
+            }
+        }
+    }
+
+    /// Parse XML content into structured, readable text format
+    fn parse_xml_to_structured_text(
+        &self,
+        xml_content: &str,
+    ) -> Result<String, Box<dyn std::error::Error>> {
+        let mut reader = Reader::from_str(xml_content);
+        reader.config_mut().trim_text(true);
+
+        let mut result = String::new();
+        let mut buf = Vec::new();
+        let mut current_path = Vec::new();
+        let mut text_content = Vec::new();
+
+        result.push_str("XML Document Content:\n\n");
+
+        loop {
+            match reader.read_event_into(&mut buf) {
+                Ok(Event::Start(ref e)) => {
+                    let name = std::str::from_utf8(e.name().as_ref())?.to_string();
+                    current_path.push(name.clone());
+
+                    // Add element structure info
+                    let indent = "  ".repeat(current_path.len() - 1);
+                    result.push_str(&format!("{}Element: {}\n", indent, name));
+
+                    // Handle attributes
+                    for attr in e.attributes() {
+                        let attr = attr?;
+                        let key = std::str::from_utf8(attr.key.as_ref())?;
+                        let value = std::str::from_utf8(&attr.value)?;
+                        result.push_str(&format!("{}  @{}: {}\n", indent, key, value));
+                    }
+                }
+                Ok(Event::End(_)) => {
+                    if !text_content.is_empty() {
+                        let content = text_content.join(" ").trim().to_string();
+                        if !content.is_empty() {
+                            let indent = "  ".repeat(current_path.len());
+                            result.push_str(&format!("{}Text: {}\n", indent, content));
+                        }
+                        text_content.clear();
+                    }
+                    current_path.pop();
+                }
+                Ok(Event::Text(e)) => {
+                    let text = e.unescape()?.trim().to_string();
+                    if !text.is_empty() {
+                        text_content.push(text);
+                    }
+                }
+                Ok(Event::CData(e)) => {
+                    let text = std::str::from_utf8(&e)?;
+                    if !text.trim().is_empty() {
+                        text_content.push(text.to_string());
+                    }
+                }
+                Ok(Event::Eof) => break,
+                Err(e) => return Err(format!("Error parsing XML: {}", e).into()),
+                _ => {} // Ignore other events
+            }
+            buf.clear();
+        }
+
+        result.push_str("\nXML parsing completed.\n");
+        Ok(result)
     }
 
     /// Extract content from HTML files
     async fn extract_html_content(&self, file_path: &str) -> GraphBitResult<String> {
         let content = std::fs::read_to_string(file_path).map_err(|e| {
-            GraphBitError::validation(
-                "document_loader",
-                format!("Failed to read HTML file: {}", e),
-            )
+            GraphBitError::validation("document_loader", format!("Failed to read HTML file: {e}"))
         })?;
 
-        // For now, return the raw HTML content
-        // TODO: Could be enhanced to extract text content from HTML tags
-        Ok(content)
+        // Enhanced HTML parsing: extract structured text content
+        match self.parse_html_to_structured_text(&content) {
+            Ok(structured_content) => Ok(structured_content),
+            Err(_) => {
+                // Fallback to raw content if parsing fails
+                Ok(content)
+            }
+        }
+    }
+
+    /// Parse HTML content into structured, readable text format
+    fn parse_html_to_structured_text(
+        &self,
+        html_content: &str,
+    ) -> Result<String, Box<dyn std::error::Error>> {
+        let document = Html::parse_document(html_content);
+        let mut result = String::new();
+
+        result.push_str("HTML Document Content:\n\n");
+
+        // Extract title
+        if let Ok(title_selector) = Selector::parse("title") {
+            if let Some(title) = document.select(&title_selector).next() {
+                result.push_str(&format!(
+                    "Title: {}\n\n",
+                    title.text().collect::<String>().trim()
+                ));
+            }
+        }
+
+        // Extract meta description
+        if let Ok(meta_selector) = Selector::parse("meta[name='description']") {
+            if let Some(meta) = document.select(&meta_selector).next() {
+                if let Some(content) = meta.value().attr("content") {
+                    result.push_str(&format!("Description: {}\n\n", content.trim()));
+                }
+            }
+        }
+
+        // Extract headings with hierarchy
+        for level in 1..=6 {
+            let selector_str = format!("h{}", level);
+            if let Ok(heading_selector) = Selector::parse(&selector_str) {
+                for heading in document.select(&heading_selector) {
+                    let text = heading.text().collect::<String>().trim().to_string();
+                    if !text.is_empty() {
+                        let indent = "  ".repeat(level - 1);
+                        result.push_str(&format!("{}H{}: {}\n", indent, level, text));
+                    }
+                }
+            };
+        }
+
+        // Extract paragraphs
+        if let Ok(p_selector) = Selector::parse("p") {
+            result.push_str("\nParagraphs:\n");
+            for paragraph in document.select(&p_selector) {
+                let text = paragraph.text().collect::<String>().trim().to_string();
+                if !text.is_empty() {
+                    result.push_str(&format!("  {}\n\n", text));
+                }
+            }
+        }
+
+        // Extract lists
+        if let Ok(ul_selector) = Selector::parse("ul, ol") {
+            result.push_str("Lists:\n");
+            for list in document.select(&ul_selector) {
+                let list_type = list.value().name();
+                result.push_str(&format!(
+                    "  {} List:\n",
+                    if list_type == "ul" {
+                        "Unordered"
+                    } else {
+                        "Ordered"
+                    }
+                ));
+
+                if let Ok(li_selector) = Selector::parse("li") {
+                    for (index, item) in list.select(&li_selector).enumerate() {
+                        let text = item.text().collect::<String>().trim().to_string();
+                        if !text.is_empty() {
+                            let prefix = if list_type == "ul" {
+                                "•"
+                            } else {
+                                &format!("{}.", index + 1)
+                            };
+                            result.push_str(&format!("    {} {}\n", prefix, text));
+                        }
+                    }
+                }
+                result.push('\n');
+            }
+        }
+
+        // Extract links
+        if let Ok(a_selector) = Selector::parse("a[href]") {
+            result.push_str("Links:\n");
+            for link in document.select(&a_selector) {
+                let text = link.text().collect::<String>().trim().to_string();
+                if let Some(href) = link.value().attr("href") {
+                    if !text.is_empty() && !href.is_empty() {
+                        result.push_str(&format!("  {} -> {}\n", text, href));
+                    }
+                }
+            }
+            result.push('\n');
+        }
+
+        // Extract table data
+        if let Ok(table_selector) = Selector::parse("table") {
+            result.push_str("Tables:\n");
+            for (table_index, table) in document.select(&table_selector).enumerate() {
+                result.push_str(&format!("  Table {}:\n", table_index + 1));
+
+                // Extract headers
+                if let Ok(th_selector) = Selector::parse("th") {
+                    let headers: Vec<String> = table
+                        .select(&th_selector)
+                        .map(|th| th.text().collect::<String>().trim().to_string())
+                        .filter(|h| !h.is_empty())
+                        .collect();
+
+                    if !headers.is_empty() {
+                        result.push_str(&format!("    Headers: {}\n", headers.join(" | ")));
+                    }
+                }
+
+                // Extract rows
+                if let Ok(tr_selector) = Selector::parse("tr") {
+                    for (row_index, row) in table.select(&tr_selector).enumerate() {
+                        if let Ok(td_selector) = Selector::parse("td") {
+                            let cells: Vec<String> = row
+                                .select(&td_selector)
+                                .map(|td| td.text().collect::<String>().trim().to_string())
+                                .filter(|c| !c.is_empty())
+                                .collect();
+
+                            if !cells.is_empty() {
+                                result.push_str(&format!(
+                                    "    Row {}: {}\n",
+                                    row_index + 1,
+                                    cells.join(" | ")
+                                ));
+                            }
+                        }
+                    }
+                }
+                result.push('\n');
+            }
+        }
+
+        result.push_str("HTML parsing completed.\n");
+        Ok(result)
     }
 
     /// Extract content from PDF files
@@ -407,7 +673,7 @@ impl DocumentLoader {
         use lopdf::Document;
 
         let doc = Document::load(file_path).map_err(|e| {
-            GraphBitError::validation("document_loader", format!("Failed to open PDF file: {}", e))
+            GraphBitError::validation("document_loader", format!("Failed to open PDF file: {e}"))
         })?;
 
         let mut text_content = String::new();
@@ -436,25 +702,16 @@ impl DocumentLoader {
         use std::io::Read;
 
         let mut file = File::open(file_path).map_err(|e| {
-            GraphBitError::validation(
-                "document_loader",
-                format!("Failed to open DOCX file: {}", e),
-            )
+            GraphBitError::validation("document_loader", format!("Failed to open DOCX file: {e}"))
         })?;
 
         let mut buffer = Vec::new();
         file.read_to_end(&mut buffer).map_err(|e| {
-            GraphBitError::validation(
-                "document_loader",
-                format!("Failed to read DOCX file: {}", e),
-            )
+            GraphBitError::validation("document_loader", format!("Failed to read DOCX file: {e}"))
         })?;
 
         let docx = docx_rs::read_docx(&buffer).map_err(|e| {
-            GraphBitError::validation(
-                "document_loader",
-                format!("Failed to parse DOCX file: {}", e),
-            )
+            GraphBitError::validation("document_loader", format!("Failed to parse DOCX file: {e}"))
         })?;
 
         let mut text_content = String::new();
@@ -515,8 +772,7 @@ pub fn validate_document_source(source_path: &str, document_type: &str) -> Graph
         return Err(GraphBitError::validation(
             "document_loader",
             format!(
-                "Unsupported document type: {}. Supported types: {:?}",
-                document_type, supported_types
+                "Unsupported document type: {document_type}. Supported types: {supported_types:?}",
             ),
         ));
     }
@@ -527,7 +783,7 @@ pub fn validate_document_source(source_path: &str, document_type: &str) -> Graph
         if !path.exists() {
             return Err(GraphBitError::validation(
                 "document_loader",
-                format!("File not found: {}", source_path),
+                format!("File not found: {source_path}"),
             ));
         }
     }

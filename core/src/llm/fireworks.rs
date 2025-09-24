@@ -1,4 +1,4 @@
-//! `Perplexity` AI LLM provider implementation
+//! `Fireworks AI` LLM provider implementation
 
 use crate::errors::{GraphBitError, GraphBitResult};
 use crate::llm::providers::LlmProviderTrait;
@@ -9,31 +9,31 @@ use async_trait::async_trait;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
-/// `Perplexity` AI provider
-pub struct PerplexityProvider {
+/// `Fireworks AI` API provider
+pub struct FireworksProvider {
     client: Client,
     api_key: String,
     model: String,
     base_url: String,
 }
 
-impl PerplexityProvider {
-    /// Create a new `Perplexity` provider
+impl FireworksProvider {
+    /// Create a new `Fireworks AI` provider
     pub fn new(api_key: String, model: String) -> GraphBitResult<Self> {
         // Optimized client with connection pooling for better performance
         let client = Client::builder()
             .timeout(std::time::Duration::from_secs(60))
-            .pool_max_idle_per_host(10)
+            .pool_max_idle_per_host(10) // Increased connection pool size
             .pool_idle_timeout(std::time::Duration::from_secs(30))
             .tcp_keepalive(std::time::Duration::from_secs(60))
             .build()
             .map_err(|e| {
                 GraphBitError::llm_provider(
-                    "perplexity",
+                    "fireworks",
                     format!("Failed to create HTTP client: {e}"),
                 )
             })?;
-        let base_url = "https://api.perplexity.ai".to_string();
+        let base_url = "https://api.fireworks.ai/inference/v1".to_string();
 
         Ok(Self {
             client,
@@ -43,8 +43,9 @@ impl PerplexityProvider {
         })
     }
 
-    /// Create a new `Perplexity` provider with custom base URL
+    /// Create a new `Fireworks AI` provider with custom base URL
     pub fn with_base_url(api_key: String, model: String, base_url: String) -> GraphBitResult<Self> {
+        // Use same optimized client settings
         let client = Client::builder()
             .timeout(std::time::Duration::from_secs(60))
             .pool_max_idle_per_host(10)
@@ -53,7 +54,7 @@ impl PerplexityProvider {
             .build()
             .map_err(|e| {
                 GraphBitError::llm_provider(
-                    "perplexity",
+                    "fireworks",
                     format!("Failed to create HTTP client: {e}"),
                 )
             })?;
@@ -66,16 +67,16 @@ impl PerplexityProvider {
         })
     }
 
-    /// Convert `GraphBit` message to `Perplexity` message format (`OpenAI`-compatible)
-    fn convert_message(message: &LlmMessage) -> PerplexityMessage {
-        PerplexityMessage {
+    /// Convert `GraphBit` message to `Fireworks AI` message format
+    fn convert_message(&self, message: &LlmMessage) -> FireworksMessage {
+        FireworksMessage {
             role: match message.role {
                 LlmRole::User => "user".to_string(),
                 LlmRole::Assistant => "assistant".to_string(),
                 LlmRole::System => "system".to_string(),
                 LlmRole::Tool => "tool".to_string(),
             },
-            content: message.content.clone(),
+            content: Some(message.content.clone()),
             tool_calls: if message.tool_calls.is_empty() {
                 None
             } else {
@@ -83,10 +84,10 @@ impl PerplexityProvider {
                     message
                         .tool_calls
                         .iter()
-                        .map(|tc| PerplexityToolCall {
+                        .map(|tc| FireworksToolCall {
                             id: tc.id.clone(),
                             r#type: "function".to_string(),
-                            function: PerplexityFunction {
+                            function: FireworksFunction {
                                 name: tc.name.clone(),
                                 arguments: tc.parameters.to_string(),
                             },
@@ -97,11 +98,11 @@ impl PerplexityProvider {
         }
     }
 
-    /// Convert `GraphBit` tool to `Perplexity` tool format (`OpenAI`-compatible)
-    fn convert_tool(tool: &LlmTool) -> PerplexityTool {
-        PerplexityTool {
+    /// Convert `GraphBit` tool to `Fireworks AI` tool format
+    fn convert_tool(&self, tool: &LlmTool) -> FireworksTool {
+        FireworksTool {
             r#type: "function".to_string(),
-            function: PerplexityFunctionDef {
+            function: FireworksFunctionDef {
                 name: tool.name.clone(),
                 description: tool.description.clone(),
                 parameters: tool.parameters.clone(),
@@ -109,23 +110,54 @@ impl PerplexityProvider {
         }
     }
 
-    /// Parse `Perplexity` response to `GraphBit` response
-    fn parse_response(&self, response: PerplexityResponse) -> GraphBitResult<LlmResponse> {
+    /// Parse `Fireworks AI` response to `GraphBit` response
+    fn parse_response(&self, response: FireworksResponse) -> GraphBitResult<LlmResponse> {
         let choice =
             response.choices.into_iter().next().ok_or_else(|| {
-                GraphBitError::llm_provider("perplexity", "No choices in response")
+                GraphBitError::llm_provider("fireworks", "No choices in response")
             })?;
 
-        let content = choice.message.content;
+        let mut content = choice.message.content.unwrap_or_default();
+        if content.trim().is_empty()
+            && !choice
+                .message
+                .tool_calls
+                .as_ref()
+                .unwrap_or(&vec![])
+                .is_empty()
+        {
+            content = "I'll help you with that using the available tools.".to_string();
+        }
+
         let tool_calls = choice
             .message
             .tool_calls
             .unwrap_or_default()
             .into_iter()
-            .map(|tc| LlmToolCall {
-                id: tc.id,
-                name: tc.function.name,
-                parameters: serde_json::from_str(&tc.function.arguments).unwrap_or_default(),
+            .map(|tc| {
+                // Production-grade argument parsing with error handling
+                let parameters = if tc.function.arguments.trim().is_empty() {
+                    serde_json::Value::Object(serde_json::Map::new())
+                } else {
+                    match serde_json::from_str(&tc.function.arguments) {
+                        Ok(params) => params,
+                        Err(e) => {
+                            tracing::warn!(
+                                "Failed to parse tool call arguments for {}: {e}. Arguments: '{}'",
+                                tc.function.name,
+                                tc.function.arguments
+                            );
+                            // Try to create a simple object with the raw arguments
+                            serde_json::json!({ "raw_arguments": tc.function.arguments })
+                        }
+                    }
+                };
+
+                LlmToolCall {
+                    id: tc.id,
+                    name: tc.function.name,
+                    parameters,
+                }
             })
             .collect();
 
@@ -152,9 +184,9 @@ impl PerplexityProvider {
 }
 
 #[async_trait]
-impl LlmProviderTrait for PerplexityProvider {
+impl LlmProviderTrait for FireworksProvider {
     fn provider_name(&self) -> &str {
-        "perplexity"
+        "fireworks"
     }
 
     fn model_name(&self) -> &str {
@@ -164,25 +196,19 @@ impl LlmProviderTrait for PerplexityProvider {
     async fn complete(&self, request: LlmRequest) -> GraphBitResult<LlmResponse> {
         let url = format!("{}/chat/completions", self.base_url);
 
-        let messages: Vec<PerplexityMessage> = request
+        let messages: Vec<FireworksMessage> = request
             .messages
             .iter()
-            .map(|m| Self::convert_message(m))
+            .map(|m| self.convert_message(m))
             .collect();
 
-        let tools: Option<Vec<PerplexityTool>> = if request.tools.is_empty() {
+        let tools: Option<Vec<FireworksTool>> = if request.tools.is_empty() {
             None
         } else {
-            Some(
-                request
-                    .tools
-                    .iter()
-                    .map(|t| Self::convert_tool(t))
-                    .collect(),
-            )
+            Some(request.tools.iter().map(|t| self.convert_tool(t)).collect())
         };
 
-        let body = PerplexityRequest {
+        let body = FireworksRequest {
             model: self.model.clone(),
             messages,
             max_tokens: request.max_tokens,
@@ -209,12 +235,11 @@ impl LlmProviderTrait for PerplexityProvider {
             .post(&url)
             .header("Authorization", format!("Bearer {}", self.api_key))
             .header("Content-Type", "application/json")
-            .header("Accept", "application/json")
             .json(&request_json)
             .send()
             .await
             .map_err(|e| {
-                GraphBitError::llm_provider("perplexity", format!("Request failed: {e}"))
+                GraphBitError::llm_provider("fireworks", format!("Request failed: {e}"))
             })?;
 
         if !response.status().is_success() {
@@ -223,60 +248,56 @@ impl LlmProviderTrait for PerplexityProvider {
                 .await
                 .unwrap_or_else(|_| "Unknown error".to_string());
             return Err(GraphBitError::llm_provider(
-                "perplexity",
+                "fireworks",
                 format!("API error: {error_text}"),
             ));
         }
 
-        let perplexity_response: PerplexityResponse = response.json().await.map_err(|e| {
-            GraphBitError::llm_provider("perplexity", format!("Failed to parse response: {e}"))
+        let fireworks_response: FireworksResponse = response.json().await.map_err(|e| {
+            GraphBitError::llm_provider("fireworks", format!("Failed to parse response: {e}"))
         })?;
 
-        self.parse_response(perplexity_response)
+        self.parse_response(fireworks_response)
     }
 
     fn supports_function_calling(&self) -> bool {
-        // `Perplexity` models support function calling through `OpenAI`-compatible interface
+        // Most Fireworks AI models support function calling
         true
     }
 
     fn max_context_length(&self) -> Option<u32> {
+        // Common context lengths for popular Fireworks AI models
         match self.model.as_str() {
-            "pplx-7b-online" | "pplx-70b-online" => Some(4096),
-            "pplx-7b-chat" | "pplx-70b-chat" => Some(8192),
-            "llama-2-70b-chat" => Some(4096),
-            "codellama-34b-instruct" => Some(16_384),
-            "mistral-7b-instruct" => Some(16_384),
-            "sonar" | "sonar-reasoning" => Some(8192),
-            "sonar-deep-research" => Some(32_768),
-            _ if self.model.starts_with("sonar") => Some(8192),
-            _ => Some(4096), // Conservative default
+            m if m.contains("llama-v3p1-8b") => Some(131_072),
+            m if m.contains("llama-v3p1-70b") => Some(131_072),
+            m if m.contains("llama-v3p1-405b") => Some(131_072),
+            m if m.contains("llama-v3-8b") => Some(8192),
+            m if m.contains("llama-v3-70b") => Some(8192),
+            m if m.contains("mixtral") => Some(32_768),
+            m if m.contains("qwen") => Some(32_768),
+            _ => None, // Unknown model, let the API handle it
         }
     }
 
     fn cost_per_token(&self) -> Option<(f64, f64)> {
-        // Cost per token in USD (input, output) based on `Perplexity` pricing
+        // Approximate costs per token in USD (input, output) for popular models
+        // Note: These are estimates and may vary
         match self.model.as_str() {
-            "pplx-7b-online" => Some((0.000_000_2, 0.000_000_2)),
-            "pplx-70b-online" => Some((0.000_001, 0.000_001)),
-            "pplx-7b-chat" => Some((0.000_000_2, 0.000_000_2)),
-            "pplx-70b-chat" => Some((0.000_001, 0.000_001)),
-            "llama-2-70b-chat" => Some((0.000_001, 0.000_001)),
-            "codellama-34b-instruct" => Some((0.000_000_35, 0.000_001_40)),
-            "mistral-7b-instruct" => Some((0.000_000_2, 0.000_000_2)),
-            "sonar" => Some((0.000_001, 0.000_001)),
-            "sonar-reasoning" => Some((0.000_002, 0.000_002)),
-            "sonar-deep-research" => Some((0.000_005, 0.000_005)),
-            _ => None,
+            m if m.contains("llama-v3p1-8b") => Some((0.000_000_2, 0.000_000_2)),
+            m if m.contains("llama-v3p1-70b") => Some((0.000_000_9, 0.000_000_9)),
+            m if m.contains("llama-v3p1-405b") => Some((0.000_003, 0.000_003)),
+            m if m.contains("mixtral-8x7b") => Some((0.000_000_5, 0.000_000_5)),
+            m if m.contains("mixtral-8x22b") => Some((0.000_000_9, 0.000_000_9)),
+            _ => None, // Unknown model pricing
         }
     }
 }
 
-// `Perplexity` API types (`OpenAI`-compatible)
+// `Fireworks AI` API types
 #[derive(Debug, Serialize)]
-struct PerplexityRequest {
+struct FireworksRequest {
     model: String,
-    messages: Vec<PerplexityMessage>,
+    messages: Vec<FireworksMessage>,
     #[serde(skip_serializing_if = "Option::is_none")]
     max_tokens: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -284,60 +305,60 @@ struct PerplexityRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     top_p: Option<f32>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    tools: Option<Vec<PerplexityTool>>,
+    tools: Option<Vec<FireworksTool>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     tool_choice: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct PerplexityMessage {
+struct FireworksMessage {
     role: String,
-    content: String,
+    content: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    tool_calls: Option<Vec<PerplexityToolCall>>,
+    tool_calls: Option<Vec<FireworksToolCall>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct PerplexityToolCall {
+struct FireworksToolCall {
     id: String,
     r#type: String,
-    function: PerplexityFunction,
+    function: FireworksFunction,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct PerplexityFunction {
+struct FireworksFunction {
     name: String,
     arguments: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
-struct PerplexityTool {
+struct FireworksTool {
     r#type: String,
-    function: PerplexityFunctionDef,
+    function: FireworksFunctionDef,
 }
 
 #[derive(Debug, Clone, Serialize)]
-struct PerplexityFunctionDef {
+struct FireworksFunctionDef {
     name: String,
     description: String,
     parameters: serde_json::Value,
 }
 
 #[derive(Debug, Deserialize)]
-struct PerplexityResponse {
+struct FireworksResponse {
     id: String,
-    choices: Vec<PerplexityChoice>,
-    usage: PerplexityUsage,
+    choices: Vec<FireworksChoice>,
+    usage: FireworksUsage,
 }
 
 #[derive(Debug, Deserialize)]
-struct PerplexityChoice {
-    message: PerplexityMessage,
+struct FireworksChoice {
+    message: FireworksMessage,
     finish_reason: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
-struct PerplexityUsage {
+struct FireworksUsage {
     prompt_tokens: u32,
     completion_tokens: u32,
 }

@@ -59,10 +59,8 @@ Install Poetry
 curl -sSL https://install.python-poetry.org | python3 -
 ```
 
-Set up poetry environment, then install dependencies
+Install dependencies (recommended to use a Python virtual environment)
 ```bash
-poetry env use python3.11   # Supports from python 3.10 to 3.13
-source $(poetry env info --path)/bin/activate
 poetry install --no-root
 ```
 

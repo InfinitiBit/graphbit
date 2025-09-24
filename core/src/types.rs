@@ -1,7 +1,7 @@
-//! Core type definitions for GraphBit
+//! Core type definitions for `GraphBit`
 //!
 //! This module contains all the fundamental types used throughout the
-//! GraphBit agentic workflow automation framework.
+//! `GraphBit` agentic workflow automation framework.
 
 use chrono;
 use serde::{Deserialize, Serialize};
@@ -1049,10 +1049,8 @@ impl ConcurrencyManager {
                     Ok(_) => break,     // Successfully acquired
                     Err(_) => continue, // Retry - another thread modified the count
                 }
-            } else {
-                // At capacity, wait for notification
-                wait_queue.notified().await;
             }
+            wait_queue.notified().await;
         }
 
         // Update statistics

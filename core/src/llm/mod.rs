@@ -1,10 +1,11 @@
-//! LLM provider abstraction for GraphBit
+//! LLM provider abstraction for `GraphBit`
 //!
 //! This module provides a unified interface for working with different
 //! LLM providers while maintaining strong type safety and validation.
 
 pub mod anthropic;
 pub mod deepseek;
+pub mod fireworks;
 pub mod huggingface;
 pub mod ollama;
 pub mod openai;
@@ -12,6 +13,7 @@ pub mod openrouter;
 pub mod perplexity;
 pub mod providers;
 pub mod response;
+pub mod xai;
 
 pub use providers::{LlmConfig, LlmProvider, LlmProviderTrait};
 pub use response::{FinishReason, LlmResponse, LlmUsage};
@@ -328,9 +330,40 @@ impl LlmProviderFactory {
                     )?))
                 }
             }
+            LlmConfig::Fireworks {
+                api_key,
+                model,
+                base_url,
+                ..
+            } => {
+                if let Some(base_url) = base_url {
+                    Ok(Box::new(fireworks::FireworksProvider::with_base_url(
+                        api_key, model, base_url,
+                    )?))
+                } else {
+                    Ok(Box::new(fireworks::FireworksProvider::new(api_key, model)?))
+                }
+            }
+            LlmConfig::Xai {
+                api_key,
+                model,
+                base_url,
+                ..
+            } => {
+                if let Some(base_url) = base_url {
+                    Ok(Box::new(xai::XaiProvider::with_base_url(
+                        api_key, model, base_url,
+                    )?))
+                } else {
+                    Ok(Box::new(xai::XaiProvider::new(api_key, model)?))
+                }
+            }
             LlmConfig::Custom { provider_type, .. } => Err(GraphBitError::config(format!(
-                "Unsupported custom provider: {}",
-                provider_type
+                "Unsupported custom provider: {provider_type}",
+            ))),
+            LlmConfig::Unconfigured { message } => Err(GraphBitError::config(format!(
+                "LLM provider not configured: {}",
+                message
             ))),
         }
     }

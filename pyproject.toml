@@ -105,6 +105,7 @@ version = "0.4.0"
 [tool.poetry.dependencies]
 # Core dependencies - minimal for framework functionality
 aiofiles = ">=23.0.0"
+aiohttp = {version = "^3.12.15", optional = true}
 # Optional AI/ML dependencies
 anthropic = {version = ">=0.24.0", optional = true}
 # Vector database dependencies
@@ -139,7 +140,7 @@ psycopg2 = {version = ">=2.9.0", optional = true}
 pydantic-ai = {version = ">=0.0.5", optional = true}
 pymilvus = {version = ">=2.3.0", optional = true}
 pymongo = {version = ">=4.0.0", optional = true}
-python = ">=3.10,<3.13"
+python = ">=3.10,<=3.13.6"
 python-dotenv = ">=1.0.0"
 qdrant-client = {version = ">=1.7.0", optional = true}
 requests = {version = ">=2.25.0", optional = true}
@@ -152,6 +153,7 @@ weaviate-client = {version = ">=4.4.0", optional = true}
 
 # Optional dependency groups for pip install
 [tool.poetry.extras]
+aiohttp = ["aiohttp"]
 astradb = ["astrapy"]
 benchmark = [
   "click",
@@ -217,7 +219,8 @@ full = [
   "qdrant-client",
   "requests",
   "weaviate-client",
-  "types-pyyaml"
+  "types-pyyaml",
+  "aiohttp"
 ]
 mariadb = ["mariadb", "numpy"]
 milvus = ["pymilvus"]
