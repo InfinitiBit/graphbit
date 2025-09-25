@@ -139,7 +139,7 @@ class TestLlmClient:
     async def test_llm_client_complete_anthropic(self):
         """Test Anthropic completion."""
         api_key = get_api_key("anthropic")
-        config = LlmConfig.anthropic(api_key=api_key, model="claude-3-sonnet")
+        config = LlmConfig.anthropic(api_key=api_key, model="claude-3-5-sonnet-20241022")
         client = LlmClient(config)
         response = await client.complete_async("Say hello!")
         assert isinstance(response, str) and len(response) > 0
@@ -148,7 +148,7 @@ class TestLlmClient:
     async def test_llm_client_anthropic_batch_chat(self):
         """Ensure batch and chat work for Anthropic (skips if key missing)."""
         api_key = get_api_key("anthropic")
-        config = LlmConfig.anthropic(api_key=api_key, model="claude-3-sonnet")
+        config = LlmConfig.anthropic(api_key=api_key, model="claude-3-5-sonnet-20241022")
         client = LlmClient(config)
         results = await client.complete_batch(["Hi", "There"], max_tokens=8, max_concurrency=2)
         assert isinstance(results, list) and len(results) == 2

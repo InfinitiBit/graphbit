@@ -13,7 +13,7 @@ fn get_azure_openai_config() -> Option<(String, String, String, String)> {
     let endpoint = env::var("AZURE_OPENAI_ENDPOINT").ok()?;
     let deployment = env::var("AZURE_OPENAI_DEPLOYMENT").ok()?;
     let api_version =
-        env::var("AZURE_OPENAI_API_VERSION").unwrap_or_else(|_| "2024-10-21".to_string());
+        env::var("AZURE_OPENAI_API_VERSION").unwrap_or_else(|_| "2024-02-15-preview".to_string());
 
     Some((api_key, endpoint, deployment, api_version))
 }
@@ -116,8 +116,8 @@ async fn test_azure_openai_real_api_with_tools() {
     let result = provider.complete(request).await;
     match result {
         Ok(response) => {
-            assert!(!response.content.is_empty());
-            println!("Azure OpenAI real API call with tools successful");
+            println!("Azure OpenAI response content: '{}'", response.content);
+            println!("Azure OpenAI response finish_reason: {:?}", response.finish_reason);
 
             // Check if tool calls were made
             if response.has_tool_calls() {
@@ -126,9 +126,12 @@ async fn test_azure_openai_real_api_with_tools() {
                     tool_calls = response.tool_calls
                 );
                 assert!(!response.tool_calls.is_empty());
+                // For tool calls, content might be empty, which is valid
             } else {
                 println!("Response content: {:?}", response.content);
+                assert!(!response.content.is_empty(), "Expected non-empty content but got: '{}'", response.content);
             }
+            println!("Azure OpenAI real API call with tools successful");
         }
         Err(e) => {
             println!("Azure OpenAI API call with tools failed: {e:?}");
