@@ -343,6 +343,9 @@ class TestCrossProviderLLM:
         if os.getenv("ANTHROPIC_API_KEY"):
             configs["anthropic"] = LlmConfig.anthropic(os.getenv("ANTHROPIC_API_KEY"), "claude-3-sonnet-20240229")
 
+        if os.getenv("TOGETHER_API_KEY"):
+            configs["togetherai"] = LlmConfig.togetherai(os.getenv("TOGETHER_API_KEY"), "openai/gpt-oss-20b")
+
         configs["ollama"] = LlmConfig.ollama("llama3.2")
 
         return configs
@@ -989,6 +992,156 @@ class TestXaiLLM:
 
         except Exception as e:
             pytest.fail(f"xAI workflow failed: {e}")
+
+
+class TestTogetherAILLM:
+    """Integration tests for TogetherAI LLM models."""
+
+    @pytest.fixture
+    def api_key(self) -> str:
+        """Get TogetherAI API key from environment."""
+        api_key = os.getenv("TOGETHER_API_KEY")
+        if not api_key:
+            pytest.skip("TOGETHER_API_KEY not set")
+        return api_key or ""
+
+    @pytest.fixture
+    def togetherai_gpt_oss_config(self, api_key: str) -> Any:
+        """Create TogetherAI GPT-OSS 20B configuration."""
+        return LlmConfig.togetherai(api_key, "openai/gpt-oss-20b")
+
+    @pytest.fixture
+    def togetherai_client(self, togetherai_gpt_oss_config: Any) -> Any:
+        """Create TogetherAI client."""
+        return LlmClient(togetherai_gpt_oss_config)
+
+    def test_togetherai_gpt_oss_config_creation(self, togetherai_gpt_oss_config: Any) -> None:
+        """Test TogetherAI GPT-OSS 20B config creation and properties."""
+        assert togetherai_gpt_oss_config.provider() == "togetherai"
+        assert togetherai_gpt_oss_config.model() == "openai/gpt-oss-20b"
+
+    def test_togetherai_client_creation(self, togetherai_client: Any) -> None:
+        """Test creating TogetherAI client."""
+        assert togetherai_client is not None
+
+    def test_togetherai_executor_creation(self, togetherai_gpt_oss_config: Any) -> None:
+        """Test creating workflow executor with TogetherAI config."""
+        executor = Executor(togetherai_gpt_oss_config)
+        assert executor is not None
+
+    def test_togetherai_executor_configurations(self, togetherai_gpt_oss_config: Any) -> None:
+        """Test different executor configurations with TogetherAI."""
+        # Test high throughput configuration
+        executor_ht = Executor.new_high_throughput(togetherai_gpt_oss_config)
+        assert executor_ht is not None
+
+        # Test low latency configuration
+        executor_ll = Executor.new_low_latency(togetherai_gpt_oss_config)
+        assert executor_ll is not None
+
+        # Test memory optimized configuration
+        executor_mo = Executor.new_memory_optimized(togetherai_gpt_oss_config)
+        assert executor_mo is not None
+
+    def test_togetherai_simple_completion(self, togetherai_client: Any) -> None:
+        """Test simple text completion with TogetherAI."""
+        try:
+            response = togetherai_client.complete("Hello, world!", max_tokens=10)
+            assert isinstance(response, str)
+            assert len(response) > 0
+        except Exception as e:
+            pytest.fail(f"TogetherAI completion failed: {e}")
+
+    def test_togetherai_simple_workflow_execution(self, togetherai_gpt_oss_config: Any) -> None:
+        """Test executing a simple workflow with TogetherAI."""
+        # Create a simple workflow
+        workflow = Workflow("test_togetherai_workflow")
+
+        # Create a simple agent node
+        try:
+            agent_node = Node.agent("test_agent", "Respond with 'Hello from TogetherAI'", "agent_togetherai")
+            node_id = workflow.add_node(agent_node)
+            assert node_id is not None
+
+            # Validate workflow
+            workflow.validate()
+
+            # Create executor and test basic execution capability
+            executor = Executor(togetherai_gpt_oss_config)
+            assert executor is not None
+
+        except Exception as e:
+            pytest.fail(f"TogetherAI workflow creation/validation failed: {e}")
+
+    @pytest.mark.asyncio
+    async def test_togetherai_basic_completion(self, togetherai_client: Any) -> None:
+        """Test basic completion with TogetherAI."""
+        try:
+            response = await togetherai_client.complete_async(prompt="What is the capital of France?", max_tokens=50, temperature=0.1)
+
+            assert response is not None
+            assert len(response) > 0
+            assert "paris" in response.lower()
+
+        except Exception as e:
+            pytest.fail(f"TogetherAI completion failed: {e}")
+
+    @pytest.mark.asyncio
+    async def test_togetherai_workflow_integration(self, togetherai_gpt_oss_config: Any) -> None:
+        """Test TogetherAI integration with workflow execution."""
+        try:
+            # Create a simple workflow with TogetherAI
+            workflow = Workflow()
+
+            node = Node(name="togetherai_test", prompt="Explain quantum computing in one sentence.", llm_config=togetherai_gpt_oss_config, max_tokens=100, temperature=0.3)
+
+            workflow.add_node(node)
+            workflow.validate()
+
+            executor = Executor(togetherai_gpt_oss_config)
+            context = await executor.execute_async(workflow)
+
+            result = context.get_variable("togetherai_test_result")
+            assert result is not None
+            assert len(result) > 0
+            assert any(word in result.lower() for word in ["quantum", "computing", "computer"])
+
+        except Exception as e:
+            pytest.fail(f"TogetherAI workflow failed: {e}")
+
+    def test_togetherai_multi_model_support(self, api_key: str) -> None:
+        """Test TogetherAI with multiple model configurations."""
+        models = ["openai/gpt-oss-20b", "moonshotai/Kimi-K2-Instruct-0905", "Qwen/Qwen3-Next-80B-A3B-Instruct"]
+
+        for model in models:
+            try:
+                config = LlmConfig.togetherai(api_key, model)
+                assert config.provider() == "togetherai"
+                assert config.model() == model
+
+                client = LlmClient(config)
+                assert client is not None
+
+                executor = Executor(config)
+                assert executor is not None
+
+            except Exception as e:
+                pytest.fail(f"TogetherAI multi-model test failed for {model}: {e}")
+
+    def test_togetherai_error_handling(self) -> None:
+        """Test TogetherAI error handling with invalid API key."""
+        try:
+            # Create config with invalid API key
+            invalid_config = LlmConfig.togetherai("invalid-key", "openai/gpt-oss-20b")
+            client = LlmClient(invalid_config)
+
+            # This should raise an authentication error
+            with pytest.raises((ValueError, RuntimeError)):
+                client.complete("Test prompt", max_tokens=10)
+
+        except Exception as e:
+            # Expected to fail with invalid API key
+            assert any(word in str(e).lower() for word in ["auth", "key", "invalid", "unauthorized"])
 
 
 if __name__ == "__main__":

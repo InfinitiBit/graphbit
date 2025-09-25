@@ -108,6 +108,15 @@ pub enum LlmConfig {
         /// Optional model version (if not specified, uses latest)
         version: Option<String>,
     },
+    /// `TogetherAI` LLM provider configuration
+    TogetherAi {
+        /// API key for authentication
+        api_key: String,
+        /// Model name to use (e.g., "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo", "mistralai/Mixtral-8x7B-Instruct-v0.1")
+        model: String,
+        /// Optional custom base URL
+        base_url: Option<String>,
+    },
     /// `xAI` LLM provider configuration for Grok models
     Xai {
         /// API key for authentication
@@ -266,6 +275,16 @@ impl LlmConfig {
             version: Some(version.into()),
         }
     }
+
+    /// Create `TogetherAI` configuration
+    pub fn togetherai(api_key: impl Into<String>, model: impl Into<String>) -> Self {
+        Self::TogetherAi {
+            api_key: api_key.into(),
+            model: model.into(),
+            base_url: None,
+        }
+    }
+
     /// Create `xAI` configuration for Grok models
     pub fn xai(api_key: impl Into<String>, model: impl Into<String>) -> Self {
         Self::Xai {
@@ -304,6 +323,7 @@ impl LlmConfig {
             LlmConfig::OpenRouter { .. } => "openrouter",
             LlmConfig::Fireworks { .. } => "fireworks",
             LlmConfig::Replicate { .. } => "replicate",
+            LlmConfig::TogetherAi { .. } => "togetherai",
             LlmConfig::Xai { .. } => "xai",
             LlmConfig::Custom { provider_type, .. } => provider_type,
             LlmConfig::Unconfigured { .. } => "unconfigured",
@@ -325,6 +345,7 @@ impl LlmConfig {
             LlmConfig::OpenRouter { model, .. } => model,
             LlmConfig::Fireworks { model, .. } => model,
             LlmConfig::Replicate { model, .. } => model,
+            LlmConfig::TogetherAi { model, .. } => model,
             LlmConfig::Xai { model, .. } => model,
             LlmConfig::Custom { config, .. } => config
                 .get("model")
