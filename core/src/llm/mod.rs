@@ -4,6 +4,7 @@
 //! LLM providers while maintaining strong type safety and validation.
 
 pub mod anthropic;
+pub mod azure_openai;
 pub mod deepseek;
 pub mod fireworks;
 pub mod huggingface;
@@ -252,6 +253,18 @@ impl LlmProviderFactory {
             LlmConfig::Anthropic { api_key, model, .. } => {
                 Ok(Box::new(anthropic::AnthropicProvider::new(api_key, model)?))
             }
+            LlmConfig::AzureOpenAI {
+                api_key,
+                deployment_name,
+                endpoint,
+                api_version,
+                ..
+            } => Ok(Box::new(azure_openai::AzureOpenAiProvider::new(
+                api_key,
+                deployment_name,
+                endpoint,
+                api_version,
+            )?)),
             LlmConfig::DeepSeek {
                 api_key,
                 model,

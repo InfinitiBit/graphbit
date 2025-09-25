@@ -40,6 +40,26 @@ impl LlmConfig {
     }
 
     #[staticmethod]
+    #[pyo3(signature = (api_key, deployment_name, endpoint, api_version=None))]
+    fn azure_openai(
+        api_key: String,
+        deployment_name: String,
+        endpoint: String,
+        api_version: Option<String>,
+    ) -> PyResult<Self> {
+        validate_api_key(&api_key, "Azure OpenAI")?;
+
+        Ok(Self {
+            inner: CoreLlmConfig::azure_openai(
+                api_key,
+                deployment_name,
+                endpoint,
+                api_version.unwrap_or_else(|| "2024-10-21".to_string()),
+            ),
+        })
+    }
+
+    #[staticmethod]
     #[pyo3(signature = (api_key, model=None))]
     fn deepseek(api_key: String, model: Option<String>) -> PyResult<Self> {
         validate_api_key(&api_key, "DeepSeek")?;

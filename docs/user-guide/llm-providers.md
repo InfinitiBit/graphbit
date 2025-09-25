@@ -6,6 +6,7 @@ GraphBit supports multiple Large Language Model providers through a unified clie
 
 GraphBit supports these LLM providers:
 - **OpenAI** - GPT models including GPT-4o, GPT-4o-mini
+- **Azure OpenAI** - GPT models hosted on Microsoft Azure with enterprise features
 - **Anthropic** - Claude models including Claude-4-Sonnet
 - **OpenRouter** - Unified access to 400+ models from multiple providers (GPT, Claude, Mistral, etc.)
 - **Perplexity** - Real-time search-enabled models including Sonar models
@@ -56,6 +57,99 @@ production_config = LlmConfig.openai(
     model="gpt-4o-mini"  # Balanced for production
 )
 
+```
+
+### Azure OpenAI Configuration
+
+Azure OpenAI provides enterprise-grade access to OpenAI models through Microsoft Azure, offering enhanced security, compliance, and regional availability.
+
+```python
+import os
+
+from graphbit import LlmConfig
+
+# Basic Azure OpenAI configuration
+config = LlmConfig.azure_openai(
+    api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+    deployment_name="gpt-4o-mini",  # Your Azure deployment name
+    endpoint="https://your-resource.openai.azure.com"  # Your Azure OpenAI endpoint
+)
+
+print(f"Provider: {config.provider()}")  # "azure_openai"
+print(f"Model: {config.model()}")        # "gpt-4o-mini"
+```
+
+#### Azure OpenAI with Custom API Version
+
+```python
+# Configuration with specific API version
+config = LlmConfig.azure_openai(
+    api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+    deployment_name="gpt-4o",
+    endpoint="https://your-resource.openai.azure.com",
+    api_version="2024-10-21"  # Optional - defaults to "2024-10-21"
+)
+```
+
+#### Azure OpenAI Setup Requirements
+
+To use Azure OpenAI, you need:
+
+1. **Azure OpenAI Resource**: Create an Azure OpenAI resource in the Azure portal
+2. **Model Deployment**: Deploy a model (e.g., GPT-4o, GPT-4o-mini) in your resource
+3. **API Key**: Get your API key from the Azure portal
+4. **Endpoint URL**: Your resource endpoint (format: `https://{resource-name}.openai.azure.com`)
+
+#### Environment Variables
+
+Set these environment variables for Azure OpenAI:
+
+```bash
+export AZURE_OPENAI_API_KEY="your-azure-openai-api-key"
+export AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com"
+export AZURE_OPENAI_DEPLOYMENT="your-deployment-name"
+export AZURE_OPENAI_API_VERSION="2024-10-21"  # Optional
+```
+
+```python
+# Using environment variables
+config = LlmConfig.azure_openai(
+    api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+    deployment_name=os.getenv("AZURE_OPENAI_DEPLOYMENT"),
+    endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+    api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-10-21")
+)
+```
+
+#### Available Azure OpenAI Models
+
+| Model | Best For | Context Length | Performance |
+|-------|----------|----------------|-------------|
+| `gpt-4o` | Complex reasoning, latest features | 128K | High quality, slower |
+| `gpt-4o-mini` | Balanced performance and cost | 128K | Good quality, faster |
+| `gpt-4-turbo` | Advanced tasks, function calling | 128K | High quality, moderate speed |
+| `gpt-4` | Complex analysis, creative tasks | 8K | High quality, slower |
+| `gpt-3.5-turbo` | General tasks, cost-effective | 16K | Good quality, fast |
+
+```python
+# Model selection examples for Azure OpenAI
+premium_config = LlmConfig.azure_openai(
+    api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+    deployment_name="gpt-4o",  # For complex reasoning and latest features
+    endpoint=os.getenv("AZURE_OPENAI_ENDPOINT")
+)
+
+balanced_config = LlmConfig.azure_openai(
+    api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+    deployment_name="gpt-4o-mini",  # Balanced performance and cost
+    endpoint=os.getenv("AZURE_OPENAI_ENDPOINT")
+)
+
+cost_effective_config = LlmConfig.azure_openai(
+    api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+    deployment_name="gpt-3.5-turbo",  # Cost-effective for general tasks
+    endpoint=os.getenv("AZURE_OPENAI_ENDPOINT")
+)
 ```
 
 ### Anthropic Configuration
@@ -1145,6 +1239,7 @@ def get_api_key(provider):
     """Securely retrieve API keys"""
     key_mapping = {
         "openai": "OPENAI_API_KEY",
+        "azure_openai": "AZURE_OPENAI_API_KEY",
         "anthropic": "ANTHROPIC_API_KEY",
         "openrouter": "OPENROUTER_API_KEY",
         "perplexity": "PERPLEXITY_API_KEY",

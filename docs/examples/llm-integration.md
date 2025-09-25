@@ -476,6 +476,11 @@ def monitor_llm_system_health():
     
     providers_to_test = [
         ('OpenAI', lambda: LlmConfig.openai(os.getenv("OPENAI_API_KEY", "test"), "gpt-4o-mini")),
+        ('Azure OpenAI', lambda: LlmConfig.azure_openai(
+            os.getenv("AZURE_OPENAI_API_KEY", "test"),
+            os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt-4o"),
+            os.getenv("AZURE_OPENAI_ENDPOINT", "https://test.openai.azure.com")
+        )),
         ('Anthropic', lambda: LlmConfig.anthropic(os.getenv("ANTHROPIC_API_KEY", "test"), "claude-sonnet-4-20250514")),
         ('Ollama', lambda: LlmConfig.ollama("llama3.2"))
     ]
@@ -660,7 +665,15 @@ def setup_production_llm_config():
             os.getenv("OPENAI_API_KEY"),
             "gpt-4o-mini"
         )))
-    
+
+    if all([os.getenv("AZURE_OPENAI_API_KEY"), os.getenv("AZURE_OPENAI_ENDPOINT"), os.getenv("AZURE_OPENAI_DEPLOYMENT")]):
+        providers.append(('azure_openai', LlmConfig.azure_openai(
+            os.getenv("AZURE_OPENAI_API_KEY"),
+            os.getenv("AZURE_OPENAI_DEPLOYMENT"),
+            os.getenv("AZURE_OPENAI_ENDPOINT"),
+            os.getenv("AZURE_OPENAI_API_VERSION", "2024-10-21")
+        )))
+
     if os.getenv("ANTHROPIC_API_KEY"):
         providers.append(('anthropic', LlmConfig.anthropic(
             os.getenv("ANTHROPIC_API_KEY"),
