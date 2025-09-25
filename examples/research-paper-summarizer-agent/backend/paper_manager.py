@@ -6,21 +6,18 @@ workflow system, with vector database integration for context retrieval and
 paper summarization capabilities.
 """
 
-import json
 import logging
 import os
 from collections import defaultdict
 from typing import Any, Dict, List, Optional
 
 from dotenv import load_dotenv
-from fastapi import WebSocket
 
-import graphbit
 from graphbit import EmbeddingClient, EmbeddingConfig, LlmClient, LlmConfig
 
-from .const import ConfigConstants
+from .constant import ConfigConstants
 from .faiss_store import create_faiss_index, embed_chunks_batch, search_faiss_index
-from .summarizer import answer_question, chunk_text, chunk_text_with_context, summarize_pdf_sections_parallel
+from .summarizer import answer_question, chunk_text_with_context, summarize_pdf_sections_parallel
 from .utils.caching import hash_pdf, load_from_cache, save_to_cache
 
 load_dotenv()
@@ -45,9 +42,6 @@ class PaperManager:
             cache_dir (str, optional): Directory for caching processed papers.
         """
         self.cache_dir = cache_dir
-
-        # Initialize GraphBit
-        graphbit.init()
 
         # Ensure OpenAI API key is present
         openai_api_key = ConfigConstants.OPENAI_API_KEY
@@ -334,21 +328,16 @@ class PaperManager:
         Returns:
             Dict[str, Any]: Statistics including active sessions, cache info, etc.
         """
-        # Safely extract model names from config objects
         try:
             llm_model = getattr(self.llm_config, "model", None)
-            if callable(llm_model):
-                llm_model = ConfigConstants.LLM_MODEL
-            elif not isinstance(llm_model, str):
+            if callable(llm_model) or not isinstance(llm_model, str):
                 llm_model = ConfigConstants.LLM_MODEL
         except Exception:
             llm_model = ConfigConstants.LLM_MODEL
 
         try:
             embedding_model = getattr(self.embedding_config, "model", None)
-            if callable(embedding_model):
-                embedding_model = ConfigConstants.EMBEDDING_MODEL
-            elif not isinstance(embedding_model, str):
+            if callable(embedding_model) or not isinstance(embedding_model, str):
                 embedding_model = ConfigConstants.EMBEDDING_MODEL
         except Exception:
             embedding_model = ConfigConstants.EMBEDDING_MODEL
@@ -359,5 +348,5 @@ class PaperManager:
             "llm_model": str(llm_model),
             "embedding_model": str(embedding_model),
             "session_ids": list(self.sessions.keys()),
-            "total_cached_papers": len([d for d in os.listdir(self.cache_dir) if os.path.isdir(os.path.join(self.cache_dir, d))]) if os.path.exists(self.cache_dir) else 0,
+            "total_cached_papers": (len([d for d in os.listdir(self.cache_dir) if os.path.isdir(os.path.join(self.cache_dir, d))]) if os.path.exists(self.cache_dir) else 0),
         }

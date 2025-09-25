@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 
 from graphbit import DocumentLoader, DocumentLoaderConfig, LlmClient, LlmConfig, TextSplitter, TextSplitterConfig
 
-from .const import ConfigConstants
+from .constant import ConfigConstants
 
 load_dotenv()
 

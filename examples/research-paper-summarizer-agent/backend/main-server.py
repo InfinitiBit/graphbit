@@ -47,6 +47,7 @@ def root():
 async def upload_pdf(file: UploadFile = File(...), background_tasks: BackgroundTasks = None):
     """
     Upload and process a PDF file for immediate summarization (Phase 1).
+
     Q&A preparation happens in the background (Phase 2).
 
     Args:

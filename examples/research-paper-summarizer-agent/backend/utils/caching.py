@@ -9,10 +9,12 @@ on repeated access to the same documents.
 import hashlib
 import json
 import os
+from typing import Optional
 
 import faiss
 
-from ..const import ConfigConstants
+from ..constant import ConfigConstants
+
 
 CACHE_DIR = ConfigConstants.CACHE_DIR
 
@@ -99,17 +101,10 @@ def cache_exists(hash_id: str) -> bool:
     folder = os.path.join(CACHE_DIR, hash_id)
     required_files = ["summaries.json", "chunk_dict.json", "chunk_titles.json", "faiss.index"]
 
-    if not os.path.exists(folder):
-        return False
-
-    for file in required_files:
-        if not os.path.exists(os.path.join(folder, file)):
-            return False
-
-    return True
+    return os.path.exists(folder) and all(os.path.exists(os.path.join(folder, file)) for file in required_files)
 
 
-def clear_cache(hash_id: str = None) -> bool:
+def clear_cache(hash_id: Optional[str] = None) -> bool:
     """
     Clear cache for a specific hash ID or all cache.
 

@@ -18,39 +18,6 @@ st.set_page_config(page_title="Research Paper Summarizer", page_icon="📄", lay
 st.title("📄 Research Paper Summarizer & Q&A")
 st.markdown("*Powered by GraphBit Framework*")
 
-# Add sidebar with information
-with st.sidebar:
-    st.header("ℹ️ About")
-    st.markdown(
-        """
-    This application uses GraphBit framework to:
-    - Extract and summarize research paper sections
-    - Create semantic embeddings for content search
-    - Answer questions about the paper content
-    - Cache processed papers for faster access
-    """
-    )
-
-    st.header("🚀 How to Use")
-    st.markdown(
-        """
-    1. Upload a PDF research paper
-    2. Wait for processing and summarization
-    3. Review section-wise summaries
-    4. Ask questions about the content
-    """
-    )
-
-    # Add stats if available
-    try:
-        stats_response = requests.get(f"{BACKEND_URL}/stats/", timeout=5)
-        if stats_response.status_code == 200:
-            stats = stats_response.json()["stats"]
-            st.header("📊 Stats")
-            st.text(f"LLM Model: {stats.get('llm_model', 'N/A')}")
-            st.text(f"Embedding Model: {stats.get('embedding_model', 'N/A')}")
-    except:
-        pass
 
 # State management for session_id and summaries
 if "session_id" not in st.session_state:
@@ -69,68 +36,67 @@ with col1:
     st.header("📤 Upload Your Research Paper")
     uploaded_file = st.file_uploader("Choose a PDF file", type=["pdf"], help="Upload a research paper in PDF format for analysis and summarization")
 
-    if uploaded_file is not None:
-        if uploaded_file.name != st.session_state["last_uploaded_file_name"]:
-            # Create progress indicators
-            progress_bar = st.progress(0)
-            status_text = st.empty()
+    if uploaded_file is not None and uploaded_file.name != st.session_state["last_uploaded_file_name"]:
+        # Create progress indicators
+        progress_bar = st.progress(0)
+        status_text = st.empty()
 
-            try:
-                status_text.text("📄 Uploading PDF...")
-                progress_bar.progress(10)
+        try:
+            status_text.text("📄 Uploading PDF...")
+            progress_bar.progress(10)
 
-                files = {"file": (uploaded_file.name, uploaded_file, "application/pdf")}
+            files = {"file": (uploaded_file.name, uploaded_file, "application/pdf")}
 
-                status_text.text("🔄 Processing PDF and extracting text...")
-                progress_bar.progress(30)
+            status_text.text("🔄 Processing PDF and extracting text...")
+            progress_bar.progress(30)
 
-                status_text.text("📝 Generating section summaries (this may take 1-2 minutes)...")
-                progress_bar.progress(50)
+            status_text.text("📝 Generating section summaries (this may take 1-2 minutes)...")
+            progress_bar.progress(50)
 
-                response = requests.post(f"{BACKEND_URL}/upload/", files=files, timeout=180)
+            response = requests.post(f"{BACKEND_URL}/upload/", files=files, timeout=180)
 
-                if response.status_code == 200:
-                    data = response.json()
-                    st.session_state["session_id"] = data["session_id"]
-                    st.session_state["summaries"] = data["summaries"]
-                    st.session_state["qa_ready"] = data.get("qa_ready", False)
-                    st.session_state["last_uploaded_file_name"] = uploaded_file.name
+            if response.status_code == 200:
+                data = response.json()
+                st.session_state["session_id"] = data["session_id"]
+                st.session_state["summaries"] = data["summaries"]
+                st.session_state["qa_ready"] = data.get("qa_ready", False)
+                st.session_state["last_uploaded_file_name"] = uploaded_file.name
 
-                    progress_bar.progress(100)
-                    status_text.text("✅ Summaries ready!")
+                progress_bar.progress(100)
+                status_text.text("✅ Summaries ready!")
 
-                    # Clear progress indicators after a short delay
-                    time.sleep(1)
-                    progress_bar.empty()
-                    status_text.empty()
-
-                    st.success("✅ Summaries generated successfully!")
-
-                    # Show Q&A preparation status
-                    if not st.session_state["qa_ready"]:
-                        st.info("🔄 Preparing Q&A functionality in the background...")
-
-                    st.balloons()
-                else:
-                    progress_bar.empty()
-                    status_text.empty()
-                    error_detail = response.json().get("detail", "Unknown error")
-                    st.error(f"❌ Error processing PDF: {error_detail}")
-
-            except requests.exceptions.Timeout:
+                # Clear progress indicators after a short delay
+                time.sleep(1)
                 progress_bar.empty()
                 status_text.empty()
-                st.error("⏰ Request timed out. The PDF is taking longer than expected to process.")
-                st.info("💡 **Tips to reduce processing time:**")
-                st.info("• Try a smaller PDF (< 20 pages)")
-                st.info("• Ensure the PDF has clear text (not scanned images)")
-                st.info("• Wait a moment and try again - the server may be busy")
 
-            except requests.exceptions.RequestException as e:
+                st.success("✅ Summaries generated successfully!")
+
+                # Show Q&A preparation status
+                if not st.session_state["qa_ready"]:
+                    st.info("🔄 Preparing Q&A functionality in the background...")
+
+                st.balloons()
+            else:
                 progress_bar.empty()
                 status_text.empty()
-                st.error(f"🔌 Connection error: {e}")
-                st.info("Please make sure the backend server is running on http://localhost:8000")
+                error_detail = response.json().get("detail", "Unknown error")
+                st.error(f"❌ Error processing PDF: {error_detail}")
+
+        except requests.exceptions.Timeout:
+            progress_bar.empty()
+            status_text.empty()
+            st.error("⏰ Request timed out. The PDF is taking longer than expected to process.")
+            st.info("💡 **Tips to reduce processing time:**")
+            st.info("• Try a smaller PDF (< 20 pages)")
+            st.info("• Ensure the PDF has clear text (not scanned images)")
+            st.info("• Wait a moment and try again - the server may be busy")
+
+        except requests.exceptions.RequestException as e:
+            progress_bar.empty()
+            status_text.empty()
+            st.error(f"🔌 Connection error: {e}")
+            st.info("Please make sure the backend server is running on http://localhost:8000")
 
 with col2:
     if st.session_state.get("session_id"):
@@ -243,7 +209,7 @@ if st.session_state.get("session_id"):
 
         # Show progress information
         if elapsed_time > 30:  # Show additional info after 30 seconds
-            st.info(f"📊 Processing in progress... This may take 1-3 minutes depending on paper complexity.")
+            st.info("📊 Processing in progress... This may take 1-3 minutes depending on paper complexity.")
 
         # Dynamic polling with timeout (5 minutes max)
         max_polling_time = 300  # 5 minutes
