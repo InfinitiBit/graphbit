@@ -55,6 +55,7 @@ impl LlmRequest {
     }
 
     /// Create a new LLM request with multiple messages
+    #[must_use]
     pub fn with_messages(messages: Vec<LlmMessage>) -> Self {
         Self {
             messages,
@@ -68,6 +69,7 @@ impl LlmRequest {
 
     /// Add a message to the request
     #[inline]
+    #[must_use]
     pub fn with_message(mut self, message: LlmMessage) -> Self {
         self.messages.push(message);
         self
@@ -75,13 +77,15 @@ impl LlmRequest {
 
     /// Set maximum tokens
     #[inline]
-    pub fn with_max_tokens(mut self, max_tokens: u32) -> Self {
+    #[must_use]
+    pub const fn with_max_tokens(mut self, max_tokens: u32) -> Self {
         self.max_tokens = Some(max_tokens);
         self
     }
 
     /// Set temperature
     #[inline]
+    #[must_use]
     pub fn with_temperature(mut self, temperature: f32) -> Self {
         self.temperature = Some(temperature.clamp(0.0, 1.0));
         self
@@ -89,6 +93,7 @@ impl LlmRequest {
 
     /// Set top-p
     #[inline]
+    #[must_use]
     pub fn with_top_p(mut self, top_p: f32) -> Self {
         self.top_p = Some(top_p.clamp(0.0, 1.0));
         self
@@ -96,12 +101,14 @@ impl LlmRequest {
 
     /// Add a tool
     #[inline]
+    #[must_use]
     pub fn with_tool(mut self, tool: LlmTool) -> Self {
         self.tools.push(tool);
         self
     }
 
     /// Add multiple tools
+    #[must_use]
     pub fn with_tools(mut self, tools: Vec<LlmTool>) -> Self {
         self.tools.extend(tools);
         self
@@ -109,12 +116,14 @@ impl LlmRequest {
 
     /// Add extra parameters
     #[inline]
+    #[must_use]
     pub fn with_extra_param(mut self, key: String, value: serde_json::Value) -> Self {
         self.extra_params.insert(key, value);
         self
     }
 
     /// Get total message length estimate for performance planning
+    #[must_use]
     pub fn estimated_token_count(&self) -> usize {
         self.messages
             .iter()
@@ -177,6 +186,7 @@ impl LlmMessage {
 
     /// Add tool calls to the message
     #[inline]
+    #[must_use]
     pub fn with_tool_calls(mut self, tool_calls: Vec<LlmToolCall>) -> Self {
         self.tool_calls = tool_calls;
         self
@@ -184,6 +194,7 @@ impl LlmMessage {
 
     /// Get content length for performance estimation
     #[inline]
+    #[must_use]
     pub fn content_length(&self) -> usize {
         self.content.len()
     }
@@ -193,13 +204,13 @@ impl LlmMessage {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum LlmRole {
-    /// User message role
+    /// Message from a user/human
     User,
-    /// Assistant message role
+    /// Message from the AI assistant
     Assistant,
-    /// System message role
+    /// System message providing context or instructions
     System,
-    /// Tool message role
+    /// Message from a tool execution
     Tool,
 }
 

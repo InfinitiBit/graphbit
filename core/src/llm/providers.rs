@@ -292,6 +292,7 @@ impl LlmConfig {
     }
 
     /// Get the provider name
+    #[must_use]
     pub fn provider_name(&self) -> &str {
         match self {
             LlmConfig::OpenAI { .. } => "openai",
@@ -311,6 +312,7 @@ impl LlmConfig {
     }
 
     /// Get the model name
+    #[must_use]
     pub fn model_name(&self) -> &str {
         match self {
             LlmConfig::OpenAI { model, .. } => model,
@@ -396,6 +398,7 @@ pub struct LlmProvider {
 
 impl LlmProvider {
     /// Create a new LLM provider wrapper
+    #[must_use]
     pub fn new(provider: Box<dyn LlmProviderTrait>, config: LlmConfig) -> Self {
         Self {
             inner: provider,
@@ -404,11 +407,13 @@ impl LlmProvider {
     }
 
     /// Get the provider configuration
-    pub fn config(&self) -> &LlmConfig {
+    #[must_use]
+    pub const fn config(&self) -> &LlmConfig {
         &self.config
     }
 
     /// Get the underlying provider
+    #[must_use]
     pub fn provider(&self) -> &dyn LlmProviderTrait {
         self.inner.as_ref()
     }

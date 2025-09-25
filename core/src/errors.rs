@@ -22,108 +22,108 @@ pub enum GraphBitError {
     /// LLM provider errors
     #[error("LLM provider error: {provider} - {message}")]
     LlmProvider {
-        /// Provider name
+        /// Name of the LLM provider that caused the error
         provider: String,
-        /// Error message
+        /// Error message describing the issue
         message: String,
     },
 
     /// Generic LLM errors
     #[error("LLM error: {message}")]
     Llm {
-        /// Error message
+        /// Error message describing the LLM issue
         message: String,
     },
 
     /// Network communication errors
     #[error("Network error: {message}")]
     Network {
-        /// Error message
+        /// Error message describing the network issue
         message: String,
     },
 
     /// JSON serialization/deserialization errors
     #[error("Serialization error: {message}")]
     Serialization {
-        /// Error message
+        /// Error message describing the serialization issue
         message: String,
     },
 
     /// Workflow execution errors
     #[error("Workflow execution error: {message}")]
     WorkflowExecution {
-        /// Error message
+        /// Error message describing the workflow execution issue
         message: String,
     },
 
     /// Graph structure errors
     #[error("Graph error: {message}")]
     Graph {
-        /// Error message
+        /// Error message describing the graph structure issue
         message: String,
     },
 
     /// Agent-related errors
     #[error("Agent error: {agent_id} - {message}")]
     Agent {
-        /// Agent identifier
+        /// ID of the agent that caused the error
         agent_id: String,
-        /// Error message
+        /// Error message describing the agent issue
         message: String,
     },
 
     /// Agent not found errors
     #[error("Agent not found: {agent_id}")]
     AgentNotFound {
-        /// Agent identifier
+        /// ID of the agent that was not found
         agent_id: String,
     },
 
     /// Type validation errors
     #[error("Validation error: {field} - {message}")]
     Validation {
-        /// Field name that failed validation
+        /// Name of the field that failed validation
         field: String,
-        /// Error message
+        /// Error message describing the validation issue
         message: String,
     },
 
     /// Authentication and authorization errors
     #[error("Authentication error: {provider} - {message}")]
     Authentication {
-        /// Provider name
+        /// Name of the provider that caused the authentication error
         provider: String,
-        /// Error message
+        /// Error message describing the authentication issue
         message: String,
     },
 
     /// Rate limiting errors
     #[error("Rate limit exceeded: {provider} - retry after {retry_after_seconds}s")]
     RateLimit {
-        /// Provider name
+        /// Name of the provider that imposed the rate limit
         provider: String,
-        /// Seconds to wait before retrying
+        /// Number of seconds to wait before retrying
         retry_after_seconds: u64,
     },
 
     /// Generic internal errors
     #[error("Internal error: {message}")]
     Internal {
-        /// Error message
+        /// Error message describing the internal issue
         message: String,
     },
 
     /// IO errors
     #[error("IO error: {message}")]
     Io {
-        /// Error message
+        /// Error message describing the IO issue
         message: String,
     },
 
     /// Concurrency control errors
     #[error("Concurrency error: {message}")]
     Concurrency {
-        /// Error message
+        /// Error message describing the concurrency issue
         message: String,
     },
 }
@@ -212,7 +212,8 @@ impl GraphBitError {
     }
 
     /// Check if the error is retryable
-    pub fn is_retryable(&self) -> bool {
+    #[must_use]
+    pub const fn is_retryable(&self) -> bool {
         matches!(
             self,
             GraphBitError::Network { .. }
@@ -223,7 +224,8 @@ impl GraphBitError {
     }
 
     /// Get retry delay in seconds for retryable errors
-    pub fn retry_delay(&self) -> Option<u64> {
+    #[must_use]
+    pub const fn retry_delay(&self) -> Option<u64> {
         match self {
             GraphBitError::RateLimit {
                 retry_after_seconds,
