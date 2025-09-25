@@ -235,6 +235,10 @@ async fn test_ollama_llm() {
 #[tokio::test]
 #[ignore = "Requires TogetherAI API key"]
 async fn test_togetherai_llm() {
+    if !has_togetherai_key() {
+        return;
+    }
+
     let config = llm::LlmConfig::TogetherAi {
         api_key: std::env::var("TOGETHER_API_KEY").unwrap(),
         model: "openai/gpt-oss-20b".to_string(),
@@ -316,6 +320,10 @@ fn test_togetherai_config_with_custom_base_url() {
 #[tokio::test]
 #[ignore = "Requires TogetherAI API key"]
 async fn test_togetherai_function_calling() {
+    if !has_togetherai_key() {
+        return;
+    }
+
     let config = llm::LlmConfig::TogetherAi {
         api_key: std::env::var("TOGETHER_API_KEY").unwrap(),
         model: "openai/gpt-oss-20b".to_string(),

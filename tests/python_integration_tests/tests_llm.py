@@ -1000,9 +1000,9 @@ class TestTogetherAILLM:
     @pytest.fixture
     def api_key(self) -> str:
         """Get TogetherAI API key from environment."""
-        api_key = os.getenv("TOGETHER_API_KEY")
+        api_key = os.getenv("TOGETHERAI_API_KEY")
         if not api_key:
-            pytest.skip("TOGETHER_API_KEY not set")
+            pytest.skip("TOGETHERAI_API_KEY not set")
         return api_key or ""
 
     @pytest.fixture
@@ -1046,7 +1046,7 @@ class TestTogetherAILLM:
     def test_togetherai_simple_completion(self, togetherai_client: Any) -> None:
         """Test simple text completion with TogetherAI."""
         try:
-            response = togetherai_client.complete("Hello, world!", max_tokens=10)
+            response = togetherai_client.complete("What is the capital of France?", max_tokens=200)
             assert isinstance(response, str)
             assert len(response) > 0
         except Exception as e:
@@ -1091,17 +1091,17 @@ class TestTogetherAILLM:
         """Test TogetherAI integration with workflow execution."""
         try:
             # Create a simple workflow with TogetherAI
-            workflow = Workflow()
+            workflow = Workflow("togetherai workflow test")
 
-            node = Node(name="togetherai_test", prompt="Explain quantum computing in one sentence.", llm_config=togetherai_gpt_oss_config, max_tokens=100, temperature=0.3)
+            node = Node.agent(name="togetherai_test", prompt="Explain quantum computing in one sentence.", llm_config=togetherai_gpt_oss_config)
 
             workflow.add_node(node)
             workflow.validate()
 
             executor = Executor(togetherai_gpt_oss_config)
-            context = await executor.execute_async(workflow)
+            context = executor.execute(workflow)
 
-            result = context.get_variable("togetherai_test_result")
+            result = context.get_node_output("togetherai_test")
             assert result is not None
             assert len(result) > 0
             assert any(word in result.lower() for word in ["quantum", "computing", "computer"])
