@@ -97,6 +97,17 @@ pub enum LlmConfig {
         /// Optional custom base URL
         base_url: Option<String>,
     },
+    /// `Replicate` LLM provider configuration
+    Replicate {
+        /// API key for authentication
+        api_key: String,
+        /// Model name to use (e.g., "lucataco/glaive-function-calling-v1", "homanp/llama-2-13b-function-calling")
+        model: String,
+        /// Optional custom base URL
+        base_url: Option<String>,
+        /// Optional model version (if not specified, uses latest)
+        version: Option<String>,
+    },
     /// `xAI` LLM provider configuration for Grok models
     Xai {
         /// API key for authentication
@@ -232,6 +243,29 @@ impl LlmConfig {
         }
     }
 
+    /// Create `Replicate` configuration
+    pub fn replicate(api_key: impl Into<String>, model: impl Into<String>) -> Self {
+        Self::Replicate {
+            api_key: api_key.into(),
+            model: model.into(),
+            base_url: None,
+            version: None,
+        }
+    }
+
+    /// Create `Replicate` configuration with version
+    pub fn replicate_with_version(
+        api_key: impl Into<String>,
+        model: impl Into<String>,
+        version: impl Into<String>,
+    ) -> Self {
+        Self::Replicate {
+            api_key: api_key.into(),
+            model: model.into(),
+            base_url: None,
+            version: Some(version.into()),
+        }
+    }
     /// Create `xAI` configuration for Grok models
     pub fn xai(api_key: impl Into<String>, model: impl Into<String>) -> Self {
         Self::Xai {
@@ -269,6 +303,7 @@ impl LlmConfig {
             Self::Perplexity { .. } => "perplexity",
             Self::OpenRouter { .. } => "openrouter",
             Self::Fireworks { .. } => "fireworks",
+            Self::Replicate { .. } => "replicate",
             Self::Xai { .. } => "xai",
             Self::Custom { provider_type, .. } => provider_type,
             Self::Unconfigured { .. } => "unconfigured",
@@ -289,6 +324,7 @@ impl LlmConfig {
             Self::Perplexity { model, .. } => model,
             Self::OpenRouter { model, .. } => model,
             Self::Fireworks { model, .. } => model,
+            Self::Replicate { model, .. } => model,
             Self::Xai { model, .. } => model,
             Self::Custom { config, .. } => config
                 .get("model")
