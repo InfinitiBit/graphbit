@@ -38,6 +38,11 @@ pub fn has_deepseek_key() -> bool {
 }
 
 #[allow(dead_code)]
+pub fn has_togetherai_key() -> bool {
+    env::var("TOGETHER_API_KEY").is_ok()
+}
+
+#[allow(dead_code)]
 // `Ollama` Helper
 pub async fn is_ollama_available() -> bool {
     let client = reqwest::Client::new();
