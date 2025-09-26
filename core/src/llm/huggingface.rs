@@ -50,16 +50,16 @@ impl HuggingFaceProvider {
         for message in messages {
             match message.role {
                 LlmRole::System => {
-                    write!(formatted, "System: {}\n", message.content).unwrap();
+                    writeln!(formatted, "System: {}", message.content).unwrap();
                 }
                 LlmRole::User => {
-                    write!(formatted, "User: {}\n", message.content).unwrap();
+                    writeln!(formatted, "User: {}", message.content).unwrap();
                 }
                 LlmRole::Assistant => {
-                    write!(formatted, "Assistant: {}\n", message.content).unwrap();
+                    writeln!(formatted, "Assistant: {}", message.content).unwrap();
                 }
                 LlmRole::Tool => {
-                    write!(formatted, "Tool: {}\n", message.content).unwrap();
+                    writeln!(formatted, "Tool: {}", message.content).unwrap();
                 }
             }
         }
