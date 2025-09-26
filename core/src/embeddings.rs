@@ -63,24 +63,24 @@ impl EmbeddingInput {
     /// Get the texts as a vector
     pub fn as_texts(&self) -> Vec<&str> {
         match self {
-            EmbeddingInput::Single(text) => vec![text.as_str()],
-            EmbeddingInput::Multiple(texts) => texts.iter().map(|s| s.as_str()).collect(),
+            Self::Single(text) => vec![text.as_str()],
+            Self::Multiple(texts) => texts.iter().map(|s| s.as_str()).collect(),
         }
     }
 
     /// Get the number of texts
     pub fn len(&self) -> usize {
         match self {
-            EmbeddingInput::Single(_) => 1,
-            EmbeddingInput::Multiple(texts) => texts.len(),
+            Self::Single(_) => 1,
+            Self::Multiple(texts) => texts.len(),
         }
     }
 
     /// Check if empty
     pub fn is_empty(&self) -> bool {
         match self {
-            EmbeddingInput::Single(text) => text.is_empty(),
-            EmbeddingInput::Multiple(texts) => texts.is_empty(),
+            Self::Single(text) => text.is_empty(),
+            Self::Multiple(texts) => texts.is_empty(),
         }
     }
 }

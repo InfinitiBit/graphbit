@@ -120,7 +120,7 @@ impl LlmUsage {
     }
 
     /// Add usage statistics
-    pub fn add(&mut self, other: &LlmUsage) {
+    pub fn add(&mut self, other: &Self) {
         self.prompt_tokens += other.prompt_tokens;
         self.completion_tokens += other.completion_tokens;
         self.total_tokens += other.total_tokens;
@@ -174,29 +174,29 @@ pub enum FinishReason {
 impl FinishReason {
     /// Check if the response finished naturally
     pub fn is_natural_stop(&self) -> bool {
-        matches!(self, FinishReason::Stop | FinishReason::ToolCalls)
+        matches!(self, Self::Stop | Self::ToolCalls)
     }
 
     /// Check if the response was truncated
     pub fn is_truncated(&self) -> bool {
-        matches!(self, FinishReason::Length)
+        matches!(self, Self::Length)
     }
 
     /// Check if there was an error
     pub fn is_error(&self) -> bool {
-        matches!(self, FinishReason::Error | FinishReason::ContentFilter)
+        matches!(self, Self::Error | Self::ContentFilter)
     }
 }
 
 impl std::fmt::Display for FinishReason {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            FinishReason::Stop => write!(f, "stop"),
-            FinishReason::Length => write!(f, "length"),
-            FinishReason::ToolCalls => write!(f, "tool_calls"),
-            FinishReason::ContentFilter => write!(f, "content_filter"),
-            FinishReason::Error => write!(f, "error"),
-            FinishReason::Other(reason) => write!(f, "{reason}"),
+            Self::Stop => write!(f, "stop"),
+            Self::Length => write!(f, "length"),
+            Self::ToolCalls => write!(f, "tool_calls"),
+            Self::ContentFilter => write!(f, "content_filter"),
+            Self::Error => write!(f, "error"),
+            Self::Other(reason) => write!(f, "{reason}"),
         }
     }
 }
