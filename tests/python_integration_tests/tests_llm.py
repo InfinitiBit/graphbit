@@ -972,17 +972,84 @@ class TestXaiLLM:
         """Test xAI integration with workflow execution."""
         try:
             # Create a simple workflow with xAI
-            workflow = Workflow()
+            workflow = Workflow("xAI_test_workflow")
 
-            node = Node(name="xai_test", prompt="Explain quantum computing in one sentence.", llm_config=xai_config, max_tokens=100, temperature=0.3)
+            node = Node.agent(name="xai_test", prompt="Explain quantum computing in one sentence.", llm_config=xai_config)
 
             workflow.add_node(node)
             workflow.validate()
 
             executor = Executor(xai_config)
-            context = await executor.execute_async(workflow)
+            context = executor.execute(workflow)
 
-            result = context.get_variable("xai_test_result")
+            result = context.get_node_output("xai_test")
+            assert result is not None
+            assert len(result) > 0
+            assert any(word in result.lower() for word in ["quantum", "computing", "computer"])
+
+        except Exception as e:
+            pytest.fail(f"xAI workflow failed: {e}")
+
+
+class TestAI21labsAILLM:
+    """Integrtion tests for AI21Labs LLM models."""
+
+    @pytest.fixture
+    def api_key(self) -> str:
+        """Get AI21 Labs API key from environment."""
+        api_key = os.getenv("AI21_API_KEY")
+        if not api_key:
+            pytest.skip("AI21_API_KEY not set")
+        return api_key or ""
+
+    @pytest.fixture
+    def ai21_config(self, api_key: str) -> Any:
+        """Create AI21 Labs configuration."""
+        return LlmConfig.ai21(api_key, "jamba-mini")
+
+    @pytest.fixture
+    def ai21_client(self, ai21_config: Any) -> Any:
+        """Create AI21 Labs client."""
+        return LlmClient(ai21_config)
+
+    def test_ai21_config_creation(self, ai21_config: Any) -> None:
+        """Test AI21 Labs config creation and properties."""
+        assert ai21_config.provider() == "ai21"
+        assert ai21_config.model() == "jamba-mini"
+
+    def test_ai21_client_creation(self, ai21_client: Any) -> None:
+        """Test AI21 Labs client creation."""
+        assert ai21_client is not None
+
+    @pytest.mark.asyncio
+    async def test_ai21_basic_completion(self, ai21_client: Any) -> None:
+        """Test basic completion with AI21 jamba-mini."""
+        try:
+            response = await ai21_client.complete_async(prompt="What is the capital of France?", max_tokens=50, temperature=0.1)
+
+            assert response is not None
+            assert len(response) > 0
+            assert "paris" in response.lower()
+
+        except Exception as e:
+            pytest.fail(f"AI21 Labs completion failed: {e}")
+
+    @pytest.mark.asyncio
+    async def test_ai21_workflow_integration(self, ai21_config: Any) -> None:
+        """Test AI21 Labs integration with workflow execution."""
+        try:
+            # Create a simple workflow with xAI
+            workflow = Workflow("AI21_test_workflow")
+
+            node = Node.agent(name="AI21_test", prompt="Explain quantum computing in one sentence.", llm_config=ai21_config)
+
+            workflow.add_node(node)
+            workflow.validate()
+
+            executor = Executor(ai21_config)
+            context = executor.execute(workflow)
+
+            result = context.get_node_output("AI21_test")
             assert result is not None
             assert len(result) > 0
             assert any(word in result.lower() for word in ["quantum", "computing", "computer"])

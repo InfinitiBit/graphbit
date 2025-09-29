@@ -272,12 +272,22 @@ impl LlmProviderTrait for Ai21Provider {
     fn max_context_length(&self) -> Option<u32> {
         // You should check AI21’s model docs for the exact context length
         // Placeholder: assume 8192 (you should adjust)
-        Some(8192)
+        // Context lengths for AI21 models based on their documentation
+        match self.model.as_str() {
+            "jamba-mini" | "jamba-large" => Some(256_000),
+            _ => None, // Unknown model, let the API handle it
+        }
     }
 
     fn cost_per_token(&self) -> Option<(f64, f64)> {
         // AI21’s pricing would have to be fetched from their docs. For now, None.
-        None
+        // AI21's pricing based on their documentation
+        // Returns (input_cost_per_token, output_cost_per_token)
+        match self.model.as_str() {
+            "jamba-mini" => Some((0.000_000_2, 0.000_000_4)), // $0.2/M input, $0.4/M output
+            "jamba-large" => Some((0.000_002, 0.000_008)),    // $2/M input, $8/M output
+            _ => None,                                        // Unknown model, no pricing info
+        }
     }
 }
 
