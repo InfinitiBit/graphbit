@@ -12,6 +12,7 @@ GraphBit supports these LLM providers:
 - **Perplexity** - Real-time search-enabled models including Sonar models
 - **DeepSeek** - High-performance models including DeepSeek-Chat, DeepSeek-Coder, and DeepSeek-Reasoner
 - **Fireworks AI** - Fast inference for open-source models including Llama, Mixtral, and Qwen
+- **Replicate** - Access to open-source models with function calling support including Glaive, Hermes, and Granite models
 - **xAI** - Grok models with real-time information and advanced reasoning capabilities
 - **Ollama** - Local model execution with various open-source models
 
@@ -289,6 +290,7 @@ reasoning_config = LlmConfig.perplexity(
     api_key=os.getenv("PERPLEXITY_API_KEY"),
     model="sonar-reasoning"  # For complex problem solving
 )
+```
 
 ### DeepSeek Configuration
 
@@ -406,6 +408,67 @@ response = client.complete(
 print(response)
 ```
 
+### Replicate Configuration
+
+Configure Replicate for access to open-source models with function calling capabilities:
+
+```python
+import os
+
+from graphbit import LlmConfig
+
+# Basic Replicate configuration
+config = LlmConfig.replicate(
+    api_key=os.getenv("REPLICATE_API_KEY"),
+    model="anthropic/claude-4-sonnet"  # openai/gpt-5
+)
+
+print(f"Provider: {config.provider()}")  # "replicate"
+print(f"Model: {config.model()}")        # "anthropic/claude-4-sonnet"
+```
+
+#### Provide Model Version
+
+You can also provide version separately:
+
+```python
+
+# Configuration with specific model version
+config = LlmConfig.replicate(
+    api_key=os.getenv("REPLICATE_API_KEY"),
+    model="lucataco/dolphin-2.9-llama3-8b",
+    version="ee173688d3b8d9e05a5b910f10fb9bab1e9348963ab224579bb90d9fce3fb00b"
+)
+```
+
+#### Getting Started with Replicate
+
+1. **Sign up** at [replicate.com](https://replicate.com)
+2. **Get your API token** from your account settings
+3. **Set environment variable**: `export REPLICATE_API_KEY="your-api-token"`
+4. **Start using** with GraphBit
+
+```python
+import os
+from graphbit import LlmClient, LlmConfig
+
+# Create configuration
+config = LlmConfig.replicate(
+    api_key=os.getenv("REPLICATE_API_KEY"),
+    model="lucataco/glaive-function-calling-v1"
+)
+
+# Create client and generate text
+client = LlmClient(config)
+response = client.complete(
+    prompt="Explain the benefits of open-source AI models",
+    max_tokens=300,
+    temperature=0.7
+)
+
+print(response)
+```
+
 ### xAI Configuration
 
 Configure xAI for Grok models with real-time information and advanced reasoning:
@@ -480,6 +543,7 @@ response = client.complete(
 
 print(response)
 ```
+
 
 ### Ollama Configuration
 
@@ -909,6 +973,100 @@ def create_ollama_workflow():
 workflow, executor = create_ollama_workflow()
 ```
 
+### Replicate Workflow Example
+
+```python
+from graphbit import LlmConfig, Workflow, Node, Executor
+import os
+
+def create_replicate_workflow():
+    """Create workflow using Replicate models with function calling"""
+
+    # Configure Replicate with function calling model
+    config = LlmConfig.replicate(
+        api_key=os.getenv("REPLICATE_API_KEY"),
+        model="lucataco/dolphin-2.9-llama3-8b:version"
+    )
+
+    # Create workflow
+    workflow = Workflow("Replicate Function Calling Pipeline")
+
+    # Create analyzer with function calling capabilities
+    analyzer = Node.agent(
+        name="Replicate Function Analyzer",
+        prompt=f"""
+        Analyze the following content and use available tools when needed:
+        - Identify key topics and themes
+        - Extract actionable insights
+        - Suggest relevant tools or functions to call
+        - Provide structured recommendations
+
+        Content: {input}
+
+        Use function calling when appropriate to enhance your analysis.
+        """,
+        agent_id="replicate_analyzer"
+    )
+
+    # Create summarizer using a different Replicate model
+    summarizer = Node.agent(
+        name="Hermes Summarizer",
+        prompt=f"Create a concise summary of this analysis: {input}",
+        agent_id="hermes_summarizer",
+        llm_config=LlmConfig.replicate(
+            api_key=os.getenv("REPLICATE_API_KEY"),
+            model="lucataco/dolphin-2.9-llama3-8b:version"
+        )
+    )
+
+    workflow.add_node(analyzer)
+    workflow.add_node(summarizer)
+    workflow.add_edge(analyzer, summarizer)
+    workflow.validate()
+
+    # Create executor with appropriate timeout for Replicate
+    executor = Executor(config, timeout_seconds=300)  # Longer timeout for prediction-based API
+    return workflow, executor
+
+def create_replicate_enterprise_workflow():
+    """Create workflow using Replicate's enterprise-focused models"""
+
+    # Configure with Granite model for enterprise use
+    config = LlmConfig.replicate(
+        api_key=os.getenv("REPLICATE_API_KEY"),
+        model="lucataco/dolphin-2.9-llama3-8b:version"
+    )
+
+    workflow = Workflow("Enterprise Replicate Pipeline")
+
+    # Enterprise-focused analyzer
+    analyzer = Node.agent(
+        name="Granite Enterprise Analyzer",
+        prompt=f"""
+        Perform enterprise-grade analysis of the following content:
+        - Business impact assessment
+        - Risk analysis and mitigation strategies
+        - Compliance considerations
+        - Strategic recommendations
+
+        Content: {input}
+
+        Provide analysis suitable for enterprise decision-making.
+        """,
+        agent_id="granite_analyzer"
+    )
+
+    workflow.add_node(analyzer)
+    workflow.validate()
+
+    executor = Executor(config, timeout_seconds=300)
+    return workflow, executor
+
+# Usage
+workflow, executor = create_replicate_workflow()
+enterprise_workflow, enterprise_executor = create_replicate_enterprise_workflow()
+```
+
 ## Performance Optimization
 
 ### Timeout Configuration
@@ -929,13 +1087,19 @@ anthropic_executor = Executor(
 )
 
 deepseek_executor = Executor(
-    deepseek_config, 
+    deepseek_config,
     timeout_seconds=90
 )
 
+# Replicate - longer timeout for prediction-based API
+replicate_executor = Executor(
+    replicate_config,
+    timeout_seconds=300
+)
 
+# Ollama - local processing
 ollama_executor = Executor(
-    ollama_config, 
+    ollama_config,
     timeout_seconds=180
 )
 ```
@@ -1044,6 +1208,16 @@ def get_optimal_config(use_case):
             api_key=os.getenv("OPENROUTER_API_KEY"),
             model="anthropic/claude-3-5-sonnet"
         )
+    elif use_case == "function_calling":
+        return LlmConfig.replicate(
+            api_key=os.getenv("REPLICATE_API_KEY"),
+            model="lucataco/dolphin-2.9-llama3-8b:version"
+        )
+    elif use_case == "open_source":
+        return LlmConfig.replicate(
+            api_key=os.getenv("REPLICATE_API_KEY"),
+            model="lucataco/dolphin-2.9-llama3-8b:version"
+        )
     elif use_case == "local":
         return LlmConfig.ollama(model="llama3.2")
     else:
@@ -1069,7 +1243,8 @@ def get_api_key(provider):
         "anthropic": "ANTHROPIC_API_KEY",
         "openrouter": "OPENROUTER_API_KEY",
         "perplexity": "PERPLEXITY_API_KEY",
-        "deepseek": "DEEPSEEK_API_KEY"
+        "deepseek": "DEEPSEEK_API_KEY",
+        "replicate": "REPLICATE_API_KEY"
     }
     
     env_var = key_mapping.get(provider)
@@ -1118,6 +1293,11 @@ class LLMManager:
             elif provider == "deepseek":
                 config = LlmConfig.deepseek(
                     api_key=get_api_key("deepseek"),
+                    model=model
+                )
+            elif provider == "replicate":
+                config = LlmConfig.replicate(
+                    api_key=get_api_key("replicate"),
                     model=model
                 )
             elif provider == "ollama":

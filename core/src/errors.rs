@@ -215,23 +215,23 @@ impl GraphBitError {
     pub fn is_retryable(&self) -> bool {
         matches!(
             self,
-            GraphBitError::Network { .. }
-                | GraphBitError::RateLimit { .. }
-                | GraphBitError::LlmProvider { .. }
-                | GraphBitError::Llm { .. }
+            Self::Network { .. }
+                | Self::RateLimit { .. }
+                | Self::LlmProvider { .. }
+                | Self::Llm { .. }
         )
     }
 
     /// Get retry delay in seconds for retryable errors
     pub fn retry_delay(&self) -> Option<u64> {
         match self {
-            GraphBitError::RateLimit {
+            Self::RateLimit {
                 retry_after_seconds,
                 ..
             } => Some(*retry_after_seconds),
-            GraphBitError::Network { .. } => Some(1),
-            GraphBitError::LlmProvider { .. } => Some(2),
-            GraphBitError::Llm { .. } => Some(1),
+            Self::Network { .. } => Some(1),
+            Self::LlmProvider { .. } => Some(2),
+            Self::Llm { .. } => Some(1),
             _ => None,
         }
     }
