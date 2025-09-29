@@ -544,6 +544,72 @@ response = client.complete(
 print(response)
 ```
 
+### AI21 Labs Configuration
+
+Configure AI21 Labs for Jamba models with real-time information and advanced reasoning:
+
+```python
+import os
+
+from graphbit import LlmConfig
+
+# Basic AI21 configuration
+config = LlmConfig.ai21(
+    api_key=os.getenv("AI21_API_KEY"),
+    model="jamba-mini"  # Optional - defaults to jamba-mini
+)
+
+print(f"Provider: {config.provider()}")  # "ai21"
+print(f"Model: {config.model()}")        # "jamba-mini"
+```
+
+#### AI21 Jamba Models
+
+| Model | Best For | Context Length | Performance | Cost |
+|-------|----------|----------------|-------------|------|
+| `jamba-mini` | General tasks, cost-effective | 256K | Highest quality | Medium |
+| `jamba-large` | General tasks, balanced performance | 256K | High quality | Medium |
+
+```python
+# Model selection for different use cases
+config = LlmConfig.ai21(
+    api_key=os.getenv("AI21_API_KEY"),
+    model="jamba-mini"  
+)
+
+config = LlmConfig.ai21(
+    api_key=os.getenv("AI21_API_KEY"),
+    model="jamba-large"  
+)
+```
+
+#### Getting Started with AI21 Labs
+
+1. **Sign up** at [AI21 Labs](https://ai21labs.com)
+2. **Get your API key** from the developer console
+3. **Set environment variable**: `export AI21_API_KEY="your-api-key"`
+4. **Start using** with GraphBit
+
+```python
+import os
+from graphbit import LlmClient, LlmConfig
+
+# Create configuration
+config = LlmConfig.xai(
+    api_key=os.getenv("AI21_API_KEY"),
+    model="jamba-mini"
+)
+
+# Create client and generate text
+client = LlmClient(config)
+response = client.complete(
+    prompt="Explain quantum computing with real-time examples",
+    max_tokens=200,
+    temperature=0.7
+)
+
+print(response)
+```
 
 ### Ollama Configuration
 

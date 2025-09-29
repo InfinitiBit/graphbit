@@ -3,6 +3,7 @@
 //! This module provides a unified interface for working with different
 //! LLM providers while maintaining strong type safety and validation.
 
+pub mod ai21;
 pub mod anthropic;
 pub mod azure_openai;
 pub mod bytedance;
@@ -404,6 +405,20 @@ impl LlmProviderFactory {
                     )?))
                 } else {
                     Ok(Box::new(xai::XaiProvider::new(api_key, model)?))
+                }
+            }
+            LlmConfig::Ai21 {
+                api_key,
+                model,
+                base_url,
+                ..
+            } => {
+                if let Some(base_url) = base_url {
+                    Ok(Box::new(ai21::Ai21Provider::with_base_url(
+                        api_key, model, base_url,
+                    )?))
+                } else {
+                    Ok(Box::new(ai21::Ai21Provider::new(api_key, model)?))
                 }
             }
             LlmConfig::Custom { provider_type, .. } => Err(GraphBitError::config(format!(
