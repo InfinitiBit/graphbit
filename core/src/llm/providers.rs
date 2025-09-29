@@ -323,6 +323,7 @@ impl LlmConfig {
             Self::OpenRouter { .. } => "openrouter",
             Self::Fireworks { .. } => "fireworks",
             Self::Replicate { .. } => "replicate",
+            Self::TogetherAi { .. } => "togetherai",
             Self::Xai { .. } => "xai",
             Self::Custom { provider_type, .. } => provider_type,
             Self::Unconfigured { .. } => "unconfigured",
@@ -344,6 +345,7 @@ impl LlmConfig {
             Self::OpenRouter { model, .. } => model,
             Self::Fireworks { model, .. } => model,
             Self::Replicate { model, .. } => model,
+            Self::TogetherAi { model, .. } => model,
             Self::Xai { model, .. } => model,
             Self::Custom { config, .. } => config
                 .get("model")
