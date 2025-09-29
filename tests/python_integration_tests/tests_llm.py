@@ -343,6 +343,9 @@ class TestCrossProviderLLM:
         if os.getenv("ANTHROPIC_API_KEY"):
             configs["anthropic"] = LlmConfig.anthropic(os.getenv("ANTHROPIC_API_KEY"), "claude-3-5-sonnet-20241022")
 
+        if os.getenv("MISTRALAI_API_KEY"):
+            configs["mistralai"] = LlmConfig.mistralai(os.getenv("MISTRALAI_API_KEY"), "mistral-large-latest")
+
         configs["ollama"] = LlmConfig.ollama("llama3.2")
 
         return configs

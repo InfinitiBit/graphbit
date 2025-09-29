@@ -47,6 +47,19 @@ async fn test_huggingface_provider_creation() {
 }
 
 #[tokio::test]
+async fn test_mistralai_provider_creation() {
+    graphbit_core::init().expect("Failed to initialize GraphBit");
+
+    let config = LlmConfig::mistralai("test-api-key", "mistral-large-latest");
+    let provider_result = LlmProviderFactory::create_provider(config);
+    assert!(provider_result.is_ok());
+
+    let provider = provider_result.unwrap();
+    assert_eq!(provider.provider_name(), "mistralai");
+    assert_eq!(provider.model_name(), "mistral-large-latest");
+}
+
+#[tokio::test]
 async fn test_ollama_provider_creation() {
     graphbit_core::init().expect("Failed to initialize GraphBit");
 
@@ -237,6 +250,10 @@ async fn test_llm_config_provider_detection() {
     let anthropic_config = LlmConfig::anthropic("key", "claude-3");
     assert_eq!(anthropic_config.provider_name(), "anthropic");
     assert_eq!(anthropic_config.model_name(), "claude-3");
+
+    let mistralai_config = LlmConfig::mistralai("key", "mistral-large-latest");
+    assert_eq!(mistralai_config.provider_name(), "mistralai");
+    assert_eq!(mistralai_config.model_name(), "mistral-large-latest");
 }
 
 #[tokio::test]
@@ -305,6 +322,32 @@ async fn test_openai_real_api_call() {
 
     let api_key = super::get_openai_api_key_or_skip();
     let config = LlmConfig::openai(api_key, "gpt-3.5-turbo");
+    let provider = LlmProviderFactory::create_provider(config).unwrap();
+
+    let request = LlmRequest::new("Say 'Hello' in one word only.")
+        .with_max_tokens(10)
+        .with_temperature(0.0);
+
+    let result = provider.complete(request).await;
+    assert!(result.is_ok());
+
+    let response = result.unwrap();
+    assert!(!response.content.is_empty());
+    assert!(response.content.to_lowercase().contains("hello"));
+}
+
+#[tokio::test]
+async fn test_mistralai_real_api_call() {
+    graphbit_core::init().expect("Failed to initialize GraphBit");
+
+    // Skip if no real API key is provided
+    if !super::has_mistralai_api_key() {
+        println!("Skipping real MistralAI API test - no valid API key");
+        return;
+    }
+
+    let api_key = super::get_mistralai_api_key_or_skip();
+    let config = LlmConfig::mistralai(api_key, "mistral-large-latest");
     let provider = LlmProviderFactory::create_provider(config).unwrap();
 
     let request = LlmRequest::new("Say 'Hello' in one word only.")
@@ -654,6 +697,7 @@ async fn test_llm_provider_factory_multiple_providers() {
         LlmConfig::anthropic("key2", "claude-3"),
         LlmConfig::fireworks("key3", "accounts/fireworks/models/llama-v3p1-8b-instruct"),
         LlmConfig::xai("key4", "grok-4"),
+        LlmConfig::mistralai("key5", "mistral-large-latest"),
         LlmConfig::ollama("llama3.2"),
     ];
 

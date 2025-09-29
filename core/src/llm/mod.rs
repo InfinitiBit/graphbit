@@ -9,6 +9,7 @@ pub mod azure_openai;
 pub mod deepseek;
 pub mod fireworks;
 pub mod huggingface;
+pub mod mistralai;
 pub mod ollama;
 pub mod openai;
 pub mod openrouter;
@@ -404,6 +405,20 @@ impl LlmProviderFactory {
                     )?))
                 } else {
                     Ok(Box::new(ai21::Ai21Provider::new(api_key, model)?))
+                }
+            }
+            LlmConfig::MistralAI {
+                api_key,
+                model,
+                base_url,
+                ..
+            } => {
+                if let Some(base_url) = base_url {
+                    Ok(Box::new(mistralai::MistralAiProvider::with_base_url(
+                        api_key, model, base_url,
+                    )?))
+                } else {
+                    Ok(Box::new(mistralai::MistralAiProvider::new(api_key, model)?))
                 }
             }
             LlmConfig::Custom { provider_type, .. } => Err(GraphBitError::config(format!(
