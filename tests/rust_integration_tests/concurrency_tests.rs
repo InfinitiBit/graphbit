@@ -377,6 +377,7 @@ async fn test_agent_message_creation_and_metadata() {
 }
 
 #[tokio::test]
+#[ignore = "Requires Ollama"]
 async fn test_agent_capabilities_management() {
     graphbit_core::init().expect("Failed to initialize GraphBit");
 

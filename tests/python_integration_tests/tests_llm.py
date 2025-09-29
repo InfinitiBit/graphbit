@@ -115,7 +115,7 @@ class TestAnthropicLLM:
     @pytest.fixture
     def anthropic_config(self, api_key: str) -> Any:
         """Create Anthropic configuration."""
-        return LlmConfig.anthropic(api_key, "claude-3-sonnet-20240229")
+        return LlmConfig.anthropic(api_key, "claude-3-5-sonnet-20241022")
 
     @pytest.fixture
     def anthropic_client(self, anthropic_config: Any) -> Any:
@@ -125,7 +125,7 @@ class TestAnthropicLLM:
     def test_anthropic_config_creation(self, anthropic_config: Any) -> None:
         """Test Anthropic config creation and properties."""
         assert anthropic_config.provider() == "anthropic"
-        assert anthropic_config.model() == "claude-3-sonnet-20240229"
+        assert anthropic_config.model() == "claude-3-5-sonnet-20241022"
 
     def test_anthropic_client_creation(self, anthropic_client: Any) -> None:
         """Test creating Anthropic client."""
@@ -341,7 +341,7 @@ class TestCrossProviderLLM:
             configs["openai"] = LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-3.5-turbo")
 
         if os.getenv("ANTHROPIC_API_KEY"):
-            configs["anthropic"] = LlmConfig.anthropic(os.getenv("ANTHROPIC_API_KEY"), "claude-3-sonnet-20240229")
+            configs["anthropic"] = LlmConfig.anthropic(os.getenv("ANTHROPIC_API_KEY"), "claude-3-5-sonnet-20241022")
 
         configs["ollama"] = LlmConfig.ollama("llama3.2")
 
@@ -808,12 +808,13 @@ class TestOpenRouterLLM:
             workflow.validate()
 
             executor = Executor(openrouter_gpt4_config, debug=True)
-            context = executor.execute(workflow)
+            result = executor.execute(workflow)
 
-            assert context.is_completed()
-            result = context.get_variable(f"node_result_{test_node.node_id}")
-            assert result is not None
-            assert len(result) > 0
+            assert result.is_success()
+            # Get output using the node name
+            output = result.get_node_output("OpenRouter Test Agent")
+            assert output is not None
+            assert len(output) > 0
 
         except Exception as e:
             pytest.fail(f"OpenRouter workflow execution failed: {e}")
@@ -833,20 +834,20 @@ class TestOpenRouterLLM:
                 name="Claude Summarizer", prompt="Summarize this analysis in 5 words: {input}", agent_id="claude_summarizer", llm_config=LlmConfig.openrouter(api_key, "anthropic/claude-3-5-haiku")
             )
 
-            workflow.add_node(gpt_node)
-            workflow.add_node(claude_node)
-            workflow.add_edge(gpt_node, claude_node)
+            gpt_id = workflow.add_node(gpt_node)
+            claude_id = workflow.add_node(claude_node)
+            workflow.connect(gpt_id, claude_id)  # Use connect instead of add_edge
             workflow.validate()
 
             # Use default config for executor
             default_config = LlmConfig.openrouter(api_key, "openai/gpt-4o-mini")
             executor = Executor(default_config, debug=True)
-            context = executor.execute(workflow)
+            result = executor.execute(workflow)
 
-            assert context.is_completed()
+            assert result.is_success()
 
-            gpt_result = context.get_variable(f"node_result_{gpt_node.node_id}")
-            claude_result = context.get_variable(f"node_result_{claude_node.node_id}")
+            gpt_result = result.get_node_output("GPT Analyzer")
+            claude_result = result.get_node_output("Claude Summarizer")
 
             assert gpt_result is not None
             assert claude_result is not None
@@ -905,20 +906,22 @@ class TestFireworksLLM:
         """Test Fireworks AI integration with workflow execution."""
         try:
             # Create a simple workflow with Fireworks AI
-            workflow = Workflow()
+            workflow = Workflow("Fireworks Test Workflow")
 
-            node = Node(name="fireworks_test", prompt="Explain quantum computing in one sentence.", llm_config=fireworks_config, max_tokens=100, temperature=0.3)
+            node = Node.agent(name="fireworks_test", prompt="Explain quantum computing in one sentence.", agent_id="fireworks_test_agent", llm_config=fireworks_config)
 
             workflow.add_node(node)
             workflow.validate()
 
             executor = Executor(fireworks_config)
-            context = await executor.execute_async(workflow)
+            # Use regular execute method since execute_async may not be available
+            result = executor.execute(workflow)
 
-            result = context.get_variable("fireworks_test_result")
-            assert result is not None
-            assert len(result) > 0
-            assert any(word in result.lower() for word in ["quantum", "computing", "computer"])
+            assert result.is_success()
+            output = result.get_node_output("fireworks_test")
+            assert output is not None
+            assert len(output) > 0
+            assert any(word in output.lower() for word in ["quantum", "computing", "computer"])
 
         except Exception as e:
             pytest.fail(f"Fireworks AI workflow failed: {e}")

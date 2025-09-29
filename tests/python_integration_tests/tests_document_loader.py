@@ -138,8 +138,12 @@ class TestDocumentLoader:
         # Verify results
         assert document is not None
         assert document.document_type == "csv"
-        assert "Name,Age,City" in document.content
+        # The CSV loader now returns formatted output, not raw CSV
+        assert "Name, Age, City" in document.content  # Formatted column names
         assert "John Doe" in document.content
+        assert "30" in document.content
+        assert "New York" in document.content
+        assert "Total rows processed:" in document.content  # New formatted output includes summary
         assert document.file_size > 0
 
     def test_xml_document_loading(self):

@@ -62,7 +62,7 @@ impl XaiProvider {
     }
 
     /// Convert `GraphBit` message to `xAI` message format
-    fn convert_message(&self, message: &LlmMessage) -> XaiMessage {
+    fn convert_message(message: &LlmMessage) -> XaiMessage {
         XaiMessage {
             role: match message.role {
                 LlmRole::User => "user".to_string(),
@@ -93,7 +93,7 @@ impl XaiProvider {
     }
 
     /// Convert `GraphBit` tool to `xAI` tool format
-    fn convert_tool(&self, tool: &LlmTool) -> XaiTool {
+    fn convert_tool(tool: &LlmTool) -> XaiTool {
         XaiTool {
             r#type: "function".to_string(),
             function: XaiFunctionDef {
@@ -194,13 +194,19 @@ impl LlmProviderTrait for XaiProvider {
         let messages: Vec<XaiMessage> = request
             .messages
             .iter()
-            .map(|m| self.convert_message(m))
+            .map(|m| Self::convert_message(m))
             .collect();
 
         let tools: Option<Vec<XaiTool>> = if request.tools.is_empty() {
             None
         } else {
-            Some(request.tools.iter().map(|t| self.convert_tool(t)).collect())
+            Some(
+                request
+                    .tools
+                    .iter()
+                    .map(|t| Self::convert_tool(t))
+                    .collect(),
+            )
         };
 
         let body = XaiRequest {

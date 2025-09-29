@@ -397,7 +397,10 @@ async fn test_workflow_with_llm() {
 
     workflow.add_node(node).unwrap();
 
-    let executor = WorkflowExecutor::new();
+    // Create executor with default LLM configuration
+    let executor = WorkflowExecutor::new()
+        .with_default_llm_config(llm_config.clone());
+
     let agent = AgentBuilder::new("test_agent", llm_config)
         .description("Test agent")
         .build()
@@ -422,7 +425,7 @@ async fn test_workflow_with_anthropic() {
 
     let llm_config = llm::LlmConfig::Anthropic {
         api_key: std::env::var("ANTHROPIC_API_KEY").unwrap(),
-        model: "claude-3-haiku-20240307".to_string(),
+        model: "claude-3-5-sonnet-20241022".to_string(),
         base_url: None,
     };
 
@@ -438,7 +441,10 @@ async fn test_workflow_with_anthropic() {
 
     workflow.add_node(node).unwrap();
 
-    let executor = WorkflowExecutor::new();
+    // Create executor with default LLM configuration
+    let executor = WorkflowExecutor::new()
+        .with_default_llm_config(llm_config.clone());
+
     let agent = AgentBuilder::new("test_agent", llm_config)
         .description("Test agent")
         .build()
@@ -481,7 +487,10 @@ async fn test_workflow_with_ollama() {
 
     workflow.add_node(node).unwrap();
 
-    let executor = WorkflowExecutor::new();
+    // Create executor with default LLM configuration
+    let executor = WorkflowExecutor::new()
+        .with_default_llm_config(llm_config.clone());
+
     let agent = AgentBuilder::new("test_agent", llm_config)
         .description("Test agent")
         .build()

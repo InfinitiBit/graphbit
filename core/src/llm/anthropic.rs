@@ -146,7 +146,7 @@ impl LlmProviderTrait for AnthropicProvider {
 
         let (system_prompt, messages) = Self::convert_messages(&request.messages);
 
-        // Convert tools to Anthropic format
+        // Convert tools to `Anthropic` format
         let tools: Option<Vec<AnthropicTool>> = if request.tools.is_empty() {
             tracing::info!("No tools provided in request");
             None
