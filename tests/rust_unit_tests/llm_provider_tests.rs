@@ -731,3 +731,84 @@ async fn test_replicate_request_with_tools() {
     assert_eq!(request.tools[0].name, "get_weather");
     assert_eq!(request.messages.len(), 2);
 }
+
+// `AI21labs` Provider Tests
+#[tokio::test]
+async fn test_ai21labs_provider_creation() {
+    let provider = LlmProviderFactory::create_provider(LlmConfig::Ai21 {
+        api_key: "test-key".to_string(),
+        model: "jamba-mini".to_string(),
+        base_url: None,
+        organization: None,
+    })
+    .unwrap();
+
+    assert_eq!(provider.provider_name(), "ai21");
+    assert_eq!(provider.model_name(), "jamba-mini");
+    assert!(provider.supports_function_calling());
+    assert_eq!(provider.max_context_length(), Some(256_000));
+
+    // Test cost per token
+    let (input_cost, output_cost) = provider.cost_per_token().unwrap();
+    assert_eq!(input_cost, 0.000_000_2);
+    assert_eq!(output_cost, 0.000_000_4);
+}
+
+#[tokio::test]
+async fn test_ai21labs_model_configs() {
+    let test_models = vec![
+        (
+            "jamba-mini",
+            Some(256_000),
+            Some((0.000_000_2, 0.000_000_4)),
+        ),
+        ("jamba-large", Some(256_000), Some((0.000_002, 0.000_008))),
+        ("unknown-model", None, None),
+    ];
+
+    for (model, context_length, cost) in test_models {
+        let provider = LlmProviderFactory::create_provider(LlmConfig::Ai21 {
+            api_key: "test-key".to_string(),
+            model: model.to_string(),
+            base_url: None,
+            organization: None,
+        })
+        .unwrap();
+
+        assert_eq!(provider.max_context_length(), context_length);
+        assert_eq!(provider.cost_per_token(), cost);
+    }
+}
+
+#[tokio::test]
+async fn test_ai21labs_message_formatting() {
+    let _provider = LlmProviderFactory::create_provider(LlmConfig::Ai21 {
+        api_key: "test-key".to_string(),
+        model: "jamba-mini".to_string(),
+        base_url: None,
+        organization: None,
+    })
+    .unwrap();
+
+    let request = LlmRequest::with_messages(vec![])
+        .with_message(LlmMessage::system("system prompt"))
+        .with_message(LlmMessage::user("user message"))
+        .with_message(LlmMessage::assistant("assistant message"))
+        .with_max_tokens(100)
+        .with_temperature(0.7)
+        .with_top_p(0.9);
+
+    assert_eq!(request.messages.len(), 3);
+    assert!(request
+        .messages
+        .iter()
+        .any(|m| matches!(m.role, LlmRole::System)));
+    assert!(request
+        .messages
+        .iter()
+        .any(|m| matches!(m.role, LlmRole::User)));
+    assert!(request
+        .messages
+        .iter()
+        .any(|m| matches!(m.role, LlmRole::Assistant)));
+}
