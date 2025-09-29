@@ -31,7 +31,7 @@ impl AzureOpenAiProvider {
     ) -> GraphBitResult<Self> {
         // Optimized client with connection pooling for better performance
         let client = Client::builder()
-            .timeout(std::time::Duration::from_secs(60))
+            .timeout(std::time::Duration::from_secs(120)) // Increased timeout for Azure OpenAI
             .pool_max_idle_per_host(10) // Increased connection pool size
             .pool_idle_timeout(std::time::Duration::from_secs(30))
             .tcp_keepalive(std::time::Duration::from_secs(60))
@@ -158,9 +158,11 @@ impl LlmProviderTrait for AzureOpenAiProvider {
     }
 
     async fn complete(&self, request: LlmRequest) -> GraphBitResult<LlmResponse> {
+        // Normalize endpoint URL to avoid double slashes
+        let endpoint = self.endpoint.trim_end_matches('/');
         let url = format!(
             "{}/openai/deployments/{}/chat/completions?api-version={}",
-            self.endpoint, self.deployment_name, self.api_version
+            endpoint, self.deployment_name, self.api_version
         );
 
         let messages: Vec<AzureOpenAiMessage> = request
