@@ -60,6 +60,28 @@ impl LlmConfig {
     }
 
     #[staticmethod]
+    #[pyo3(signature = (api_key, model=None, base_url=None))]
+    fn bytedance(
+        api_key: String,
+        model: Option<String>,
+        base_url: Option<String>,
+    ) -> PyResult<Self> {
+        validate_api_key(&api_key, "ByteDance")?;
+
+        let config = if let Some(base_url) = base_url {
+            CoreLlmConfig::bytedance_with_base_url(
+                api_key,
+                model.unwrap_or_else(|| "seed-1-6-250915".to_string()),
+                base_url,
+            )
+        } else {
+            CoreLlmConfig::bytedance(api_key, model.unwrap_or_else(|| "seed-1-6-250915".to_string()))
+        };
+
+        Ok(Self { inner: config })
+    }
+
+    #[staticmethod]
     #[pyo3(signature = (api_key, model=None))]
     fn deepseek(api_key: String, model: Option<String>) -> PyResult<Self> {
         validate_api_key(&api_key, "DeepSeek")?;
