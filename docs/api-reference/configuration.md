@@ -131,6 +131,26 @@ coding_config = LlmConfig.deepseek("your-deepseek-key", "deepseek-coder")
 reasoning_config = LlmConfig.deepseek("your-deepseek-key", "deepseek-reasoner")
 ```
 
+### MistralAI Configuration
+
+```python
+from graphbit import LlmConfig
+
+# Basic MistralAI configuration
+llm_config = LlmConfig.mistralai(
+    api_key="your-mistralai-key",
+    model="mistral-large-latest"  # Optional, defaults to mistral-large-latest
+)
+
+# With default model
+llm_config = LlmConfig.mistralai("your-mistralai-key")
+
+# Different models for specific use cases
+large_config = LlmConfig.mistralai("your-mistralai-key", "mistral-large-latest")
+medium_config = LlmConfig.mistralai("your-mistralai-key", "mistral-medium-latest")
+small_config = LlmConfig.mistralai("your-mistralai-key", "mistral-small-latest")
+```
+
 ### Ollama Configuration
 
 ```python
@@ -149,7 +169,7 @@ llm_config = LlmConfig.ollama()
 
 ```python
 # Access configuration properties
-provider = llm_config.provider()  # "openai", "azure_openai", "anthropic", "perplexity", "deepseek", "ollama"
+provider = llm_config.provider()  # "openai", "azure_openai", "anthropic", "mistralai", "perplexity", "deepseek", "ollama"
 model = llm_config.model()        # Model name
 ```
 

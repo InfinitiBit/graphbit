@@ -73,6 +73,14 @@ class TestLlmConfig:
         assert config.provider() == "deepseek"
         assert config.model() == "deepseek-chat"
 
+    def test_llm_config_creation_mistralai(self):
+        """Test creating MistralAI LLM configuration."""
+        api_key = get_api_key("mistralai")
+        config = LlmConfig.mistralai(api_key=api_key, model="mistral-large-latest")
+        assert config is not None
+        assert config.provider() == "mistralai"
+        assert config.model() == "mistral-large-latest"
+
     def test_llm_config_perplexity(self):
         """Test creating Perplexity LLM configuration."""
         api_key = get_api_key("perplexity")

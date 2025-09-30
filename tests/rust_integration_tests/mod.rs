@@ -43,6 +43,13 @@ pub fn has_huggingface_api_key() -> bool {
         .unwrap_or(false)
 }
 
+/// Check if a valid `MistralAI` API key is available
+pub fn has_mistralai_api_key() -> bool {
+    std::env::var("MISTRALAI_API_KEY")
+        .map(|key| !key.is_empty() && key != "test-api-key-placeholder")
+        .unwrap_or(false)
+}
+
 /// Check if valid Azure OpenAI credentials are available
 pub fn has_azure_openai_credentials() -> bool {
     let api_key = std::env::var("AZURE_OPENAI_API_KEY").unwrap_or_default();
@@ -95,6 +102,17 @@ pub fn get_huggingface_api_key_or_skip() -> String {
         Ok(key) if !key.is_empty() && key != "test-api-key-placeholder" => key,
         _ => {
             println!("Skipping test - no valid HUGGINGFACE_API_KEY found");
+            panic!("TEST_SKIP");
+        }
+    }
+}
+
+/// Get `MistralAI` API key or skip test if not available
+pub fn get_mistralai_api_key_or_skip() -> String {
+    match std::env::var("MISTRALAI_API_KEY") {
+        Ok(key) if !key.is_empty() && key != "test-api-key-placeholder" => key,
+        _ => {
+            println!("Skipping test - no valid MISTRALAI_API_KEY found");
             panic!("TEST_SKIP");
         }
     }
@@ -165,6 +183,12 @@ macro_rules! skip_if_no_api {
     (azure_openai) => {
         if !$crate::has_azure_openai_credentials() {
             println!("Skipping test - no valid Azure OpenAI credentials found");
+            return;
+        }
+    };
+    (mistralai) => {
+        if !$crate::has_mistralai_api_key() {
+            println!("Skipping test - no valid MISTRALAI_API_KEY found");
             return;
         }
     };

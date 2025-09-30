@@ -173,6 +173,30 @@ config = LlmConfig.deepseek("your-deepseek-api-key")  # Uses default model "deep
 
 **Returns**: `LlmConfig` instance
 
+##### `LlmConfig.mistralai(api_key, model=None)`
+Create MistralAI provider configuration.
+
+```python
+config = LlmConfig.mistralai("your-mistralai-api-key", "mistral-large-latest")
+
+# With default model
+config = LlmConfig.mistralai("your-mistralai-api-key")  # Uses default model "mistral-large-latest"
+```
+
+**Parameters**:
+- `api_key` (str): MistralAI API key
+- `model` (str, optional): Model name. Default: "mistral-large-latest"
+
+**Available Models**:
+- `mistral-large-latest`: Complex reasoning, multilingual tasks (128K context, function calling)
+- `mistral-medium-latest`: Balanced performance and cost (32K context, function calling)
+- `mistral-small-latest`: Fast responses, simple tasks (32K context, function calling)
+- `open-mistral-7b`: Open source, lightweight (32K context)
+- `open-mixtral-8x7b`: Open source, high performance (32K context)
+- `open-mixtral-8x22b`: Open source, largest model (64K context)
+
+**Returns**: `LlmConfig` instance
+
 ##### `LlmConfig.ollama(model=None)`
 Create Ollama provider configuration.
 

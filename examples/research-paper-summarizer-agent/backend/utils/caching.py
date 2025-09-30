@@ -15,7 +15,6 @@ import faiss
 
 from ..constant import ConfigConstants
 
-
 CACHE_DIR = ConfigConstants.CACHE_DIR
 
 
