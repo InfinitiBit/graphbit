@@ -65,7 +65,7 @@ mod workflow;
 // Re-export all public types and functions
 pub use document_loader::{PyDocumentContent, PyDocumentLoader, PyDocumentLoaderConfig};
 pub use embeddings::{EmbeddingClient, EmbeddingConfig};
-pub use llm::{LlmClient, LlmConfig};
+pub use llm::{LlmClient, LlmConfig, PyFinishReason, PyLlmResponse, PyLlmToolCall, PyLlmUsage};
 pub use text_splitter::{
     CharacterSplitter, RecursiveSplitter, SentenceSplitter, TextChunk, TextSplitterConfig,
     TokenSplitter,
@@ -367,6 +367,10 @@ fn graphbit(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // LLM classes
     m.add_class::<LlmConfig>()?;
     m.add_class::<LlmClient>()?;
+    m.add_class::<PyLlmUsage>()?;
+    m.add_class::<PyFinishReason>()?;
+    m.add_class::<PyLlmToolCall>()?;
+    m.add_class::<PyLlmResponse>()?;
 
     // Workflow classes
     m.add_class::<Node>()?;
