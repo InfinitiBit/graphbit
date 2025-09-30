@@ -3,19 +3,22 @@
 //! This module provides PyO3 bindings for GraphBit's LLM response types,
 //! enabling comprehensive LLM tracing and observability from Python.
 
-use graphbit_core::llm::{FinishReason, LlmResponse, LlmToolCall, LlmUsage};
+use graphbit_core::llm::{
+    FinishReason as CoreFinishReason, LlmResponse as CoreLlmResponse,
+    LlmToolCall as CoreLlmToolCall, LlmUsage as CoreLlmUsage,
+};
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
 use serde_json;
 
 /// Python wrapper for LlmUsage struct
-/// 
+///
 /// Provides token usage statistics for LLM requests including prompt tokens,
 /// completion tokens, and total token counts.
 #[pyclass(name = "LlmUsage")]
 #[derive(Debug, Clone)]
 pub struct PyLlmUsage {
-    pub(crate) inner: LlmUsage,
+    pub(crate) inner: CoreLlmUsage,
 }
 
 #[pymethods]
@@ -25,7 +28,7 @@ impl PyLlmUsage {
     #[pyo3(signature = (prompt_tokens, completion_tokens))]
     fn new(prompt_tokens: u32, completion_tokens: u32) -> Self {
         Self {
-            inner: LlmUsage::new(prompt_tokens, completion_tokens),
+            inner: CoreLlmUsage::new(prompt_tokens, completion_tokens),
         }
     }
 
@@ -33,7 +36,7 @@ impl PyLlmUsage {
     #[staticmethod]
     fn empty() -> Self {
         Self {
-            inner: LlmUsage::empty(),
+            inner: CoreLlmUsage::empty(),
         }
     }
 
@@ -108,25 +111,25 @@ impl PyLlmUsage {
     }
 }
 
-impl From<LlmUsage> for PyLlmUsage {
-    fn from(usage: LlmUsage) -> Self {
+impl From<CoreLlmUsage> for PyLlmUsage {
+    fn from(usage: CoreLlmUsage) -> Self {
         Self { inner: usage }
     }
 }
 
-impl From<PyLlmUsage> for LlmUsage {
+impl From<PyLlmUsage> for CoreLlmUsage {
     fn from(py_usage: PyLlmUsage) -> Self {
         py_usage.inner
     }
 }
 
 /// Python wrapper for FinishReason enum
-/// 
+///
 /// Represents the reason why the LLM stopped generating tokens.
 #[pyclass(name = "FinishReason")]
 #[derive(Debug, Clone)]
 pub struct PyFinishReason {
-    pub(crate) inner: FinishReason,
+    pub(crate) inner: CoreFinishReason,
 }
 
 #[pymethods]
@@ -135,7 +138,7 @@ impl PyFinishReason {
     #[staticmethod]
     fn stop() -> Self {
         Self {
-            inner: FinishReason::Stop,
+            inner: CoreFinishReason::Stop,
         }
     }
 
@@ -143,7 +146,7 @@ impl PyFinishReason {
     #[staticmethod]
     fn length() -> Self {
         Self {
-            inner: FinishReason::Length,
+            inner: CoreFinishReason::Length,
         }
     }
 
@@ -151,7 +154,7 @@ impl PyFinishReason {
     #[staticmethod]
     fn tool_calls() -> Self {
         Self {
-            inner: FinishReason::ToolCalls,
+            inner: CoreFinishReason::ToolCalls,
         }
     }
 
@@ -159,7 +162,7 @@ impl PyFinishReason {
     #[staticmethod]
     fn content_filter() -> Self {
         Self {
-            inner: FinishReason::ContentFilter,
+            inner: CoreFinishReason::ContentFilter,
         }
     }
 
@@ -167,7 +170,7 @@ impl PyFinishReason {
     #[staticmethod]
     fn error() -> Self {
         Self {
-            inner: FinishReason::Error,
+            inner: CoreFinishReason::Error,
         }
     }
 
@@ -175,7 +178,7 @@ impl PyFinishReason {
     #[staticmethod]
     fn other(reason: String) -> Self {
         Self {
-            inner: FinishReason::Other(reason),
+            inner: CoreFinishReason::Other(reason),
         }
     }
 
@@ -210,13 +213,13 @@ impl PyFinishReason {
     }
 }
 
-impl From<FinishReason> for PyFinishReason {
-    fn from(reason: FinishReason) -> Self {
+impl From<CoreFinishReason> for PyFinishReason {
+    fn from(reason: CoreFinishReason) -> Self {
         Self { inner: reason }
     }
 }
 
-impl From<PyFinishReason> for FinishReason {
+impl From<PyFinishReason> for CoreFinishReason {
     fn from(py_reason: PyFinishReason) -> Self {
         py_reason.inner
     }
@@ -228,7 +231,7 @@ impl From<PyFinishReason> for FinishReason {
 #[pyclass(name = "LlmToolCall")]
 #[derive(Debug, Clone)]
 pub struct PyLlmToolCall {
-    pub(crate) inner: LlmToolCall,
+    pub(crate) inner: CoreLlmToolCall,
 }
 
 #[pymethods]
@@ -240,7 +243,7 @@ impl PyLlmToolCall {
             .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Invalid JSON parameters: {}", e)))?;
 
         Ok(Self {
-            inner: LlmToolCall {
+            inner: CoreLlmToolCall {
                 id,
                 name,
                 parameters: params_value,
@@ -284,13 +287,13 @@ impl PyLlmToolCall {
     }
 }
 
-impl From<LlmToolCall> for PyLlmToolCall {
-    fn from(tool_call: LlmToolCall) -> Self {
+impl From<CoreLlmToolCall> for PyLlmToolCall {
+    fn from(tool_call: CoreLlmToolCall) -> Self {
         Self { inner: tool_call }
     }
 }
 
-impl From<PyLlmToolCall> for LlmToolCall {
+impl From<PyLlmToolCall> for CoreLlmToolCall {
     fn from(py_tool_call: PyLlmToolCall) -> Self {
         py_tool_call.inner
     }
@@ -303,7 +306,7 @@ impl From<PyLlmToolCall> for LlmToolCall {
 #[pyclass(name = "LlmResponse")]
 #[derive(Debug, Clone)]
 pub struct PyLlmResponse {
-    pub(crate) inner: LlmResponse,
+    pub(crate) inner: CoreLlmResponse,
 }
 
 #[pymethods]
@@ -312,7 +315,7 @@ impl PyLlmResponse {
     #[new]
     fn new(content: String, model: String) -> Self {
         Self {
-            inner: LlmResponse::new(content, model),
+            inner: CoreLlmResponse::new(content, model),
         }
     }
 
@@ -392,7 +395,7 @@ impl PyLlmResponse {
 
     /// Add tool calls (builder pattern)
     fn with_tool_calls(&mut self, tool_calls: Vec<PyLlmToolCall>) -> PyResult<()> {
-        let rust_tool_calls: Vec<LlmToolCall> = tool_calls
+        let rust_tool_calls: Vec<CoreLlmToolCall> = tool_calls
             .into_iter()
             .map(|tc| tc.inner)
             .collect();
@@ -468,13 +471,13 @@ impl PyLlmResponse {
     }
 }
 
-impl From<LlmResponse> for PyLlmResponse {
-    fn from(response: LlmResponse) -> Self {
+impl From<CoreLlmResponse> for PyLlmResponse {
+    fn from(response: CoreLlmResponse) -> Self {
         Self { inner: response }
     }
 }
 
-impl From<PyLlmResponse> for LlmResponse {
+impl From<PyLlmResponse> for CoreLlmResponse {
     fn from(py_response: PyLlmResponse) -> Self {
         py_response.inner
     }
