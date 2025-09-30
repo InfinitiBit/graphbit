@@ -117,6 +117,17 @@ pub enum LlmConfig {
         /// Optional custom base URL
         base_url: Option<String>,
     },
+    /// `AI21` LLM provider configuration
+    Ai21 {
+        /// API key for authentication
+        api_key: String,
+        /// Model name to use
+        model: String,
+        /// Optional custom base URL
+        base_url: Option<String>,
+        /// Optional custom organization
+        organization: Option<String>,
+    },
     /// Custom LLM provider configuration
     Custom {
         /// Provider type identifier
@@ -275,6 +286,30 @@ impl LlmConfig {
         }
     }
 
+    /// Create `AI21` configuration
+    pub fn ai21(api_key: impl Into<String>, model: impl Into<String>) -> Self {
+        Self::Ai21 {
+            api_key: api_key.into(),
+            model: model.into(),
+            base_url: None,
+            organization: None,
+        }
+    }
+
+    /// Create `AI21` configuration with organization
+    pub fn ai21_with_organization(
+        api_key: impl Into<String>,
+        model: impl Into<String>,
+        organization: impl Into<String>,
+    ) -> Self {
+        Self::Ai21 {
+            api_key: api_key.into(),
+            model: model.into(),
+            base_url: None,
+            organization: Some(organization.into()),
+        }
+    }
+
     /// Create `Ollama` configuration
     pub fn ollama(model: impl Into<String>) -> Self {
         Self::Ollama {
@@ -305,6 +340,7 @@ impl LlmConfig {
             Self::Fireworks { .. } => "fireworks",
             Self::Replicate { .. } => "replicate",
             Self::Xai { .. } => "xai",
+            Self::Ai21 { .. } => "ai21",
             Self::Custom { provider_type, .. } => provider_type,
             Self::Unconfigured { .. } => "unconfigured",
         }
@@ -326,6 +362,7 @@ impl LlmConfig {
             Self::Fireworks { model, .. } => model,
             Self::Replicate { model, .. } => model,
             Self::Xai { model, .. } => model,
+            Self::Ai21 { model, .. } => model,
             Self::Custom { config, .. } => config
                 .get("model")
                 .and_then(|v| v.as_str())
