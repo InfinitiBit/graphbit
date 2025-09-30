@@ -387,23 +387,18 @@ struct MistralAiFunctionDef {
 #[derive(Debug, Deserialize)]
 struct MistralAiResponse {
     id: String,
-    object: String,
-    created: u64,
-    model: String,
     choices: Vec<MistralAiChoice>,
     usage: MistralAiUsage,
 }
 
 #[derive(Debug, Deserialize)]
 struct MistralAiChoice {
-    index: u32,
     message: MistralAiResponseMessage,
     finish_reason: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
 struct MistralAiResponseMessage {
-    role: String,
     content: Option<String>,
     tool_calls: Option<Vec<MistralAiToolCall>>,
 }
@@ -412,5 +407,4 @@ struct MistralAiResponseMessage {
 struct MistralAiUsage {
     prompt_tokens: u32,
     completion_tokens: u32,
-    total_tokens: u32,
 }

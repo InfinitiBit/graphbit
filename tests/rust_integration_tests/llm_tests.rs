@@ -329,11 +329,21 @@ async fn test_openai_real_api_call() {
         .with_temperature(0.0);
 
     let result = provider.complete(request).await;
-    assert!(result.is_ok());
-
-    let response = result.unwrap();
-    assert!(!response.content.is_empty());
-    assert!(response.content.to_lowercase().contains("hello"));
+    match result {
+        Ok(response) => {
+            assert!(!response.content.is_empty());
+            assert_eq!(response.model, "gpt-3.5-turbo");
+            assert!(response.usage.total_tokens > 0);
+            println!(
+                "OpenAI real API call successful: {content}",
+                content = response.content
+            );
+        }
+        Err(e) => {
+            println!("OpenAI API call failed: {e:?}");
+            panic!("OpenAI API call should succeed with valid credentials");
+        }
+    }
 }
 
 #[tokio::test]
@@ -705,12 +715,13 @@ async fn test_llm_provider_factory_multiple_providers() {
     assert!(providers_result.is_ok());
 
     let providers = providers_result.unwrap();
-    assert_eq!(providers.len(), 5);
+    assert_eq!(providers.len(), 6);
     assert_eq!(providers[0].provider_name(), "openai");
     assert_eq!(providers[1].provider_name(), "anthropic");
     assert_eq!(providers[2].provider_name(), "fireworks");
     assert_eq!(providers[3].provider_name(), "xai");
-    assert_eq!(providers[4].provider_name(), "ollama");
+    assert_eq!(providers[4].provider_name(), "mistralai");
+    assert_eq!(providers[5].provider_name(), "ollama");
 }
 
 #[tokio::test]
