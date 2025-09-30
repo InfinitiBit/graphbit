@@ -1061,5 +1061,104 @@ class TestAI21labsAILLM:
             pytest.fail(f"xAI workflow failed: {e}")
 
 
+class TestByteDanceLLM:
+    """Integration tests for ByteDance ModelArk LLM models."""
+
+    @pytest.fixture
+    def api_key(self) -> str:
+        """Get ByteDance API key from environment."""
+        api_key = os.getenv("BYTEDANCE_API_KEY")
+        if not api_key:
+            pytest.skip("BYTEDANCE_API_KEY not set")
+        return api_key or ""
+
+    @pytest.fixture
+    def bytedance_flash_config(self, api_key: str) -> Any:
+        """Create ByteDance configuration."""
+        return LlmConfig.bytedance(api_key, "seed-1-6-flash-250715")
+
+    @pytest.fixture
+    def bytedance_config(self, api_key: str) -> Any:
+        """Create ByteDance Pro configuration."""
+        return LlmConfig.bytedance(api_key, "seed-1-6-250915")
+
+    @pytest.fixture
+    def bytedance_client(self, bytedance_config: Any) -> Any:
+        """Create ByteDance client."""
+        return LlmClient(bytedance_config)
+
+    def test_bytedance_flash_config_creation(self, bytedance_flash_config: Any) -> None:
+        """Test ByteDance config creation and properties."""
+        assert bytedance_flash_config.provider() == "bytedance"
+        assert bytedance_flash_config.model() == "seed-1-6-flash-250715"
+
+    def test_bytedance_config_creation(self, bytedance_config: Any) -> None:
+        """Test ByteDance Pro config creation and properties."""
+        assert bytedance_config.provider() == "bytedance"
+        assert bytedance_config.model() == "seed-1-6-250915"
+
+    def test_bytedance_client_creation(self, bytedance_client: Any) -> None:
+        """Test creating ByteDance client."""
+        assert bytedance_client is not None
+
+    def test_bytedance_executor_creation(self, bytedance_config: Any) -> None:
+        """Test creating workflow executor with ByteDance config."""
+        executor = Executor(bytedance_config)
+        assert executor is not None
+
+    def test_bytedance_executor_configurations(self, bytedance_config: Any) -> None:
+        """Test different executor configurations with ByteDance."""
+        # Test high throughput configuration
+        executor_ht = Executor.new_high_throughput(bytedance_config)
+        assert executor_ht is not None
+
+        # Test low latency configuration
+        executor_ll = Executor.new_low_latency(bytedance_config)
+        assert executor_ll is not None
+
+        # Test memory optimized configuration
+        executor_mo = Executor.new_memory_optimized(bytedance_config)
+        assert executor_mo is not None
+
+    def test_bytedance_simple_completion(self, bytedance_client: Any) -> None:
+        """Test simple text completion with ByteDance."""
+        try:
+            response = bytedance_client.complete("Hello, world!", max_tokens=10)
+            assert isinstance(response, str)
+            assert len(response) > 0
+        except Exception as e:
+            pytest.fail(f"ByteDance completion failed: {e}")
+
+    def test_bytedance_simple_workflow_execution(self, bytedance_config: Any) -> None:
+        """Test executing a simple workflow with ByteDance."""
+        # Create a simple workflow
+        workflow = Workflow("test_bytedance_workflow")
+
+        # Create a simple agent node
+        try:
+            agent_node = Node.agent(name="test_agent", prompt="Explain quantum computing in one sentence.")
+            node_id = workflow.add_node(agent_node)
+            assert node_id is not None
+
+            # Validate workflow
+            workflow.validate()
+
+            # Create executor and test basic execution capability
+            executor = Executor(bytedance_config)
+            assert executor is not None
+
+            # Use regular execute method since execute_async may not be available
+            result = executor.execute(workflow)
+
+            assert result.is_success()
+            output = result.get_node_output("test_agent")
+            assert output is not None
+            assert len(output) > 0
+            assert any(word in output.lower() for word in ["quantum", "computing", "computer"])
+
+        except Exception as e:
+            pytest.fail(f"ByteDance workflow creation/validation failed: {e}")
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
