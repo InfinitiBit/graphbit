@@ -75,7 +75,10 @@ impl LlmConfig {
                 base_url,
             )
         } else {
-            CoreLlmConfig::bytedance(api_key, model.unwrap_or_else(|| "seed-1-6-250915".to_string()))
+            CoreLlmConfig::bytedance(
+                api_key,
+                model.unwrap_or_else(|| "seed-1-6-250915".to_string()),
+            )
         };
 
         Ok(Self { inner: config })

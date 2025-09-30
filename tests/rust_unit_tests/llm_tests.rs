@@ -59,7 +59,7 @@ async fn test_anthropic_llm() {
 
     let provider = llm::LlmProviderFactory::create_provider(config).unwrap();
     let request = llm::LlmRequest::new("What is 2+2?")
-        .with_max_tokens(50)  // Increased to avoid length truncation
+        .with_max_tokens(50) // Increased to avoid length truncation
         .with_temperature(0.0);
 
     let result = provider.complete(request).await;
@@ -147,7 +147,7 @@ async fn test_perplexity_llm() {
 
     let provider = llm::LlmProviderFactory::create_provider(config).unwrap();
     let request = llm::LlmRequest::new("What is 2+2?")
-        .with_max_tokens(50)  // Increased to avoid length truncation
+        .with_max_tokens(50) // Increased to avoid length truncation
         .with_temperature(0.0);
 
     let result = provider.complete(request).await;
@@ -197,7 +197,7 @@ async fn test_deepseek_llm() {
 
     let provider = llm::LlmProviderFactory::create_provider(config).unwrap();
     let request = llm::LlmRequest::new("What is 2+2?")
-        .with_max_tokens(50)  // Increased to avoid length truncation
+        .with_max_tokens(50) // Increased to avoid length truncation
         .with_temperature(0.0);
 
     let result = provider.complete(request).await;

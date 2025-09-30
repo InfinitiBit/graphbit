@@ -246,18 +246,13 @@ impl LlmProviderTrait for ByteDanceProvider {
     fn max_context_length(&self) -> Option<u32> {
         // Common context lengths for ByteDance ModelArk models
         match self.model.as_str() {
-            // Skylark models
-            "skylark-lite" => Some(32_768),
-            "skylark-plus" => Some(32_768),
-            "skylark-pro" => Some(32_768),
-            "skylark-chat" => Some(32_768),
-            // Seedance models
-            "seedance-1.0-lite" => Some(32_768),
-            "seedance-1.0-pro" => Some(32_768),
+            // ByteDance Seed models
+            "seed-1-6-flash-250715" => Some(256_000),
+            "seed-1-6-250915" => Some(256_000),
             // Default for other models
-            _ if self.model.starts_with("skylark") => Some(32_768),
-            _ if self.model.starts_with("seedance") => Some(32_768),
-            _ => Some(32_768), // Default context length
+            _ if self.model.starts_with("skylark") => Some(128_000),
+            _ if self.model.starts_with("seed") => Some(256_000),
+            _ => Some(256_000), // Default context length
         }
     }
 
@@ -269,10 +264,10 @@ impl LlmProviderTrait for ByteDanceProvider {
             "skylark-plus" => Some((0.000_002, 0.000_004)), // $2/$4 per 1M tokens
             "skylark-pro" => Some((0.000_003, 0.000_006)),  // $3/$6 per 1M tokens
             "skylark-chat" => Some((0.000_002, 0.000_004)), // $2/$4 per 1M tokens
-            "seedance-1.0-lite" => Some((0.000_001_5, 0.000_003)), // $1.5/$3 per 1M tokens
-            "seedance-1.0-pro" => Some((0.000_003, 0.000_006)), // $3/$6 per 1M tokens
+            "seed-1-6-flash-250715" => Some((0.000_000_1, 0.000_000_8)), // $0.1/$0.8 per 1K tokens
+            "seed-1-6-250915" => Some((0.000_000_5, 0.000_004)), // $0.5/$4 per 1M tokens
             _ if self.model.starts_with("skylark") => Some((0.000_002, 0.000_004)),
-            _ if self.model.starts_with("seedance") => Some((0.000_002, 0.000_004)),
+            _ if self.model.starts_with("seed") => Some((0.000_001, 0.000_002)),
             _ => Some((0.000_002, 0.000_004)), // Default pricing
         }
     }
