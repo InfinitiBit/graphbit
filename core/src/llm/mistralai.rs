@@ -28,7 +28,10 @@ impl MistralAiProvider {
             .tcp_keepalive(std::time::Duration::from_secs(60))
             .build()
             .map_err(|e| {
-                GraphBitError::llm_provider("mistralai", format!("Failed to create HTTP client: {e}"))
+                GraphBitError::llm_provider(
+                    "mistralai",
+                    format!("Failed to create HTTP client: {e}"),
+                )
             })?;
         let base_url = "https://api.mistral.ai/v1".to_string();
 
@@ -50,7 +53,10 @@ impl MistralAiProvider {
             .tcp_keepalive(std::time::Duration::from_secs(60))
             .build()
             .map_err(|e| {
-                GraphBitError::llm_provider("mistralai", format!("Failed to create HTTP client: {e}"))
+                GraphBitError::llm_provider(
+                    "mistralai",
+                    format!("Failed to create HTTP client: {e}"),
+                )
             })?;
 
         Ok(Self {
@@ -63,6 +69,27 @@ impl MistralAiProvider {
 
     /// Convert `GraphBit` message to `MistralAI` message format
     fn convert_message(message: &LlmMessage) -> MistralAiMessage {
+        let (content, tool_call_id) = if message.role == LlmRole::Tool {
+            // For tool messages, extract tool_call_id from content
+            // GraphBit format: "Tool call {tool_call_id} result: {actual_result}"
+            let content_str = &message.content;
+            if let Some(start) = content_str.find("Tool call ") {
+                if let Some(end) = content_str.find(" result: ") {
+                    let tool_call_id = content_str[start + 10..end].to_string();
+                    let actual_result = content_str[end + 9..].to_string();
+                    (actual_result, Some(tool_call_id))
+                } else {
+                    // Fallback: use the entire content as result
+                    (content_str.clone(), None)
+                }
+            } else {
+                // Fallback: use the entire content as result
+                (content_str.clone(), None)
+            }
+        } else {
+            (message.content.clone(), None)
+        };
+
         MistralAiMessage {
             role: match message.role {
                 LlmRole::User => "user".to_string(),
@@ -70,7 +97,12 @@ impl MistralAiProvider {
                 LlmRole::System => "system".to_string(),
                 LlmRole::Tool => "tool".to_string(),
             },
-            content: message.content.clone(),
+            content: if message.role == LlmRole::Assistant && !message.tool_calls.is_empty() {
+                // Assistant messages with tool calls should have empty content
+                None
+            } else {
+                Some(content)
+            },
             tool_calls: if message.tool_calls.is_empty() {
                 None
             } else {
@@ -80,16 +112,17 @@ impl MistralAiProvider {
                         .iter()
                         .map(|tc| MistralAiToolCall {
                             id: tc.id.clone(),
-                            r#type: "function".to_string(),
+                            r#type: Some("function".to_string()),
                             function: MistralAiFunction {
                                 name: tc.name.clone(),
                                 arguments: tc.parameters.to_string(),
                             },
+                            index: None,
                         })
                         .collect(),
                 )
             },
-            tool_call_id: None, // Set when role is "tool"
+            tool_call_id,
         }
     }
 
@@ -111,17 +144,29 @@ impl MistralAiProvider {
             GraphBitError::llm_provider("mistralai", "No choices in response".to_string())
         })?;
 
-        let content = choice.message.content.unwrap_or_default();
-
-        let tool_calls = choice
+        let tool_calls: Vec<LlmToolCall> = choice
             .message
             .tool_calls
             .unwrap_or_default()
             .into_iter()
             .map(|tc| {
-                let parameters = serde_json::from_str(&tc.function.arguments).unwrap_or_else(|_| {
-                    serde_json::json!({})
-                });
+                // Production-grade argument parsing with error handling
+                let parameters = if tc.function.arguments.trim().is_empty() {
+                    serde_json::Value::Object(serde_json::Map::new())
+                } else {
+                    match serde_json::from_str(&tc.function.arguments) {
+                        Ok(params) => params,
+                        Err(e) => {
+                            tracing::warn!(
+                                "Failed to parse tool call arguments for {}: {e}. Arguments: '{}'",
+                                tc.function.name,
+                                tc.function.arguments
+                            );
+                            // Try to create a simple object with the raw arguments
+                            serde_json::json!({ "raw_arguments": tc.function.arguments })
+                        }
+                    }
+                };
 
                 LlmToolCall {
                     id: tc.id,
@@ -130,6 +175,12 @@ impl MistralAiProvider {
                 }
             })
             .collect();
+
+        // Handle content - provide default message for tool calls
+        let mut content = choice.message.content.unwrap_or_default();
+        if content.trim().is_empty() && !tool_calls.is_empty() {
+            content = "I'll help you with that using the available tools.".to_string();
+        }
 
         let finish_reason = match choice.finish_reason.as_deref() {
             Some("stop") => FinishReason::Stop,
@@ -214,7 +265,9 @@ impl LlmProviderTrait for MistralAiProvider {
             .json(&request_json)
             .send()
             .await
-            .map_err(|e| GraphBitError::llm_provider("mistralai", format!("Request failed: {e}")))?;
+            .map_err(|e| {
+                GraphBitError::llm_provider("mistralai", format!("Request failed: {e}"))
+            })?;
 
         if !response.status().is_success() {
             let error_text = response
@@ -257,7 +310,9 @@ impl LlmProviderTrait for MistralAiProvider {
     fn max_context_length(&self) -> Option<u32> {
         // Context lengths for different MistralAI models
         match self.model.as_str() {
-            "mistral-large-latest" | "mistral-medium-latest" | "mistral-small-latest" => Some(128_000),
+            "mistral-large-latest" | "mistral-medium-latest" | "mistral-small-latest" => {
+                Some(128_000)
+            }
             "pixtral-large-latest" | "pixtral-12b-latest" => Some(128_000),
             "ministral-8b-latest" | "ministral-3b-latest" => Some(128_000),
             "codestral-latest" => Some(256_000),
@@ -292,7 +347,8 @@ struct MistralAiRequest {
 #[derive(Debug, Serialize, Deserialize)]
 struct MistralAiMessage {
     role: String,
-    content: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    content: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     tool_calls: Option<Vec<MistralAiToolCall>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -302,8 +358,11 @@ struct MistralAiMessage {
 #[derive(Debug, Serialize, Deserialize)]
 struct MistralAiToolCall {
     id: String,
-    r#type: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    r#type: Option<String>,
     function: MistralAiFunction,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    index: Option<u32>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

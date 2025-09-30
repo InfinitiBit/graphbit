@@ -192,7 +192,7 @@ impl LlmMessage {
 }
 
 /// Role of a message sender
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum LlmRole {
     /// User message role

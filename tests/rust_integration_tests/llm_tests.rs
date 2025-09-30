@@ -358,16 +358,16 @@ async fn test_mistralai_real_api_call() {
     match result {
         Ok(response) => {
             assert!(!response.content.is_empty());
-            assert_eq!(response.model, "gpt-3.5-turbo");
+            assert_eq!(response.model, "mistral-large-latest");
             assert!(response.usage.total_tokens > 0);
             println!(
-                "OpenAI real API call successful: {content}",
+                "MistralAI real API call successful: {content}",
                 content = response.content
             );
         }
         Err(e) => {
-            println!("OpenAI API call failed: {e:?}");
-            panic!("OpenAI API call should succeed with valid credentials");
+            println!("MistralAI API call failed: {e:?}");
+            panic!("MistralAI API call should succeed with valid credentials");
         }
     }
 }
