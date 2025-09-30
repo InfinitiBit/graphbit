@@ -16,6 +16,7 @@ pub mod perplexity;
 pub mod providers;
 pub mod replicate;
 pub mod response;
+pub mod togetherai;
 pub mod xai;
 
 pub use providers::{LlmConfig, LlmProvider, LlmProviderTrait};
@@ -377,6 +378,22 @@ impl LlmProviderFactory {
                 }
 
                 Ok(Box::new(provider))
+            }
+            LlmConfig::TogetherAi {
+                api_key,
+                model,
+                base_url,
+                ..
+            } => {
+                if let Some(base_url) = base_url {
+                    Ok(Box::new(togetherai::TogetherAiProvider::with_base_url(
+                        api_key, model, base_url,
+                    )?))
+                } else {
+                    Ok(Box::new(togetherai::TogetherAiProvider::new(
+                        api_key, model,
+                    )?))
+                }
             }
             LlmConfig::Xai {
                 api_key,

@@ -252,3 +252,135 @@ async fn test_ollama_llm() {
     let response = result.unwrap();
     assert!(matches!(response.finish_reason, llm::FinishReason::Stop));
 }
+
+#[tokio::test]
+#[ignore = "Requires TogetherAI API key"]
+async fn test_togetherai_llm() {
+    if !has_togetherai_key() {
+        return;
+    }
+
+    let config = llm::LlmConfig::TogetherAi {
+        api_key: std::env::var("TOGETHER_API_KEY").unwrap(),
+        model: "openai/gpt-oss-20b".to_string(),
+        base_url: None,
+    };
+
+    let provider = llm::LlmProviderFactory::create_provider(config).unwrap();
+    let request = llm::LlmRequest::new("What is 2+2?")
+        .with_max_tokens(10)
+        .with_temperature(0.0);
+
+    let result = provider.complete(request).await;
+    assert!(result.is_ok());
+
+    let response = result.unwrap();
+    assert!(matches!(response.finish_reason, llm::FinishReason::Stop));
+}
+
+#[tokio::test]
+#[ignore = "Tests TogetherAI authentication failure"]
+async fn test_togetherai_llm_failure() {
+    let config = llm::LlmConfig::TogetherAi {
+        api_key: "invalid-key".to_string(),
+        model: "openai/gpt-oss-20b".to_string(),
+        base_url: None,
+    };
+
+    let provider = llm::LlmProviderFactory::create_provider(config).unwrap();
+    let request = llm::LlmRequest::new("test");
+    let result = provider.complete(request).await;
+
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_togetherai_config_creation() {
+    let config = llm::LlmConfig::TogetherAi {
+        api_key: "test-key".to_string(),
+        model: "openai/gpt-oss-20b".to_string(),
+        base_url: None,
+    };
+
+    match config {
+        llm::LlmConfig::TogetherAi {
+            api_key,
+            model,
+            base_url,
+        } => {
+            assert_eq!(api_key, "test-key");
+            assert_eq!(model, "openai/gpt-oss-20b");
+            assert_eq!(base_url, None);
+        }
+        _ => panic!("Expected TogetherAi config"),
+    }
+}
+
+#[test]
+fn test_togetherai_config_with_custom_base_url() {
+    let config = llm::LlmConfig::TogetherAi {
+        api_key: "test-key".to_string(),
+        model: "openai/gpt-oss-20b".to_string(),
+        base_url: Some("https://custom.together.xyz/v1".to_string()),
+    };
+
+    match config {
+        llm::LlmConfig::TogetherAi {
+            api_key,
+            model,
+            base_url,
+        } => {
+            assert_eq!(api_key, "test-key");
+            assert_eq!(model, "openai/gpt-oss-20b");
+            assert_eq!(base_url, Some("https://custom.together.xyz/v1".to_string()));
+        }
+        _ => panic!("Expected TogetherAi config"),
+    }
+}
+
+#[tokio::test]
+#[ignore = "Requires TogetherAI API key"]
+async fn test_togetherai_function_calling() {
+    if !has_togetherai_key() {
+        return;
+    }
+
+    let config = llm::LlmConfig::TogetherAi {
+        api_key: std::env::var("TOGETHER_API_KEY").unwrap(),
+        model: "openai/gpt-oss-20b".to_string(),
+        base_url: None,
+    };
+
+    let provider = llm::LlmProviderFactory::create_provider(config).unwrap();
+
+    // Test function calling support
+    let tools = vec![llm::LlmTool::new(
+        "get_weather",
+        "Get weather information for a location",
+        serde_json::json!({
+            "type": "object",
+            "properties": {
+                "location": {
+                    "type": "string",
+                    "description": "The city name"
+                }
+            },
+            "required": ["location"]
+        }),
+    )];
+
+    let request = llm::LlmRequest::new("What's the weather like in Paris?")
+        .with_max_tokens(100)
+        .with_temperature(0.1)
+        .with_tools(tools);
+
+    let result = provider.complete(request).await;
+    assert!(result.is_ok());
+
+    let response = result.unwrap();
+    // Function calling may or may not be triggered, but the request should succeed
+    assert!(matches!(
+        response.finish_reason,
+        llm::FinishReason::Stop | llm::FinishReason::ToolCalls
+    ));
+}
