@@ -51,7 +51,7 @@ impl ValidationResult {
     }
 
     /// Merge another validation result into this one
-    pub fn merge(&mut self, other: ValidationResult) {
+    pub fn merge(&mut self, other: Self) {
         if !other.is_valid {
             self.is_valid = false;
         }

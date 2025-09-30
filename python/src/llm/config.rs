@@ -163,6 +163,50 @@ impl LlmConfig {
     }
 
     #[staticmethod]
+    #[pyo3(signature = (api_key, model=None, organization=None))]
+    fn ai21(
+        api_key: String,
+        model: Option<String>,
+        organization: Option<String>,
+    ) -> PyResult<Self> {
+        validate_api_key(&api_key, "AI21")?;
+
+        let config = if let Some(organization) = organization {
+            CoreLlmConfig::ai21_with_organization(
+                api_key,
+                model.unwrap_or_else(|| "jamba-mini".to_string()),
+                organization,
+            )
+        } else {
+            CoreLlmConfig::ai21(api_key, model.unwrap_or_else(|| "jamba-mini".to_string()))
+        };
+
+        Ok(Self { inner: config })
+    }
+
+    #[staticmethod]
+    #[pyo3(signature = (api_key, model=None, version=None))]
+    fn replicate(
+        api_key: String,
+        model: Option<String>,
+        version: Option<String>,
+    ) -> PyResult<Self> {
+        validate_api_key(&api_key, "Replicate")?;
+
+        let config = if let Some(version) = version {
+            CoreLlmConfig::replicate_with_version(
+                api_key,
+                model.unwrap_or_else(|| "openai/gpt-5".to_string()),
+                version,
+            )
+        } else {
+            CoreLlmConfig::replicate(api_key, model.unwrap_or_else(|| "openai/gpt-5".to_string()))
+        };
+
+        Ok(Self { inner: config })
+    }
+
+    #[staticmethod]
     #[pyo3(signature = (api_key, model=None))]
     fn xai(api_key: String, model: Option<String>) -> PyResult<Self> {
         validate_api_key(&api_key, "xAI")?;

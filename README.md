@@ -34,7 +34,7 @@ Designed to run **multi-agent workflows in parallel**, Graphbit persists memory 
 - **Tool Selection** - LLMs intelligently select tools based on descriptions
 - **Type Safety** - Strong typing throughout the execution pipeline
 - **Reliability** - Circuit breakers, retry policies, and error handling
-- **Multi-LLM Support** - OpenAI, Azure OpenAI, Anthropic, OpenRouter, DeepSeek, Ollama
+- **Multi-LLM Support** - OpenAI, Azure OpenAI, Anthropic, OpenRouter, DeepSeek, Replicate, Ollama
 - **Resource Management** - Concurrency controls and memory optimization
 - **Observability** - Built-in metrics and execution tracing
 
@@ -80,6 +80,7 @@ First, set up your API keys:
 ```bash
 export OPENAI_API_KEY=your_openai_api_key_here
 export ANTHROPIC_API_KEY=your_anthropic_api_key_here
+export REPLICATE_API_KEY=your_replicate_api_token_here
 ```
 
 > **Security Note**: Never commit API keys to version control. Always use environment variables or secure secret management.

@@ -1,5 +1,5 @@
 use graphbit_core::llm::response::{FinishReason, LlmResponse, LlmUsage};
-use graphbit_core::llm::{LlmConfig, LlmMessage, LlmProviderFactory, LlmRequest, LlmRole};
+use graphbit_core::llm::{LlmConfig, LlmMessage, LlmProviderFactory, LlmRequest, LlmRole, LlmTool};
 
 // `DeepSeek` Provider Tests
 #[tokio::test]
@@ -610,4 +610,205 @@ async fn test_openrouter_model_context_lengths() {
 
         assert_eq!(provider.max_context_length(), expected_context);
     }
+}
+
+// `Replicate` Provider Tests
+#[tokio::test]
+async fn test_replicate_provider_creation() {
+    let provider = LlmProviderFactory::create_provider(LlmConfig::Replicate {
+        api_key: "test-key".to_string(),
+        model: "lucataco/glaive-function-calling-v1".to_string(),
+        base_url: None,
+        version: None,
+    })
+    .unwrap();
+
+    assert_eq!(provider.provider_name(), "replicate");
+    assert_eq!(provider.model_name(), "lucataco/glaive-function-calling-v1");
+    assert!(provider.supports_function_calling());
+    assert_eq!(provider.max_context_length(), Some(8192));
+}
+
+#[tokio::test]
+async fn test_replicate_provider_with_version() {
+    let provider = LlmProviderFactory::create_provider(LlmConfig::Replicate {
+        api_key: "test-key".to_string(),
+        model: "homanp/llama-2-13b-function-calling".to_string(),
+        base_url: None,
+        version: Some(
+            "2288c783ba83e28b9ac4906e2dfa8004e3eda67f11ffc7a6a80bd927e46bc6c9".to_string(),
+        ),
+    })
+    .unwrap();
+
+    assert_eq!(provider.provider_name(), "replicate");
+    assert_eq!(provider.model_name(), "homanp/llama-2-13b-function-calling");
+    assert!(provider.supports_function_calling());
+    assert_eq!(provider.max_context_length(), Some(4096));
+}
+
+#[tokio::test]
+async fn test_replicate_message_formatting() {
+    let _provider = LlmProviderFactory::create_provider(LlmConfig::Replicate {
+        api_key: "test-key".to_string(),
+        model: "lucataco/glaive-function-calling-v1".to_string(),
+        base_url: None,
+        version: None,
+    })
+    .unwrap();
+
+    let request = LlmRequest::with_messages(vec![])
+        .with_message(LlmMessage::system("You are a helpful assistant"))
+        .with_message(LlmMessage::user("What's the weather like?"))
+        .with_max_tokens(100)
+        .with_temperature(0.7)
+        .with_top_p(0.9);
+
+    assert_eq!(request.messages.len(), 2);
+    assert!(request
+        .messages
+        .iter()
+        .any(|m| matches!(m.role, LlmRole::System)));
+    assert!(request
+        .messages
+        .iter()
+        .any(|m| matches!(m.role, LlmRole::User)));
+    assert_eq!(request.max_tokens, Some(100));
+    assert_eq!(request.temperature, Some(0.7));
+    assert_eq!(request.top_p, Some(0.9));
+}
+
+#[tokio::test]
+async fn test_replicate_tool_calling_support() {
+    let provider = LlmProviderFactory::create_provider(LlmConfig::Replicate {
+        api_key: "test-key".to_string(),
+        model: "lucataco/glaive-function-calling-v1".to_string(),
+        base_url: None,
+        version: None,
+    })
+    .unwrap();
+
+    // Test that function calling models support it
+    assert!(provider.supports_function_calling());
+
+    // Test with a non-function calling model
+    let non_fc_provider = LlmProviderFactory::create_provider(LlmConfig::Replicate {
+        api_key: "test-key".to_string(),
+        model: "some/other-model".to_string(),
+        base_url: None,
+        version: None,
+    })
+    .unwrap();
+
+    assert!(!non_fc_provider.supports_function_calling());
+}
+
+#[tokio::test]
+async fn test_replicate_request_with_tools() {
+    let tool = LlmTool::new(
+        "get_weather",
+        "Get current weather for a location",
+        serde_json::json!({
+            "type": "object",
+            "properties": {
+                "location": {
+                    "type": "string",
+                    "description": "The city and state, e.g. San Francisco, CA"
+                }
+            },
+            "required": ["location"]
+        }),
+    );
+
+    let request = LlmRequest::with_messages(vec![
+        LlmMessage::system("You are a helpful assistant with access to weather data"),
+        LlmMessage::user("What's the weather like in San Francisco?"),
+    ])
+    .with_tool(tool)
+    .with_max_tokens(150);
+
+    assert_eq!(request.tools.len(), 1);
+    assert_eq!(request.tools[0].name, "get_weather");
+    assert_eq!(request.messages.len(), 2);
+}
+
+// `AI21labs` Provider Tests
+#[tokio::test]
+async fn test_ai21labs_provider_creation() {
+    let provider = LlmProviderFactory::create_provider(LlmConfig::Ai21 {
+        api_key: "test-key".to_string(),
+        model: "jamba-mini".to_string(),
+        base_url: None,
+        organization: None,
+    })
+    .unwrap();
+
+    assert_eq!(provider.provider_name(), "ai21");
+    assert_eq!(provider.model_name(), "jamba-mini");
+    assert!(provider.supports_function_calling());
+    assert_eq!(provider.max_context_length(), Some(256_000));
+
+    // Test cost per token
+    let (input_cost, output_cost) = provider.cost_per_token().unwrap();
+    assert_eq!(input_cost, 0.000_000_2);
+    assert_eq!(output_cost, 0.000_000_4);
+}
+
+#[tokio::test]
+async fn test_ai21labs_model_configs() {
+    let test_models = vec![
+        (
+            "jamba-mini",
+            Some(256_000),
+            Some((0.000_000_2, 0.000_000_4)),
+        ),
+        ("jamba-large", Some(256_000), Some((0.000_002, 0.000_008))),
+        ("unknown-model", None, None),
+    ];
+
+    for (model, context_length, cost) in test_models {
+        let provider = LlmProviderFactory::create_provider(LlmConfig::Ai21 {
+            api_key: "test-key".to_string(),
+            model: model.to_string(),
+            base_url: None,
+            organization: None,
+        })
+        .unwrap();
+
+        assert_eq!(provider.max_context_length(), context_length);
+        assert_eq!(provider.cost_per_token(), cost);
+    }
+}
+
+#[tokio::test]
+async fn test_ai21labs_message_formatting() {
+    let _provider = LlmProviderFactory::create_provider(LlmConfig::Ai21 {
+        api_key: "test-key".to_string(),
+        model: "jamba-mini".to_string(),
+        base_url: None,
+        organization: None,
+    })
+    .unwrap();
+
+    let request = LlmRequest::with_messages(vec![])
+        .with_message(LlmMessage::system("system prompt"))
+        .with_message(LlmMessage::user("user message"))
+        .with_message(LlmMessage::assistant("assistant message"))
+        .with_max_tokens(100)
+        .with_temperature(0.7)
+        .with_top_p(0.9);
+
+    assert_eq!(request.messages.len(), 3);
+    assert!(request
+        .messages
+        .iter()
+        .any(|m| matches!(m.role, LlmRole::System)));
+    assert!(request
+        .messages
+        .iter()
+        .any(|m| matches!(m.role, LlmRole::User)));
+    assert!(request
+        .messages
+        .iter()
+        .any(|m| matches!(m.role, LlmRole::Assistant)));
 }

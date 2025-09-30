@@ -97,6 +97,17 @@ pub enum LlmConfig {
         /// Optional custom base URL
         base_url: Option<String>,
     },
+    /// `Replicate` LLM provider configuration
+    Replicate {
+        /// API key for authentication
+        api_key: String,
+        /// Model name to use (e.g., "lucataco/glaive-function-calling-v1", "homanp/llama-2-13b-function-calling")
+        model: String,
+        /// Optional custom base URL
+        base_url: Option<String>,
+        /// Optional model version (if not specified, uses latest)
+        version: Option<String>,
+    },
     /// `xAI` LLM provider configuration for Grok models
     Xai {
         /// API key for authentication
@@ -105,6 +116,17 @@ pub enum LlmConfig {
         model: String,
         /// Optional custom base URL
         base_url: Option<String>,
+    },
+    /// `AI21` LLM provider configuration
+    Ai21 {
+        /// API key for authentication
+        api_key: String,
+        /// Model name to use
+        model: String,
+        /// Optional custom base URL
+        base_url: Option<String>,
+        /// Optional custom organization
+        organization: Option<String>,
     },
     /// Custom LLM provider configuration
     Custom {
@@ -232,12 +254,59 @@ impl LlmConfig {
         }
     }
 
+    /// Create `Replicate` configuration
+    pub fn replicate(api_key: impl Into<String>, model: impl Into<String>) -> Self {
+        Self::Replicate {
+            api_key: api_key.into(),
+            model: model.into(),
+            base_url: None,
+            version: None,
+        }
+    }
+
+    /// Create `Replicate` configuration with version
+    pub fn replicate_with_version(
+        api_key: impl Into<String>,
+        model: impl Into<String>,
+        version: impl Into<String>,
+    ) -> Self {
+        Self::Replicate {
+            api_key: api_key.into(),
+            model: model.into(),
+            base_url: None,
+            version: Some(version.into()),
+        }
+    }
     /// Create `xAI` configuration for Grok models
     pub fn xai(api_key: impl Into<String>, model: impl Into<String>) -> Self {
         Self::Xai {
             api_key: api_key.into(),
             model: model.into(),
             base_url: None,
+        }
+    }
+
+    /// Create `AI21` configuration
+    pub fn ai21(api_key: impl Into<String>, model: impl Into<String>) -> Self {
+        Self::Ai21 {
+            api_key: api_key.into(),
+            model: model.into(),
+            base_url: None,
+            organization: None,
+        }
+    }
+
+    /// Create `AI21` configuration with organization
+    pub fn ai21_with_organization(
+        api_key: impl Into<String>,
+        model: impl Into<String>,
+        organization: impl Into<String>,
+    ) -> Self {
+        Self::Ai21 {
+            api_key: api_key.into(),
+            model: model.into(),
+            base_url: None,
+            organization: Some(organization.into()),
         }
     }
 
@@ -260,41 +329,45 @@ impl LlmConfig {
     /// Get the provider name
     pub fn provider_name(&self) -> &str {
         match self {
-            LlmConfig::OpenAI { .. } => "openai",
-            LlmConfig::Anthropic { .. } => "anthropic",
-            LlmConfig::AzureOpenAI { .. } => "azure_openai",
-            LlmConfig::DeepSeek { .. } => "deepseek",
-            LlmConfig::HuggingFace { .. } => "huggingface",
-            LlmConfig::Ollama { .. } => "ollama",
-            LlmConfig::Perplexity { .. } => "perplexity",
-            LlmConfig::OpenRouter { .. } => "openrouter",
-            LlmConfig::Fireworks { .. } => "fireworks",
-            LlmConfig::Xai { .. } => "xai",
-            LlmConfig::Custom { provider_type, .. } => provider_type,
-            LlmConfig::Unconfigured { .. } => "unconfigured",
+            Self::OpenAI { .. } => "openai",
+            Self::Anthropic { .. } => "anthropic",
+            Self::AzureOpenAI { .. } => "azure_openai",
+            Self::DeepSeek { .. } => "deepseek",
+            Self::HuggingFace { .. } => "huggingface",
+            Self::Ollama { .. } => "ollama",
+            Self::Perplexity { .. } => "perplexity",
+            Self::OpenRouter { .. } => "openrouter",
+            Self::Fireworks { .. } => "fireworks",
+            Self::Replicate { .. } => "replicate",
+            Self::Xai { .. } => "xai",
+            Self::Ai21 { .. } => "ai21",
+            Self::Custom { provider_type, .. } => provider_type,
+            Self::Unconfigured { .. } => "unconfigured",
         }
     }
 
     /// Get the model name
     pub fn model_name(&self) -> &str {
         match self {
-            LlmConfig::OpenAI { model, .. } => model,
-            LlmConfig::Anthropic { model, .. } => model,
-            LlmConfig::AzureOpenAI {
+            Self::OpenAI { model, .. } => model,
+            Self::Anthropic { model, .. } => model,
+            Self::AzureOpenAI {
                 deployment_name, ..
             } => deployment_name,
-            LlmConfig::DeepSeek { model, .. } => model,
-            LlmConfig::HuggingFace { model, .. } => model,
-            LlmConfig::Ollama { model, .. } => model,
-            LlmConfig::Perplexity { model, .. } => model,
-            LlmConfig::OpenRouter { model, .. } => model,
-            LlmConfig::Fireworks { model, .. } => model,
-            LlmConfig::Xai { model, .. } => model,
-            LlmConfig::Custom { config, .. } => config
+            Self::DeepSeek { model, .. } => model,
+            Self::HuggingFace { model, .. } => model,
+            Self::Ollama { model, .. } => model,
+            Self::Perplexity { model, .. } => model,
+            Self::OpenRouter { model, .. } => model,
+            Self::Fireworks { model, .. } => model,
+            Self::Replicate { model, .. } => model,
+            Self::Xai { model, .. } => model,
+            Self::Ai21 { model, .. } => model,
+            Self::Custom { config, .. } => config
                 .get("model")
                 .and_then(|v| v.as_str())
                 .unwrap_or("unknown"),
-            LlmConfig::Unconfigured { .. } => "none",
+            Self::Unconfigured { .. } => "none",
         }
     }
 }

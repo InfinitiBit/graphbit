@@ -3,6 +3,7 @@
 //! This module provides a unified interface for working with different
 //! LLM providers while maintaining strong type safety and validation.
 
+pub mod ai21;
 pub mod anthropic;
 pub mod azure_openai;
 pub mod deepseek;
@@ -13,6 +14,7 @@ pub mod openai;
 pub mod openrouter;
 pub mod perplexity;
 pub mod providers;
+pub mod replicate;
 pub mod response;
 pub mod xai;
 
@@ -357,6 +359,25 @@ impl LlmProviderFactory {
                     Ok(Box::new(fireworks::FireworksProvider::new(api_key, model)?))
                 }
             }
+            LlmConfig::Replicate {
+                api_key,
+                model,
+                base_url,
+                version,
+                ..
+            } => {
+                let mut provider = if let Some(base_url) = base_url {
+                    replicate::ReplicateProvider::with_base_url(api_key, model, base_url)?
+                } else {
+                    replicate::ReplicateProvider::new(api_key, model)?
+                };
+
+                if let Some(version) = version {
+                    provider = provider.with_version(version);
+                }
+
+                Ok(Box::new(provider))
+            }
             LlmConfig::Xai {
                 api_key,
                 model,
@@ -371,12 +392,25 @@ impl LlmProviderFactory {
                     Ok(Box::new(xai::XaiProvider::new(api_key, model)?))
                 }
             }
+            LlmConfig::Ai21 {
+                api_key,
+                model,
+                base_url,
+                ..
+            } => {
+                if let Some(base_url) = base_url {
+                    Ok(Box::new(ai21::Ai21Provider::with_base_url(
+                        api_key, model, base_url,
+                    )?))
+                } else {
+                    Ok(Box::new(ai21::Ai21Provider::new(api_key, model)?))
+                }
+            }
             LlmConfig::Custom { provider_type, .. } => Err(GraphBitError::config(format!(
                 "Unsupported custom provider: {provider_type}",
             ))),
             LlmConfig::Unconfigured { message } => Err(GraphBitError::config(format!(
-                "LLM provider not configured: {}",
-                message
+                "LLM provider not configured: {message}",
             ))),
         }
     }

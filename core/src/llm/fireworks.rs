@@ -68,7 +68,7 @@ impl FireworksProvider {
     }
 
     /// Convert `GraphBit` message to `Fireworks AI` message format
-    fn convert_message(&self, message: &LlmMessage) -> FireworksMessage {
+    fn convert_message(message: &LlmMessage) -> FireworksMessage {
         FireworksMessage {
             role: match message.role {
                 LlmRole::User => "user".to_string(),
@@ -99,7 +99,7 @@ impl FireworksProvider {
     }
 
     /// Convert `GraphBit` tool to `Fireworks AI` tool format
-    fn convert_tool(&self, tool: &LlmTool) -> FireworksTool {
+    fn convert_tool(tool: &LlmTool) -> FireworksTool {
         FireworksTool {
             r#type: "function".to_string(),
             function: FireworksFunctionDef {
@@ -199,13 +199,19 @@ impl LlmProviderTrait for FireworksProvider {
         let messages: Vec<FireworksMessage> = request
             .messages
             .iter()
-            .map(|m| self.convert_message(m))
+            .map(|m| Self::convert_message(m))
             .collect();
 
         let tools: Option<Vec<FireworksTool>> = if request.tools.is_empty() {
             None
         } else {
-            Some(request.tools.iter().map(|t| self.convert_tool(t)).collect())
+            Some(
+                request
+                    .tools
+                    .iter()
+                    .map(|t| Self::convert_tool(t))
+                    .collect(),
+            )
         };
 
         let body = FireworksRequest {
