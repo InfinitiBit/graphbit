@@ -681,7 +681,7 @@ async fn test_replicate_provider_creation() {
     assert_eq!(provider.provider_name(), "replicate");
     assert_eq!(provider.model_name(), "lucataco/glaive-function-calling-v1");
     assert!(provider.supports_function_calling());
-    assert_eq!(provider.max_context_length(), Some(8192));
+    assert_eq!(provider.max_context_length(), Some(10_192));
 }
 
 #[tokio::test]

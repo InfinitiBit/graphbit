@@ -398,8 +398,7 @@ async fn test_workflow_with_llm() {
     workflow.add_node(node).unwrap();
 
     // Create executor with default LLM configuration
-    let executor = WorkflowExecutor::new()
-        .with_default_llm_config(llm_config.clone());
+    let executor = WorkflowExecutor::new().with_default_llm_config(llm_config.clone());
 
     let agent = AgentBuilder::new("test_agent", llm_config)
         .description("Test agent")
@@ -442,8 +441,7 @@ async fn test_workflow_with_anthropic() {
     workflow.add_node(node).unwrap();
 
     // Create executor with default LLM configuration
-    let executor = WorkflowExecutor::new()
-        .with_default_llm_config(llm_config.clone());
+    let executor = WorkflowExecutor::new().with_default_llm_config(llm_config.clone());
 
     let agent = AgentBuilder::new("test_agent", llm_config)
         .description("Test agent")
@@ -488,8 +486,7 @@ async fn test_workflow_with_ollama() {
     workflow.add_node(node).unwrap();
 
     // Create executor with default LLM configuration
-    let executor = WorkflowExecutor::new()
-        .with_default_llm_config(llm_config.clone());
+    let executor = WorkflowExecutor::new().with_default_llm_config(llm_config.clone());
 
     let agent = AgentBuilder::new("test_agent", llm_config)
         .description("Test agent")
