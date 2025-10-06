@@ -1017,20 +1017,75 @@ impl WorkflowExecutor {
             tracing::info!("Executing agent with tools - prompt: '{resolved_prompt}'");
             tracing::info!("ENTERING execute_agent_with_tools function");
 
-            let result =
-                Self::execute_agent_with_tools(agent_id, &resolved_prompt, node_config, agent)
-                    .await;
+            // Get node name from context
+            let node_name = {
+                let ctx = context.lock().await;
+                ctx.metadata
+                    .get("node_id_to_name")
+                    .and_then(|m| m.as_object())
+                    .and_then(|m| m.get(&current_node_id.to_string()))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("unknown")
+                    .to_string()
+            };
+
+            let result = Self::execute_agent_with_tools(
+                agent_id,
+                &resolved_prompt,
+                node_config,
+                agent,
+                current_node_id,
+                &node_name,
+                context.clone(),
+            )
+            .await;
             tracing::info!("Agent with tools execution result: {:?}", result);
             result
         } else {
             // Execute agent without tools (original behavior)
             tracing::info!("NO TOOLS DETECTED - using standard agent execution");
-            let message = AgentMessage::new(
-                agent_id.clone(),
-                None,
-                MessageContent::Text(resolved_prompt),
-            );
-            agent.execute(message).await
+
+            // Call LLM provider directly to capture metadata
+            use crate::llm::LlmRequest;
+            let request = LlmRequest::new(resolved_prompt);
+            let llm_response = agent.llm_provider().complete(request).await?;
+
+            // Store LLM response metadata in context for observability
+            {
+                // First, get the node name before mutable borrow
+                let node_name = {
+                    let ctx = context.lock().await;
+                    ctx.metadata
+                        .get("node_id_to_name")
+                        .and_then(|m| m.as_object())
+                        .and_then(|m| m.get(&current_node_id.to_string()))
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string())
+                        .unwrap_or_else(|| "unknown".to_string())
+                };
+
+                // Now store the metadata
+                let mut ctx = context.lock().await;
+                if let Ok(response_metadata) = serde_json::to_value(&llm_response) {
+                    // Store by node ID
+                    ctx.metadata.insert(
+                        format!("node_response_{}", current_node_id),
+                        response_metadata.clone(),
+                    );
+                    // Store by node name
+                    ctx.metadata.insert(
+                        format!("node_response_{}", node_name),
+                        response_metadata,
+                    );
+                }
+            }
+
+            // Return the content as JSON value
+            if let Ok(json_value) = serde_json::from_str::<serde_json::Value>(&llm_response.content) {
+                Ok(json_value)
+            } else {
+                Ok(serde_json::Value::String(llm_response.content))
+            }
         }
     }
 
@@ -1040,6 +1095,9 @@ impl WorkflowExecutor {
         prompt: &str,
         node_config: &std::collections::HashMap<String, serde_json::Value>,
         agent: Arc<dyn AgentTrait>,
+        node_id: &NodeId,
+        node_name: &str,
+        context: Arc<Mutex<WorkflowContext>>,
     ) -> GraphBitResult<serde_json::Value> {
         tracing::info!("Starting execute_agent_with_tools for agent: {_agent_id}");
         use crate::llm::{LlmRequest, LlmTool};
@@ -1081,6 +1139,23 @@ impl WorkflowExecutor {
             request.tools.len()
         );
         let llm_response = agent.llm_provider().complete(request).await?;
+
+        // Store LLM response metadata in context for observability
+        {
+            let mut ctx = context.lock().await;
+            if let Ok(response_metadata) = serde_json::to_value(&llm_response) {
+                // Store by node ID
+                ctx.metadata.insert(
+                    format!("node_response_{}", node_id),
+                    response_metadata.clone(),
+                );
+                // Store by node name
+                ctx.metadata.insert(
+                    format!("node_response_{}", node_name),
+                    response_metadata,
+                );
+            }
+        }
 
         // DEBUG: Log LLM response details
         tracing::info!("LLM Response - Content: '{}'", llm_response.content);

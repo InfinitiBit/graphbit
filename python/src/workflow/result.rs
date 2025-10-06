@@ -125,4 +125,59 @@ impl WorkflowResult {
             })
             .collect()
     }
+
+    /// Get LLM response metadata for a specific node
+    ///
+    /// Returns a dictionary containing the full LLM response metadata including:
+    /// - content: The generated text
+    /// - usage: Token usage statistics (prompt_tokens, completion_tokens, total_tokens)
+    /// - finish_reason: Why the LLM stopped generating
+    /// - model: The model used
+    /// - metadata: Additional provider-specific metadata
+    ///
+    /// # Arguments
+    /// * `node_id` - Node ID or node name
+    ///
+    /// # Returns
+    /// Dictionary with LLM response metadata, or None if not found
+    fn get_node_response_metadata(&self, py: Python<'_>, node_id: &str) -> PyResult<Option<PyObject>> {
+        let key = format!("node_response_{}", node_id);
+        match self.inner.metadata.get(&key) {
+            Some(value) => {
+                // Use pythonize to convert serde_json::Value to Python object
+                let py_obj = pythonize::pythonize(py, value)?;
+                Ok(Some(py_obj.into()))
+            }
+            None => Ok(None),
+        }
+    }
+
+    /// Get all node LLM response metadata
+    ///
+    /// Returns a dictionary mapping node IDs/names to their LLM response metadata.
+    /// Each metadata entry contains:
+    /// - content: The generated text
+    /// - usage: Token usage statistics (prompt_tokens, completion_tokens, total_tokens)
+    /// - finish_reason: Why the LLM stopped generating
+    /// - model: The model used
+    /// - metadata: Additional provider-specific metadata
+    ///
+    /// # Returns
+    /// Dictionary mapping node IDs/names to their LLM response metadata
+    fn get_all_node_response_metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
+        use pyo3::types::PyDict;
+
+        let result_dict = PyDict::new(py);
+
+        for (k, v) in self.inner.metadata.iter() {
+            // Only include keys that start with "node_response_"
+            if k.starts_with("node_response_") {
+                let node_id = k.strip_prefix("node_response_").unwrap();
+                let py_value = pythonize::pythonize(py, v)?;
+                result_dict.set_item(node_id, py_value)?;
+            }
+        }
+
+        Ok(result_dict.into())
+    }
 }

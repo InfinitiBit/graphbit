@@ -661,7 +661,31 @@ impl Executor {
                                                     let response_content =
                                                         final_response.content.clone();
 
-                                                    // Update the context with the final response
+                                                    // Store full LLM response metadata in context
+                                                    // This enables observability tools to capture complete LLM metadata
+                                                    if let Ok(response_metadata) = serde_json::to_value(&final_response) {
+                                                        // Store by node ID
+                                                        context.metadata.insert(
+                                                            format!("node_response_{}", node.id),
+                                                            response_metadata.clone(),
+                                                        );
+
+                                                        // Also store by node name if available
+                                                        if let Some(node_name) = workflow
+                                                            .graph
+                                                            .get_nodes()
+                                                            .iter()
+                                                            .find(|(id, _)| **id == node.id)
+                                                            .map(|(_, n)| &n.name)
+                                                        {
+                                                            context.metadata.insert(
+                                                                format!("node_response_{}", node_name),
+                                                                response_metadata,
+                                                            );
+                                                        }
+                                                    }
+
+                                                    // Update the context with the final response (text content only)
                                                     context.set_node_output(
                                                         &node.id,
                                                         serde_json::Value::String(
