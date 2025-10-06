@@ -34,7 +34,7 @@ workspace = true
 
 [package]
 description = "Production-grade Python bindings for GraphBit agentic workflow automation"
-name = "graphbit-python"
+name = "graphbit"
 publish = false
 authors.workspace = true
 categories.workspace = true

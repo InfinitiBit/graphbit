@@ -24,7 +24,7 @@ workspace = true
 # Root package (library crate)
 [package]
 description = "GraphBit agentic workflow automation framework (library)"
-name = "graphbit"
+name = "graphbit-lib"
 publish = false
 authors.workspace = true
 categories.workspace = true
