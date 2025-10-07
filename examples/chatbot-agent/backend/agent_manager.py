@@ -6,13 +6,14 @@ workflow system, with vector database integration for context retrieval and
 memory storage capabilities.
 """
 
+import asyncio
 import logging
 import os
-from typing import List, Optional
+from typing import Optional
 
 from dotenv import load_dotenv
 
-from graphbit import EmbeddingClient, EmbeddingConfig, LlmClient, LlmConfig, Node, Workflow, WorkflowBuilder, WorkflowExecutor
+from graphbit import Executor, LlmClient, LlmConfig, Node, Workflow
 
 from .const import ConfigConstants
 from .tool_manager import ToolManager
@@ -31,42 +32,85 @@ class AgentManager:
     for generating responses, embeddings, and streaming chat completions.
     """
 
-    def __init__(self, api_key: Optional[str] = ConfigConstants.OPENAI_API_KEY):
+    def __init__(self, api_key: str, model: str, tool_manager: ToolManager):
         """
         Initialize the AgentManager with the OpenAI API key.
 
         Args:
             api_key (str): OpenAI API key for accessing the language model.
         """
-        # Ensure OpenAI API key is present
-        if not api_key:
-            raise ValueError("OPENAI_API_KEY environment variable is not set. Please set it in your environment.")
-
         # Configure LLM
-        self.llm_config = LlmConfig.openai(model=ConfigConstants.OPENAI_LLM_MODEL, api_key=api_key)
+        self.llm_config = LlmConfig.openai(model=model, api_key=api_key)
         self.llm_client = LlmClient(self.llm_config)
 
-        # Configure embeddings
-        self.embedding_config = EmbeddingConfig.openai(model=ConfigConstants.OPENAI_EMBEDDING_MODEL, api_key=api_key)
-        self.embedding_client = EmbeddingClient(self.embedding_config)
+        # Assign tool manager
+        self.tool_manager = tool_manager
 
-        self.tool_manager = ToolManager()
         self.workflow = None
 
-    def build_workflow(self):
-        workflow = WorkflowBuilder("Chatbot Workflow")
-        node = Node.agent("chatbot", "You are a helpful assistant.", tools=self.tool_manager.get_tools(), agent_id="chatbot")
-        workflow.add_node(node)
-        workflow.validate()
+    def build_workflow(self, query: str):
+        workflow = Workflow("Chatbot Workflow")
+
+        prompt = f"""
+You are a tool-using assistant.
+
+TOOLS:
+- save_personal_info(doc_content:str, metadata:dict) — call when the user reveals NEW personal facts
+  (name, email, phone, role, employer, preferences, city/country). Include which fields you detected in metadata.fields.
+- save_chat_history(doc_content:str, metadata:dict) — call once per turn with the full turn text
+  ("user: {"user_query"}\\nassistant: {"your_answer"}") BEFORE finalizing your answer.
+- get_personal_info(similarity_search_query:str) — call when you need profile facts already saved.
+- get_chat_history(similarity_search_query:str) — call when you need conversation memory.
+
+POLICY:
+1) If THIS message includes new personal facts → call save_personal_info first.
+2) If you generate a response → call save_chat_history for this turn.
+3) Only then produce the final answer to the user.
+4) If no saving is needed, skip the save tools.
+
+EXAMPLE (personal info present):
+User: "Hi, I'm Tanima. My email is tanimahossain01@gmail.com."
+Assistant calls: save_personal_info({{
+  "doc_content": "Hi, I'm Tanima. My email is tanimahossain01@gmail.com.",
+  "metadata": {{"fields": ["name","email"], "source":"chat"}}
+}})
+Assistant (final): "Nice to meet you, Tanima! I've noted that."
+
+Now handle the current user query:
+{query}
+"""
+
+        save_personal_info = self.tool_manager.save_personal_info
+        save_chat_history = self.tool_manager.save_chat_history
+        get_personal_info = self.tool_manager.get_personal_info
+        get_chat_history = self.tool_manager.get_chat_history
+
+        node = Node.agent(name="chatbot", prompt=prompt, agent_id="chatbot", tools=[save_personal_info, save_chat_history, get_personal_info, get_chat_history])
+        output_node = Node.agent(
+            name="output", prompt="Respond to user query based on the output of previous node as if you are having a conversation no need to mention your internal technical steps", agent_id="output"
+        )
+        node1 = workflow.add_node(node)
+        # node2=workflow.add_node(output_node)
+        # workflow.connect(node1, node2)
         self.workflow = workflow
 
+        return workflow
+
     def get_executor(self):
-        return WorkflowExecutor(self.llm_config)
+        return Executor(self.llm_config)
 
     def execute_workflow(self, query: str):
-        workflow = self.build_workflow()
+        workflow = self.build_workflow(query=query)
         executor = self.get_executor()
-        return executor.execute(workflow)
+        result = executor.execute(workflow)
+        print("result: ", result.is_success())
+
+        if result.is_success():
+            output = result.get_node_output("chatbot")
+            print("output: ", output)
+            return output
+        else:
+            return "Error: " + result.get_error()
 
     async def chat_stream(self, prompt: str):
         """
@@ -81,6 +125,7 @@ class AgentManager:
         Yields:
             str: Individual response tokens from the streaming completion.
         """
-        response = await self.llm_client.complete_stream(prompt, max_tokens=ConfigConstants.MAX_TOKENS)
-        for chunk in response:
-            yield chunk
+        print("prompt: ", prompt)
+        response = await asyncio.to_thread(self.execute_workflow, prompt)
+        for char in response:
+            yield char

@@ -1,16 +1,19 @@
 import os
-from graphbit import Workflow, Node, Executor, LlmConfig, tool
+
+from graphbit import Executor, LlmConfig, Node, Workflow, tool
 
 
 @tool(_description="Get current weather information for any city")
 def get_weather(location: str) -> dict:
     return {"location": location, "temperature": 25, "condition": "cloudy"}
 
+
 @tool(_description="Perform mathematical calculations and return results")
 def calculate(expression: str) -> str:
     return f"Result: {eval(expression)}"
 
-def main(model:str):
+
+def main(model: str):
     agent_id = model
     api_key = os.getenv("MISTRALAI_API_KEY")
     llm_config = LlmConfig.mistralai(api_key, model)
@@ -23,7 +26,7 @@ def main(model:str):
         system_prompt="Use the tools I have provided. to answer my queries.",
         prompt="What's the weather of paris and what is 2324+2342? use the provided tools and provide the exact output without modifying the value.",
         agent_id=agent_id,
-        tools=[get_weather, calculate]
+        tools=[get_weather, calculate],
     )
     workflow.add_node(agent)
     workflow.validate()
@@ -34,9 +37,9 @@ def main(model:str):
     print(f"{agent_id}: ", content)
     print("--------------------------------------------------")
 
-models = [
-    "mistral-small-latest"
-]
+
+models = ["mistral-small-latest"]
+
 
 def without_tool_calling(model: str):
     agent_id = model
@@ -58,6 +61,7 @@ def without_tool_calling(model: str):
     print(f"{agent_id}: ", content)
     print("--------------------------------------------------")
     print()
+
 
 if __name__ == "__main__":
     for model in models:

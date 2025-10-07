@@ -9,14 +9,15 @@ memory storage capabilities.
 import json
 import logging
 import os
-from typing import Optional
+from typing import List
 
 from dotenv import load_dotenv
 from fastapi import WebSocket
 
 from .agent_manager import AgentManager
-from .const import ConfigConstants
+from .const import COLLECTIONS_TEXT_FILES, ConfigConstants, VectorDB
 from .embedding_manager import EmbeddingManager
+from .tool_manager import ToolManager
 from .vectordb_manager import VectorDBManager
 
 load_dotenv()
@@ -41,6 +42,7 @@ class ChatbotManager:
         Args:
             index_name (str, optional): Name of the vector database index to use.
         """
+        logging.info("Initializing ChatbotManager")
         self.index_name: str = index_name
 
         # Ensure OpenAI API key is present
@@ -48,65 +50,34 @@ class ChatbotManager:
         if not openai_api_key:
             raise ValueError("OPENAI_API_KEY environment variable is not set. Please set it in your environment.")
 
-        self.agent_manager = AgentManager(openai_api_key)
-        self.embedding_manager = EmbeddingManager(openai_api_key)
+        # Ensure OpenAI embedding model is present
+        openai_embedding_model = ConfigConstants.OPENAI_EMBEDDING_MODEL
+        if not openai_embedding_model:
+            raise ValueError("OPENAI_EMBEDDING_MODEL environment variable is not set. Please set it in your environment.")
+
+        # Ensure OpenAI LLM model is present
+        llm_model = ConfigConstants.OPENAI_LLM_MODEL
+        if not llm_model:
+            raise ValueError("OPENAI_LLM_MODEL environment variable is not set. Please set it in your environment.")
+
+        # Initialize EmbeddingManager
+        self.embedding_manager = EmbeddingManager(openai_api_key, openai_embedding_model)
 
         # Initialize ChromaDB
         self.vector_db_manager = VectorDBManager(index_name=self.index_name, embedding_manager=self.embedding_manager)
 
-    def _create_index(self, file_path: str = ConfigConstants.VECTOR_DB_CHAT_HISTORY_TEXT_FILE) -> None:
+        # Initialize Tool Manager
+        self.tool_manager = ToolManager(vector_db_manager=self.vector_db_manager)
+
+        # Initialize AgentManager
+        self.agent_manager = AgentManager(openai_api_key, model=llm_model, tool_manager=self.tool_manager)
+
+    def _create_index(self, collection: List[VectorDB] = [VectorDB.HISTORY_COLLECTION, VectorDB.PERSONAL_INFO_COLLECTION]) -> None:
         """Create vector index from a text file."""
-        self.vector_db_manager._create_index(file_path)
+        for collection in collection:
+            self.vector_db_manager._create_index(collection)
 
-    def _retrieve_context(self, query: str) -> str:
-        """Retrieve relevant context from the vector database."""
-        return self.vector_db_manager._retrieve_context(query)
-
-    def _save_to_vectordb(self, query: str, session_id: str, response: str) -> None:
-        """Save conversation to vector database by delegating to VectorDBManager."""
-        try:
-            if response:
-                doc_content = f"Question: {query}\nAnswer: {response}"
-            else:
-                doc_content = f"Question: {query}\nAnswer: No processed summary available"
-            metadata = {"session_id": session_id, "type": "qa_pair", "source": "chatbot_response"}
-            self.vector_db_manager._save_to_vectordb(doc_content, metadata)
-        except Exception as e:
-            logging.error(f"Error saving to vector DB: {str(e)}")
-
-    def format_prompt_ai_response(self, context: Optional[str] = "", chat_history: Optional[str] = "", query: Optional[str] = "") -> str:
-        """
-        Build the AI prompt using context, chat history, and the current question.
-
-        Args:
-            context (str): Relevant document context.
-            chat_history (str): Recent conversation history.
-            query (str): User's current question.
-
-        Returns:
-            str: Formatted prompt for the AI assistant.
-        """
-        prompt = f"""You are a helpful and friendly AI assistant. You can answer questions, hold normal conversations, and remember what the user has told you in this session.
-You have access to external documents and chat history that you should use to enhance your answer when relevant.
-Always try to:
-- Understand the intent behind short or vague inputs
-- Ask clarifying questions if needed
-- Keep the conversation engaging and natural
-- Use the chat history for personalization
-- Reference the document context when it's clearly relevant
-
-Document Context:
-{context}
-
-Recent Chat History:
-{chat_history}
-
-Current Question: {query}
-
-Provide a helpful and engaging response:"""
-        return prompt
-
-    async def stream_full_chat(self, websocket: WebSocket, session_id: str, prompt: str):
+    async def stream_full_chat(self, websocket: WebSocket, session_id: str, prompt: str):  # needed
         """Stream chat response tokens to the client via WebSocket."""
         response = ""
         async for token in self.agent_manager.chat_stream(prompt):
@@ -114,7 +85,7 @@ Provide a helpful and engaging response:"""
             await websocket.send_text(json.dumps({"response": token, "session_id": session_id, "type": "chunk"}))
         return response
 
-    async def chat(self, websocket: WebSocket, session_id: str, query: str) -> str:
+    async def chat(self, websocket: WebSocket, session_id: str, query: str) -> str:  # needed
         """
         Handle a chat message: manage session, retrieve context, generate and stream response, and store conversation.
 
@@ -129,21 +100,14 @@ Provide a helpful and engaging response:"""
         try:
             user_message = {"role": "user", "content": query}
             logging.info(f"User message: {user_message}")
+            print(user_message)
 
-            # Retrieve Context
-            retrieved_docs = self._retrieve_context(query)
-
-            # Get AI response
-            prompt = self.format_prompt_ai_response(context=retrieved_docs, query=query)
-            stream_response = await self.stream_full_chat(websocket, session_id, prompt)
+            stream_response = await self.stream_full_chat(websocket, session_id, query)
             await websocket.send_text(json.dumps({"response": "", "session_id": session_id, "type": "end"}))
 
             # Add AI response to session
             ai_message = {"role": "assistant", "content": stream_response}
             logging.info(f"AI message: {ai_message}")
-
-            # Save to vector database
-            self._save_to_vectordb(query, session_id, stream_response)
 
             return stream_response
 
