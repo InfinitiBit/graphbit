@@ -75,6 +75,11 @@ opt-level = 1
 [target.'cfg(unix)'.dependencies]
 jemallocator.workspace = true
 
+# Enable vendored OpenSSL for musl targets (Alpine Linux)
+# musl containers don't have OpenSSL dev packages, so we compile from source
+[target.'cfg(target_env = "musl")'.dependencies]
+openssl = { version = "0.10", features = ["vendored"] }
+
 [workspace]
 members = [
   "core",
@@ -109,7 +114,7 @@ pythonize = "0.24"
 quick-xml = {version = "0.36", features = ["serialize"]}
 rand = "0.8"
 regex = "1.10"
-reqwest = {version = "0.11", features = ["json", "native-tls-vendored"]}
+reqwest = {version = "0.11", features = ["json"]}
 # HTML parsing
 scraper = "0.20"
 serde = {version = "1.0", features = ["derive"]}

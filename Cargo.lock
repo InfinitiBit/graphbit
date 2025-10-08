@@ -596,6 +596,7 @@ dependencies = [
  "graphbit-core",
  "jemallocator",
  "num_cpus",
+ "openssl",
  "pyo3",
  "reqwest",
  "serde",
