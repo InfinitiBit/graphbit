@@ -34,7 +34,6 @@ workspace = true
 
 [package]
 description = "Production-grade Python bindings for GraphBit agentic workflow automation"
-license-file = "LICENSE.md"
 name = "graphbit-python"
 publish = false
 authors.workspace = true
