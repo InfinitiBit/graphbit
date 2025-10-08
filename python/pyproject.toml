@@ -30,13 +30,9 @@ version = "0.4.0"
 [tool.maturin]
 # PyO3 bindings configuration
 bindings = "pyo3"
-# Compatibility settings for PyPI distribution
-compatibility = "pypi"
 # Module configuration - this controls the wheel package name
 module-name = "graphbit"
 # Build profile for optimized releases
 profile = "release"
-# Skip auditwheel for root builds (problematic configuration)
-skip-auditwheel = true
 # Build optimizations
 strip = true
