@@ -133,6 +133,22 @@ jobs:
         sccache: 'true'
         manylinux: ${{ matrix.platform.manylinux }}
         working-directory: python
+        before-script-linux: |
+          set -eux
+          # Install OpenSSL development packages for glibc builds
+          # musl builds will use vendored OpenSSL (configured in Cargo.toml)
+          if command -v yum >/dev/null 2>&1; then
+            # manylinux2014 / CentOS 7 family
+            yum -y install openssl-devel
+          elif command -v apt-get >/dev/null 2>&1; then
+            # Debian/Ubuntu family
+            apt-get update && apt-get install -y libssl-dev
+          elif command -v apk >/dev/null 2>&1; then
+            # musllinux (Alpine) - vendored OpenSSL will be used instead
+            echo "Alpine/musl detected - using vendored OpenSSL from Cargo.toml"
+          else
+            echo "Unknown package manager. Skipping OpenSSL installation."
+          fi
 
     - name: Verify wheel contents
       shell: bash
