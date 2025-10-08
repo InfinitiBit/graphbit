@@ -22,7 +22,7 @@ homepage = "https://graphbit.ai"
 keywords = ["ai", "automation", "workflow", "agent", "llm"]
 license = {file = "LICENSE.md"}
 name = "graphbit"
-readme = "../README.md"
+readme = "README.md"
 repository = "https://github.com/InfinitiBit/graphbit"
 requires-python = ">=3.10"
 version = "0.4.0"
