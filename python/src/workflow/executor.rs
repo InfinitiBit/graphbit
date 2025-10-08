@@ -663,7 +663,34 @@ impl Executor {
 
                                                     // Store full LLM response metadata in context
                                                     // This enables observability tools to capture complete LLM metadata
-                                                    if let Ok(response_metadata) = serde_json::to_value(&final_response) {
+                                                    // IMPORTANT: Preserve existing metadata fields (prompt, duration_ms, execution_timestamp, tool_calls)
+                                                    if let Ok(mut response_metadata) = serde_json::to_value(&final_response) {
+                                                        // Get existing metadata to preserve prompt, duration_ms, execution_timestamp, and tool_calls
+                                                        let existing_metadata_by_id = context.metadata.get(&format!("node_response_{}", node.id)).cloned();
+
+                                                        // Merge existing metadata fields into new metadata
+                                                        if let (Some(existing), Some(response_obj)) = (existing_metadata_by_id, response_metadata.as_object_mut()) {
+                                                            if let Some(existing_obj) = existing.as_object() {
+                                                                // Preserve these critical fields from the initial LLM call
+                                                                if let Some(prompt) = existing_obj.get("prompt") {
+                                                                    response_obj.insert("prompt".to_string(), prompt.clone());
+                                                                }
+                                                                if let Some(duration_ms) = existing_obj.get("duration_ms") {
+                                                                    response_obj.insert("duration_ms".to_string(), duration_ms.clone());
+                                                                }
+                                                                if let Some(execution_timestamp) = existing_obj.get("execution_timestamp") {
+                                                                    response_obj.insert("execution_timestamp".to_string(), execution_timestamp.clone());
+                                                                }
+                                                            }
+                                                        }
+
+                                                        // IMPORTANT: Add the original tool_calls from the initial LLM response
+                                                        // The final_response.tool_calls will be empty since tools were already executed
+                                                        // We need to preserve the original tool calls for observability
+                                                        if let Some(response_obj) = response_metadata.as_object_mut() {
+                                                            response_obj.insert("tool_calls".to_string(), tool_calls.clone());
+                                                        }
+
                                                         // Store by node ID
                                                         context.metadata.insert(
                                                             format!("node_response_{}", node.id),
