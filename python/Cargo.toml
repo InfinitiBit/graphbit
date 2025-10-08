@@ -46,5 +46,10 @@ repository.workspace = true
 rust-version.workspace = true
 version.workspace = true
 
+# Enable vendored OpenSSL for musl targets (Alpine Linux)
+# musl containers don't have OpenSSL dev packages, so we compile from source
+[target.'cfg(target_env = "musl")'.dependencies]
+openssl = {version = "0.10", features = ["vendored"]}
+
 [target.'cfg(unix)'.dependencies]
 jemallocator.workspace = true
