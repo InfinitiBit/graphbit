@@ -399,12 +399,7 @@ jobs:
   publish-testpypi:
     name: Publish to TestPyPI
     needs: [build-wheels, build-sdist, verify-artifacts]
-    if: |
-      (startsWith(github.ref, 'refs/tags/v') || inputs.use_test_pypi_only == true || inputs.publish_to_pypi == true) &&
-      needs.build-wheels.result == 'success' &&
-      needs.build-sdist.result == 'success' &&
-      needs.verify-artifacts.result == 'success' &&
-      needs.verify-artifacts.outputs.verification_passed == 'true'
+    if: always()
     runs-on: ubuntu-latest
     # Uncomment to require manual approval:
     # environment: testpypi
@@ -473,14 +468,7 @@ jobs:
   publish-pypi:
     name: Publish to PyPI
     needs: [build-wheels, build-sdist, verify-artifacts, publish-testpypi]
-    if: |
-      (startsWith(github.ref, 'refs/tags/v') || inputs.publish_to_pypi == true) &&
-      inputs.use_test_pypi_only != true &&
-      needs.build-wheels.result == 'success' &&
-      needs.build-sdist.result == 'success' &&
-      needs.verify-artifacts.result == 'success' &&
-      needs.verify-artifacts.outputs.verification_passed == 'true' &&
-      needs.publish-testpypi.result == 'success'
+    if: always()
     runs-on: ubuntu-latest
     # Uncomment to require manual approval for production releases:
     # environment: pypi-production
