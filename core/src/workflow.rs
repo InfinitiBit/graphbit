@@ -1007,7 +1007,8 @@ impl WorkflowExecutor {
             use crate::llm::LlmRequest;
             let request = LlmRequest::new(resolved_prompt.clone());
 
-            // Measure LLM call duration
+            // Measure LLM call duration and capture execution timestamp
+            let execution_timestamp = chrono::Utc::now();
             let llm_start = std::time::Instant::now();
             let llm_response = agent.llm_provider().complete(request).await?;
             let llm_duration_ms = llm_start.elapsed().as_secs_f64() * 1000.0;
@@ -1034,6 +1035,8 @@ impl WorkflowExecutor {
                         obj.insert("prompt".to_string(), serde_json::Value::String(resolved_prompt.clone()));
                         // Add LLM call duration for accurate latency tracking
                         obj.insert("duration_ms".to_string(), serde_json::json!(llm_duration_ms));
+                        // Add execution timestamp for chronological ordering
+                        obj.insert("execution_timestamp".to_string(), serde_json::json!(execution_timestamp.to_rfc3339()));
                     }
 
                     // Store by node ID
@@ -1108,7 +1111,8 @@ impl WorkflowExecutor {
             request.tools.len()
         );
 
-        // Measure LLM call duration
+        // Measure LLM call duration and capture execution timestamp
+        let execution_timestamp = chrono::Utc::now();
         let llm_start = std::time::Instant::now();
         let llm_response = agent.llm_provider().complete(request).await?;
         let llm_duration_ms = llm_start.elapsed().as_secs_f64() * 1000.0;
@@ -1122,6 +1126,8 @@ impl WorkflowExecutor {
                     obj.insert("prompt".to_string(), serde_json::Value::String(prompt.to_string()));
                     // Add LLM call duration for accurate latency tracking
                     obj.insert("duration_ms".to_string(), serde_json::json!(llm_duration_ms));
+                    // Add execution timestamp for chronological ordering
+                    obj.insert("execution_timestamp".to_string(), serde_json::json!(execution_timestamp.to_rfc3339()));
                 }
 
                 // Store by node ID
