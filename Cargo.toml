@@ -77,6 +77,11 @@ opt-level = 1
 [target.'cfg(target_env = "musl")'.dependencies]
 openssl = {version = "0.10", features = ["vendored"]}
 
+# Enable vendored OpenSSL for aarch64 cross-compilation
+# Cross-compilation containers lack aarch64-specific OpenSSL dev packages
+[target.aarch64-unknown-linux-gnu.dependencies]
+openssl = {version = "0.10", features = ["vendored"]}
+
 [target.'cfg(unix)'.dependencies]
 jemallocator.workspace = true
 
