@@ -25,7 +25,7 @@ name = "graphbit"
 readme = "README.md"
 repository = "https://github.com/InfinitiBit/graphbit"
 requires-python = ">=3.10"
-version = "0.4.0"
+version = "0.5.0"
 
 [tool.maturin]
 # PyO3 bindings configuration

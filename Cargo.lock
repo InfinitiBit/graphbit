@@ -587,7 +587,7 @@ checksum = "07e28edb80900c19c28f1072f2e8aeca7fa06b23cd4169cefe1af5aa3260783f"
 
 [[package]]
 name = "graphbit"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -607,7 +607,7 @@ dependencies = [
 
 [[package]]
 name = "graphbit-core"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -637,7 +637,7 @@ dependencies = [
 
 [[package]]
 name = "graphbit-python"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "chrono",
  "futures",
