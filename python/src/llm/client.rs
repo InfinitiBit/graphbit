@@ -19,6 +19,7 @@ use tokio::time::timeout;
 use tracing::{debug, info, instrument, warn};
 
 use super::config::LlmConfig;
+use super::response::PyLlmResponse;
 use crate::errors::{timeout_error, to_py_error, validation_error};
 use crate::runtime::get_runtime;
 
@@ -720,6 +721,145 @@ impl LlmClient {
         });
         Ok(())
     }
+
+    /// Complete with full response object (synchronous)
+    #[instrument(skip(self), fields(prompt_len = prompt.len()))]
+    #[pyo3(signature = (prompt, max_tokens=None, temperature=None))]
+    fn complete_full(
+        &self,
+        prompt: String,
+        max_tokens: Option<i64>,
+        temperature: Option<f64>,
+    ) -> PyResult<PyLlmResponse> {
+        // Validate input
+        if prompt.is_empty() {
+            return Err(validation_error(
+                "prompt",
+                Some(&prompt),
+                "Prompt cannot be empty",
+            ));
+        }
+
+        let validated_max_tokens = max_tokens
+            .map(|t| {
+                if t <= 0 {
+                    Err(validation_error(
+                        "max_tokens",
+                        Some(&t.to_string()),
+                        "max_tokens must be positive",
+                    ))
+                } else if t > 100_000 {
+                    Err(validation_error(
+                        "max_tokens",
+                        Some(&t.to_string()),
+                        "max_tokens cannot exceed 100,000",
+                    ))
+                } else {
+                    Ok(t as u32)
+                }
+            })
+            .transpose()?;
+
+        let validated_temperature = temperature
+            .map(|t| {
+                if !(0.0..=2.0).contains(&t) {
+                    Err(validation_error(
+                        "temperature",
+                        Some(&t.to_string()),
+                        "temperature must be between 0.0 and 2.0",
+                    ))
+                } else {
+                    Ok(t as f32)
+                }
+            })
+            .transpose()?;
+
+        let response = get_runtime().block_on(Self::execute_with_resilience_full(
+            Arc::clone(&self.provider),
+            Arc::clone(&self.circuit_breaker),
+            Arc::clone(&self.stats),
+            self.config.clone(),
+            prompt,
+            validated_max_tokens,
+            validated_temperature,
+        ))?;
+
+        Ok(PyLlmResponse::from(response))
+    }
+
+    /// Complete with full response object (asynchronous)
+    #[instrument(skip(self, py), fields(prompt_len = prompt.len()))]
+    #[pyo3(signature = (prompt, max_tokens=None, temperature=None))]
+    fn complete_full_async<'a>(
+        &self,
+        prompt: String,
+        max_tokens: Option<i64>,
+        temperature: Option<f64>,
+        py: Python<'a>,
+    ) -> PyResult<Bound<'a, PyAny>> {
+        // Validate input
+        if prompt.is_empty() {
+            return Err(validation_error(
+                "prompt",
+                Some(&prompt),
+                "Prompt cannot be empty",
+            ));
+        }
+
+        let validated_max_tokens = max_tokens
+            .map(|t| {
+                if t <= 0 {
+                    Err(validation_error(
+                        "max_tokens",
+                        Some(&t.to_string()),
+                        "max_tokens must be positive",
+                    ))
+                } else if t > 100_000 {
+                    Err(validation_error(
+                        "max_tokens",
+                        Some(&t.to_string()),
+                        "max_tokens cannot exceed 100,000",
+                    ))
+                } else {
+                    Ok(t as u32)
+                }
+            })
+            .transpose()?;
+
+        let validated_temperature = temperature
+            .map(|t| {
+                if !(0.0..=2.0).contains(&t) {
+                    Err(validation_error(
+                        "temperature",
+                        Some(&t.to_string()),
+                        "temperature must be between 0.0 and 2.0",
+                    ))
+                } else {
+                    Ok(t as f32)
+                }
+            })
+            .transpose()?;
+
+        let provider = Arc::clone(&self.provider);
+        let circuit_breaker = Arc::clone(&self.circuit_breaker);
+        let stats = Arc::clone(&self.stats);
+        let config = self.config.clone();
+
+        pyo3_async_runtimes::tokio::future_into_py(py, async move {
+            let response = Self::execute_with_resilience_full(
+                provider,
+                circuit_breaker,
+                stats,
+                config,
+                prompt,
+                validated_max_tokens,
+                validated_temperature,
+            )
+            .await?;
+
+            Ok(PyLlmResponse::from(response))
+        })
+    }
 }
 
 impl LlmClient {
@@ -751,6 +891,34 @@ impl LlmClient {
         .await?;
 
         Ok(response.content)
+    }
+
+    /// Core execution method with full resilience patterns (returns full response)
+    async fn execute_with_resilience_full(
+        provider: Arc<RwLock<Box<dyn LlmProviderTrait>>>,
+        circuit_breaker: Arc<CircuitBreaker>,
+        stats: Arc<RwLock<ClientStats>>,
+        config: ClientConfig,
+        prompt: String,
+        max_tokens: Option<u32>,
+        temperature: Option<f32>,
+    ) -> PyResult<graphbit_core::llm::LlmResponse> {
+        let mut request = LlmRequest::new(prompt);
+        if let Some(tokens) = max_tokens {
+            request = request.with_max_tokens(tokens);
+        }
+        if let Some(temp) = temperature {
+            request = request.with_temperature(temp);
+        }
+
+        Self::execute_request_with_resilience(
+            provider,
+            circuit_breaker,
+            stats,
+            config,
+            request,
+        )
+        .await
     }
 
     /// Execute a single request with retry logic and circuit breaker

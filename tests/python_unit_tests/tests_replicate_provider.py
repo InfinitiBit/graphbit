@@ -18,7 +18,7 @@ class TestReplicateProvider:
         """Test creating Replicate configuration."""
         config = LlmConfig.replicate("test-api-key")
         assert config.provider() == "replicate"
-        assert config.model() == "lucataco/glaive-function-calling-v1"  # Default model
+        assert config.model() == "openai/gpt-5"  # Default model
 
     def test_replicate_config_with_version(self):
         """Test creating Replicate configuration with specific version."""
@@ -43,11 +43,13 @@ class TestReplicateProvider:
     def test_replicate_function_calling_models(self):
         """Test that known function calling models are properly configured."""
         function_calling_models = [
-            "lucataco/glaive-function-calling-v1:cd9c955362e3fb2278764e130497f4013a0aaf7217f1cf7540bebab40f01fa8a",
-            "homanp/llama-2-13b-function-calling:2288c783ba83e28b9ac4906e2dfa8004e3eda67f11ffc7a6a80bd927e46bc6c9",
-            "lucataco/termes-2-pro-llama-3-8b:51ca4143b8464e9dfeb0c88339962a6bdf2ffd833f047ed293b38537a92c1515",
-            "lucataco/dolphin-2.9-llama3-8b:ee173688d3b8d9e05a5b910f10fb9bab1e9348963ab224579bb90d9fce3fb00b",
-            "ibm-granite/granite-3.3-8b-instruct:8afd11cc386bd05622227e71b208b9ecc000b946d84d373be96090f38ec91bdf",
+            "openai/gpt-5",
+            "openai/gpt-5-structured",
+            "lucataco/glaive-function-calling-v1",
+            "homanp/llama-2-13b-function-calling",
+            "lucataco/hermes-2-pro-llama-3-8b",
+            "lucataco/dolphin-2.9-llama3-8b",
+            "ibm-granite/granite-3.3-8b-instruct",
         ]
 
         for model in function_calling_models:
@@ -59,7 +61,7 @@ class TestReplicateProvider:
         """Test Replicate configuration with None values."""
         config = LlmConfig.replicate("test-api-key", model=None, version=None)
         assert config.provider() == "replicate"
-        assert config.model() == "lucataco/glaive-function-calling-v1"  # Should use default
+        assert config.model() == "openai/gpt-5"  # Should use default
 
     def test_replicate_config_string_representation(self):
         """Test string representation of Replicate configuration."""
@@ -76,11 +78,11 @@ class TestReplicateProvider:
 class TestReplicateIntegration:
     """Integration tests for Replicate provider (require actual API key)."""
 
-    @pytest.mark.skipif(not os.getenv("REPLICATE_API_KEY"), reason="REPLICATE_API_KEY environment variable not set")
+    @pytest.mark.skipif(not os.getenv("REPLICATE_API_KEY"), reason="Skipped: REPLICATE_API_KEY not set")
     def test_replicate_real_api_connection(self):
         """Test actual connection to Replicate API (requires real API key)."""
         api_key = os.getenv("REPLICATE_API_KEY")
-        config = LlmConfig.replicate(api_key, model="llucataco/dolphin-2.9-llama3-8b:ee173688d3b8d9e05a5b910f10fb9bab1e9348963ab224579bb90d9fce3fb00b")
+        config = LlmConfig.replicate(api_key, model="lucataco/dolphin-2.9-llama3-8b")
         client = LlmClient(config)
 
         # This test just verifies the client can be created with a real API key
@@ -104,10 +106,20 @@ class TestReplicateIntegration:
 class TestReplicateModels:
     """Test specific Replicate model configurations."""
 
+    def test_gpt5_model(self):
+        """Test GPT-5 model configuration."""
+        config = LlmConfig.replicate("test-key", model="openai/gpt-5")
+        assert config.model() == "openai/gpt-5"
+
+    def test_gpt5_structured_model(self):
+        """Test GPT-5 structured model configuration."""
+        config = LlmConfig.replicate("test-key", model="openai/gpt-5-structured")
+        assert config.model() == "openai/gpt-5-structured"
+
     def test_glaive_function_calling_model(self):
         """Test Glaive function calling model configuration."""
-        config = LlmConfig.replicate("test-key", model="lucataco/glaive-function-calling-v1:cd9c955362e3fb2278764e130497f4013a0aaf7217f1cf7540bebab40f01fa8a")
-        assert config.model() == "lucataco/glaive-function-calling-v1:cd9c955362e3fb2278764e130497f4013a0aaf7217f1cf7540bebab40f01fa8a"
+        config = LlmConfig.replicate("test-key", model="lucataco/glaive-function-calling-v1")
+        assert config.model() == "lucataco/glaive-function-calling-v1"
 
     def test_llama2_function_calling_model(self):
         """Test Llama-2 function calling model configuration."""
@@ -116,18 +128,18 @@ class TestReplicateModels:
 
     def test_hermes_model(self):
         """Test Hermes model configuration."""
-        config = LlmConfig.replicate("test-key", model="lucataco/hermes-2-pro-llama-3-8b:51ca4143b8464e9dfeb0c88339962a6bdf2ffd833f047ed293b38537a92c1515")
-        assert config.model() == "lucataco/hermes-2-pro-llama-3-8b:51ca4143b8464e9dfeb0c88339962a6bdf2ffd833f047ed293b38537a92c1515"
+        config = LlmConfig.replicate("test-key", model="lucataco/hermes-2-pro-llama-3-8b")
+        assert config.model() == "lucataco/hermes-2-pro-llama-3-8b"
 
     def test_dolphin_model(self):
         """Test Dolphin model configuration."""
-        config = LlmConfig.replicate("test-key", model="lucataco/dolphin-2.9-llama3-8b:ee173688d3b8d9e05a5b910f10fb9bab1e9348963ab224579bb90d9fce3fb00b")
-        assert config.model() == "lucataco/dolphin-2.9-llama3-8b:ee173688d3b8d9e05a5b910f10fb9bab1e9348963ab224579bb90d9fce3fb00b"
+        config = LlmConfig.replicate("test-key", model="lucataco/dolphin-2.9-llama3-8b")
+        assert config.model() == "lucataco/dolphin-2.9-llama3-8b"
 
     def test_granite_model(self):
         """Test Granite model configuration."""
-        config = LlmConfig.replicate("test-key", model="ibm-granite/granite-3.3-8b-instruct:8afd11cc386bd05622227e71b208b9ecc000b946d84d373be96090f38ec91bdf")
-        assert config.model() == "ibm-granite/granite-3.3-8b-instruct:8afd11cc386bd05622227e71b208b9ecc000b946d84d373be96090f38ec91bdf"
+        config = LlmConfig.replicate("test-key", model="ibm-granite/granite-3.3-8b-instruct")
+        assert config.model() == "ibm-granite/granite-3.3-8b-instruct"
 
 
 if __name__ == "__main__":

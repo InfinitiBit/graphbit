@@ -12,6 +12,7 @@ GraphBit supports these LLM providers:
 - **OpenRouter** - Unified access to 400+ models from multiple providers (GPT, Claude, Mistral, etc.)
 - **Perplexity** - Real-time search-enabled models including Sonar models
 - **DeepSeek** - High-performance models including DeepSeek-Chat, DeepSeek-Coder, and DeepSeek-Reasoner
+- **TogetherAI** - Access to open-source models including GPT-OSS, Kimi, and Qwen with competitive pricing
 - **Fireworks AI** - Fast inference for open-source models including Llama, Mixtral, and Qwen
 - **Replicate** - Access to open-source models with function calling support including Glaive, Hermes, and Granite models
 - **xAI** - Grok models with real-time information and advanced reasoning capabilities
@@ -441,6 +442,85 @@ reasoning_config = LlmConfig.deepseek(
     api_key=os.getenv("DEEPSEEK_API_KEY"),
     model="deepseek-reasoner"  # For complex reasoning tasks
 )
+```
+
+### TogetherAI Configuration
+
+Configure TogetherAI provider for access to open-source models with competitive pricing:
+
+```python
+# Basic TogetherAI configuration
+config = LlmConfig.togetherai(
+    api_key=os.getenv("TOGETHER_API_KEY"),
+    model="openai/gpt-oss-20b"  # Optional - defaults to openai/gpt-oss-20b
+)
+
+# Access configuration details
+print(f"Provider: {config.provider()}")  # "togetherai"
+print(f"Model: {config.model()}")        # "openai/gpt-oss-20b"
+```
+
+#### Available TogetherAI Models
+
+| Model | Best For | Context Length | Cost (per 1M tokens) |
+|-------|----------|----------------|---------------------|
+| `openai/gpt-oss-20b` | General tasks, fast inference | 8K | $0.50 / $0.50 |
+| `moonshotai/Kimi-K2-Instruct-0905` | Long documents, high context | 200K | $1.00 / $1.00 |
+| `Qwen/Qwen3-Next-80B-A3B-Instruct` | Complex reasoning, most capable | 32K | $2.00 / $2.00 |
+
+```python
+# Model selection examples
+fast_config = LlmConfig.togetherai(
+    api_key=os.getenv("TOGETHER_API_KEY"),
+    model="openai/gpt-oss-20b"  # Fast and cost-effective
+)
+
+long_context_config = LlmConfig.togetherai(
+    api_key=os.getenv("TOGETHER_API_KEY"),
+    model="moonshotai/Kimi-K2-Instruct-0905"  # For long documents
+)
+
+capable_config = LlmConfig.togetherai(
+    api_key=os.getenv("TOGETHER_API_KEY"),
+    model="Qwen/Qwen3-Next-80B-A3B-Instruct"  # Most capable
+)
+```
+
+#### TogetherAI Features
+
+- ✅ **Function Calling**: All models support function/tool calling
+- ✅ **Streaming**: Real-time response streaming
+- ✅ **Cost Estimation**: Built-in cost tracking per token
+- ✅ **Context Detection**: Automatic context length detection
+- ✅ **Async Support**: Full async/await compatibility
+
+#### Getting Started with TogetherAI
+
+1. **Sign up**: Create an account at [TogetherAI](https://api.together.xyz/)
+2. **Get API Key**: Generate your API key from the dashboard
+3. **Set Environment Variable**: `export TOGETHER_API_KEY="your-key"`
+4. **Start Building**: Use in your GraphBit workflows
+
+```python
+# Complete example
+import os
+from graphbit import LlmConfig, Executor, Workflow, Node
+
+# Configure TogetherAI
+config = LlmConfig.togetherai(
+    api_key=os.getenv("TOGETHER_API_KEY"),
+    model="openai/gpt-oss-20b"
+)
+
+# Create client and generate text
+client = LlmClient(config)
+response = client.complete(
+    prompt="Explain quantum computing in simple terms",
+    max_tokens=200,
+    temperature=0.7
+)
+
+print(response)
 ```
 
 ### Fireworks AI Configuration
