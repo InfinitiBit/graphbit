@@ -97,6 +97,13 @@ pub enum LlmConfig {
         /// Optional custom base URL
         base_url: Option<String>,
     },
+    /// `AWS Bedrock` LLM provider configuration
+    AwsBedrock {
+        /// AWS region (e.g., "us-east-1")
+        region: String,
+        /// Bedrock model ID (e.g., "anthropic.claude-v2")
+        model_id: String,
+    },
     /// `Replicate` LLM provider configuration
     Replicate {
         /// API key for authentication
@@ -328,6 +335,13 @@ impl LlmConfig {
             organization: Some(organization.into()),
         }
     }
+    /// Create `AWS Bedrock` configuration
+    pub fn aws_bedrock(region: impl Into<String>, model_id: impl Into<String>) -> Self {
+        Self::AwsBedrock {
+            region: region.into(),
+            model_id: model_id.into(),
+        }
+    }
 
     /// Create `Ollama` configuration
     pub fn ollama(model: impl Into<String>) -> Self {
@@ -357,6 +371,7 @@ impl LlmConfig {
             Self::Perplexity { .. } => "perplexity",
             Self::OpenRouter { .. } => "openrouter",
             Self::Fireworks { .. } => "fireworks",
+            Self::AwsBedrock { .. } => "aws_bedrock",
             Self::Replicate { .. } => "replicate",
             Self::TogetherAi { .. } => "togetherai",
             Self::Xai { .. } => "xai",
@@ -380,6 +395,7 @@ impl LlmConfig {
             Self::Perplexity { model, .. } => model,
             Self::OpenRouter { model, .. } => model,
             Self::Fireworks { model, .. } => model,
+            Self::AwsBedrock { model_id, .. } => model_id,
             Self::Replicate { model, .. } => model,
             Self::TogetherAi { model, .. } => model,
             Self::Xai { model, .. } => model,
