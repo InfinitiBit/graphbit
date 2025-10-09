@@ -26,9 +26,9 @@ impl AwsBedrockProvider {
     ///
     /// - `region`: e.g. "us-east-1"
     /// - `model_id`: e.g. "anthropic.claude-v2"
-    pub async fn new(region: String, model_id: String) -> GraphBitResult<Self> {
+    pub fn new(region: String, model_id: String) -> GraphBitResult<Self> {
         let region_provider = RegionProviderChain::first_try(region.clone());
-        let shared_config = aws_config::from_env().region(region_provider).load().await;
+        let shared_config = aws_config::from_env().region(region_provider).load();
 
         let client = BedrockClient::new(&shared_config);
 
@@ -161,9 +161,9 @@ struct BedrockTextRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     max_tokens_to_sample: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    temperature: Option<f64>,
+    temperature: Option<f32>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    top_p: Option<f64>,
+    top_p: Option<f32>,
 }
 
 /// Response payload returned by Bedrock models.
