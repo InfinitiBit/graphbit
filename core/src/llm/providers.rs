@@ -137,6 +137,15 @@ pub enum LlmConfig {
         /// Optional custom organization
         organization: Option<String>,
     },
+    /// `MistralAI` LLM provider configuration
+    MistralAI {
+        /// API key for authentication
+        api_key: String,
+        /// Model name to use
+        model: String,
+        /// Optional custom base URL
+        base_url: Option<String>,
+    },
     /// Custom LLM provider configuration
     Custom {
         /// Provider type identifier
@@ -329,6 +338,15 @@ impl LlmConfig {
         }
     }
 
+    /// Create `MistralAI` configuration
+    pub fn mistralai(api_key: impl Into<String>, model: impl Into<String>) -> Self {
+        Self::MistralAI {
+            api_key: api_key.into(),
+            model: model.into(),
+            base_url: None,
+        }
+    }
+
     /// Create `Ollama` configuration
     pub fn ollama(model: impl Into<String>) -> Self {
         Self::Ollama {
@@ -361,6 +379,7 @@ impl LlmConfig {
             Self::TogetherAi { .. } => "togetherai",
             Self::Xai { .. } => "xai",
             Self::Ai21 { .. } => "ai21",
+            Self::MistralAI { .. } => "mistralai",
             Self::Custom { provider_type, .. } => provider_type,
             Self::Unconfigured { .. } => "unconfigured",
         }
@@ -384,6 +403,7 @@ impl LlmConfig {
             Self::TogetherAi { model, .. } => model,
             Self::Xai { model, .. } => model,
             Self::Ai21 { model, .. } => model,
+            Self::MistralAI { model, .. } => model,
             Self::Custom { config, .. } => config
                 .get("model")
                 .and_then(|v| v.as_str())

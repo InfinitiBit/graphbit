@@ -482,6 +482,7 @@ def monitor_llm_system_health():
             os.getenv("AZURE_OPENAI_ENDPOINT", "https://test.openai.azure.com")
         )),
         ('Anthropic', lambda: LlmConfig.anthropic(os.getenv("ANTHROPIC_API_KEY", "test"), "claude-sonnet-4-20250514")),
+        ('MistralAI', lambda: LlmConfig.mistralai(os.getenv("MISTRALAI_API_KEY", "test"), "mistral-large-latest")),
         ('Ollama', lambda: LlmConfig.ollama("llama3.2"))
     ]
     
@@ -643,6 +644,39 @@ def quick_anthropic_example():
 quick_anthropic_example()
 ```
 
+### MistralAI Integration
+
+```python
+from graphbit import init, LlmConfig, LlmClient
+import os
+
+def quick_mistralai_example():
+    """Simple MistralAI integration example."""
+
+    # Initialize
+    init()
+
+    # Configure MistralAI
+    config = LlmConfig.mistralai(
+        api_key=os.getenv("MISTRALAI_API_KEY"),
+        model="mistral-large-latest"
+    )
+    client = LlmClient(config)
+
+    # Multilingual task
+    response = client.complete(
+        """Explain the concept of artificial intelligence in both
+        English and French. Be concise but informative.""",
+        max_tokens=250,
+        temperature=0.7
+    )
+
+    print(f"MistralAI multilingual response: {response}")
+
+# Usage (requires MISTRALAI_API_KEY)
+quick_mistralai_example()
+```
+
 ## Best Practices
 
 ### Configuration Management
@@ -678,6 +712,12 @@ def setup_production_llm_config():
         providers.append(('anthropic', LlmConfig.anthropic(
             os.getenv("ANTHROPIC_API_KEY"),
             "claude-sonnet-4-20250514"
+        )))
+
+    if os.getenv("MISTRALAI_API_KEY"):
+        providers.append(('mistralai', LlmConfig.mistralai(
+            os.getenv("MISTRALAI_API_KEY"),
+            "mistral-large-latest"
         )))
     
     # Add local fallback
