@@ -3,7 +3,7 @@
 import inspect
 import os
 import time
-from typing import Any
+from typing import Any, Dict, Optional
 
 import aiohttp
 import pytest
@@ -859,6 +859,99 @@ class TestOpenRouterLLM:
 
         except Exception as e:
             pytest.fail(f"Multi-model OpenRouter workflow failed: {e}")
+
+
+class TestAwsBedrockLLM:
+    """Integration tests for AWS Bedrock LLM models."""
+
+    @pytest.fixture
+    def aws_credentials(self) -> Dict[str, str]:
+        """Get AWS credentials from environment."""
+        region = os.getenv("AWS_REGION", "us-east-1")
+        access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
+        secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+        # Session token is optional for temporary credentials
+        session_token = os.getenv("AWS_SESSION_TOKEN")
+
+        if not access_key_id or not secret_access_key:
+            pytest.skip("AWS credentials not set for Bedrock tests")
+
+        return {
+            "region": region,
+            "access_key_id": access_key_id,
+            "secret_access_key": secret_access_key,
+            "session_token": session_token or "",
+        }
+
+    @pytest.fixture
+    def bedrock_config(self, aws_credentials: Dict[str, str]) -> Any:
+        """Create AWS Bedrock configuration."""
+        model_id = os.getenv("AWS_BEDROCK_MODEL_ID", "amazon.titan-text-express-v1")
+
+        return LlmConfig.aws_bedrock(
+            region=aws_credentials["region"],
+            access_key_id=aws_credentials["access_key_id"],
+            secret_access_key=aws_credentials["secret_access_key"],
+            session_token=aws_credentials["session_token"] or None,
+            model_id=model_id,
+        )
+
+    @pytest.fixture
+    def bedrock_client(self, bedrock_config: Any) -> Any:
+        """Create AWS Bedrock client."""
+        return LlmClient(bedrock_config)
+
+    def test_bedrock_config_creation(self, bedrock_config: Any) -> None:
+        """Test AWS Bedrock config creation and properties."""
+        assert bedrock_config.provider() == "aws_bedrock"
+        expected_model = os.getenv("AWS_BEDROCK_MODEL_ID", "amazon.titan-text-express-v1")
+        assert bedrock_config.model() == expected_model
+
+    def test_bedrock_client_creation(self, bedrock_client: Any) -> None:
+        """Test creating AWS Bedrock client."""
+        assert bedrock_client is not None
+
+    @pytest.mark.asyncio
+    async def test_bedrock_basic_completion(self, bedrock_client: Any) -> None:
+        """Test basic completion with AWS Bedrock."""
+        try:
+            response = await bedrock_client.complete_async(
+                prompt="What is the capital of France?",
+                max_tokens=50,
+                temperature=0.1,
+            )
+            assert response is not None
+            assert len(response) > 0
+            assert "paris" in response.lower()
+        except Exception as exc:  # pragma: no cover - integration pathway
+            pytest.fail(f"AWS Bedrock completion failed: {exc}")
+
+    @pytest.mark.asyncio
+    async def test_bedrock_workflow_integration(self, bedrock_config: Any) -> None:
+        """Test AWS Bedrock integration with workflow execution."""
+        try:
+            workflow = Workflow("AWS Bedrock Test Workflow")
+
+            node = Node.agent(
+                name="bedrock_test",
+                prompt="Explain quantum computing in one sentence.",
+                agent_id="bedrock_test_agent",
+                llm_config=bedrock_config,
+            )
+
+            workflow.add_node(node)
+            workflow.validate()
+
+            executor = Executor(bedrock_config)
+            result = executor.execute(workflow)
+
+            assert result.is_success()
+            output = result.get_node_output("bedrock_test")
+            assert output is not None
+            assert len(output) > 0
+            assert any(word in output.lower() for word in ["quantum", "computing", "computer"])
+        except Exception as exc:  # pragma: no cover - integration pathway
+            pytest.fail(f"AWS Bedrock workflow failed: {exc}")
 
 
 class TestFireworksLLM:

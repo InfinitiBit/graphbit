@@ -6,6 +6,7 @@
 pub mod ai21;
 pub mod anthropic;
 pub mod azure_openai;
+pub mod aws_bedrock;
 pub mod deepseek;
 pub mod fireworks;
 pub mod huggingface;
@@ -360,6 +361,23 @@ impl LlmProviderFactory {
                     Ok(Box::new(fireworks::FireworksProvider::new(api_key, model)?))
                 }
             }
+
+            LlmConfig::AwsBedrock {
+                region,
+                model_id,
+                access_key_id,
+                secret_access_key,
+                session_token,
+            } => Ok(Box::new(
+                aws_bedrock::AwsBedrockProvider::new(
+                    region,
+                    model_id,
+                    access_key_id,
+                    secret_access_key,
+                    session_token,
+                )?,
+            )),
+
             LlmConfig::Replicate {
                 api_key,
                 model,
