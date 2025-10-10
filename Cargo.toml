@@ -10,6 +10,7 @@ serde.workspace = true
 serde_json.workspace = true
 tempfile.workspace = true
 tokio.workspace = true
+aws-sdk-bedrockruntime.workspace = true
 
 [dev-dependencies]
 pyo3 = {workspace = true, features = ["auto-initialize"]}
@@ -123,6 +124,8 @@ tokio = {version = "1.38", features = ["full"]}
 tracing = "0.1"
 tracing-subscriber = {version = "0.3.20", features = ["env-filter", "json"]}
 uuid = {version = "1.8", features = ["v4", "v5", "serde"]}
+#AWS Bedrock SDK
+aws-sdk-bedrockruntime = "1.23.0"
 
 [workspace.lints.clippy]
 # Set lint groups with proper priority hierarchy
