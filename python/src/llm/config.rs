@@ -229,6 +229,17 @@ impl LlmConfig {
         })
     }
 
+    #[staticmethod]
+    #[pyo3(signature = (region, model_id))]
+    fn aws_bedrock(region: String, model_id: String) -> PyResult<Self> {
+        crate::validation::validate_non_empty("region", &region)?;
+        crate::validation::validate_non_empty("model_id", &model_id)?;
+
+        Ok(Self {
+            inner: CoreLlmConfig::aws_bedrock(region, model_id),
+        })
+    }
+
     fn provider(&self) -> String {
         self.inner.provider_name().to_string()
     }

@@ -365,7 +365,7 @@ impl LlmProviderFactory {
             LlmConfig::AwsBedrock { 
                 region, 
                 model_id 
-            } => Ok(Box::new(aws_bedrock::AwsBedrockProvider::new(region, model_id)?))
+            } => Ok(Box::new(aws_bedrock::AwsBedrockProvider::new(region, model_id)?)),
 
             LlmConfig::Replicate {
                 api_key,
