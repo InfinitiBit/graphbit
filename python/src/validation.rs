@@ -27,3 +27,15 @@ pub(crate) fn validate_api_key(api_key: &str, provider: &str) -> PyResult<()> {
 
     Ok(())
 }
+
+/// Validate a required, non-empty string field
+pub(crate) fn validate_non_empty(field_name: &str, value: &str) -> PyResult<()> {
+    if value.trim().is_empty() {
+        return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+            "{} cannot be empty",
+            field_name
+        )));
+    }
+
+    Ok(())
+}

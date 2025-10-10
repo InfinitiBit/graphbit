@@ -188,6 +188,7 @@ impl LlmClient {
                 client_config.request_timeout = Duration::from_secs(180);
             }
             graphbit_core::llm::providers::LlmConfig::OpenAI { .. }
+            | graphbit_core::llm::providers::LlmConfig::AwsBedrock { .. }
             | graphbit_core::llm::providers::LlmConfig::Anthropic { .. }
             | graphbit_core::llm::providers::LlmConfig::AzureOpenAI { .. }
             | graphbit_core::llm::providers::LlmConfig::Perplexity { .. }
