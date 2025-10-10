@@ -427,6 +427,112 @@ async fn test_perplexity_message_formatting() {
         .any(|m| matches!(m.role, LlmRole::Assistant)));
 }
 
+// `AWS Bedrock` Provider Tests
+#[tokio::test]
+async fn test_bedrock_provider_creation() {
+    let provider = LlmProviderFactory::create_provider(LlmConfig::AwsBedrock {
+        region: "us-east-1".to_string(),
+        access_key_id: "test-access-key".to_string(),
+        secret_access_key: "test-secret".to_string(),
+        session_token: None,
+        model_id: Some("amazon.titan-text-express-v1".to_string()),
+    })
+    .unwrap();
+
+    assert_eq!(provider.provider_name(), "aws_bedrock");
+    assert_eq!(provider.model_name(), "amazon.titan-text-express-v1");
+    assert!(!provider.supports_function_calling());
+    assert_eq!(provider.max_context_length(), Some(8000));
+
+    // Cost coverage
+    let (input_cost, output_cost) = provider.cost_per_token().unwrap();
+    assert_eq!(input_cost, 0.000_000_4);
+    assert_eq!(output_cost, 0.000_000_8);
+}
+
+#[tokio::test]
+async fn test_bedrock_model_configs() {
+    let test_cases = vec![
+        (
+            "amazon.titan-text-express-v1",
+            Some(8000),
+            Some((0.000_000_4, 0.000_000_8)),
+        ),
+        (
+            "anthropic.claude-v2",
+            Some(100_000),
+            Some((0.000_008_0, 0.000_024_0)),
+        ),
+        (
+            "anthropic.claude-v3-sonnet",
+            Some(200_000),
+            Some((0.000_015_0, 0.000_075_0)),
+        ),
+        (
+            "meta.llama3-8b-instruct",
+            Some(8000),
+            Some((0.000_000_5, 0.000_000_6)),
+        ),
+        (
+            "ai21.j2-ultra-v1",
+            Some(8000),
+            Some((0.000_002_0, 0.000_002_0)),
+        ),
+        ("unknown-model", None, None),
+    ];
+
+    for (model_id, expected_context, expected_cost) in test_cases {
+        let provider = LlmProviderFactory::create_provider(LlmConfig::AwsBedrock {
+            region: "us-east-1".to_string(),
+            access_key_id: "test-access-key".to_string(),
+            secret_access_key: "test-secret".to_string(),
+            session_token: None,
+            model_id: Some(model_id.to_string()),
+        })
+        .unwrap();
+
+        assert_eq!(provider.max_context_length(), expected_context);
+        assert_eq!(provider.cost_per_token(), expected_cost);
+    }
+}
+
+#[tokio::test]
+async fn test_bedrock_message_formatting() {
+    let _provider = LlmProviderFactory::create_provider(LlmConfig::AwsBedrock {
+        region: "us-east-1".to_string(),
+        access_key_id: "test-access-key".to_string(),
+        secret_access_key: "test-secret".to_string(),
+        session_token: None,
+        model_id: Some("amazon.titan-text-express-v1".to_string()),
+    })
+    .unwrap();
+
+    let request = LlmRequest::with_messages(vec![])
+        .with_message(LlmMessage::system("system prompt"))
+        .with_message(LlmMessage::user("user message"))
+        .with_message(LlmMessage::assistant("assistant message"))
+        .with_max_tokens(256)
+        .with_temperature(0.3)
+        .with_top_p(0.8);
+
+    assert_eq!(request.messages.len(), 3);
+    assert!(request
+        .messages
+        .iter()
+        .any(|m| matches!(m.role, LlmRole::System)));
+    assert!(request
+        .messages
+        .iter()
+        .any(|m| matches!(m.role, LlmRole::User)));
+    assert!(request
+        .messages
+        .iter()
+        .any(|m| matches!(m.role, LlmRole::Assistant)));
+    assert_eq!(request.max_tokens, Some(256));
+    assert_eq!(request.temperature, Some(0.3));
+    assert_eq!(request.top_p, Some(0.8));
+}
+
 // Provider Factory Tests
 #[tokio::test]
 async fn test_provider_factory_error_handling() {

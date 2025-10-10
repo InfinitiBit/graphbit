@@ -7,6 +7,7 @@ GraphBit supports multiple Large Language Model providers through a unified clie
 GraphBit supports these LLM providers:
 - **OpenAI** - GPT models including GPT-4o, GPT-4o-mini
 - **Azure OpenAI** - GPT models hosted on Microsoft Azure with enterprise features
+- **AWS Bedrock** - Managed service for accessing popular models like Claude, Llama, and Titan
 - **Anthropic** - Claude models including Claude-4-Sonnet
 - **OpenRouter** - Unified access to 400+ models from multiple providers (GPT, Claude, Mistral, etc.)
 - **Perplexity** - Real-time search-enabled models including Sonar models
