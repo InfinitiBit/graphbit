@@ -151,6 +151,114 @@ cost_effective_config = LlmConfig.azure_openai(
     deployment_name="gpt-3.5-turbo",  # Cost-effective for general tasks
     endpoint=os.getenv("AZURE_OPENAI_ENDPOINT")
 )
+
+```
+### AWS Bedrock Configuration
+
+AWS Bedrock is Amazon's managed service for accessing large language models (LLMs) such as Claude, Llama, and Titan. It offers secure, scalable, and cost-effective integration into applications and services.
+
+#### Basic AWS Bedrock Configuration
+
+```python
+import os
+
+from graphbit import LlmConfig
+
+# Basic AWS Bedrock configuration
+config = LlmConfig.aws_bedrock(
+    region="us-east-1",
+    access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+    secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+    session_token=os.getenv("AWS_SESSION_TOKEN"),  # Optional
+    model_id="amazon.titan-text-express-v1"  # Optional - defaults to "amazon.titan-text-express-v1"
+)
+
+print(f"Provider: {config.provider()}")  # "aws_bedrock"
+print(f"Model: {config.model()}")        # "amazon.titan-text-express-v1"
+```
+
+#### AWS Bedrock with Custom Model
+
+```python
+# Configuration with a specific model
+config = LlmConfig.aws_bedrock(
+    region="us-east-1",
+    access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+    secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+    session_token=os.getenv("AWS_SESSION_TOKEN"),  # Optional
+    model_id="anthropic.claude-v2"  # Specify a different model
+)
+```
+
+#### AWS Bedrock Setup Requirements
+
+To use AWS Bedrock, you need:
+
+1. **AWS Account**: An active AWS account with access to the Bedrock service.
+2. **Bedrock Access**: Enable Bedrock in your AWS account and request access to specific models via the AWS Management Console.
+3. **IAM Credentials**: Generate an access key ID, secret access key, and optional session token for an IAM user or role with Bedrock permissions.
+4. **Region**: Choose an AWS region where Bedrock is available (e.g., `us-east-1`, `us-west-2`).
+
+#### Environment Variables
+
+Set these environment variables for AWS Bedrock:
+
+```bash
+export AWS_ACCESS_KEY_ID="your-aws-access-key-id"
+export AWS_SECRET_ACCESS_KEY="your-aws-secret-access-key"
+export AWS_SESSION_TOKEN="your-aws-session-token"  # Optional
+export AWS_REGION="us-east-1"  # Optional - defaults to "us-east-1"
+export AWS_BEDROCK_MODEL_ID="amazon.titan-text-express-v1"  # Optional
+```
+
+```python
+# Using environment variables
+config = LlmConfig.aws_bedrock(
+    region=os.getenv("AWS_REGION", "us-east-1"),
+    access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+    secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+    session_token=os.getenv("AWS_SESSION_TOKEN"),
+    model_id=os.getenv("AWS_BEDROCK_MODEL_ID", "amazon.titan-text-express-v1")
+)
+```
+
+#### Available AWS Bedrock Models
+
+| Model | Best For | Context Length | Performance |
+|-------|----------|----------------|-------------|
+| `anthropic.claude-v2` | Advanced reasoning, natural language tasks | 100K | High quality, moderate speed |
+| `anthropic.claude-v3-sonnet` | Complex reasoning, creative tasks | 200K | High quality, slower |
+| `amazon.titan-text-express-v1` | General tasks, cost-effective | 8K | Good quality, fast |
+| `meta.llama3-8b-instruct` | General-purpose, instruction-following | 8K | Good quality, fast |
+| `ai21.j2-ultra-v1` | Creative writing, summarization | 8K | High quality, moderate speed |
+
+#### Model Selection Examples for AWS Bedrock
+
+```python
+# Model selection examples for AWS Bedrock
+advanced_config = LlmConfig.aws_bedrock(
+    region=os.getenv("AWS_REGION", "us-east-1"),
+    access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+    secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+    session_token=os.getenv("AWS_SESSION_TOKEN"),
+    model_id="anthropic.claude-v3-sonnet"  # For complex reasoning and creative tasks
+)
+
+general_config = LlmConfig.aws_bedrock(
+    region=os.getenv("AWS_REGION", "us-east-1"),
+    access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+    secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+    session_token=os.getenv("AWS_SESSION_TOKEN"),
+    model_id="amazon.titan-text-express-v1"  # Cost-effective for general tasks
+)
+
+fast_config = LlmConfig.aws_bedrock(
+    region=os.getenv("AWS_REGION", "us-east-1"),
+    access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+    secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+    session_token=os.getenv("AWS_SESSION_TOKEN"),
+    model_id="meta.llama3-8b-instruct"  # Balanced performance for instruction-following
+)
 ```
 
 ### Anthropic Configuration
