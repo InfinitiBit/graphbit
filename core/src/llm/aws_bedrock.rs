@@ -115,14 +115,7 @@ impl LlmProviderTrait for AwsBedrockProvider {
             })?;
 
         // Collect bytes from the streamed response
-        let bytes = response
-            .body
-            .collect()
-            .await
-            .map_err(|e| {
-                GraphBitError::llm_provider("aws_bedrock", format!("Failed to read response body: {e}"))
-            })?
-            .into_bytes();
+        let bytes = response.body.into_inner();
 
         // Try to parse as JSON
         let parsed: BedrockTextResponse = serde_json::from_slice(&bytes).map_err(|e| {
