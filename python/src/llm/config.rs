@@ -230,13 +230,27 @@ impl LlmConfig {
     }
 
     #[staticmethod]
-    #[pyo3(signature = (region, model_id))]
-    fn aws_bedrock(region: String, model_id: String) -> PyResult<Self> {
+    #[pyo3(signature = (region, model_id, access_key_id, secret_access_key, session_token=None))]
+    fn aws_bedrock(
+        region: String,
+        model_id: String,
+        access_key_id: String,
+        secret_access_key: String,
+        session_token: Option<String>,
+    ) -> PyResult<Self> {
         crate::validation::validate_non_empty("region", &region)?;
         crate::validation::validate_non_empty("model_id", &model_id)?;
+        crate::validation::validate_non_empty("access_key_id", &access_key_id)?;
+        crate::validation::validate_non_empty("secret_access_key", &secret_access_key)?;
 
         Ok(Self {
-            inner: CoreLlmConfig::aws_bedrock(region, model_id),
+            inner: CoreLlmConfig::aws_bedrock(
+                region,
+                model_id,
+                access_key_id,
+                secret_access_key,
+                session_token,
+            ),
         })
     }
 

@@ -103,6 +103,12 @@ pub enum LlmConfig {
         region: String,
         /// Bedrock model ID (e.g., "anthropic.claude-v2")
         model_id: String,
+        /// AWS access key ID for authentication
+        access_key_id: String,
+        /// AWS secret access key for authentication
+        secret_access_key: String,
+        /// Optional Bedrock session token (for temporary credentials)
+        session_token: Option<String>,
     },
     /// `Replicate` LLM provider configuration
     Replicate {
@@ -336,10 +342,19 @@ impl LlmConfig {
         }
     }
     /// Create `AWS Bedrock` configuration
-    pub fn aws_bedrock(region: impl Into<String>, model_id: impl Into<String>) -> Self {
+    pub fn aws_bedrock(
+        region: impl Into<String>,
+        model_id: impl Into<String>,
+        access_key_id: impl Into<String>,
+        secret_access_key: impl Into<String>,
+        session_token: Option<impl Into<String>>,
+    ) -> Self {
         Self::AwsBedrock {
             region: region.into(),
             model_id: model_id.into(),
+            access_key_id: access_key_id.into(),
+            secret_access_key: secret_access_key.into(),
+            session_token: session_token.map(Into::into),
         }
     }
 

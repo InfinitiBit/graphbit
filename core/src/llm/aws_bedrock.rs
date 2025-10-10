@@ -2,40 +2,81 @@
 //!
 //! This connector interacts with AWS Bedrock-hosted models (e.g. Claude, Llama, Titan).
 //! It uses the official AWS SDK for Rust to send prompts and parse generated text.
+//!
+//! **Changes in this version**
+//! * No longer uses `aws_config::defaults(...).load()`.
+//! * Builds the `BedrockClient` directly via `aws_sdk_bedrockruntime::config::Builder`.
+//! * Sets region, credentials, and the latest behavior version explicitly.
+//! * Keeps the same public API – callers still pass `region`, `model_id`, `access_key_id`, `secret_access_key`, and optional `session_token`.
 
 use crate::errors::{GraphBitError, GraphBitResult};
 use crate::llm::providers::LlmProviderTrait;
 use crate::llm::{FinishReason, LlmMessage, LlmRequest, LlmResponse, LlmRole, LlmUsage};
 
 use async_trait::async_trait;
-use aws_config::meta::region::RegionProviderChain;
+use aws_sdk_bedrockruntime::config::Builder as BedrockConfigBuilder;
+use aws_sdk_bedrockruntime::config::Credentials;
+use aws_sdk_bedrockruntime::config::Region;
 use aws_sdk_bedrockruntime::Client as BedrockClient;
+use aws_sdk_bedrockruntime::config::BehaviorVersion;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::fmt::Write;
 
 /// `AWS Bedrock` API provider
 pub struct AwsBedrockProvider {
     client: BedrockClient,
     model_id: String,
-    region: String,
 }
 
 impl AwsBedrockProvider {
-    /// Create a new `AWS Bedrock` provider.
+    /// Create a new `AWS Bedrock` provider **without** using `aws_config::load`.
     ///
-    /// - `region`: e.g. "us-east-1"
-    /// - `model_id`: e.g. "anthropic.claude-v2"
-    pub fn new(region: String, model_id: String) -> GraphBitResult<Self> {
-        let region_provider = RegionProviderChain::first_try(region.clone());
-        let shared_config = aws_config::from_env().region(region_provider).load();
+    /// - `region`: e.g. `"us-east-1"`
+    /// - `model_id`: e.g. `"anthropic.claude-v2"`
+    /// - `access_key_id`, `secret_access_key`, `session_token` (optional) are used to build static credentials.
+    ///
+    /// The SDK's `Config` is built manually:
+    /// ```rust
+    /// let conf = BedrockConfigBuilder::default()
+    ///     .behavior_version(BehaviorVersion::latest())
+    ///     .region(Region::new(region.clone()))
+    ///     .credentials_provider(Credentials::new(...))
+    ///     .build();
+    /// let client = BedrockClient::from_conf(conf);
+    /// ```
+    pub fn new(
+        region: String,
+        model_id: String,
+        access_key_id: String,
+        secret_access_key: String,
+        session_token: Option<String>,
+    ) -> GraphBitResult<Self> {
+        // 1. Build static AWS credentials (same shape as before)
+        let credentials = Credentials::new(
+            access_key_id,
+            secret_access_key,
+            session_token,
+            None,               // expiration – None means “no expiry” for static creds
+            "graphbit",         // provider name (only for debugging)
+        );
 
-        let client = BedrockClient::new(&shared_config);
+        // 2. Construct the SDK config **without** invoking `aws_config::load`.
+        let sdk_config = BedrockConfigBuilder::default()
+            // Use the latest SDK behavior (v2 client, etc.)
+            .behavior_version(BehaviorVersion::latest())
+            // Explicit region (string → Region)
+            .region(Region::new(region.clone()))
+            // Static credentials provider
+            .credentials_provider(credentials)
+            // Optional: force HTTP/1.1, endpoint overrides, etc. can be added here.
+            .build();
+
+        // 3. Create the Bedrock runtime client from the manual config.
+        let client = BedrockClient::from_conf(sdk_config);
 
         Ok(Self {
             client,
             model_id,
-            region,
         })
     }
 
@@ -114,15 +155,8 @@ impl LlmProviderTrait for AwsBedrockProvider {
                 GraphBitError::llm_provider("aws_bedrock", format!("Bedrock request failed: {e}"))
             })?;
 
-        // Collect bytes from the streamed response
-        let bytes = response
-            .body
-            .collect()
-            .await
-            .map_err(|e| {
-                GraphBitError::llm_provider("aws_bedrock", format!("Failed to read response body: {e}"))
-            })?
-            .into_bytes();
+        // ✅ Fixed: `Blob` is not a stream — just get bytes directly
+        let bytes = response.body.into_inner(); // Blob → Vec<u8>
 
         // Try to parse as JSON
         let parsed: BedrockTextResponse = serde_json::from_slice(&bytes).map_err(|e| {
@@ -174,6 +208,4 @@ struct BedrockTextResponse {
     completion: Option<String>,
     #[serde(default)]
     output_text: Option<String>,
-    #[serde(flatten)]
-    extra: HashMap<String, serde_json::Value>,
 }

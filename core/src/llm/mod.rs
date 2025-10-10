@@ -362,10 +362,21 @@ impl LlmProviderFactory {
                 }
             }
 
-            LlmConfig::AwsBedrock { 
-                region, 
-                model_id 
-            } => Ok(Box::new(aws_bedrock::AwsBedrockProvider::new(region, model_id)?)),
+            LlmConfig::AwsBedrock {
+                region,
+                model_id,
+                access_key_id,
+                secret_access_key,
+                session_token,
+            } => Ok(Box::new(
+                aws_bedrock::AwsBedrockProvider::new(
+                    region,
+                    model_id,
+                    access_key_id,
+                    secret_access_key,
+                    session_token,
+                )?,
+            )),
 
             LlmConfig::Replicate {
                 api_key,
