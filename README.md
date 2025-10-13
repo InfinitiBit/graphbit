@@ -9,9 +9,8 @@
 <!-- Added placeholders for links, fill it up when the corresponding links are available. -->
 <p align="center">
     <a href="https://graphbit.ai/">Website</a> | 
-    <a href="https://graphbit-docs.vercel.app/docs">Docs</a> |
-    <a href="https://discord.gg/8TvUK6uf">Discord</a> |
-    <a href="https://docs.google.com/spreadsheets/d/1deQk0p7cCJUeeZw3t8FimxVg4jc99w0Bw1XQyLPN0Zk/edit?usp=sharing">Roadmap</a> 
+    <a href="https://docs.graphbit.ai/">Docs</a> |
+    <a href="https://discord.com/invite/huVJwkyu">Discord</a>
     <br /><br />
 </p>
 
@@ -94,15 +93,14 @@ smart_agent = Node.agent(
 )
 
 processor = Node.agent(
-    name = "Data Processor",
-    prompt = "Process and summarize the data from Data Analyzer."
-)
+    name="Data Processor",
+    prompt="Process the results obtained from Smart Agent.",
+    system_prompt="""You process and organize results from other agents.
 
-agent_with_tools = graphbit.Node.agent(
-    name="Weather Assistant",
-    prompt= f"You are a weather assistant. Use tools when needed: {input}",
-    agent_id="weather_agent",  # Optional, auto-generated if not provided
-    tools=[get_weather]  # List of decorated tool functions
+    - Summarize and clarify key points
+    - Structure your output for easy reading
+    - Focus on actionable insights
+    """
 )
 
 # Connect and execute
@@ -116,7 +114,11 @@ print("\nSmart Agent Output: \n", result.get_node_output("Smart Agent"))
 print("\nData Processor Output: \n", result.get_node_output("Data Processor"))
 ```
 
-## Architecture
+## High-Level Architecture
+
+<p align="center">
+  <img src="assets/architecture.svg" height="250" alt="GraphBit Architecture">
+</p>
 
 Three-tier design for reliability and performance:
 - **Rust Core** - Workflow engine, agents, and LLM providers
