@@ -8,6 +8,7 @@ GraphBit supports these LLM providers:
 - **OpenAI** - GPT models including GPT-4o, GPT-4o-mini
 - **Azure OpenAI** - GPT models hosted on Microsoft Azure with enterprise features
 - **Anthropic** - Claude models including Claude-4-Sonnet
+- **MistralAI** - Mistral models including Mistral Large, Mistral Medium, and Mistral Small with function calling support
 - **OpenRouter** - Unified access to 400+ models from multiple providers (GPT, Claude, Mistral, etc.)
 - **Perplexity** - Real-time search-enabled models including Sonar models
 - **DeepSeek** - High-performance models including DeepSeek-Chat, DeepSeek-Coder, and DeepSeek-Reasoner
@@ -192,6 +193,115 @@ fast_config = LlmConfig.anthropic(
     api_key=os.getenv("ANTHROPIC_API_KEY"),
     model="claude-3-haiku-20240307"  # For speed and efficiency
 )
+```
+
+### MistralAI Configuration
+
+Configure MistralAI provider for high-performance multilingual models with function calling support:
+
+```python
+import os
+
+from graphbit import LlmConfig
+
+# Basic MistralAI configuration
+config = LlmConfig.mistralai(
+    api_key=os.getenv("MISTRALAI_API_KEY"),
+    model="mistral-large-latest"  # Optional - defaults to mistral-large-latest
+)
+
+print(f"Provider: {config.provider()}")  # "mistralai"
+print(f"Model: {config.model()}")        # "mistral-large-latest"
+```
+
+#### Available MistralAI Models
+
+| Model | Best For | Context Length | Function Calling |
+|-------|----------|----------------|------------------|
+| `mistral-large-latest` | Complex reasoning, multilingual tasks | 128K | ✅ |
+| `mistral-medium-latest` | Balanced performance and cost | 32K | ✅ |
+| `mistral-small-latest` | Fast responses, simple tasks | 32K | ✅ |
+| `open-mistral-7b` | Open source, lightweight | 32K | ❌ |
+| `open-mixtral-8x7b` | Open source, high performance | 32K | ❌ |
+| `open-mixtral-8x22b` | Open source, largest model | 64K | ❌ |
+
+#### Getting Started with MistralAI
+
+1. **Sign up** at [mistral.ai](https://mistral.ai)
+2. **Get your API key** from the platform dashboard
+3. **Set environment variable**: `export MISTRALAI_API_KEY="your-api-key"`
+4. **Start using** with GraphBit
+
+```python
+import os
+from graphbit import LlmClient, LlmConfig
+
+# Create configuration
+config = LlmConfig.mistralai(
+    api_key=os.getenv("MISTRALAI_API_KEY"),
+    model="mistral-large-latest"
+)
+
+# Create client and generate text
+client = LlmClient(config)
+response = client.complete(
+    prompt="Explain machine learning in French and English",
+    max_tokens=200,
+    temperature=0.7
+)
+
+print(f"MistralAI response: {response}")
+```
+
+#### MistralAI Function Calling
+
+MistralAI models support function calling for tool integration:
+
+```python
+import os
+from graphbit import LlmClient, LlmConfig, LlmMessage, LlmTool
+
+# Configure MistralAI with function calling support
+config = LlmConfig.mistralai(
+    api_key=os.getenv("MISTRALAI_API_KEY"),
+    model="mistral-large-latest"  # Function calling supported
+)
+
+client = LlmClient(config)
+
+# Define a tool
+def get_weather(location: str) -> str:
+    """Get current weather for a location."""
+    return f"The weather in {location} is sunny, 22°C"
+
+# Create tool definition
+weather_tool = LlmTool(
+    name="get_weather",
+    description="Get current weather for a location",
+    parameters={
+        "type": "object",
+        "properties": {
+            "location": {
+                "type": "string",
+                "description": "The city and country, e.g. Paris, France"
+            }
+        },
+        "required": ["location"]
+    }
+)
+
+# Chat with function calling
+messages = [
+    LlmMessage.user("What's the weather like in Paris?")
+]
+
+response = client.chat_with_tools(
+    messages=messages,
+    tools=[weather_tool],
+    max_tokens=150
+)
+
+print(f"MistralAI with tools: {response}")
 ```
 
 ### OpenRouter Configuration

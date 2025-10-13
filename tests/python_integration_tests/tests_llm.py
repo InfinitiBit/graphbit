@@ -343,6 +343,8 @@ class TestCrossProviderLLM:
         if os.getenv("ANTHROPIC_API_KEY"):
             configs["anthropic"] = LlmConfig.anthropic(os.getenv("ANTHROPIC_API_KEY"), "claude-3-5-sonnet-20241022")
 
+        if os.getenv("MISTRALAI_API_KEY"):
+            configs["mistralai"] = LlmConfig.mistralai(os.getenv("MISTRALAI_API_KEY"), "mistral-large-latest")
         if os.getenv("TOGETHER_API_KEY"):
             configs["togetherai"] = LlmConfig.togetherai(os.getenv("TOGETHER_API_KEY"), "openai/gpt-oss-20b")
 
