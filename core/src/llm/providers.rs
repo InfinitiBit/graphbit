@@ -10,6 +10,17 @@ use std::collections::HashMap;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "provider")]
 pub enum LlmConfig {
+    /// `Cloudflare Worker AI` LLM provider configuration
+    Cloudflare {
+        /// API key for authentication
+        api_key: String,
+        /// Model name to use (e.g., "openai/gpt-5-mini", "google-ai-studio/gemini-2.5-flash")
+        model: String,
+        /// Cloudflare account ID
+        account_id: String,
+        /// Cloudflare gateway ID
+        gateway_id: String,
+    },
     /// `OpenAI` LLM provider configuration
     OpenAI {
         /// API key for authentication
@@ -282,6 +293,21 @@ impl LlmConfig {
         }
     }
 
+    /// Create `Cloudflare Worker AI` configuration
+    pub fn cloudflare(
+        api_key: impl Into<String>,
+        model: impl Into<String>,
+        account_id: impl Into<String>,
+        gateway_id: impl Into<String>,
+    ) -> Self {
+        Self::Cloudflare {
+            api_key: api_key.into(),
+            model: model.into(),
+            account_id: account_id.into(),
+            gateway_id: gateway_id.into(),
+        }
+    }
+
     /// Create `Replicate` configuration with version
     pub fn replicate_with_version(
         api_key: impl Into<String>,
@@ -369,6 +395,7 @@ impl LlmConfig {
             Self::OpenAI { .. } => "openai",
             Self::Anthropic { .. } => "anthropic",
             Self::AzureOpenAI { .. } => "azure_openai",
+            Self::Cloudflare { .. } => "cloudflare",
             Self::DeepSeek { .. } => "deepseek",
             Self::HuggingFace { .. } => "huggingface",
             Self::Ollama { .. } => "ollama",
@@ -393,6 +420,7 @@ impl LlmConfig {
             Self::AzureOpenAI {
                 deployment_name, ..
             } => deployment_name,
+            Self::Cloudflare { model, .. } => model,
             Self::DeepSeek { model, .. } => model,
             Self::HuggingFace { model, .. } => model,
             Self::Ollama { model, .. } => model,
