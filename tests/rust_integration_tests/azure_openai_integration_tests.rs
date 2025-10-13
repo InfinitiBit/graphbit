@@ -117,7 +117,10 @@ async fn test_azure_openai_real_api_with_tools() {
     match result {
         Ok(response) => {
             println!("Azure OpenAI response content: '{}'", response.content);
-            println!("Azure OpenAI response finish_reason: {:?}", response.finish_reason);
+            println!(
+                "Azure OpenAI response finish_reason: {:?}",
+                response.finish_reason
+            );
 
             // Check if tool calls were made
             if response.has_tool_calls() {
@@ -129,7 +132,11 @@ async fn test_azure_openai_real_api_with_tools() {
                 // For tool calls, content might be empty, which is valid
             } else {
                 println!("Response content: {:?}", response.content);
-                assert!(!response.content.is_empty(), "Expected non-empty content but got: '{}'", response.content);
+                assert!(
+                    !response.content.is_empty(),
+                    "Expected non-empty content but got: '{}'",
+                    response.content
+                );
             }
             println!("Azure OpenAI real API call with tools successful");
         }

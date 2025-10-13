@@ -80,6 +80,61 @@ async fn test_fireworks_provider_creation() {
     assert_eq!(output_cost, 0.000_000_2);
 }
 
+// `TogetherAI` Provider Tests
+#[tokio::test]
+async fn test_togetherai_provider_creation() {
+    let provider = LlmProviderFactory::create_provider(LlmConfig::TogetherAi {
+        api_key: "test-key".to_string(),
+        model: "openai/gpt-oss-20b".to_string(),
+        base_url: None,
+    })
+    .unwrap();
+
+    assert_eq!(provider.provider_name(), "togetherai");
+    assert_eq!(provider.model_name(), "openai/gpt-oss-20b");
+    assert!(provider.supports_function_calling());
+    assert_eq!(provider.max_context_length(), Some(8192));
+
+    // Test cost per token
+    let (input_cost, output_cost) = provider.cost_per_token().unwrap();
+    assert_eq!(input_cost, 0.000_000_5);
+    assert_eq!(output_cost, 0.000_000_5);
+}
+
+#[tokio::test]
+async fn test_togetherai_model_configs() {
+    let test_models = vec![
+        (
+            "openai/gpt-oss-20b",
+            Some(8192),
+            Some((0.000_000_5, 0.000_000_5)),
+        ),
+        (
+            "moonshotai/Kimi-K2-Instruct-0905",
+            Some(200_000),
+            Some((0.000_001_0, 0.000_001_0)),
+        ),
+        (
+            "Qwen/Qwen3-Next-80B-A3B-Instruct",
+            Some(32_768),
+            Some((0.000_002_0, 0.000_002_0)),
+        ),
+        ("unknown-model", None, None),
+    ];
+
+    for (model, expected_context, expected_cost) in test_models {
+        let provider = LlmProviderFactory::create_provider(LlmConfig::TogetherAi {
+            api_key: "test-key".to_string(),
+            model: model.to_string(),
+            base_url: None,
+        })
+        .unwrap();
+
+        assert_eq!(provider.max_context_length(), expected_context);
+        assert_eq!(provider.cost_per_token(), expected_cost);
+    }
+}
+
 #[tokio::test]
 async fn test_fireworks_model_configs() {
     let test_models = vec![
@@ -626,7 +681,7 @@ async fn test_replicate_provider_creation() {
     assert_eq!(provider.provider_name(), "replicate");
     assert_eq!(provider.model_name(), "lucataco/glaive-function-calling-v1");
     assert!(provider.supports_function_calling());
-    assert_eq!(provider.max_context_length(), Some(8192));
+    assert_eq!(provider.max_context_length(), Some(10_192));
 }
 
 #[tokio::test]

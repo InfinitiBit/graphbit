@@ -117,6 +117,15 @@ pub enum LlmConfig {
         /// Optional model version (if not specified, uses latest)
         version: Option<String>,
     },
+    /// `TogetherAI` LLM provider configuration
+    TogetherAi {
+        /// API key for authentication
+        api_key: String,
+        /// Model name to use (e.g., "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo", "mistralai/Mixtral-8x7B-Instruct-v0.1")
+        model: String,
+        /// Optional custom base URL
+        base_url: Option<String>,
+    },
     /// `xAI` LLM provider configuration for Grok models
     Xai {
         /// API key for authentication
@@ -136,6 +145,15 @@ pub enum LlmConfig {
         base_url: Option<String>,
         /// Optional custom organization
         organization: Option<String>,
+    },
+    /// `MistralAI` LLM provider configuration
+    MistralAI {
+        /// API key for authentication
+        api_key: String,
+        /// Model name to use
+        model: String,
+        /// Optional custom base URL
+        base_url: Option<String>,
     },
     /// Custom LLM provider configuration
     Custom {
@@ -308,6 +326,16 @@ impl LlmConfig {
             version: Some(version.into()),
         }
     }
+
+    /// Create `TogetherAI` configuration
+    pub fn togetherai(api_key: impl Into<String>, model: impl Into<String>) -> Self {
+        Self::TogetherAi {
+            api_key: api_key.into(),
+            model: model.into(),
+            base_url: None,
+        }
+    }
+
     /// Create `xAI` configuration for Grok models
     pub fn xai(api_key: impl Into<String>, model: impl Into<String>) -> Self {
         Self::Xai {
@@ -341,6 +369,15 @@ impl LlmConfig {
         }
     }
 
+    /// Create `MistralAI` configuration
+    pub fn mistralai(api_key: impl Into<String>, model: impl Into<String>) -> Self {
+        Self::MistralAI {
+            api_key: api_key.into(),
+            model: model.into(),
+            base_url: None,
+        }
+    }
+
     /// Create `Ollama` configuration
     pub fn ollama(model: impl Into<String>) -> Self {
         Self::Ollama {
@@ -371,8 +408,10 @@ impl LlmConfig {
             Self::OpenRouter { .. } => "openrouter",
             Self::Fireworks { .. } => "fireworks",
             Self::Replicate { .. } => "replicate",
+            Self::TogetherAi { .. } => "togetherai",
             Self::Xai { .. } => "xai",
             Self::Ai21 { .. } => "ai21",
+            Self::MistralAI { .. } => "mistralai",
             Self::Custom { provider_type, .. } => provider_type,
             Self::Unconfigured { .. } => "unconfigured",
         }
@@ -394,8 +433,10 @@ impl LlmConfig {
             Self::OpenRouter { model, .. } => model,
             Self::Fireworks { model, .. } => model,
             Self::Replicate { model, .. } => model,
+            Self::TogetherAi { model, .. } => model,
             Self::Xai { model, .. } => model,
             Self::Ai21 { model, .. } => model,
+            Self::MistralAI { model, .. } => model,
             Self::Custom { config, .. } => config
                 .get("model")
                 .and_then(|v| v.as_str())

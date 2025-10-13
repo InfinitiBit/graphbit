@@ -10,6 +10,7 @@ pub mod bytedance;
 pub mod deepseek;
 pub mod fireworks;
 pub mod huggingface;
+pub mod mistralai;
 pub mod ollama;
 pub mod openai;
 pub mod openrouter;
@@ -17,6 +18,7 @@ pub mod perplexity;
 pub mod providers;
 pub mod replicate;
 pub mod response;
+pub mod togetherai;
 pub mod xai;
 
 pub use providers::{LlmConfig, LlmProvider, LlmProviderTrait};
@@ -192,7 +194,7 @@ impl LlmMessage {
 }
 
 /// Role of a message sender
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum LlmRole {
     /// User message role
@@ -393,6 +395,22 @@ impl LlmProviderFactory {
 
                 Ok(Box::new(provider))
             }
+            LlmConfig::TogetherAi {
+                api_key,
+                model,
+                base_url,
+                ..
+            } => {
+                if let Some(base_url) = base_url {
+                    Ok(Box::new(togetherai::TogetherAiProvider::with_base_url(
+                        api_key, model, base_url,
+                    )?))
+                } else {
+                    Ok(Box::new(togetherai::TogetherAiProvider::new(
+                        api_key, model,
+                    )?))
+                }
+            }
             LlmConfig::Xai {
                 api_key,
                 model,
@@ -419,6 +437,20 @@ impl LlmProviderFactory {
                     )?))
                 } else {
                     Ok(Box::new(ai21::Ai21Provider::new(api_key, model)?))
+                }
+            }
+            LlmConfig::MistralAI {
+                api_key,
+                model,
+                base_url,
+                ..
+            } => {
+                if let Some(base_url) = base_url {
+                    Ok(Box::new(mistralai::MistralAiProvider::with_base_url(
+                        api_key, model, base_url,
+                    )?))
+                } else {
+                    Ok(Box::new(mistralai::MistralAiProvider::new(api_key, model)?))
                 }
             }
             LlmConfig::Custom { provider_type, .. } => Err(GraphBitError::config(format!(

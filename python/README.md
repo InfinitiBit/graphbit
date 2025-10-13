@@ -258,14 +258,61 @@ print(f"All variables: {context.get_all_variables()}")
 
 ### Core Classes
 - `LlmConfig`: LLM provider configuration
+- `LlmClient`: LLM client with resilience patterns
+- `LlmUsage`: Token usage statistics for cost tracking
+- `FinishReason`: LLM completion reason (stop, length, tool_calls, etc.)
+- `LlmToolCall`: Tool/function call information
+- `LlmResponse`: Complete LLM response with metadata
 - `EmbeddingConfig`: Embedding service configuration
 - `EmbeddingClient`: Text embedding generation
 - `Node`: Workflow node factory (agent, transform, condition)
 - `Workflow`: Workflow definition and operations
 - `DocumentLoaderConfig`: Documents loading service configuration
-- `DocumentLoader`: Loading documents 
+- `DocumentLoader`: Loading documents
 - `TextSplitterConfig`: Text splitter service configuration
 - `TextSplitter`: Text splitters for text processing
 - `Executor`: Workflow execution engine
 
-This API provides everything needed to build agentic workflows with Python, from simple automation to multi-step pipelines.
+### LLM Response Observability
+
+Access detailed LLM response information for comprehensive tracing across multiple providers:
+
+```python
+import graphbit
+import os
+
+# Configure different LLM providers
+providers = {
+    "OpenAI": graphbit.LlmConfig.openai(api_key=os.getenv("OPENAI_API_KEY")),
+    "Anthropic": graphbit.LlmConfig.anthropic(api_key=os.getenv("ANTHROPIC_API_KEY")),
+    "DeepSeek": graphbit.LlmConfig.deepseek(api_key=os.getenv("DEEPSEEK_API_KEY")),
+    "Perplexity": graphbit.LlmConfig.perplexity(api_key=os.getenv("PERPLEXITY_API_KEY"))
+}
+
+# Test with DeepSeek for cost-effective AI
+config = providers["DeepSeek"]
+client = graphbit.LlmClient(config)
+
+# Get full response with usage statistics
+response = client.complete_full("What is AI?", max_tokens=100)
+
+# Access detailed metrics
+print(f"Content: {response.content}")
+print(f"Model: {response.model}")
+print(f"Prompt tokens: {response.usage.prompt_tokens}")
+print(f"Completion tokens: {response.usage.completion_tokens}")
+print(f"Total tokens: {response.usage.total_tokens}")
+print(f"Finish reason: {response.finish_reason}")
+
+# Test with Perplexity for real-time search capabilities
+perplexity_client = graphbit.LlmClient(providers["Perplexity"])
+search_response = await perplexity_client.complete_full_async(
+    "What are the latest developments in quantum computing?",
+    max_tokens=150
+)
+
+# Serialize for logging/monitoring
+response_data = response.to_dict()
+```
+
+This API provides everything needed to build agentic workflows with Python, from simple automation to multi-step pipelines with comprehensive LLM observability.

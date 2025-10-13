@@ -24,7 +24,7 @@ workspace = true
 # Root package (library crate)
 [package]
 description = "GraphBit agentic workflow automation framework (library)"
-name = "graphbit"
+name = "graphbit-lib"
 publish = false
 authors.workspace = true
 categories.workspace = true
@@ -105,6 +105,7 @@ petgraph = "0.6"
 # Python bindings
 pyo3 = {version = "0.24.1", features = ["extension-module"]}
 pyo3-async-runtimes = {version = "0.24", features = ["tokio-runtime"]}
+pythonize = "0.24"
 quick-xml = {version = "0.36", features = ["serialize"]}
 rand = "0.8"
 regex = "1.10"

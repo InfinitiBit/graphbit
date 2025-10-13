@@ -182,8 +182,13 @@ impl ReplicateProvider {
     fn model_supports_function_calling(&self) -> bool {
         // List of known function calling models on Replicate
         let function_calling_models = [
+            "openai/gpt-5",
+            "openai/gpt-5-structured",
+            "lucataco/glaive-function-calling-v1",
+            "homanp/llama-2-13b-function-calling",
             "lucataco/hermes-2-pro-llama-3-8b",
             "lucataco/dolphin-2.9-llama3-8b",
+            "ibm-granite/granite-3.3-8b-instruct",
         ];
 
         function_calling_models
@@ -324,7 +329,9 @@ impl LlmProviderTrait for ReplicateProvider {
 
     fn max_context_length(&self) -> Option<u32> {
         // Different models have different context lengths
-        if self.model.contains("llama-2-13b") {
+        if self.model.contains("openai/gpt-5") {
+            Some(128_000) // GPT-5 has 128K context length
+        } else if self.model.contains("llama-2-13b") {
             Some(4096)
         } else if self.model.contains("glaive-function-calling") {
             Some(10_192)

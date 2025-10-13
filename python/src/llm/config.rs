@@ -233,11 +233,37 @@ impl LlmConfig {
 
     #[staticmethod]
     #[pyo3(signature = (api_key, model=None))]
+    fn togetherai(api_key: String, model: Option<String>) -> PyResult<Self> {
+        validate_api_key(&api_key, "TogetherAI")?;
+
+        Ok(Self {
+            inner: CoreLlmConfig::togetherai(
+                api_key,
+                model.unwrap_or_else(|| "openai/gpt-oss-20b".to_string()),
+            ),
+        })
+    }
+
+    #[staticmethod]
+    #[pyo3(signature = (api_key, model=None))]
     fn xai(api_key: String, model: Option<String>) -> PyResult<Self> {
         validate_api_key(&api_key, "xAI")?;
 
         Ok(Self {
             inner: CoreLlmConfig::xai(api_key, model.unwrap_or_else(|| "grok-4".to_string())),
+        })
+    }
+
+    #[staticmethod]
+    #[pyo3(signature = (api_key, model=None))]
+    fn mistralai(api_key: String, model: Option<String>) -> PyResult<Self> {
+        validate_api_key(&api_key, "MistralAI")?;
+
+        Ok(Self {
+            inner: CoreLlmConfig::mistralai(
+                api_key,
+                model.unwrap_or_else(|| "mistral-large-latest".to_string()),
+            ),
         })
     }
 
