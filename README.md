@@ -9,8 +9,9 @@
 <!-- Added placeholders for links, fill it up when the corresponding links are available. -->
 <p align="center">
     <a href="https://graphbit.ai/">Website</a> | 
-    <a href="https://docs.graphbit.ai/">Docs</a> |
-    <a href="https://discord.com/invite/huVJwkyu">Discord</a>
+    <a href="https://graphbit-docs.vercel.app/docs">Docs</a> |
+    <a href="https://discord.gg/8TvUK6uf">Discord</a> |
+    <a href="https://docs.google.com/spreadsheets/d/1deQk0p7cCJUeeZw3t8FimxVg4jc99w0Bw1XQyLPN0Zk/edit?usp=sharing">Roadmap</a> 
     <br /><br />
 </p>
 
@@ -40,47 +41,22 @@ Designed to run **multi-agent workflows in parallel**, Graphbit persists memory 
 
 ##  Quick Start
 
-### Installation
-Clone the repository
-```bash
-git clone https://github.com/InfinitiBit/graphbit.git
-cd graphbit
-```
+### Installation 
 
-Install Rust
-- **Linux/macOS**: 
-```bash
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh && source $HOME/.cargo/env
-```  
-- **Windows**: Download & run [rustup-init.exe](https://win.rustup.rs/x86_64)  
+Recommended to use virtual environment.
 
-Install Poetry
 ```bash
-curl -sSL https://install.python-poetry.org | python3 -
-```
-
-Install dependencies (recommended to use a Python virtual environment)
-```bash
-poetry install --no-root
-```
-
-Build from source
-```bash
-cargo build --release
-```
-
-Build Python bindings
-```bash
-cd python/
-maturin develop --release
+pip install graphbit
 ```
 
 ### Environment Setup
-First, set up your API keys:
+Set up API keys you want to use in your project:
 ```bash
+# OpenAI (optional – required if using OpenAI models)
 export OPENAI_API_KEY=your_openai_api_key_here
+
+# Anthropic (optional – required if using Anthropic models)
 export ANTHROPIC_API_KEY=your_anthropic_api_key_here
-export REPLICATE_API_KEY=your_replicate_api_token_here
 ```
 
 > **Security Note**: Never commit API keys to version control. Always use environment variables or secure secret management.
@@ -118,14 +94,15 @@ smart_agent = Node.agent(
 )
 
 processor = Node.agent(
-    name="Data Processor",
-    prompt="Process the results obtained from Smart Agent.",
-    system_prompt="""You process and organize results from other agents.
+    name = "Data Processor",
+    prompt = "Process and summarize the data from Data Analyzer."
+)
 
-    - Summarize and clarify key points
-    - Structure your output for easy reading
-    - Focus on actionable insights
-    """
+agent_with_tools = graphbit.Node.agent(
+    name="Weather Assistant",
+    prompt= f"You are a weather assistant. Use tools when needed: {input}",
+    agent_id="weather_agent",  # Optional, auto-generated if not provided
+    tools=[get_weather]  # List of decorated tool functions
 )
 
 # Connect and execute
@@ -139,11 +116,7 @@ print("\nSmart Agent Output: \n", result.get_node_output("Smart Agent"))
 print("\nData Processor Output: \n", result.get_node_output("Data Processor"))
 ```
 
-## High-Level Architecture
-
-<p align="center">
-  <img src="assets/architecture.svg" height="250" alt="GraphBit Architecture">
-</p>
+## Architecture
 
 Three-tier design for reliability and performance:
 - **Rust Core** - Workflow engine, agents, and LLM providers
