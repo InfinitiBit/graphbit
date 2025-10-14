@@ -256,6 +256,9 @@ pub struct WorkflowContext {
     pub completed_at: Option<chrono::DateTime<chrono::Utc>>,
     /// Execution statistics
     pub stats: Option<WorkflowExecutionStats>,
+    /// Optional memory manager for stateful agent memory
+    #[serde(skip)]
+    pub memory_manager: Option<std::sync::Arc<tokio::sync::RwLock<crate::memory::MemoryManager>>>,
 }
 
 impl WorkflowContext {
@@ -270,7 +273,41 @@ impl WorkflowContext {
             started_at: chrono::Utc::now(),
             completed_at: None,
             stats: None,
+            memory_manager: None,
         }
+    }
+
+    /// Create a new workflow context with memory manager
+    pub fn with_memory(
+        workflow_id: WorkflowId,
+        memory_manager: std::sync::Arc<tokio::sync::RwLock<crate::memory::MemoryManager>>,
+    ) -> Self {
+        Self {
+            workflow_id,
+            state: WorkflowState::Pending,
+            variables: HashMap::with_capacity(8),
+            node_outputs: HashMap::with_capacity(8),
+            metadata: HashMap::with_capacity(4),
+            started_at: chrono::Utc::now(),
+            completed_at: None,
+            stats: None,
+            memory_manager: Some(memory_manager),
+        }
+    }
+
+    /// Set the memory manager for this context
+    pub fn set_memory_manager(&mut self, memory_manager: std::sync::Arc<tokio::sync::RwLock<crate::memory::MemoryManager>>) {
+        self.memory_manager = Some(memory_manager);
+    }
+
+    /// Get a reference to the memory manager if available
+    pub fn get_memory_manager(&self) -> Option<&std::sync::Arc<tokio::sync::RwLock<crate::memory::MemoryManager>>> {
+        self.memory_manager.as_ref()
+    }
+
+    /// Check if memory is enabled for this context
+    pub fn has_memory(&self) -> bool {
+        self.memory_manager.is_some()
     }
 
     /// Set a variable in the context
@@ -378,6 +415,7 @@ impl Default for WorkflowContext {
             started_at: chrono::Utc::now(),
             completed_at: None,
             stats: None,
+            memory_manager: None,
         }
     }
 }
