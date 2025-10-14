@@ -1,9 +1,7 @@
 //! Memory types for GraphBit Python bindings
 
 use graphbit_core::memory::manager::MemoryStats as CoreMemoryStats;
-use graphbit_core::memory::types::{
-    MemoryEntry as CoreMemoryEntry, MemoryType as CoreMemoryType,
-};
+use graphbit_core::memory::types::{MemoryEntry as CoreMemoryEntry, MemoryType as CoreMemoryType};
 use pyo3::prelude::*;
 use std::collections::HashMap;
 
@@ -191,4 +189,3 @@ impl From<CoreMemoryStats> for MemoryStats {
         Self { inner: stats }
     }
 }
-
