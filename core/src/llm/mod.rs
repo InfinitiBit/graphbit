@@ -443,12 +443,10 @@ impl LlmProviderFactory {
                 api_key,
                 model,
                 account_id,
-                gateway_id,
             } => Ok(Box::new(cloudflare::CloudflareProvider::new(
                 api_key,
                 model,
                 account_id,
-                gateway_id,
             )?)),
             LlmConfig::Custom { provider_type, .. } => Err(GraphBitError::config(format!(
                 "Unsupported custom provider: {provider_type}",

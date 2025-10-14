@@ -14,12 +14,10 @@ pub enum LlmConfig {
     Cloudflare {
         /// API key for authentication
         api_key: String,
-        /// Model name to use (e.g., "openai/gpt-5-mini", "google-ai-studio/gemini-2.5-flash")
+        /// Model name to use (e.g., "@cf/meta/llama-2-7b-chat-int8", "@cf/mistral/mistral-7b-instruct-v0.1")
         model: String,
         /// Cloudflare account ID
         account_id: String,
-        /// Cloudflare gateway ID
-        gateway_id: String,
     },
     /// `OpenAI` LLM provider configuration
     OpenAI {
@@ -298,13 +296,11 @@ impl LlmConfig {
         api_key: impl Into<String>,
         model: impl Into<String>,
         account_id: impl Into<String>,
-        gateway_id: impl Into<String>,
     ) -> Self {
         Self::Cloudflare {
             api_key: api_key.into(),
             model: model.into(),
             account_id: account_id.into(),
-            gateway_id: gateway_id.into(),
         }
     }
 

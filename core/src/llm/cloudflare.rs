@@ -16,12 +16,10 @@ pub struct CloudflareProvider {
     api_key: String,
     model: String,
     account_id: String,
-    gateway_id: String,
 }
 
 #[derive(Debug, Serialize)]
 struct CloudflareRequest {
-    model: String,
     messages: Vec<CloudflareMessage>,
     #[serde(skip_serializing_if = "Option::is_none")]
     max_tokens: Option<u32>,
@@ -31,6 +29,8 @@ struct CloudflareRequest {
     top_p: Option<f32>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     tools: Vec<CloudflareTool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    stream: Option<bool>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -43,9 +43,24 @@ struct CloudflareMessage {
 
 #[derive(Debug, Deserialize)]
 struct CloudflareResponse {
+    result: CloudflareResult,
+    success: bool,
+    errors: Vec<CloudflareError>,
+    messages: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct CloudflareResult {
+    response: String,
     id: String,
     choices: Vec<CloudflareChoice>,
     usage: CloudflareUsage,
+}
+
+#[derive(Debug, Deserialize)]
+struct CloudflareError {
+    code: u32,
+    message: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -65,13 +80,13 @@ impl CloudflareProvider {
     /// Get the base URL for Cloudflare Worker AI API
     fn get_base_url(&self) -> String {
         format!(
-            "https://gateway.ai.cloudflare.com/v1/{}/{}/compat",
-            self.account_id, self.gateway_id
+            "https://api.cloudflare.com/client/v4/accounts/{}/ai/run/{}",
+            self.account_id, self.model
         )
     }
 
     /// Create a new Cloudflare Worker AI provider
-    pub fn new(api_key: String, model: String, account_id: String, gateway_id: String) -> GraphBitResult<Self> {
+    pub fn new(api_key: String, model: String, account_id: String) -> GraphBitResult<Self> {
         let client = Client::builder()
             .timeout(std::time::Duration::from_secs(60))
             .pool_max_idle_per_host(10)
@@ -87,7 +102,6 @@ impl CloudflareProvider {
             api_key,
             model,
             account_id,
-            gateway_id,
         })
     }
 
@@ -134,11 +148,9 @@ impl LlmProviderTrait for CloudflareProvider {
     }
 
     async fn complete(&self, request: LlmRequest) -> GraphBitResult<LlmResponse> {
-        let base_url = self.get_base_url();
-        let url = format!("{}/chat/completions", base_url);
+        let url = self.get_base_url();
 
         let cloudflare_request = CloudflareRequest {
-            model: self.model.clone(),
             messages: request
                 .messages
                 .iter()
@@ -148,6 +160,7 @@ impl LlmProviderTrait for CloudflareProvider {
             temperature: request.temperature,
             top_p: request.top_p,
             tools: request.tools.iter().map(|t| t.into()).collect(),
+            stream: None,
         };
 
         let response = self
@@ -178,12 +191,22 @@ impl LlmProviderTrait for CloudflareProvider {
             )
         })?;
 
-        let choice = cloudflare_response.choices.into_iter().next().ok_or_else(|| {
+        if !cloudflare_response.success {
+            let error_msg = cloudflare_response
+                .errors
+                .into_iter()
+                .map(|e| format!("Error {}: {}", e.code, e.message))
+                .collect::<Vec<_>>()
+                .join(", ");
+            return Err(GraphBitError::llm_provider("cloudflare", error_msg));
+        }
+
+        let choice = cloudflare_response.result.choices.into_iter().next().ok_or_else(|| {
             GraphBitError::llm_provider("cloudflare", "No completion in response")
         })?;
 
         Ok(LlmResponse {
-            id: Some(cloudflare_response.id),
+            id: Some(cloudflare_response.result.id),
             content: choice.message.content,
             tool_calls: choice
                 .message
@@ -204,11 +227,22 @@ impl LlmProviderTrait for CloudflareProvider {
                 _ => FinishReason::Other(choice.finish_reason.unwrap_or_else(|| "unknown".to_string())),
             },
             usage: LlmUsage {
-                prompt_tokens: cloudflare_response.usage.prompt_tokens,
-                completion_tokens: cloudflare_response.usage.completion_tokens,
-                total_tokens: cloudflare_response.usage.total_tokens,
+                prompt_tokens: cloudflare_response.result.usage.prompt_tokens,
+                completion_tokens: cloudflare_response.result.usage.completion_tokens,
+                total_tokens: cloudflare_response.result.usage.total_tokens,
             },
-            metadata: HashMap::new(),
+            metadata: {
+                let mut metadata = HashMap::new();
+                // Add messages from the response for debugging
+                if !cloudflare_response.messages.is_empty() {
+                    metadata.insert("cloudflare_messages".to_string(), 
+                        serde_json::to_value(&cloudflare_response.messages).unwrap_or_default());
+                }
+                // Add raw response for debugging
+                metadata.insert("cloudflare_raw_response".to_string(), 
+                    serde_json::to_value(&cloudflare_response.result.response).unwrap_or_default());
+                metadata
+            },
             model: self.model.clone(),
         })
     }

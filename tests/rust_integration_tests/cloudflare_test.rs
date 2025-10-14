@@ -9,9 +9,8 @@ use graphbit_core::{
 async fn test_cloudflare_provider_creation() -> GraphBitResult<()> {
     let config = LlmConfig::cloudflare(
         "test-key".to_string(),
-        "openai/gpt-5-mini".to_string(),
+        "@cf/meta/llama-2-7b-chat-int8".to_string(),
         "test-account".to_string(),
-        "test-gateway".to_string(),
     );
 
     let provider = LlmProviderFactory::create_provider(config)?;
@@ -23,9 +22,8 @@ async fn test_cloudflare_provider_creation() -> GraphBitResult<()> {
 async fn test_cloudflare_request_structure() -> GraphBitResult<()> {
     let config = LlmConfig::cloudflare(
         "test-key".to_string(),
-        "google-ai-studio/gemini-2.5-flash".to_string(),
+        "@cf/meta/llama-2-7b-chat-int8".to_string(),
         "test-account".to_string(),
-        "test-gateway".to_string(),
     );
 
     let provider = LlmProviderFactory::create_provider(config)?;
@@ -45,9 +43,8 @@ async fn test_cloudflare_request_structure() -> GraphBitResult<()> {
 async fn test_cloudflare_message_formats() -> GraphBitResult<()> {
     let config = LlmConfig::cloudflare(
         "test-key".to_string(),
-        "anthropic/claude-sonnet-4-5".to_string(),
+        "@cf/mistral/mistral-7b-instruct-v0.1".to_string(),
         "test-account".to_string(),
-        "test-gateway".to_string(),
     );
 
     let provider = LlmProviderFactory::create_provider(config)?;

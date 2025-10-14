@@ -8,6 +8,7 @@ GraphBit supports these LLM providers:
 - **OpenAI** - GPT models including GPT-4o, GPT-4o-mini
 - **Azure OpenAI** - GPT models hosted on Microsoft Azure with enterprise features
 - **Anthropic** - Claude models including Claude-4-Sonnet
+- **Cloudflare Worker AI** - Hosted and managed models including Llama-2, Mistral, and more
 - **MistralAI** - Mistral models including Mistral Large, Mistral Medium, and Mistral Small with function calling support
 - **OpenRouter** - Unified access to 400+ models from multiple providers (GPT, Claude, Mistral, etc.)
 - **Perplexity** - Real-time search-enabled models including Sonar models
@@ -194,6 +195,67 @@ fast_config = LlmConfig.anthropic(
     model="claude-3-haiku-20240307"  # For speed and efficiency
 )
 ```
+
+### Cloudflare Worker AI Configuration
+
+Configure Cloudflare Worker AI provider for hosted models:
+
+```python
+import os
+
+from graphbit import LlmConfig
+
+# Basic Cloudflare Worker AI configuration
+config = LlmConfig.cloudflare(
+    api_key=os.getenv("CLOUDFLARE_API_KEY"),
+    account_id=os.getenv("CLOUDFLARE_ACCOUNT_ID"),
+    model="@cf/meta/llama-2-7b-chat-int8"  # Optional - defaults to @cf/meta/llama-2-7b-chat-int8
+)
+
+print(f"Provider: {config.provider()}")  # "Cloudflare"
+print(f"Model: {config.model()}")        # "@cf/meta/llama-2-7b-chat-int8"
+```
+
+#### Available Cloudflare Worker AI Models
+
+| Model | Best For | Context Length | Speed | Description |
+|-------|----------|----------------|-------|-------------|
+| `@cf/meta/llama-2-7b-chat-int8` | General purpose chat | 4K | Fast | Quantized Llama-2 7B chat model |
+| `@cf/meta/llama-2-13b-chat-int8` | Enhanced chat | 4K | Medium | Larger Llama-2 with better quality |
+| `@cf/mistral/mistral-7b-instruct-v0.1` | Instructions | 8K | Fast | Mistral's 7B instruct model |
+
+```python
+# Model selection examples
+fast_config = LlmConfig.cloudflare(
+    api_key=os.getenv("CLOUDFLARE_API_KEY"),
+    account_id=os.getenv("CLOUDFLARE_ACCOUNT_ID"),
+    model="@cf/meta/llama-2-7b-chat-int8"  # Fast, general purpose
+)
+
+quality_config = LlmConfig.cloudflare(
+    api_key=os.getenv("CLOUDFLARE_API_KEY"),
+    account_id=os.getenv("CLOUDFLARE_ACCOUNT_ID"),
+    model="@cf/meta/llama-2-13b-chat-int8"  # Better quality
+)
+
+instruction_config = LlmConfig.cloudflare(
+    api_key=os.getenv("CLOUDFLARE_API_KEY"),
+    account_id=os.getenv("CLOUDFLARE_ACCOUNT_ID"),
+    model="@cf/mistral/mistral-7b-instruct-v0.1"  # Better at following instructions
+)
+```
+
+#### Environment Variables
+
+Set these environment variables for Cloudflare Worker AI:
+
+```bash
+export CLOUDFLARE_API_KEY="your-cloudflare-api-key"
+export CLOUDFLARE_ACCOUNT_ID="your-cloudflare-account-id"
+```
+
+You can find your API key and account ID in the Cloudflare dashboard under the AI section.
+
 
 ### MistralAI Configuration
 

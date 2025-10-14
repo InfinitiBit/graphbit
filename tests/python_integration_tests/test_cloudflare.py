@@ -7,9 +7,8 @@ def test_cloudflare_config_creation():
     """Test creating Cloudflare Worker AI configuration"""
     config = LlmConfig.cloudflare(
         api_key="test-key",
-        model="openai/gpt-5-mini",
-        account_id="test-account",
-        gateway_id="test-gateway"
+        model="@cf/meta/llama-2-7b-chat-int8",
+        account_id="test-account"
     )
     assert config is not None
 
@@ -18,18 +17,16 @@ def test_cloudflare_config_validation():
     with pytest.raises(ValueError):
         LlmConfig.cloudflare(
             api_key="",  # Empty API key should fail
-            model="openai/gpt-5-mini",
-            account_id="test-account",
-            gateway_id="test-gateway"
+            model="@cf/meta/llama-2-7b-chat-int8",
+            account_id="test-account"
         )
 
 def test_cloudflare_client_creation():
     """Test creating LLM client with Cloudflare Worker AI configuration"""
     config = LlmConfig.cloudflare(
         api_key="test-key",
-        model="google-ai-studio/gemini-2.5-flash",
-        account_id="test-account",
-        gateway_id="test-gateway"
+        model="@cf/meta/llama-2-7b-chat-int8",
+        account_id="test-account"
     )
     client = LlmClient(config)
     assert client is not None
@@ -55,9 +52,8 @@ async def test_cloudflare_complex_request():
     """Test Cloudflare Worker AI with complex message structure"""
     config = LlmConfig.cloudflare(
         api_key="test-key",
-        model="anthropic/claude-sonnet-4-5",
-        account_id="test-account",
-        gateway_id="test-gateway"
+        model="@cf/meta/llama-2-7b-chat-int8",
+        account_id="test-account"
     )
     client = LlmClient(config)
     
