@@ -6,6 +6,7 @@
 pub mod ai21;
 pub mod anthropic;
 pub mod azure_openai;
+pub mod bytedance;
 pub mod deepseek;
 pub mod fireworks;
 pub mod huggingface;
@@ -268,6 +269,20 @@ impl LlmProviderFactory {
                 endpoint,
                 api_version,
             )?)),
+            LlmConfig::ByteDance {
+                api_key,
+                model,
+                base_url,
+                ..
+            } => {
+                if let Some(base_url) = base_url {
+                    Ok(Box::new(bytedance::ByteDanceProvider::with_base_url(
+                        api_key, model, base_url,
+                    )?))
+                } else {
+                    Ok(Box::new(bytedance::ByteDanceProvider::new(api_key, model)?))
+                }
+            }
             LlmConfig::DeepSeek {
                 api_key,
                 model,
