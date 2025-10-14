@@ -912,14 +912,8 @@ impl LlmClient {
             request = request.with_temperature(temp);
         }
 
-        Self::execute_request_with_resilience(
-            provider,
-            circuit_breaker,
-            stats,
-            config,
-            request,
-        )
-        .await
+        Self::execute_request_with_resilience(provider, circuit_breaker, stats, config, request)
+            .await
     }
 
     /// Execute a single request with retry logic and circuit breaker
