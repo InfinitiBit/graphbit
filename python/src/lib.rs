@@ -56,6 +56,7 @@ mod document_loader;
 mod embeddings;
 mod errors;
 mod llm;
+mod memory;
 mod runtime;
 mod text_splitter;
 mod tools;
@@ -420,6 +421,14 @@ fn graphbit(m: &Bound<'_, PyModule>) -> PyResult<()> {
         workflow::node::sync_global_tools_to_workflow,
         m
     )?)?;
+
+    // Memory system classes
+    m.add_class::<memory::config::MemoryConfig>()?;
+    m.add_class::<memory::manager::MemoryManager>()?;
+    m.add_class::<memory::query::MemoryQuery>()?;
+    m.add_class::<memory::types::MemoryType>()?;
+    m.add_class::<memory::types::MemoryEntry>()?;
+    m.add_class::<memory::types::MemoryStats>()?;
 
     // Module metadata
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
