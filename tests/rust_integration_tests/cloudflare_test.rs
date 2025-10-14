@@ -7,10 +7,19 @@ use graphbit_core::{
 
 #[tokio::test]
 async fn test_cloudflare_provider_creation() -> GraphBitResult<()> {
+    // Skip if no credentials are provided
+    if !super::has_cloudflare_key() || !super::has_cloudflare_account() {
+        println!("Skipping Cloudflare provider test - missing API key or account ID");
+        return Ok(());
+    }
+
+    let api_key = super::get_cloudflare_key_or_skip();
+    let account_id = super::get_cloudflare_account_or_skip();
+
     let config = LlmConfig::cloudflare(
-        "test-key".to_string(),
+        api_key,
         "@cf/meta/llama-2-7b-chat-int8".to_string(),
-        "test-account".to_string(),
+        account_id,
     );
 
     let provider = LlmProviderFactory::create_provider(config)?;
@@ -20,10 +29,19 @@ async fn test_cloudflare_provider_creation() -> GraphBitResult<()> {
 
 #[tokio::test]
 async fn test_cloudflare_request_structure() -> GraphBitResult<()> {
+    // Skip if no credentials are provided
+    if !super::has_cloudflare_key() || !super::has_cloudflare_account() {
+        println!("Skipping Cloudflare request test - missing API key or account ID");
+        return Ok(());
+    }
+
+    let api_key = super::get_cloudflare_key_or_skip();
+    let account_id = super::get_cloudflare_account_or_skip();
+
     let config = LlmConfig::cloudflare(
-        "test-key".to_string(),
+        api_key,
         "@cf/meta/llama-2-7b-chat-int8".to_string(),
-        "test-account".to_string(),
+        account_id,
     );
 
     let provider = LlmProviderFactory::create_provider(config)?;
@@ -41,10 +59,19 @@ async fn test_cloudflare_request_structure() -> GraphBitResult<()> {
 
 #[tokio::test]
 async fn test_cloudflare_message_formats() -> GraphBitResult<()> {
+    // Skip if no credentials are provided
+    if !super::has_cloudflare_key() || !super::has_cloudflare_account() {
+        println!("Skipping Cloudflare message formats test - missing API key or account ID");
+        return Ok(());
+    }
+
+    let api_key = super::get_cloudflare_key_or_skip();
+    let account_id = super::get_cloudflare_account_or_skip();
+
     let config = LlmConfig::cloudflare(
-        "test-key".to_string(),
+        api_key,
         "@cf/mistral/mistral-7b-instruct-v0.1".to_string(),
-        "test-account".to_string(),
+        account_id,
     );
 
     let provider = LlmProviderFactory::create_provider(config)?;
