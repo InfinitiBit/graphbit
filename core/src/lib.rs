@@ -16,6 +16,7 @@ pub mod embeddings;
 pub mod errors;
 pub mod graph;
 pub mod llm;
+pub mod memory;
 pub mod text_splitter;
 pub mod types;
 pub mod validation;
