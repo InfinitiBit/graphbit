@@ -199,6 +199,39 @@ fast_config = LlmConfig.anthropic(
 
 ### Cloudflare Worker AI Configuration
 
+#### Setup Requirements
+
+To use Cloudflare Worker AI, you need:
+
+1. **Cloudflare Account**: Create or use an existing Cloudflare account
+2. **Workers AI Access**: Enable Workers AI in your account dashboard
+3. **API Token**: Create a Cloudflare API token with Workers AI permissions
+4. **Account ID**: Get your Cloudflare Account ID from the dashboard
+
+#### Creating an API Token
+
+1. Go to the [Cloudflare dashboard](https://dash.cloudflare.com)
+2. Navigate to "User Profile" → "API Tokens"
+3. Click "Create Token"
+4. Select "Create Custom Token"
+5. Set the token name (e.g., "Workers AI Access")
+6. Under "Permissions", add:
+   - Workers AI - Read and Edit
+   - Account Settings - Read
+7. Under "Account Resources", select your account
+8. Set an optional expiration date
+9. Click "Continue to summary" then "Create Token"
+10. Copy and save the token - it won't be shown again
+
+#### Finding Your Account ID
+
+1. Log in to the [Cloudflare dashboard](https://dash.cloudflare.com)
+2. Your Account ID is in the URL when viewing the Workers AI section:
+   `https://dash.cloudflare.com/<Account-ID>/ai`
+3. It's also shown in the right sidebar under "API" when viewing Workers AI settings
+
+#### Basic Configuration and Usage
+
 Configure Cloudflare Worker AI provider for hosted models and make requests:
 
 ```python
