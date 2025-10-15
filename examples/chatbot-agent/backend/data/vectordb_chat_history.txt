@@ -1,0 +1,3 @@
+Conversation History:
+This is the initial knowledge base for the chatbot.
+The chatbot can answer questions and hold conversations.
