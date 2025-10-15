@@ -27,3 +27,20 @@ pub(crate) fn validate_api_key(api_key: &str, provider: &str) -> PyResult<()> {
 
     Ok(())
 }
+
+/// Validate Cloudflare account ID
+pub(crate) fn validate_cloudflare_account_id(account_id: &str) -> PyResult<()> {
+    if account_id.is_empty() {
+        return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+            "Cloudflare account ID cannot be empty"
+        ));
+    }
+
+    if account_id.len() < 32 {
+        return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+            "Invalid Cloudflare account ID format"
+        ));
+    }
+
+    Ok(())
+}

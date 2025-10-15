@@ -52,9 +52,6 @@ struct CloudflareResponse {
 #[derive(Debug, Deserialize)]
 struct CloudflareResult {
     response: String,
-    id: String,
-    choices: Vec<CloudflareChoice>,
-    usage: CloudflareUsage,
 }
 
 #[derive(Debug, Deserialize)]
@@ -201,35 +198,16 @@ impl LlmProviderTrait for CloudflareProvider {
             return Err(GraphBitError::llm_provider("cloudflare", error_msg));
         }
 
-        let choice = cloudflare_response.result.choices.into_iter().next().ok_or_else(|| {
-            GraphBitError::llm_provider("cloudflare", "No completion in response")
-        })?;
-
+        let response_content = cloudflare_response.result.response.clone();
         Ok(LlmResponse {
-            id: Some(cloudflare_response.result.id),
-            content: choice.message.content,
-            tool_calls: choice
-                .message
-                .tool_calls
-                .unwrap_or_default()
-                .into_iter()
-                .map(|tc| LlmToolCall {
-                    id: tc.id,
-                    name: tc.function.name,
-                    parameters: serde_json::from_str(&tc.function.arguments).unwrap_or_default(),
-                })
-                .collect(),
-            finish_reason: match choice.finish_reason.as_deref() {
-                Some("stop") => FinishReason::Stop,
-                Some("length") => FinishReason::Length,
-                Some("tool_calls") => FinishReason::ToolCalls,
-                Some("content_filter") => FinishReason::ContentFilter,
-                _ => FinishReason::Other(choice.finish_reason.unwrap_or_else(|| "unknown".to_string())),
-            },
+            id: None,  // Cloudflare doesn't provide an ID
+            content: response_content,
+            tool_calls: vec![], // Cloudflare doesn't support tool calls in this format
+            finish_reason: FinishReason::Stop, // Default to Stop since Cloudflare doesn't provide this
             usage: LlmUsage {
-                prompt_tokens: cloudflare_response.result.usage.prompt_tokens,
-                completion_tokens: cloudflare_response.result.usage.completion_tokens,
-                total_tokens: cloudflare_response.result.usage.total_tokens,
+                prompt_tokens: 0,  // Cloudflare doesn't provide usage stats
+                completion_tokens: 0,
+                total_tokens: 0,
             },
             metadata: {
                 let mut metadata = HashMap::new();

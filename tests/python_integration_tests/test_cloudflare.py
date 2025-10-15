@@ -9,18 +9,21 @@ Integration tests for Cloudflare Worker AI that mirror the integration test patt
 of other providers. These tests require actual Cloudflare credentials.
 """
 
+from environs import Env
 import os
+env = Env()
+env.read_env()
 from typing import Optional, Tuple
 
 import pytest
 
-from graphbit import LlmClient, LlmConfig, LlmMessage, LlmRequest, LlmRole
+from graphbit import LlmClient, LlmConfig
 
 
 def get_cloudflare_credentials() -> Optional[Tuple[str, str, str]]:
     """Get Cloudflare credentials from environment variables."""
-    api_key = os.getenv("CLOUDFLARE_API_KEY")
-    account_id = os.getenv("CLOUDFLARE_ACCOUNT_ID")
+    api_key = env.str("CLOUDFLARE_API_KEY")
+    account_id = env.str("CLOUDFLARE_ACCOUNT_ID")
 
     if api_key and account_id:
         return api_key, account_id
