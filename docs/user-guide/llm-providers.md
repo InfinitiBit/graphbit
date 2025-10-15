@@ -198,12 +198,12 @@ fast_config = LlmConfig.anthropic(
 
 ### Cloudflare Worker AI Configuration
 
-Configure Cloudflare Worker AI provider for hosted models:
+Configure Cloudflare Worker AI provider for hosted models and make requests:
 
 ```python
 import os
-
-from graphbit import LlmConfig
+import asyncio
+from graphbit import LlmConfig, LlmClient
 
 # Basic Cloudflare Worker AI configuration
 config = LlmConfig.cloudflare(
@@ -212,8 +212,28 @@ config = LlmConfig.cloudflare(
     model="@cf/meta/llama-2-7b-chat-int8"  # Optional - defaults to @cf/meta/llama-2-7b-chat-int8
 )
 
-print(f"Provider: {config.provider()}")  # "Cloudflare"
-print(f"Model: {config.model()}")        # "@cf/meta/llama-2-7b-chat-int8"
+# Create a client
+client = LlmClient(config)
+
+# Simple synchronous completion
+response = client.complete(
+    prompt="What's the capital of France?",
+    max_tokens=100,
+    temperature=0.7
+)
+print("Synchronous response:", response)
+
+# Async completion
+async def async_example():
+    response = await client.complete_async(
+        prompt="Tell me a short joke.",
+        max_tokens=100,
+        temperature=0.7
+    )
+    print("Async response:", response)
+
+# Run async example
+asyncio.run(async_example())
 ```
 
 #### Available Cloudflare Worker AI Models

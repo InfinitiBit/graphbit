@@ -3,7 +3,7 @@
 use crate::errors::{GraphBitError, GraphBitResult};
 use crate::llm::providers::LlmProviderTrait;
 use crate::llm::{
-    FinishReason, LlmMessage, LlmRequest, LlmResponse, LlmRole, LlmTool, LlmToolCall, LlmUsage,
+    FinishReason, LlmMessage, LlmRequest, LlmResponse, LlmRole, LlmTool, LlmUsage,
 };
 use async_trait::async_trait;
 use reqwest::Client;
@@ -58,19 +58,6 @@ struct CloudflareResult {
 struct CloudflareError {
     code: u32,
     message: String,
-}
-
-#[derive(Debug, Deserialize)]
-struct CloudflareChoice {
-    message: CloudflareMessage,
-    finish_reason: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-struct CloudflareUsage {
-    prompt_tokens: u32,
-    completion_tokens: u32,
-    total_tokens: u32,
 }
 
 impl CloudflareProvider {
