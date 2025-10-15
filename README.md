@@ -40,47 +40,22 @@ Designed to run **multi-agent workflows in parallel**, Graphbit persists memory 
 
 ##  Quick Start
 
-### Installation
-Clone the repository
-```bash
-git clone https://github.com/InfinitiBit/graphbit.git
-cd graphbit
-```
+### Installation 
 
-Install Rust
-- **Linux/macOS**: 
-```bash
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh && source $HOME/.cargo/env
-```  
-- **Windows**: Download & run [rustup-init.exe](https://win.rustup.rs/x86_64)  
+Recommended to use virtual environment.
 
-Install Poetry
 ```bash
-curl -sSL https://install.python-poetry.org | python3 -
-```
-
-Install dependencies (recommended to use a Python virtual environment)
-```bash
-poetry install --no-root
-```
-
-Build from source
-```bash
-cargo build --release
-```
-
-Build Python bindings
-```bash
-cd python/
-maturin develop --release
+pip install graphbit
 ```
 
 ### Environment Setup
-First, set up your API keys:
+Set up API keys you want to use in your project:
 ```bash
+# OpenAI (optional – required if using OpenAI models)
 export OPENAI_API_KEY=your_openai_api_key_here
+
+# Anthropic (optional – required if using Anthropic models)
 export ANTHROPIC_API_KEY=your_anthropic_api_key_here
-export REPLICATE_API_KEY=your_replicate_api_token_here
 ```
 
 > **Security Note**: Never commit API keys to version control. Always use environment variables or secure secret management.

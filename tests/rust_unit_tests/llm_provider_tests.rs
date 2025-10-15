@@ -867,3 +867,98 @@ async fn test_ai21labs_message_formatting() {
         .iter()
         .any(|m| matches!(m.role, LlmRole::Assistant)));
 }
+
+// `ByteDance ModelArk` Provider Tests
+#[tokio::test]
+async fn test_bytedance_provider_creation() {
+    let provider = LlmProviderFactory::create_provider(LlmConfig::ByteDance {
+        api_key: "test-key".to_string(),
+        model: "seed-1-6-flash-250715".to_string(),
+        base_url: None,
+    })
+    .unwrap();
+
+    assert_eq!(provider.provider_name(), "bytedance");
+    assert_eq!(provider.model_name(), "seed-1-6-flash-250715");
+    assert!(provider.supports_function_calling());
+    assert_eq!(provider.max_context_length(), Some(256_000));
+
+    // Test cost per token
+    let (input_cost, output_cost) = provider.cost_per_token().unwrap();
+    assert_eq!(input_cost, 0.000_000_1);
+    assert_eq!(output_cost, 0.000_000_8);
+}
+
+#[tokio::test]
+async fn test_bytedance_model_configs() {
+    let test_models = vec![
+        (
+            "seed-1-6-flash-250715",
+            Some(256_000),
+            Some((0.000_000_1, 0.000_000_8)),
+        ),
+        (
+            "seed-1-6-250915",
+            Some(256_000),
+            Some((0.000_000_5, 0.000_004)),
+        ),
+        ("unknown-model", Some(256_000), Some((0.000_002, 0.000_004))),
+    ];
+
+    for (model, context_length, cost) in test_models {
+        let provider = LlmProviderFactory::create_provider(LlmConfig::ByteDance {
+            api_key: "test-key".to_string(),
+            model: model.to_string(),
+            base_url: None,
+        })
+        .unwrap();
+
+        assert_eq!(provider.max_context_length(), context_length);
+        assert_eq!(provider.cost_per_token(), cost);
+    }
+}
+
+#[tokio::test]
+async fn test_bytedance_message_formatting() {
+    let _provider = LlmProviderFactory::create_provider(LlmConfig::ByteDance {
+        api_key: "test-key".to_string(),
+        model: "seed-1-6-flash-250715".to_string(),
+        base_url: None,
+    })
+    .unwrap();
+
+    let request = LlmRequest::with_messages(vec![])
+        .with_message(LlmMessage::system("system prompt"))
+        .with_message(LlmMessage::user("user message"))
+        .with_message(LlmMessage::assistant("assistant message"))
+        .with_max_tokens(100)
+        .with_temperature(0.7)
+        .with_top_p(0.9);
+
+    assert_eq!(request.messages.len(), 3);
+    assert!(request
+        .messages
+        .iter()
+        .any(|m| matches!(m.role, LlmRole::System)));
+    assert!(request
+        .messages
+        .iter()
+        .any(|m| matches!(m.role, LlmRole::User)));
+    assert!(request
+        .messages
+        .iter()
+        .any(|m| matches!(m.role, LlmRole::Assistant)));
+}
+
+#[tokio::test]
+async fn test_bytedance_with_custom_base_url() {
+    let provider = LlmProviderFactory::create_provider(LlmConfig::ByteDance {
+        api_key: "test-key".to_string(),
+        model: "seed-1-6-flash-250715".to_string(),
+        base_url: Some("https://custom.bytedance.com/api/v3".to_string()),
+    })
+    .unwrap();
+
+    assert_eq!(provider.provider_name(), "bytedance");
+    assert_eq!(provider.model_name(), "seed-1-6-flash-250715");
+}

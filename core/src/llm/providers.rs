@@ -50,6 +50,15 @@ pub enum LlmConfig {
         /// API version to use
         api_version: String,
     },
+    /// `ByteDance ModelArk` LLM provider configuration
+    ByteDance {
+        /// API key for authentication
+        api_key: String,
+        /// Model name to use (e.g., "skylark-lite", "skylark-pro", "seedance-1.0-pro")
+        model: String,
+        /// Optional custom base URL
+        base_url: Option<String>,
+    },
     /// `DeepSeek` LLM provider configuration
     DeepSeek {
         /// API key for authentication
@@ -215,6 +224,28 @@ impl LlmConfig {
             deployment_name: deployment_name.into(),
             endpoint: endpoint.into(),
             api_version: "2024-10-21".to_string(),
+        }
+    }
+
+    /// Create `ByteDance ModelArk` configuration
+    pub fn bytedance(api_key: impl Into<String>, model: impl Into<String>) -> Self {
+        Self::ByteDance {
+            api_key: api_key.into(),
+            model: model.into(),
+            base_url: None,
+        }
+    }
+
+    /// Create `ByteDance ModelArk` configuration with custom base URL
+    pub fn bytedance_with_base_url(
+        api_key: impl Into<String>,
+        model: impl Into<String>,
+        base_url: impl Into<String>,
+    ) -> Self {
+        Self::ByteDance {
+            api_key: api_key.into(),
+            model: model.into(),
+            base_url: Some(base_url.into()),
         }
     }
 
@@ -391,6 +422,7 @@ impl LlmConfig {
             Self::OpenAI { .. } => "openai",
             Self::Anthropic { .. } => "anthropic",
             Self::AzureOpenAI { .. } => "azure_openai",
+            Self::ByteDance { .. } => "bytedance",
             Self::Cloudflare { .. } => "cloudflare",
             Self::DeepSeek { .. } => "deepseek",
             Self::HuggingFace { .. } => "huggingface",
@@ -416,6 +448,7 @@ impl LlmConfig {
             Self::AzureOpenAI {
                 deployment_name, ..
             } => deployment_name,
+            Self::ByteDance { model, .. } => model,
             Self::Cloudflare { model, .. } => model,
             Self::DeepSeek { model, .. } => model,
             Self::HuggingFace { model, .. } => model,

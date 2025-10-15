@@ -10,6 +10,7 @@ GraphBit supports these LLM providers:
 - **Anthropic** - Claude models including Claude-4-Sonnet
 - **Cloudflare Worker AI** - Hosted and managed models including Llama-2, Mistral, and more
 - **MistralAI** - Mistral models including Mistral Large, Mistral Medium, and Mistral Small with function calling support
+- **ByteDance ModelArk** - ByteDance Seed and other models with OpenAI-compatible API
 - **OpenRouter** - Unified access to 400+ models from multiple providers (GPT, Claude, Mistral, etc.)
 - **Perplexity** - Real-time search-enabled models including Sonar models
 - **DeepSeek** - High-performance models including DeepSeek-Chat, DeepSeek-Coder, and DeepSeek-Reasoner
@@ -384,6 +385,94 @@ response = client.chat_with_tools(
 )
 
 print(f"MistralAI with tools: {response}")
+```
+
+### ByteDance ModelArk Configuration
+
+Configure ByteDance ModelArk provider for access to ByteDance Seed and other models:
+
+```python
+import os
+
+from graphbit import LlmConfig
+
+# Basic ByteDance configuration
+config = LlmConfig.bytedance(
+    api_key=os.getenv("BYTEDANCE_API_KEY"),
+    model="seed-1-6-250915"  # Optional - defaults to seed-1-6-250915
+)
+
+print(f"Provider: {config.provider()}")  # "bytedance"
+print(f"Model: {config.model()}")        # "seed-1-6-250915"
+```
+
+#### Available ByteDance Models
+
+**ByteDance Seed Models:**
+
+| Model | Best For | Context Length | Performance | Cost |
+|-------|----------|----------------|-------------|------|
+| `seed-1-6-flash-250715` | Lightweight tasks | 256K | Fast, efficient | Very low |
+| `seed-1-6-250915` | Professional tasks | 256K | High quality | Medium |
+
+**Other Models:**
+
+| Model | Best For | Context Length | Performance | Cost |
+|-------|----------|----------------|-------------|------|
+| `deepseek-v3-1-250821` | Multi-aspect applications | 256K | High quality | Medium |
+| `gpt-oss-120b-250805` | Advanced high reasoning | 256K | High quality | High |
+| `kimi-k2-250711` | Creative tasks | 128K | High quality | High |
+
+```python
+# Model selection for different use cases
+fast_config = LlmConfig.bytedance(
+    api_key=os.getenv("BYTEDANCE_API_KEY"),
+    model="seed-1-6-flash-250715"  # For fast, cost-effective tasks
+)
+
+professional_config = LlmConfig.bytedance(
+    api_key=os.getenv("BYTEDANCE_API_KEY"),
+    model="seed-1-6-250915"  # For complex reasoning and analysis
+)
+
+multi_aspect_config = LlmConfig.bytedance(
+    api_key=os.getenv("BYTEDANCE_API_KEY"),
+    model="deepseek-v3-1-250821"  # For multi-aspect applications
+)
+```
+
+#### ByteDance with Custom Base URL
+
+```python
+# Configuration with custom endpoint
+config = LlmConfig.bytedance(
+    api_key=os.getenv("BYTEDANCE_API_KEY"),
+    model="seed-1-6-250915",
+    base_url="https://custom.bytedance.com/api/v3"  # Optional custom endpoint
+)
+```
+
+#### Getting Started with ByteDance ModelArk
+
+1. **Sign up** at [ByteDance ModelArk platform](https://ark.ap-southeast.bytepluses.com/)
+2. **Get your API key** from the dashboard
+3. **Set environment variable**: `export BYTEDANCE_API_KEY="your-api-key"`
+4. **Start using** with GraphBit
+
+```python
+import os
+from graphbit import LlmClient, LlmConfig
+
+# Create configuration
+config = LlmConfig.bytedance(
+    api_key=os.getenv("BYTEDANCE_API_KEY"),
+    model="seed-1-6-250915"
+)
+
+# Create client and generate text
+client = LlmClient(config)
+response = client.complete("Explain quantum computing in simple terms.")
+print(response)
 ```
 
 ### OpenRouter Configuration
@@ -1527,9 +1616,9 @@ def get_optimal_config(use_case):
             model="claude-sonnet-4-20250514"
         )
     elif use_case == "cost_effective":
-        return LlmConfig.deepseek(
-            api_key=os.getenv("DEEPSEEK_API_KEY"),
-            model="deepseek-chat"
+        return LlmConfig.bytedance(
+            api_key=os.getenv("BYTEDANCE_API_KEY"),
+            model="skylark-lite"
         )
     elif use_case == "coding":
         return LlmConfig.deepseek(
@@ -1579,6 +1668,7 @@ def get_api_key(provider):
         "openai": "OPENAI_API_KEY",
         "azure_openai": "AZURE_OPENAI_API_KEY",
         "anthropic": "ANTHROPIC_API_KEY",
+        "bytedance": "BYTEDANCE_API_KEY",
         "openrouter": "OPENROUTER_API_KEY",
         "perplexity": "PERPLEXITY_API_KEY",
         "deepseek": "DEEPSEEK_API_KEY",
