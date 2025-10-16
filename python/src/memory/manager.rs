@@ -13,7 +13,7 @@ use tokio::sync::RwLock;
 #[pyclass]
 pub struct MemoryManager {
     pub(crate) inner: Arc<RwLock<CoreMemoryManager>>,
-    runtime: tokio::runtime::Handle,
+    runtime: tokio::runtime::Runtime,
 }
 
 #[pymethods]
@@ -22,10 +22,12 @@ impl MemoryManager {
     #[new]
     #[pyo3(signature = (config=None))]
     fn new(config: Option<MemoryConfig>) -> PyResult<Self> {
-        let runtime = tokio::runtime::Handle::try_current().map_err(|_| {
-            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-                "No tokio runtime found. Please ensure you're running in an async context.",
-            )
+        // Create a new tokio runtime for this memory manager
+        let runtime = tokio::runtime::Runtime::new().map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+                "Failed to create tokio runtime: {}",
+                e
+            ))
         })?;
 
         let core_config = config.map(|c| c.inner).unwrap_or_default();
