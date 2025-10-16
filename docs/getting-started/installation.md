@@ -12,28 +12,9 @@ This guide will help you install GraphBit on your system and set up your develop
 ---
 
 ## Installation 
-Clone the repository
-```bash
-git clone https://github.com/InfinitiBit/graphbit.git
-cd graphbit
-```
 
-Install Rust
-- **Linux/macOS**: 
 ```bash
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh && source $HOME/.cargo/env`
-```  
-- **Windows**: Download & run [rustup-init.exe](https://win.rustup.rs/x86_64)  
-
-Set up poetry environment, then install dependencies
-```bash
-poetry install --no-root
-```
-
-Build Python bindings
-```bash
-cd python
-maturin develop
+pip install graphbit
 ```
 
 ---
@@ -115,22 +96,7 @@ maturin develop
 
 ### Common Issues
 
-#### 1. Rust Compilation Errors
-```
-error: Microsoft Visual C++ 14.0 is required (Windows)
-```
-**Solution**: Install Microsoft C++ Build Tools or Visual Studio with C++ support.
-
-For Linux/macOS compilation issues:
-```bash
-# Ensure ARGV0 is unset for proper compilation
-unset ARGV0
-
-# Make sure Rust is properly installed
-rustc --version
-```
-
-#### 2. Runtime Initialization Errors
+#### 1. Runtime Initialization Errors
 ```
 Failed to initialize GraphBit runtime
 ```
@@ -143,14 +109,13 @@ health = health_check()
 print(health)
 ```
 
-#### 3. Environment Setup (Linux/macOS)
+#### 2. Environment Setup (Linux/macOS)
 ```bash
 # Use virtual environment (recommended)
 python -m venv graphbit-env
 source graphbit-env/bin/activate  # Linux/macOS
 # graphbit-env\Scripts\activate   # Windows
-cd python
-maturin develop
+pip install graphbit
 ```
 
 ### Get Help
@@ -172,11 +137,7 @@ If you encounter issues:
 Keep GraphBit updated for the latest features and bug fixes:
 
 ```bash
-# Update from source
-cd graphbit
-git pull origin main
-cd python
-maturin develop
+pip install --upgrade graphbit
 ``` 
 
 ---
