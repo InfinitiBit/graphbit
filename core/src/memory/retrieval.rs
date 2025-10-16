@@ -175,6 +175,21 @@ impl MemoryRetriever {
         let query_lower = query.query.to_lowercase();
         let query_words: Vec<&str> = query_lower.split_whitespace().collect();
 
+        // Handle empty query - return all filtered candidates
+        // This allows users to list all memories matching their filters (session_id, type, tags)
+        // without requiring a search term
+        if query_words.is_empty() {
+            let mut results: Vec<RetrievalResult> = candidates
+                .into_iter()
+                .map(|entry| RetrievalResult::new(entry.clone(), 1.0))
+                .collect();
+
+            // Limit results
+            results.truncate(query.limit);
+
+            return Ok(results);
+        }
+
         let mut results: Vec<RetrievalResult> = candidates
             .into_iter()
             .filter_map(|entry| {
