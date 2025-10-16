@@ -122,6 +122,24 @@ impl LlmConfig {
     }
 
     #[staticmethod]
+    #[pyo3(signature = (api_key, model, account_id))]
+    fn cloudflare(
+        api_key: Option<String>,
+        model: String,
+        account_id: Option<String>
+    ) -> PyResult<Self> {
+        let api_key = api_key.unwrap_or_default();
+        let account_id = account_id.unwrap_or_default();
+
+        validate_api_key(&api_key, "Cloudflare")?;
+        crate::validation::validate_cloudflare_account_id(&account_id)?;
+
+        Ok(Self {
+            inner: CoreLlmConfig::cloudflare(api_key, model, account_id),
+        })
+    }
+
+    #[staticmethod]
     #[pyo3(signature = (model=None))]
     fn ollama(model: Option<String>) -> Self {
         Self {

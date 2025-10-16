@@ -7,6 +7,7 @@ pub mod ai21;
 pub mod anthropic;
 pub mod azure_openai;
 pub mod bytedance;
+pub mod cloudflare;
 pub mod deepseek;
 pub mod fireworks;
 pub mod huggingface;
@@ -453,6 +454,15 @@ impl LlmProviderFactory {
                     Ok(Box::new(mistralai::MistralAiProvider::new(api_key, model)?))
                 }
             }
+            LlmConfig::Cloudflare {
+                api_key,
+                model,
+                account_id,
+            } => Ok(Box::new(cloudflare::CloudflareProvider::new(
+                api_key,
+                model,
+                account_id,
+            )?)),
             LlmConfig::Custom { provider_type, .. } => Err(GraphBitError::config(format!(
                 "Unsupported custom provider: {provider_type}",
             ))),
