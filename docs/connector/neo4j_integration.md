@@ -548,6 +548,6 @@ if __name__ == "__main__":
 
 ## Additional Resources
 
-- [Neo4j Vector Search Documentation](https://neo4j.com/docs/cypher-manual/current/vector-search/)
+- [Neo4j Vector Search Documentation](https://neo4j.com/blog/developer/graph-metadata-filtering-vector-search-rag/)
 - [Neo4j Python Driver Documentation](https://neo4j.com/docs/python-manual/current/)
 - [GraphBit Documentation](../index.md)
