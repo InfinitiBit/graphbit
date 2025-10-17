@@ -219,7 +219,7 @@ impl PyDocumentContent {
         } else {
             // Take the first max_length characters (not bytes)
             let preview: String = self.inner.content.chars().take(max_length).collect();
-            format!("{}...", preview)
+            format!("{preview}...")
         }
     }
 
