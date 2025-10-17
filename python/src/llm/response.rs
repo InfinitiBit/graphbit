@@ -100,13 +100,15 @@ impl PyLlmUsage {
     /// Create from dictionary
     #[staticmethod]
     fn from_dict(data: &Bound<'_, PyDict>) -> PyResult<Self> {
-        let prompt_tokens: u32 = data.get_item("prompt_tokens")?
+        let prompt_tokens: u32 = data
+            .get_item("prompt_tokens")?
             .ok_or_else(|| pyo3::exceptions::PyKeyError::new_err("Missing 'prompt_tokens'"))?
             .extract()?;
-        let completion_tokens: u32 = data.get_item("completion_tokens")?
+        let completion_tokens: u32 = data
+            .get_item("completion_tokens")?
             .ok_or_else(|| pyo3::exceptions::PyKeyError::new_err("Missing 'completion_tokens'"))?
             .extract()?;
-        
+
         Ok(Self::new(prompt_tokens, completion_tokens))
     }
 }
@@ -239,8 +241,9 @@ impl PyLlmToolCall {
     /// Create new tool call
     #[new]
     fn new(id: String, name: String, parameters: String) -> PyResult<Self> {
-        let params_value: serde_json::Value = serde_json::from_str(&parameters)
-            .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Invalid JSON parameters: {}", e)))?;
+        let params_value: serde_json::Value = serde_json::from_str(&parameters).map_err(|e| {
+            pyo3::exceptions::PyValueError::new_err(format!("Invalid JSON parameters: {}", e))
+        })?;
 
         Ok(Self {
             inner: CoreLlmToolCall {
@@ -273,7 +276,9 @@ impl PyLlmToolCall {
     fn __repr__(&self) -> String {
         format!(
             "LlmToolCall(id='{}', name='{}', parameters={})",
-            self.inner.id, self.inner.name, self.parameters()
+            self.inner.id,
+            self.inner.name,
+            self.parameters()
         )
     }
 
@@ -385,8 +390,6 @@ impl PyLlmResponse {
         self.inner.total_tokens()
     }
 
-
-
     /// Set usage statistics (builder pattern)
     fn with_usage(&mut self, usage: &PyLlmUsage) -> PyResult<()> {
         self.inner = self.inner.clone().with_usage(usage.inner.clone());
@@ -395,17 +398,18 @@ impl PyLlmResponse {
 
     /// Add tool calls (builder pattern)
     fn with_tool_calls(&mut self, tool_calls: Vec<PyLlmToolCall>) -> PyResult<()> {
-        let rust_tool_calls: Vec<CoreLlmToolCall> = tool_calls
-            .into_iter()
-            .map(|tc| tc.inner)
-            .collect();
+        let rust_tool_calls: Vec<CoreLlmToolCall> =
+            tool_calls.into_iter().map(|tc| tc.inner).collect();
         self.inner = self.inner.clone().with_tool_calls(rust_tool_calls);
         Ok(())
     }
 
     /// Set finish reason (builder pattern)
     fn with_finish_reason(&mut self, finish_reason: &PyFinishReason) -> PyResult<()> {
-        self.inner = self.inner.clone().with_finish_reason(finish_reason.inner.clone());
+        self.inner = self
+            .inner
+            .clone()
+            .with_finish_reason(finish_reason.inner.clone());
         Ok(())
     }
 
@@ -417,8 +421,9 @@ impl PyLlmResponse {
 
     /// Add metadata (builder pattern) - accepts JSON string
     fn with_metadata(&mut self, key: String, value: String) -> PyResult<()> {
-        let json_value: serde_json::Value = serde_json::from_str(&value)
-            .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Invalid JSON value: {}", e)))?;
+        let json_value: serde_json::Value = serde_json::from_str(&value).map_err(|e| {
+            pyo3::exceptions::PyValueError::new_err(format!("Invalid JSON value: {}", e))
+        })?;
         self.inner = self.inner.clone().with_metadata(key, json_value);
         Ok(())
     }
@@ -454,7 +459,10 @@ impl PyLlmResponse {
         dict.set_item("tool_calls", tool_calls_list)?;
 
         // Add usage
-        dict.set_item("usage", PyLlmUsage::from(self.inner.usage.clone()).to_dict(py)?)?;
+        dict.set_item(
+            "usage",
+            PyLlmUsage::from(self.inner.usage.clone()).to_dict(py)?,
+        )?;
 
         // Add finish reason
         dict.set_item("finish_reason", self.inner.finish_reason.to_string())?;
