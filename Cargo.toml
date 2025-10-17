@@ -100,6 +100,7 @@ jemallocator = "0.5"
 lazy_static = "1.4"
 lopdf = "0.32"
 num_cpus = "1.16"
+pdf-extract = "0.10"
 # Graph and algorithms
 petgraph = "0.6"
 # Python bindings
