@@ -126,6 +126,13 @@ pub enum GraphBitError {
         /// Error message
         message: String,
     },
+
+    /// Memory system errors
+    #[error("Memory error: {message}")]
+    Memory {
+        /// Error message
+        message: String,
+    },
 }
 
 impl GraphBitError {
@@ -211,6 +218,13 @@ impl GraphBitError {
         }
     }
 
+    /// Create a new memory error
+    pub fn memory(message: impl Into<String>) -> Self {
+        Self::Memory {
+            message: message.into(),
+        }
+    }
+
     /// Check if the error is retryable
     pub fn is_retryable(&self) -> bool {
         matches!(
@@ -265,6 +279,15 @@ impl From<anyhow::Error> for GraphBitError {
 impl From<std::io::Error> for GraphBitError {
     fn from(error: std::io::Error) -> Self {
         Self::Io {
+            message: error.to_string(),
+        }
+    }
+}
+
+impl From<uuid::Error> for GraphBitError {
+    fn from(error: uuid::Error) -> Self {
+        Self::Validation {
+            field: "uuid".to_string(),
             message: error.to_string(),
         }
     }
