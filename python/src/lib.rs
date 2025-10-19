@@ -424,8 +424,10 @@ fn graphbit(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     // Memory system classes
     m.add_class::<memory::config::MemoryConfig>()?;
+    m.add_class::<memory::decay::DecayStats>()?;
     m.add_class::<memory::manager::MemoryManager>()?;
     m.add_class::<memory::query::MemoryQuery>()?;
+    m.add_class::<memory::semantic::SemanticConcept>()?;
     m.add_class::<memory::types::MemoryType>()?;
     m.add_class::<memory::types::MemoryEntry>()?;
     m.add_class::<memory::types::MemoryStats>()?;
