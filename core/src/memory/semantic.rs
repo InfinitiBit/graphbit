@@ -93,10 +93,13 @@ impl SemanticMemory {
         metadata.set_source("semantic".to_string());
         metadata.add_tag("concept".to_string());
         metadata.add_tag(concept.name.clone());
-        
+
         // Store concept metadata
         metadata.add_custom("concept_id".to_string(), serde_json::json!(concept.id));
-        metadata.add_custom("confidence".to_string(), serde_json::json!(concept.confidence));
+        metadata.add_custom(
+            "confidence".to_string(),
+            serde_json::json!(concept.confidence),
+        );
         metadata.add_custom(
             "reinforcement_count".to_string(),
             serde_json::json!(concept.reinforcement_count),
@@ -135,7 +138,7 @@ impl SemanticMemory {
     /// Retrieve a concept by name
     pub fn get_concept(&self, name: &str, storage: &dyn MemoryStorage) -> Option<MemoryEntry> {
         let concepts = storage.list_by_type(MemoryType::Semantic);
-        
+
         concepts
             .into_iter()
             .find(|c| c.metadata.tags.contains(&name.to_string()))
@@ -272,7 +275,7 @@ impl SemanticMemory {
         storage: &dyn MemoryStorage,
     ) -> Vec<MemoryEntry> {
         let concepts = storage.list_by_type(MemoryType::Semantic);
-        
+
         concepts
             .into_iter()
             .filter(|c| {
@@ -348,19 +351,17 @@ mod tests {
         let mut semantic = SemanticMemory::new();
         let mut storage = InMemoryStorage::new();
 
-        let concept1 = SemanticConcept::new("AI".to_string(), "Artificial Intelligence".to_string());
+        let concept1 =
+            SemanticConcept::new("AI".to_string(), "Artificial Intelligence".to_string());
         let concept2 = SemanticConcept::new("ML".to_string(), "Machine Learning".to_string());
 
         semantic.store_concept(concept1, &mut storage).unwrap();
         semantic.store_concept(concept2, &mut storage).unwrap();
 
-        let connected = semantic
-            .connect_concepts("AI", "ML", &mut storage)
-            .unwrap();
+        let connected = semantic.connect_concepts("AI", "ML", &mut storage).unwrap();
         assert!(connected);
 
         let related = semantic.get_related_concepts("AI", &storage);
         assert_eq!(related.len(), 1);
     }
 }
-
