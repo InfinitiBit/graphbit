@@ -49,7 +49,7 @@ impl FactualMemory {
         metadata.set_source("factual".to_string());
         metadata.add_tag("fact".to_string());
         metadata.add_tag(key.clone());
-        
+
         if let Some(ref ns) = self.namespace {
             metadata.add_tag(format!("namespace:{}", ns));
         }
@@ -57,11 +57,11 @@ impl FactualMemory {
         let mut entry = MemoryEntry::with_importance(
             content,
             MemoryType::Factual,
-            0.8, // Facts are important by default
+            0.8,  // Facts are important by default
             None, // No session ID for factual memories
         );
         entry.metadata = metadata;
-        
+
         let id = entry.id.clone();
         storage.store(entry)?;
         Ok(id)
@@ -80,19 +80,15 @@ impl FactualMemory {
         metadata.set_source("factual".to_string());
         metadata.add_tag("fact".to_string());
         metadata.add_tag(key.clone());
-        
+
         if let Some(ref ns) = self.namespace {
             metadata.add_tag(format!("namespace:{}", ns));
         }
 
-        let mut entry = MemoryEntry::with_importance(
-            content,
-            MemoryType::Factual,
-            importance,
-            None,
-        );
+        let mut entry =
+            MemoryEntry::with_importance(content, MemoryType::Factual, importance, None);
         entry.metadata = metadata;
-        
+
         let id = entry.id.clone();
         storage.store(entry)?;
         Ok(id)
@@ -101,7 +97,7 @@ impl FactualMemory {
     /// Retrieve a fact by key
     pub fn get_fact(&self, key: &str, storage: &dyn MemoryStorage) -> Option<String> {
         let facts = storage.list_by_type(MemoryType::Factual);
-        
+
         for fact in facts {
             // Check if this fact matches the key
             if fact.metadata.tags.contains(&key.to_string()) {
@@ -112,7 +108,7 @@ impl FactualMemory {
                         continue;
                     }
                 }
-                
+
                 // Extract value from "key: value" format
                 if let Some(colon_pos) = fact.content.find(':') {
                     let value = fact.content[colon_pos + 1..].trim();
@@ -120,7 +116,7 @@ impl FactualMemory {
                 }
             }
         }
-        
+
         None
     }
 
@@ -165,7 +161,7 @@ impl FactualMemory {
     /// Delete a fact by key
     pub fn delete_fact(&self, key: &str, storage: &mut dyn MemoryStorage) -> GraphBitResult<bool> {
         let facts = storage.list_by_type(MemoryType::Factual);
-        
+
         for fact in facts {
             if fact.metadata.tags.contains(&key.to_string()) {
                 // Check namespace if set
@@ -175,12 +171,12 @@ impl FactualMemory {
                         continue;
                     }
                 }
-                
+
                 let fact_id = fact.id.clone();
                 return storage.delete(&fact_id);
             }
         }
-        
+
         Ok(false)
     }
 
@@ -188,7 +184,7 @@ impl FactualMemory {
     pub fn list_facts(&self, storage: &dyn MemoryStorage) -> Vec<(String, String)> {
         let facts = storage.list_by_type(MemoryType::Factual);
         let mut result = Vec::with_capacity(facts.len());
-        
+
         for fact in facts {
             // Check namespace if set
             if let Some(ref ns) = self.namespace {
@@ -197,7 +193,7 @@ impl FactualMemory {
                     continue;
                 }
             }
-            
+
             // Parse "key: value" format
             if let Some(colon_pos) = fact.content.find(':') {
                 let key = fact.content[..colon_pos].trim().to_string();
@@ -205,12 +201,15 @@ impl FactualMemory {
                 result.push((key, value));
             }
         }
-        
+
         result
     }
 
     /// Get all facts as a HashMap
-    pub fn get_all_facts(&self, storage: &dyn MemoryStorage) -> std::collections::HashMap<String, String> {
+    pub fn get_all_facts(
+        &self,
+        storage: &dyn MemoryStorage,
+    ) -> std::collections::HashMap<String, String> {
         let facts = self.list_facts(storage);
         facts.into_iter().collect()
     }
@@ -236,7 +235,7 @@ impl FactualMemory {
         metadata.set_source("user_preference".to_string());
         metadata.add_tag("preference".to_string());
         metadata.add_tag(key.clone());
-        
+
         if let Some(ref ns) = self.namespace {
             metadata.add_tag(format!("namespace:{}", ns));
         }
@@ -249,7 +248,7 @@ impl FactualMemory {
             None,
         );
         entry.metadata = metadata;
-        
+
         let id = entry.id.clone();
         storage.store(entry)?;
         Ok(id)
@@ -258,7 +257,7 @@ impl FactualMemory {
     /// Get a user preference
     pub fn get_preference(&self, key: &str, storage: &dyn MemoryStorage) -> Option<String> {
         let facts = storage.list_by_type(MemoryType::Factual);
-        
+
         for fact in facts {
             if fact.metadata.tags.contains(&"preference".to_string())
                 && fact.metadata.tags.contains(&key.to_string())
@@ -270,14 +269,14 @@ impl FactualMemory {
                         continue;
                     }
                 }
-                
+
                 if let Some(colon_pos) = fact.content.find(':') {
                     let value = fact.content[colon_pos + 1..].trim();
                     return Some(value.to_string());
                 }
             }
         }
-        
+
         None
     }
 }
@@ -342,10 +341,16 @@ mod tests {
 
         // Retrieve from specific namespace
         factual.set_namespace("app1".to_string());
-        assert_eq!(factual.get_fact("setting", &storage), Some("value1".to_string()));
+        assert_eq!(
+            factual.get_fact("setting", &storage),
+            Some("value1".to_string())
+        );
 
         factual.set_namespace("app2".to_string());
-        assert_eq!(factual.get_fact("setting", &storage), Some("value2".to_string()));
+        assert_eq!(
+            factual.get_fact("setting", &storage),
+            Some("value2".to_string())
+        );
     }
 
     #[test]
@@ -363,4 +368,3 @@ mod tests {
         );
     }
 }
-
