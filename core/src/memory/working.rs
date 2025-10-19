@@ -95,14 +95,14 @@ impl WorkingMemory {
     /// Get session context as a formatted string
     pub fn get_session_context(&self, storage: &dyn MemoryStorage) -> String {
         let memories = self.get_session_memories(storage);
-        
+
         if memories.is_empty() {
             return String::from("No working memory available.");
         }
 
         let mut context = String::with_capacity(memories.len() * 100);
         context.push_str("Working Memory Context:\n");
-        
+
         for (i, memory) in memories.iter().enumerate() {
             context.push_str(&format!("{}. {}\n", i + 1, memory.content));
         }
@@ -179,8 +179,12 @@ mod tests {
         let mut storage = InMemoryStorage::new();
 
         working.start_session("session1".to_string());
-        working.store("First memory".to_string(), &mut storage).unwrap();
-        working.store("Second memory".to_string(), &mut storage).unwrap();
+        working
+            .store("First memory".to_string(), &mut storage)
+            .unwrap();
+        working
+            .store("Second memory".to_string(), &mut storage)
+            .unwrap();
 
         let context = working.get_session_context(&storage);
         assert!(context.contains("First memory"));
@@ -190,7 +194,7 @@ mod tests {
     #[test]
     fn test_session_metadata() {
         let mut working = WorkingMemory::new();
-        
+
         working.set_session_metadata("user_id".to_string(), serde_json::json!("user123"));
         working.set_session_metadata("language".to_string(), serde_json::json!("en"));
 
@@ -207,4 +211,3 @@ mod tests {
         assert_eq!(working.get_session_metadata("user_id"), None);
     }
 }
-
