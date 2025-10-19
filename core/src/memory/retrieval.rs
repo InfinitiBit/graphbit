@@ -101,15 +101,16 @@ impl MemoryRetriever {
         // Filter by session if specified
         if let Some(ref session_id) = query.session_id {
             candidates.retain(|entry| {
-                entry.session_id.as_ref().map_or(false, |sid| sid == session_id)
+                entry
+                    .session_id
+                    .as_ref()
+                    .map_or(false, |sid| sid == session_id)
             });
         }
 
         // Filter by tags if specified
         if let Some(ref tags) = query.tags {
-            candidates.retain(|entry| {
-                tags.iter().any(|tag| entry.metadata.tags.contains(tag))
-            });
+            candidates.retain(|entry| tags.iter().any(|tag| entry.metadata.tags.contains(tag)));
         }
 
         candidates
@@ -123,10 +124,9 @@ impl MemoryRetriever {
         service: &EmbeddingService,
     ) -> GraphBitResult<Vec<RetrievalResult>> {
         // Generate query embedding
-        let query_embedding = service
-            .embed_text(&query.query)
-            .await
-            .map_err(|e| GraphBitError::memory(format!("Failed to generate query embedding: {}", e)))?;
+        let query_embedding = service.embed_text(&query.query).await.map_err(|e| {
+            GraphBitError::memory(format!("Failed to generate query embedding: {}", e))
+        })?;
 
         // Calculate similarities and collect results
         let mut results: Vec<RetrievalResult> = candidates
@@ -245,11 +245,7 @@ impl MemoryRetriever {
     }
 
     /// Retrieve a specific memory by ID and record access
-    pub fn get_by_id(
-        &self,
-        id: &MemoryId,
-        storage: &mut dyn MemoryStorage,
-    ) -> Option<MemoryEntry> {
+    pub fn get_by_id(&self, id: &MemoryId, storage: &mut dyn MemoryStorage) -> Option<MemoryEntry> {
         if let Some(entry) = storage.get_mut(id) {
             entry.record_access();
             Some(entry.clone())
@@ -344,4 +340,3 @@ mod tests {
         assert!((MemoryRetriever::cosine_similarity(&a, &b) - 1.0).abs() < 0.001);
     }
 }
-
