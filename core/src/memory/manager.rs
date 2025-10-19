@@ -173,7 +173,7 @@ impl MemoryManager {
     }
 
     // Working Memory Methods
-    
+
     /// Start a new working memory session
     pub fn start_session(&mut self, session_id: String) {
         if self.config.enable_working {
@@ -247,6 +247,36 @@ impl MemoryManager {
         self.factual.update_fact(key, value, &mut **storage)
     }
 
+    /// Delete a fact
+    pub async fn delete_fact(&self, key: &str) -> GraphBitResult<bool> {
+        if !self.config.enable_factual {
+            return Ok(false);
+        }
+
+        let mut storage = self.storage.write().await;
+        self.factual.delete_fact(key, &mut **storage)
+    }
+
+    /// List all facts
+    pub async fn list_facts(&self) -> Vec<(String, String)> {
+        if !self.config.enable_factual {
+            return Vec::new();
+        }
+
+        let storage = self.storage.read().await;
+        self.factual.list_facts(&**storage)
+    }
+
+    /// Check if a fact exists
+    pub async fn has_fact(&self, key: &str) -> bool {
+        if !self.config.enable_factual {
+            return false;
+        }
+
+        let storage = self.storage.read().await;
+        self.factual.has_fact(key, &**storage)
+    }
+
     // Episodic Memory Methods
 
     /// Start recording an episode
@@ -310,6 +340,36 @@ impl MemoryManager {
         self.semantic.reinforce_concept(name, &mut **storage)
     }
 
+    /// Get a concept by name
+    pub async fn get_concept(&self, name: &str) -> Option<super::types::MemoryEntry> {
+        if !self.config.enable_semantic {
+            return None;
+        }
+
+        let storage = self.storage.read().await;
+        self.semantic.get_concept(name, &**storage)
+    }
+
+    /// Connect two concepts
+    pub async fn connect_concepts(&mut self, from: &str, to: &str) -> GraphBitResult<bool> {
+        if !self.config.enable_semantic {
+            return Ok(false);
+        }
+
+        let mut storage = self.storage.write().await;
+        self.semantic.connect_concepts(from, to, &mut **storage)
+    }
+
+    /// Get related concepts
+    pub async fn get_related_concepts(&self, name: &str) -> Vec<super::types::MemoryEntry> {
+        if !self.config.enable_semantic {
+            return Vec::new();
+        }
+
+        let storage = self.storage.read().await;
+        self.semantic.get_related_concepts(name, &**storage)
+    }
+
     // Retrieval Methods
 
     /// Retrieve memories matching a query
@@ -342,7 +402,7 @@ impl MemoryManager {
     /// Get memory statistics
     pub async fn get_stats(&self) -> MemoryStats {
         let storage = self.storage.read().await;
-        
+
         MemoryStats {
             total_memories: storage.count(),
             working_count: storage.count_by_type(MemoryType::Working),
@@ -388,4 +448,3 @@ pub struct MemoryStats {
     /// Current session ID (if any)
     pub current_session: Option<String>,
 }
-
