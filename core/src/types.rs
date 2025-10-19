@@ -296,12 +296,17 @@ impl WorkflowContext {
     }
 
     /// Set the memory manager for this context
-    pub fn set_memory_manager(&mut self, memory_manager: std::sync::Arc<tokio::sync::RwLock<crate::memory::MemoryManager>>) {
+    pub fn set_memory_manager(
+        &mut self,
+        memory_manager: std::sync::Arc<tokio::sync::RwLock<crate::memory::MemoryManager>>,
+    ) {
         self.memory_manager = Some(memory_manager);
     }
 
     /// Get a reference to the memory manager if available
-    pub fn get_memory_manager(&self) -> Option<&std::sync::Arc<tokio::sync::RwLock<crate::memory::MemoryManager>>> {
+    pub fn get_memory_manager(
+        &self,
+    ) -> Option<&std::sync::Arc<tokio::sync::RwLock<crate::memory::MemoryManager>>> {
         self.memory_manager.as_ref()
     }
 
