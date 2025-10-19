@@ -70,4 +70,3 @@ pub use semantic::{ConceptRelation, SemanticConcept, SemanticMemory};
 pub use storage::{InMemoryStorage, MemoryStorage, SharedStorage};
 pub use types::{MemoryEntry, MemoryId, MemoryMetadata, MemoryQuery, MemoryType};
 pub use working::WorkingMemory;
-
