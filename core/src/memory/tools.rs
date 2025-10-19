@@ -116,10 +116,7 @@ impl MemoryTools {
         _tags: Option<Vec<String>>,
     ) -> GraphBitResult<RememberResult> {
         // Determine memory type
-        let mem_type = memory_type
-            .as_deref()
-            .unwrap_or("Working")
-            .to_lowercase();
+        let mem_type = memory_type.as_deref().unwrap_or("Working").to_lowercase();
 
         let memory_id = match mem_type.as_str() {
             "working" => {
@@ -148,10 +145,8 @@ impl MemoryTools {
             "semantic" => {
                 let mut manager = self.manager.write().await;
                 // For semantic, use content as both name and description
-                let mut concept = super::semantic::SemanticConcept::new(
-                    content.clone(),
-                    content.clone(),
-                );
+                let mut concept =
+                    super::semantic::SemanticConcept::new(content.clone(), content.clone());
                 // Set confidence based on importance
                 if let Some(imp) = importance {
                     concept.confidence = imp;
@@ -259,10 +254,7 @@ impl MemoryTools {
         // In a full implementation, you would update the semantic graph
         Ok(ConnectResult {
             success: true,
-            message: format!(
-                "Connected memories: {} <-> {}",
-                memory_id1, memory_id2
-            ),
+            message: format!("Connected memories: {} <-> {}", memory_id1, memory_id2),
         })
     }
 
@@ -351,4 +343,3 @@ mod tests {
         assert_eq!(result.query, "Python");
     }
 }
-
