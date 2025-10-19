@@ -4,8 +4,8 @@
 //! remembered and how it should be categorized.
 
 use super::types::MemoryType;
-use crate::llm::{LlmProvider, LlmRequest};
 use crate::errors::GraphBitResult;
+use crate::llm::{LlmProvider, LlmRequest};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -151,7 +151,11 @@ impl MemoryExtractor {
     }
 
     /// Extract memories from a conversation message
-    pub async fn extract(&mut self, message: &str, context: Option<&str>) -> GraphBitResult<ExtractionResult> {
+    pub async fn extract(
+        &mut self,
+        message: &str,
+        context: Option<&str>,
+    ) -> GraphBitResult<ExtractionResult> {
         if !self.config.enabled {
             return Ok(ExtractionResult::skip());
         }
@@ -228,7 +232,7 @@ Be selective - not everything needs to be remembered."#,
 
         for line in response.lines() {
             let line = line.trim();
-            
+
             if let Some(value) = line.strip_prefix("REMEMBER:") {
                 should_remember = value.trim().to_lowercase() == "yes";
             } else if let Some(value) = line.strip_prefix("CONTENT:") {
@@ -278,12 +282,8 @@ Be selective - not everything needs to be remembered."#,
             return Ok(ExtractionResult::skip());
         }
 
-        let mut result = ExtractionResult::remember(
-            content.unwrap(),
-            memory_type.unwrap(),
-            importance,
-            tags,
-        );
+        let mut result =
+            ExtractionResult::remember(content.unwrap(), memory_type.unwrap(), importance, tags);
 
         if let Some(r) = reasoning {
             result = result.with_reasoning(r);
@@ -358,4 +358,3 @@ mod tests {
         assert_eq!(remember.importance, 0.8);
     }
 }
-
