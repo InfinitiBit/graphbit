@@ -1,6 +1,7 @@
 //! Memory manager for GraphBit Python bindings
 
 use super::config::MemoryConfig;
+use super::decay::DecayStats;
 use super::query::MemoryQuery;
 use super::types::{MemoryEntry, MemoryStats};
 use crate::errors::to_py_error;
@@ -90,6 +91,136 @@ impl MemoryManager {
         })
     }
 
+    /// Retrieve a fact by key
+    fn get_fact(&self, key: String) -> PyResult<Option<String>> {
+        let inner = self.inner.clone();
+        self.runtime.block_on(async move {
+            let manager = inner.read().await;
+            Ok(manager.get_fact(&key).await)
+        })
+    }
+
+    /// Update an existing fact
+    fn update_fact(&self, key: String, value: String) -> PyResult<bool> {
+        let inner = self.inner.clone();
+        self.runtime.block_on(async move {
+            let mut manager = inner.write().await;
+            manager
+                .update_fact(&key, value)
+                .await
+                .map_err(to_py_error)
+        })
+    }
+
+    /// Delete a fact by key
+    fn delete_fact(&self, key: String) -> PyResult<bool> {
+        let inner = self.inner.clone();
+        self.runtime.block_on(async move {
+            let mut manager = inner.write().await;
+            manager
+                .delete_fact(&key)
+                .await
+                .map_err(to_py_error)
+        })
+    }
+
+    /// List all facts as (key, value) tuples
+    fn list_facts(&self) -> PyResult<Vec<(String, String)>> {
+        let inner = self.inner.clone();
+        self.runtime.block_on(async move {
+            let manager = inner.read().await;
+            Ok(manager.list_facts().await)
+        })
+    }
+
+    /// Check if a fact exists
+    fn has_fact(&self, key: String) -> PyResult<bool> {
+        let inner = self.inner.clone();
+        self.runtime.block_on(async move {
+            let manager = inner.read().await;
+            Ok(manager.has_fact(&key).await)
+        })
+    }
+
+    // Semantic Memory Methods
+
+    /// Store a semantic concept
+    fn store_concept(&self, name: String, description: String) -> PyResult<String> {
+        let inner = self.inner.clone();
+        self.runtime.block_on(async move {
+            let mut manager = inner.write().await;
+            let concept =
+                graphbit_core::memory::semantic::SemanticConcept::new(name, description);
+            manager
+                .store_concept(concept)
+                .await
+                .map(|id| id.to_string())
+                .map_err(to_py_error)
+        })
+    }
+
+    /// Get a concept by name
+    fn get_concept(&self, name: String) -> PyResult<Option<super::semantic::SemanticConcept>> {
+        let inner = self.inner.clone();
+        self.runtime.block_on(async move {
+            let manager = inner.read().await;
+            Ok(manager
+                .get_concept(&name)
+                .await
+                .and_then(|entry| super::semantic::SemanticConcept::from_memory_entry(&entry)))
+        })
+    }
+
+    /// Reinforce a concept (increases confidence)
+    fn reinforce_concept(&self, name: String) -> PyResult<bool> {
+        let inner = self.inner.clone();
+        self.runtime.block_on(async move {
+            let mut manager = inner.write().await;
+            manager
+                .reinforce_concept(&name)
+                .await
+                .map_err(to_py_error)
+        })
+    }
+
+    /// Connect two concepts
+    fn connect_concepts(&self, from_concept: String, to_concept: String) -> PyResult<bool> {
+        let inner = self.inner.clone();
+        self.runtime.block_on(async move {
+            let mut manager = inner.write().await;
+            manager
+                .connect_concepts(&from_concept, &to_concept)
+                .await
+                .map_err(to_py_error)
+        })
+    }
+
+    /// Get related concepts
+    fn get_related_concepts(&self, name: String) -> PyResult<Vec<String>> {
+        let inner = self.inner.clone();
+        self.runtime.block_on(async move {
+            let manager = inner.read().await;
+            let entries = manager.get_related_concepts(&name).await;
+
+            // Extract concept names from entries
+            let names: Vec<String> = entries
+                .iter()
+                .filter_map(|entry| {
+                    entry
+                        .metadata
+                        .tags
+                        .iter()
+                        .find(|tag| *tag != "concept")
+                        .cloned()
+                })
+                .collect();
+
+            Ok(names)
+        })
+    }
+
+    // Episodic Memory Methods
+
     /// Add content to the current episode
     fn add_to_episode(&self, content: String) -> PyResult<()> {
         let inner = self.inner.clone();
@@ -138,14 +269,13 @@ impl MemoryManager {
         let inner = self.inner.clone();
 
         self.runtime.block_on(async move {
-            let id = graphbit_core::memory::types::MemoryId::from_string(&memory_id).map_err(
-                |e| {
+            let id =
+                graphbit_core::memory::types::MemoryId::from_string(&memory_id).map_err(|e| {
                     PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
                         "Invalid memory ID: {}",
                         e
                     ))
-                },
-            )?;
+                })?;
 
             let manager = inner.read().await;
             Ok(manager.get_memory(&id).await.map(MemoryEntry::from))
@@ -157,14 +287,13 @@ impl MemoryManager {
         let inner = self.inner.clone();
 
         self.runtime.block_on(async move {
-            let id = graphbit_core::memory::types::MemoryId::from_string(&memory_id).map_err(
-                |e| {
+            let id =
+                graphbit_core::memory::types::MemoryId::from_string(&memory_id).map_err(|e| {
                     PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
                         "Invalid memory ID: {}",
                         e
                     ))
-                },
-            )?;
+                })?;
 
             let manager = inner.read().await;
             manager.remove_memory(&id).await.map_err(to_py_error)
@@ -198,12 +327,16 @@ impl MemoryManager {
         })
     }
 
-    /// Run memory decay
-    fn run_decay(&self) -> PyResult<()> {
+    /// Run memory decay and return statistics
+    fn run_decay(&self) -> PyResult<DecayStats> {
         let inner = self.inner.clone();
         self.runtime.block_on(async move {
             let mut manager = inner.write().await;
-            manager.run_decay().await.map(|_| ()).map_err(to_py_error)
+            manager
+                .run_decay()
+                .await
+                .map(DecayStats::from)
+                .map_err(to_py_error)
         })
     }
 
@@ -221,4 +354,3 @@ impl MemoryManager {
         "MemoryManager()".to_string()
     }
 }
-
