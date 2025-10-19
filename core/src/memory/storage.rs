@@ -79,7 +79,7 @@ impl InMemoryStorage {
     /// Create a new in-memory storage with custom capacities
     pub fn with_capacities(capacities: HashMap<MemoryType, usize>) -> Self {
         let total_capacity: usize = capacities.values().sum();
-        
+
         Self {
             memories: HashMap::with_capacity(total_capacity),
             type_index: HashMap::with_capacity(4),
@@ -111,7 +111,7 @@ impl InMemoryStorage {
     /// Evict least important memory of a given type
     fn evict_least_important(&mut self, memory_type: MemoryType) -> GraphBitResult<()> {
         let type_memories = self.list_by_type(memory_type);
-        
+
         if type_memories.is_empty() {
             return Ok(());
         }
@@ -123,7 +123,9 @@ impl InMemoryStorage {
             .min_by(|a, b| {
                 let a_score = a.calculate_decay(now);
                 let b_score = b.calculate_decay(now);
-                a_score.partial_cmp(&b_score).unwrap_or(std::cmp::Ordering::Equal)
+                a_score
+                    .partial_cmp(&b_score)
+                    .unwrap_or(std::cmp::Ordering::Equal)
             })
             .map(|entry| entry.id.clone());
 
@@ -209,22 +211,14 @@ impl MemoryStorage for InMemoryStorage {
     fn list_by_type(&self, memory_type: MemoryType) -> Vec<&MemoryEntry> {
         self.type_index
             .get(&memory_type)
-            .map(|ids| {
-                ids.iter()
-                    .filter_map(|id| self.memories.get(id))
-                    .collect()
-            })
+            .map(|ids| ids.iter().filter_map(|id| self.memories.get(id)).collect())
             .unwrap_or_default()
     }
 
     fn list_by_session(&self, session_id: &str) -> Vec<&MemoryEntry> {
         self.session_index
             .get(session_id)
-            .map(|ids| {
-                ids.iter()
-                    .filter_map(|id| self.memories.get(id))
-                    .collect()
-            })
+            .map(|ids| ids.iter().filter_map(|id| self.memories.get(id)).collect())
             .unwrap_or_default()
     }
 
@@ -294,4 +288,3 @@ pub fn create_shared_storage_with_capacities(
         capacities,
     ))))
 }
-
