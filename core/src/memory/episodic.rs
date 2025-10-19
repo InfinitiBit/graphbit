@@ -135,7 +135,7 @@ impl EpisodicMemory {
         let mut metadata = MemoryMetadata::new();
         metadata.set_source("episodic".to_string());
         metadata.add_tag("episode".to_string());
-        
+
         for tag in &episode.tags {
             metadata.add_tag(tag.clone());
         }
@@ -194,7 +194,7 @@ impl EpisodicMemory {
     ) -> Vec<MemoryEntry> {
         let episodes = storage.list_by_type(MemoryType::Episodic);
         let participant_key = format!("participant_{}", participant);
-        
+
         episodes
             .into_iter()
             .filter(|ep| ep.metadata.custom.contains_key(&participant_key))
@@ -203,13 +203,9 @@ impl EpisodicMemory {
     }
 
     /// Retrieve episodes by tag
-    pub fn get_episodes_by_tag(
-        &self,
-        tag: &str,
-        storage: &dyn MemoryStorage,
-    ) -> Vec<MemoryEntry> {
+    pub fn get_episodes_by_tag(&self, tag: &str, storage: &dyn MemoryStorage) -> Vec<MemoryEntry> {
         let episodes = storage.list_by_type(MemoryType::Episodic);
-        
+
         episodes
             .into_iter()
             .filter(|ep| ep.metadata.tags.contains(&tag.to_string()))
@@ -225,7 +221,7 @@ impl EpisodicMemory {
         storage: &dyn MemoryStorage,
     ) -> Vec<MemoryEntry> {
         let episodes = storage.list_by_type(MemoryType::Episodic);
-        
+
         episodes
             .into_iter()
             .filter(|ep| ep.created_at >= start && ep.created_at <= end)
@@ -244,10 +240,10 @@ impl EpisodicMemory {
             .into_iter()
             .cloned()
             .collect();
-        
+
         // Sort by creation time (most recent first)
         episodes.sort_by(|a, b| b.created_at.cmp(&a.created_at));
-        
+
         episodes.truncate(limit);
         episodes
     }
@@ -260,7 +256,7 @@ impl EpisodicMemory {
             .first()
             .and_then(|line| line.strip_prefix("Episode: "))
             .unwrap_or("Untitled Episode");
-        
+
         format!(
             "{} ({})",
             title,
@@ -298,7 +294,7 @@ mod tests {
     #[test]
     fn test_episode_creation() {
         let mut episode = Episode::new("Test Episode".to_string(), "Test content".to_string());
-        
+
         episode.add_participant("Alice".to_string());
         episode.add_participant("Bob".to_string());
         episode.set_outcome("Success".to_string());
@@ -355,4 +351,3 @@ mod tests {
         assert_eq!(recent.len(), 1);
     }
 }
-
