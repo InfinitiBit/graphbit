@@ -6,8 +6,8 @@ use pyo3::prelude::*;
 use std::collections::HashMap;
 
 /// Memory type enumeration
-#[pyclass]
-#[derive(Clone, Debug)]
+#[pyclass(eq, eq_int)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum MemoryType {
     /// Short-term session-based memory
     Working,
@@ -17,6 +17,19 @@ pub enum MemoryType {
     Episodic,
     /// Pattern-based knowledge
     Semantic,
+}
+
+#[pymethods]
+impl MemoryType {
+    /// String representation
+    fn __repr__(&self) -> String {
+        format!("MemoryType.{:?}", self)
+    }
+
+    /// String conversion
+    fn __str__(&self) -> String {
+        format!("{:?}", self)
+    }
 }
 
 impl From<MemoryType> for CoreMemoryType {
