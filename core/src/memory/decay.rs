@@ -154,7 +154,8 @@ impl DecayManager {
             if entry.should_forget(threshold, now) {
                 to_delete.push(entry.id.clone());
                 stats.forgotten += 1;
-                stats.forgotten_by_type
+                stats
+                    .forgotten_by_type
                     .entry(entry.memory_type)
                     .and_modify(|count| *count += 1)
                     .or_insert(1);
@@ -176,11 +177,7 @@ impl DecayManager {
     }
 
     /// Check if a memory is protected from decay
-    fn is_protected(
-        &self,
-        entry: &super::types::MemoryEntry,
-        now: DateTime<Utc>,
-    ) -> bool {
+    fn is_protected(&self, entry: &super::types::MemoryEntry, now: DateTime<Utc>) -> bool {
         // Protect high-importance memories
         if entry.importance_score >= self.config.importance_protection_threshold {
             return true;
@@ -342,4 +339,3 @@ mod tests {
         assert!((stats.protection_rate() - 0.1).abs() < 0.001);
     }
 }
-
