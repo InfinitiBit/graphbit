@@ -120,11 +120,7 @@ pub struct MemoryEntry {
 
 impl MemoryEntry {
     /// Create a new memory entry
-    pub fn new(
-        content: String,
-        memory_type: MemoryType,
-        session_id: Option<String>,
-    ) -> Self {
+    pub fn new(content: String, memory_type: MemoryType, session_id: Option<String>) -> Self {
         let now = Utc::now();
         Self {
             id: MemoryId::new(),
@@ -157,7 +153,7 @@ impl MemoryEntry {
     pub fn record_access(&mut self) {
         self.last_accessed = Utc::now();
         self.access_count = self.access_count.saturating_add(1);
-        
+
         // Boost importance slightly on access (up to 0.1 increase)
         let boost = 0.01 * (1.0 - self.importance_score);
         self.importance_score = (self.importance_score + boost).min(1.0);
@@ -179,16 +175,16 @@ impl MemoryEntry {
     pub fn calculate_decay(&self, now: DateTime<Utc>) -> f32 {
         let age_seconds = (now - self.created_at).num_seconds() as f32;
         let recency_seconds = (now - self.last_accessed).num_seconds() as f32;
-        
+
         // Decay factors
         let age_decay = (-age_seconds / 86400.0 / 30.0).exp(); // 30-day half-life
         let recency_decay = (-recency_seconds / 86400.0 / 7.0).exp(); // 7-day recency half-life
         let access_boost = (self.access_count as f32).ln().max(0.0) / 10.0;
-        
+
         // Combined decay score
-        let decay_score = (age_decay * 0.3 + recency_decay * 0.5 + access_boost * 0.2)
-            * self.importance_score;
-        
+        let decay_score =
+            (age_decay * 0.3 + recency_decay * 0.5 + access_boost * 0.2) * self.importance_score;
+
         decay_score.clamp(0.0, 1.0)
     }
 
@@ -347,4 +343,3 @@ impl MemoryQuery {
         self
     }
 }
-
