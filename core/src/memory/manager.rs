@@ -213,6 +213,74 @@ impl MemoryManager {
         self.working.get_session_context(&**storage)
     }
 
+    /// Get all working memory items for current session
+    pub async fn get_all_items(&self) -> Vec<MemoryEntry> {
+        if !self.config.enable_working {
+            return Vec::new();
+        }
+
+        let storage = self.storage.read().await;
+        self.working.get_session_memories(&**storage)
+    }
+
+    /// Count working memory items in current session
+    pub async fn count_items(&self) -> usize {
+        if !self.config.enable_working {
+            return 0;
+        }
+
+        let storage = self.storage.read().await;
+        self.working.count_session_memories(&**storage)
+    }
+
+    /// Clear all working memory items in current session
+    pub async fn clear_items(&mut self) -> GraphBitResult<usize> {
+        if !self.config.enable_working {
+            return Ok(0);
+        }
+
+        let mut storage = self.storage.write().await;
+        self.working.clear_session_memories(&mut **storage)
+    }
+
+    /// Set context variable for current session
+    pub fn set_context(&mut self, key: String, value: String) {
+        if self.config.enable_working {
+            self.working.set_session_metadata(key, serde_json::Value::String(value));
+        }
+    }
+
+    /// Get context variable for current session
+    pub fn get_context(&self, key: &str) -> Option<String> {
+        if !self.config.enable_working {
+            return None;
+        }
+
+        self.working
+            .get_session_metadata(key)
+            .and_then(|v| v.as_str().map(|s| s.to_string()))
+    }
+
+    /// Get all context variables for current session
+    pub fn get_all_context(&self) -> std::collections::HashMap<String, String> {
+        if !self.config.enable_working {
+            return std::collections::HashMap::new();
+        }
+
+        self.working
+            .get_all_session_metadata()
+            .into_iter()
+            .filter_map(|(k, v)| v.as_str().map(|s| (k, s.to_string())))
+            .collect()
+    }
+
+    /// Clear all context variables for current session
+    pub fn clear_context(&mut self) {
+        if self.config.enable_working {
+            self.working.clear_session_metadata();
+        }
+    }
+
     // Factual Memory Methods
 
     /// Store a fact
@@ -277,6 +345,97 @@ impl MemoryManager {
         self.factual.has_fact(key, &**storage)
     }
 
+    /// Store a fact with custom importance
+    pub async fn store_fact_with_importance(
+        &self,
+        key: String,
+        value: String,
+        importance: f32,
+    ) -> GraphBitResult<MemoryId> {
+        if !self.config.enable_factual {
+            return Err(crate::errors::GraphBitError::memory(
+                "Factual memory is disabled",
+            ));
+        }
+
+        let mut storage = self.storage.write().await;
+        self.factual
+            .store_fact_with_importance(key, value, importance, &mut **storage)
+    }
+
+    /// Get all facts as a HashMap
+    pub async fn get_all_facts(&self) -> std::collections::HashMap<String, String> {
+        if !self.config.enable_factual {
+            return std::collections::HashMap::new();
+        }
+
+        let storage = self.storage.read().await;
+        self.factual.get_all_facts(&**storage)
+    }
+
+    /// Count facts in current namespace
+    pub async fn count_facts(&self) -> usize {
+        if !self.config.enable_factual {
+            return 0;
+        }
+
+        let storage = self.storage.read().await;
+        self.factual.count_facts(&**storage)
+    }
+
+    /// Store a user preference
+    pub async fn store_preference(&self, key: String, value: String) -> GraphBitResult<MemoryId> {
+        if !self.config.enable_factual {
+            return Err(crate::errors::GraphBitError::memory(
+                "Factual memory is disabled",
+            ));
+        }
+
+        let mut storage = self.storage.write().await;
+        self.factual.store_preference(key, value, &mut **storage)
+    }
+
+    /// Get a user preference
+    pub async fn get_preference(&self, key: &str) -> Option<String> {
+        if !self.config.enable_factual {
+            return None;
+        }
+
+        let storage = self.storage.read().await;
+        self.factual.get_preference(key, &**storage)
+    }
+
+    /// Search facts by pattern with optional importance filtering
+    pub async fn search_facts(
+        &self,
+        pattern: &str,
+        min_importance: Option<f32>,
+        max_results: Option<usize>,
+    ) -> Vec<(String, String)> {
+        if !self.config.enable_factual {
+            return Vec::new();
+        }
+
+        let storage = self.storage.read().await;
+        self.factual
+            .search_facts(pattern, min_importance, max_results, &**storage)
+    }
+
+    /// Get facts by importance range
+    pub async fn get_facts_by_importance(
+        &self,
+        min_importance: f32,
+        max_importance: Option<f32>,
+    ) -> Vec<(String, String)> {
+        if !self.config.enable_factual {
+            return Vec::new();
+        }
+
+        let storage = self.storage.read().await;
+        self.factual
+            .get_facts_by_importance(min_importance, max_importance, &**storage)
+    }
+
     // Episodic Memory Methods
 
     /// Start recording an episode
@@ -293,6 +452,27 @@ impl MemoryManager {
         }
     }
 
+    /// Add a participant to the current episode
+    pub fn add_participant(&mut self, participant: String) {
+        if self.config.enable_episodic {
+            self.episodic.add_participant(participant);
+        }
+    }
+
+    /// Set the outcome of the current episode
+    pub fn set_outcome(&mut self, outcome: String) {
+        if self.config.enable_episodic {
+            self.episodic.set_outcome(outcome);
+        }
+    }
+
+    /// Add a tag to the current episode
+    pub fn add_tag(&mut self, tag: String) {
+        if self.config.enable_episodic {
+            self.episodic.add_tag(tag);
+        }
+    }
+
     /// End current episode
     pub async fn end_episode(&mut self) -> GraphBitResult<Option<MemoryId>> {
         if !self.config.enable_episodic {
@@ -303,6 +483,42 @@ impl MemoryManager {
         self.episodic.end_episode(&mut **storage)
     }
 
+    /// Get episodes by participant
+    pub async fn get_episodes_by_participant(&self, participant: &str) -> Vec<MemoryEntry> {
+        if !self.config.enable_episodic {
+            return Vec::new();
+        }
+
+        let storage = self.storage.read().await;
+        self.episodic
+            .get_episodes_by_participant(participant, &**storage)
+    }
+
+    /// Get episodes by tag
+    pub async fn get_episodes_by_tag(&self, tag: &str) -> Vec<MemoryEntry> {
+        if !self.config.enable_episodic {
+            return Vec::new();
+        }
+
+        let storage = self.storage.read().await;
+        self.episodic.get_episodes_by_tag(tag, &**storage)
+    }
+
+    /// Get episodes by time range
+    pub async fn get_episodes_by_timerange(
+        &self,
+        start: chrono::DateTime<chrono::Utc>,
+        end: chrono::DateTime<chrono::Utc>,
+    ) -> Vec<MemoryEntry> {
+        if !self.config.enable_episodic {
+            return Vec::new();
+        }
+
+        let storage = self.storage.read().await;
+        self.episodic
+            .get_episodes_by_timerange(start, end, &**storage)
+    }
+
     /// Get recent episodes
     pub async fn get_recent_episodes(&self, limit: usize) -> Vec<MemoryEntry> {
         if !self.config.enable_episodic {
@@ -311,6 +527,61 @@ impl MemoryManager {
 
         let storage = self.storage.read().await;
         self.episodic.get_recent_episodes(limit, &**storage)
+    }
+
+    /// Count episodes
+    pub async fn count_episodes(&self) -> usize {
+        if !self.config.enable_episodic {
+            return 0;
+        }
+
+        let storage = self.storage.read().await;
+        self.episodic.count_episodes(&**storage)
+    }
+
+    /// Check if currently recording an episode
+    pub fn is_recording(&self) -> bool {
+        if !self.config.enable_episodic {
+            return false;
+        }
+
+        self.episodic.is_recording()
+    }
+
+    /// Search episodes with multiple filters
+    pub async fn search_episodes(
+        &self,
+        pattern: &str,
+        participants: Option<Vec<String>>,
+        tags: Option<Vec<String>>,
+        start_time: Option<chrono::DateTime<chrono::Utc>>,
+        end_time: Option<chrono::DateTime<chrono::Utc>>,
+        max_results: Option<usize>,
+    ) -> Vec<MemoryEntry> {
+        if !self.config.enable_episodic {
+            return Vec::new();
+        }
+
+        let storage = self.storage.read().await;
+        self.episodic.search_episodes(
+            pattern,
+            participants,
+            tags,
+            start_time,
+            end_time,
+            max_results,
+            &**storage,
+        )
+    }
+
+    /// Get summaries of recent episodes
+    pub async fn get_episode_summaries(&self, limit: usize) -> Vec<String> {
+        if !self.config.enable_episodic {
+            return Vec::new();
+        }
+
+        let storage = self.storage.read().await;
+        self.episodic.get_episode_summaries(limit, &**storage)
     }
 
     // Semantic Memory Methods
@@ -368,6 +639,89 @@ impl MemoryManager {
 
         let storage = self.storage.read().await;
         self.semantic.get_related_concepts(name, &**storage)
+    }
+
+    /// List all concepts
+    pub async fn list_concepts(&self) -> Vec<super::types::MemoryEntry> {
+        if !self.config.enable_semantic {
+            return Vec::new();
+        }
+
+        let storage = self.storage.read().await;
+        self.semantic.list_concepts(&**storage)
+    }
+
+    /// Count total number of concepts
+    pub async fn count_concepts(&self) -> usize {
+        if !self.config.enable_semantic {
+            return 0;
+        }
+
+        let storage = self.storage.read().await;
+        self.semantic.count_concepts(&**storage)
+    }
+
+    /// Get the concept relationship graph
+    pub async fn get_concept_graph(&self) -> std::collections::HashMap<String, Vec<String>> {
+        if !self.config.enable_semantic {
+            return std::collections::HashMap::new();
+        }
+
+        self.semantic.get_concept_graph().clone()
+    }
+
+    /// Get concepts with confidence above threshold
+    pub async fn get_high_confidence_concepts(
+        &self,
+        min_confidence: f32,
+    ) -> Vec<super::types::MemoryEntry> {
+        if !self.config.enable_semantic {
+            return Vec::new();
+        }
+
+        let storage = self.storage.read().await;
+        self.semantic
+            .get_high_confidence_concepts(min_confidence, &**storage)
+    }
+
+    /// Calculate similarity between two concepts
+    pub async fn calculate_similarity(&self, concept1_name: &str, concept2_name: &str) -> f32 {
+        if !self.config.enable_semantic {
+            return 0.0;
+        }
+
+        let storage = self.storage.read().await;
+        self.semantic
+            .calculate_similarity(concept1_name, concept2_name, &**storage)
+    }
+
+    /// Search for concepts matching a pattern
+    ///
+    /// Searches for concepts whose names contain the given pattern (case-insensitive).
+    /// Results can be filtered by minimum confidence and limited to a maximum number.
+    ///
+    /// # Arguments
+    ///
+    /// * `pattern` - Substring to search for in concept names (case-insensitive)
+    /// * `min_confidence` - Optional minimum confidence threshold (0.0-1.0)
+    /// * `max_results` - Optional limit on number of results to return
+    ///
+    /// # Returns
+    ///
+    /// Vector of MemoryEntry objects matching the criteria, sorted by confidence (descending)
+    pub async fn search_concepts(
+        &self,
+        pattern: &str,
+        min_confidence: Option<f32>,
+        max_results: Option<usize>,
+    ) -> Vec<MemoryEntry> {
+        if !self.config.enable_semantic {
+            return Vec::new();
+        }
+
+        let storage = self.storage.read().await;
+        self.semantic
+            .search_concepts(pattern, min_confidence, max_results, &**storage)
     }
 
     // Retrieval Methods
