@@ -279,6 +279,98 @@ impl FactualMemory {
 
         None
     }
+
+    /// Search facts by pattern with optional importance filtering
+    pub fn search_facts(
+        &self,
+        pattern: &str,
+        min_importance: Option<f32>,
+        max_results: Option<usize>,
+        storage: &dyn MemoryStorage,
+    ) -> Vec<(String, String)> {
+        let facts = storage.list_by_type(MemoryType::Factual);
+        let pattern_lower = pattern.to_lowercase();
+        let mut results: Vec<(String, String, f32)> = Vec::new();
+
+        for fact in facts {
+            // Check namespace if set
+            if let Some(ref ns) = self.namespace {
+                let ns_tag = format!("namespace:{}", ns);
+                if !fact.metadata.tags.contains(&ns_tag) {
+                    continue;
+                }
+            }
+
+            // Check importance filter
+            if let Some(min_imp) = min_importance {
+                if fact.importance_score < min_imp {
+                    continue;
+                }
+            }
+
+            // Parse "key: value" format
+            if let Some(colon_pos) = fact.content.find(':') {
+                let key = fact.content[..colon_pos].trim();
+                let value = fact.content[colon_pos + 1..].trim();
+
+                // Case-insensitive pattern matching on key or value
+                if key.to_lowercase().contains(&pattern_lower)
+                    || value.to_lowercase().contains(&pattern_lower)
+                {
+                    results.push((key.to_string(), value.to_string(), fact.importance_score));
+                }
+            }
+        }
+
+        // Sort by importance (highest first)
+        results.sort_by(|a, b| b.2.partial_cmp(&a.2).unwrap_or(std::cmp::Ordering::Equal));
+
+        // Apply max_results limit
+        if let Some(limit) = max_results {
+            results.truncate(limit);
+        }
+
+        // Return only key-value pairs (drop importance)
+        results.into_iter().map(|(k, v, _)| (k, v)).collect()
+    }
+
+    /// Get facts by importance range
+    pub fn get_facts_by_importance(
+        &self,
+        min_importance: f32,
+        max_importance: Option<f32>,
+        storage: &dyn MemoryStorage,
+    ) -> Vec<(String, String)> {
+        let facts = storage.list_by_type(MemoryType::Factual);
+        let max_imp = max_importance.unwrap_or(1.0);
+        let mut results: Vec<(String, String, f32)> = Vec::new();
+
+        for fact in facts {
+            // Check namespace if set
+            if let Some(ref ns) = self.namespace {
+                let ns_tag = format!("namespace:{}", ns);
+                if !fact.metadata.tags.contains(&ns_tag) {
+                    continue;
+                }
+            }
+
+            // Check importance range
+            if fact.importance_score >= min_importance && fact.importance_score <= max_imp {
+                // Parse "key: value" format
+                if let Some(colon_pos) = fact.content.find(':') {
+                    let key = fact.content[..colon_pos].trim().to_string();
+                    let value = fact.content[colon_pos + 1..].trim().to_string();
+                    results.push((key, value, fact.importance_score));
+                }
+            }
+        }
+
+        // Sort by importance (highest first)
+        results.sort_by(|a, b| b.2.partial_cmp(&a.2).unwrap_or(std::cmp::Ordering::Equal));
+
+        // Return only key-value pairs (drop importance)
+        results.into_iter().map(|(k, v, _)| (k, v)).collect()
+    }
 }
 
 impl Default for FactualMemory {
