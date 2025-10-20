@@ -68,7 +68,15 @@ impl SemanticConcept {
             .find(|tag| *tag != "concept")
             .cloned()?;
 
-        let description = entry.content.clone();
+        // Parse description from content
+        // Content format: "Concept: {name}\nDescription: {description}\nConfidence: {conf}\nReinforcements: {count}"
+        let description = entry
+            .content
+            .lines()
+            .find(|line| line.starts_with("Description: "))
+            .and_then(|line| line.strip_prefix("Description: "))
+            .unwrap_or(&entry.content)
+            .to_string();
 
         let confidence = entry
             .metadata
