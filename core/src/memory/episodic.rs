@@ -278,6 +278,102 @@ impl EpisodicMemory {
     pub fn get_current_episode(&self) -> Option<&Episode> {
         self.current_episode.as_ref()
     }
+
+    /// Search episodes with multiple filters
+    ///
+    /// Filters episodes by:
+    /// - Content pattern (case-insensitive substring match)
+    /// - Participants (optional)
+    /// - Tags (optional)
+    /// - Time range (optional)
+    ///
+    /// Returns up to `max_results` episodes matching all specified filters.
+    pub fn search_episodes(
+        &self,
+        pattern: &str,
+        participants: Option<Vec<String>>,
+        tags: Option<Vec<String>>,
+        start_time: Option<DateTime<Utc>>,
+        end_time: Option<DateTime<Utc>>,
+        max_results: Option<usize>,
+        storage: &dyn MemoryStorage,
+    ) -> Vec<MemoryEntry> {
+        let episodes = storage.list_by_type(MemoryType::Episodic);
+        let pattern_lower = pattern.to_lowercase();
+
+        let mut results: Vec<MemoryEntry> = episodes
+            .into_iter()
+            .filter(|ep| {
+                // Filter by content pattern
+                if !pattern.is_empty() && !ep.content.to_lowercase().contains(&pattern_lower) {
+                    return false;
+                }
+
+                // Filter by participants
+                if let Some(ref participant_list) = participants {
+                    let has_all_participants = participant_list.iter().all(|p| {
+                        let participant_key = format!("participant_{}", p);
+                        ep.metadata.custom.contains_key(&participant_key)
+                    });
+                    if !has_all_participants {
+                        return false;
+                    }
+                }
+
+                // Filter by tags
+                if let Some(ref tag_list) = tags {
+                    let has_all_tags = tag_list
+                        .iter()
+                        .all(|t| ep.metadata.tags.contains(&t.to_string()));
+                    if !has_all_tags {
+                        return false;
+                    }
+                }
+
+                // Filter by time range
+                if let Some(start) = start_time {
+                    if ep.created_at < start {
+                        return false;
+                    }
+                }
+                if let Some(end) = end_time {
+                    if ep.created_at > end {
+                        return false;
+                    }
+                }
+
+                true
+            })
+            .cloned()
+            .collect();
+
+        // Sort by creation time (most recent first)
+        results.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+
+        // Limit results
+        if let Some(limit) = max_results {
+            results.truncate(limit);
+        }
+
+        results
+    }
+
+    /// Get summaries of recent episodes
+    ///
+    /// Returns a list of episode summaries (title + timestamp) for the most recent episodes.
+    /// Each summary is a formatted string like "Episode Title (2024-01-15 14:30)".
+    pub fn get_episode_summaries(
+        &self,
+        limit: usize,
+        storage: &dyn MemoryStorage,
+    ) -> Vec<String> {
+        let recent_episodes = self.get_recent_episodes(limit, storage);
+
+        recent_episodes
+            .iter()
+            .map(|ep| self.get_episode_summary(ep))
+            .collect()
+    }
 }
 
 impl Default for EpisodicMemory {
