@@ -22,9 +22,9 @@ This guide demonstrates how to integrate Neo4j, a native graph database, with Gr
 
 ---
 
-## Step 1: Create the Neo4jGraphbit Class
+## Step 1: Initialize Connections and Configuration
 
-Create a class to manage Neo4j and embedding operations:
+Set up Neo4j and embedding configuration:
 
 ```python
 import os
@@ -44,41 +44,34 @@ NEO4J_USERNAME = os.getenv("NEO4J_USERNAME")
 NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-class Neo4jGraphbit:
-    def __init__(self):
-        # Initialize Neo4j driver
-        self.driver = GraphDatabase.driver(
-            NEO4J_URI,
-            auth=(NEO4J_USERNAME, NEO4J_PASSWORD)
-        )
+def init_neo4j_driver():
+    """Initialize and return Neo4j driver."""
+    return GraphDatabase.driver(
+        NEO4J_URI,
+        auth=(NEO4J_USERNAME, NEO4J_PASSWORD)
+    )
+
+def init_embedding_client():
+    """Initialize and return embedding client."""
+    embedding_config = EmbeddingConfig.openai(
+        model="text-embedding-3-small",
+        api_key=OPENAI_API_KEY
+    )
+    return EmbeddingClient(embedding_config)
+
+def verify_connections(driver, embedding_client):
+    """Verify Neo4j and embedding client connections."""
+    try:
+        driver.verify_connectivity()
+        print("✓ Neo4j connection successful")
         
-        # Initialize embedding client
-        embedding_config = EmbeddingConfig.openai(
-            model="text-embedding-3-small",
-            api_key=OPENAI_API_KEY
-        )
-        self.embedding_client = EmbeddingClient(embedding_config)
-        
-        # Verify connections
-        self._verify_connections()
-        
-    def _verify_connections(self):
-        """Verify Neo4j and embedding client connections."""
-        try:
-            self.driver.verify_connectivity()
-            print("✓ Neo4j connection successful")
-            
-            # Test embedding generation
-            test_embedding = self.embedding_client.embed("test")
-            if len(test_embedding) > 0:
-                print("✓ Embedding client configured successfully")
-        except Exception as e:
-            print(f"Connection error: {str(e)}")
-            raise
-            
-    def close(self):
-        """Close the Neo4j driver connection."""
-        self.driver.close()
+        # Test embedding generation
+        test_embedding = embedding_client.embed("test")
+        if len(test_embedding) > 0:
+            print("✓ Embedding client configured successfully")
+    except Exception as e:
+        print(f"Connection error: {str(e)}")
+        raise
 ```
 
 ---
@@ -303,7 +296,7 @@ from typing import List, Dict, Any, Tuple
 import numpy as np
 import json
 from dotenv import load_dotenv
-from neo4j import GraphDatabase
+from neo4j import GraphDatabase, Driver
 from graphbit import EmbeddingClient, EmbeddingConfig
 
 # Load environment variables
@@ -315,182 +308,186 @@ NEO4J_USERNAME = os.getenv("NEO4J_USERNAME")
 NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-class Neo4jGraphbit:
-    def __init__(self):
-        # Initialize Neo4j driver
-        self.driver = GraphDatabase.driver(
-            NEO4J_URI,
-            auth=(NEO4J_USERNAME, NEO4J_PASSWORD)
-        )
+def init_neo4j_driver() -> Driver:
+    """Initialize and return Neo4j driver."""
+    return GraphDatabase.driver(
+        NEO4J_URI,
+        auth=(NEO4J_USERNAME, NEO4J_PASSWORD)
+    )
+
+def init_embedding_client() -> EmbeddingClient:
+    """Initialize and return embedding client."""
+    embedding_config = EmbeddingConfig.openai(
+        model="text-embedding-3-small",
+        api_key=OPENAI_API_KEY
+    )
+    return EmbeddingClient(embedding_config)
+
+def verify_connections(driver: Driver, embedding_client: EmbeddingClient):
+    """Verify Neo4j and embedding client connections."""
+    try:
+        driver.verify_connectivity()
+        print("✓ Neo4j connection successful")
         
-        # Initialize embedding client
-        embedding_config = EmbeddingConfig.openai(
-            model="text-embedding-3-small",
-            api_key=OPENAI_API_KEY
-        )
-        self.embedding_client = EmbeddingClient(embedding_config)
+        # Test embedding generation
+        test_embedding = embedding_client.embed("test")
+        if len(test_embedding) > 0:
+            print("✓ Embedding client configured successfully")
+    except Exception as e:
+        print(f"Connection error: {str(e)}")
+        raise
+
+def setup_vector_schema(driver: Driver):
+    """Initialize Neo4j schema with vector search capabilities."""
+    with driver.session() as session:
+        # Create constraints
+        session.run("""
+            CREATE CONSTRAINT document_id_unique IF NOT EXISTS
+            FOR (n:Document)
+            REQUIRE n.id IS UNIQUE
+        """)
+        
+        # Create vector index
+        session.run("""
+            CREATE VECTOR INDEX documentEmbeddings IF NOT EXISTS
+            FOR (n:Document)
+            ON n.embedding
+            OPTIONS {indexConfig: {
+                `vector.dimensions`: 1536,
+                `vector.similarity_function`: 'cosine'
+            }}
+        """)
+    print("✓ Vector schema initialized")
+
+def store_document(driver: Driver, embedding_client: EmbeddingClient, 
+                  text: str, metadata: Dict[str, Any] = None) -> str:
+    """Store a single document with its embedding."""
+    metadata = metadata or {}
+    embedding = embedding_client.embed(text)
+    
+    with driver.session() as session:
+        result = session.run("""
+            CREATE (d:Document {
+                id: randomUUID(),
+                text: $text,
+                embedding: $embedding,
+                metadata_str: $metadata_str
+            })
+            RETURN d.id as id
+        """, {
+            "text": text,
+            "embedding": embedding if isinstance(embedding, list) else embedding.tolist(),
+            "metadata_str": json.dumps(metadata)
+        })
+        return result.single()["id"]
+
+def batch_store_documents(driver: Driver, embedding_client: EmbeddingClient,
+                        documents: List[Dict[str, Any]], batch_size: int = 100):
+    """Store multiple documents in batches."""
+    total_stored = 0
+    for i in range(0, len(documents), batch_size):
+        batch = documents[i:i + batch_size]
+        texts = [doc["text"] for doc in batch]
+        embeddings = embedding_client.embed_many(texts)
+        
+        with driver.session() as session:
+            for doc, embedding in zip(batch, embeddings):
+                session.run("""
+                    CREATE (d:Document {
+                        id: randomUUID(),
+                        text: $text,
+                        embedding: $embedding,
+                        metadata_str: $metadata_str
+                    })
+                """, {
+                    "text": doc["text"],
+                    "embedding": embedding if isinstance(embedding, list) else embedding.tolist(),
+                    "metadata_str": json.dumps(doc.get("metadata", {}))
+                })
+        total_stored += len(batch)
+        print(f"✓ Stored {total_stored}/{len(documents)} documents")
+
+def create_relationship(driver: Driver, source_text: str, target_text: str, relationship_type: str):
+    """Create a relationship between two documents."""
+    with driver.session() as session:
+        query = f"""
+            MATCH (source:Document {{text: $source_text}})
+            MATCH (target:Document {{text: $target_text}})
+            MERGE (source)-[r:{relationship_type}]->(target)
+        """
+        session.run(query, {
+            "source_text": source_text,
+            "target_text": target_text
+        })
+
+def search_similar_documents(driver: Driver, embedding_client: EmbeddingClient,
+                           query_text: str, limit: int = 5) -> List[Tuple[str, Dict, float]]:
+    """Search for similar documents using vector similarity."""
+    query_embedding = embedding_client.embed(query_text)
+    
+    with driver.session() as session:
+        results = session.run("""
+            CALL db.index.vector.queryNodes(
+                'documentEmbeddings',
+                $k,
+                $embedding
+            ) YIELD node, score
+            RETURN node.text AS text, 
+                   node.metadata_str AS metadata_str,
+                   score
+            ORDER BY score DESC
+        """, {
+            "k": limit,
+            "embedding": query_embedding if isinstance(query_embedding, list) else query_embedding.tolist()
+        })
+        
+        return [(record["text"], json.loads(record["metadata_str"]), record["score"]) 
+                for record in results]
+
+def graph_enhanced_search(driver: Driver, embedding_client: EmbeddingClient,
+                        query_text: str, limit: int = 5, max_hops: int = 2):
+    """Perform graph-enhanced vector similarity search."""
+    query_embedding = embedding_client.embed(query_text)
+    
+    with driver.session() as session:
+        query = f"""
+            CALL db.index.vector.queryNodes(
+                'documentEmbeddings',
+                $k,
+                $embedding
+            ) YIELD node, score
+            MATCH path = (node)-[*0..{max_hops}]->(related:Document)
+            RETURN related.text AS text,
+                   related.metadata_str AS metadata_str,
+                   score,
+                   length(path) AS distance
+            ORDER BY score DESC, distance
+            LIMIT $limit
+        """
+        results = session.run(query, {
+            "k": limit,
+            "embedding": query_embedding if isinstance(query_embedding, list) else query_embedding.tolist(),
+            "limit": limit
+        })
+        
+        return [(record["text"], json.loads(record["metadata_str"]), 
+                 record["score"], record["distance"])
+                for record in results]
+
+
+def main():
+    """Main function demonstrating Neo4j integration with GraphBit."""
+    driver = None
+    try:
+        # Initialize connections
+        driver = init_neo4j_driver()
+        embedding_client = init_embedding_client()
         
         # Verify connections
-        self._verify_connections()
+        verify_connections(driver, embedding_client)
         
-    def _verify_connections(self):
-        """Verify Neo4j and embedding client connections."""
-        try:
-            self.driver.verify_connectivity()
-            print("✓ Neo4j connection successful")
-            
-            # Test embedding generation
-            test_embedding = self.embedding_client.embed("test")
-            if len(test_embedding) > 0:
-                print("✓ Embedding client configured successfully")
-        except Exception as e:
-            print(f"Connection error: {str(e)}")
-            raise
-
-    def setup_vector_schema(self):
-        """Initialize Neo4j schema with vector search capabilities."""
-        with self.driver.session() as session:
-            # Create constraints
-            session.run("""
-                CREATE CONSTRAINT document_id_unique IF NOT EXISTS
-                FOR (n:Document)
-                REQUIRE n.id IS UNIQUE
-            """)
-            
-            # Create vector index
-            session.run("""
-                CREATE VECTOR INDEX documentEmbeddings IF NOT EXISTS
-                FOR (n:Document)
-                ON n.embedding
-                OPTIONS {indexConfig: {
-                    `vector.dimensions`: 1536,
-                    `vector.similarity_function`: 'cosine'
-                }}
-            """)
-        print("✓ Vector schema initialized")
-
-    def store_document(self, text: str, metadata: Dict[str, Any] = None) -> str:
-        """Store a single document with its embedding."""
-        metadata = metadata or {}
-        embedding = self.embedding_client.embed(text)
-        
-        with self.driver.session() as session:
-            result = session.run("""
-                CREATE (d:Document {
-                    id: randomUUID(),
-                    text: $text,
-                    embedding: $embedding,
-                    metadata_str: $metadata_str
-                })
-                RETURN d.id as id
-            """, {
-                "text": text,
-                "embedding": embedding if isinstance(embedding, list) else embedding.tolist(),
-                "metadata_str": json.dumps(metadata)
-            })
-            return result.single()["id"]
-
-    def batch_store_documents(self, documents: List[Dict[str, Any]], batch_size: int = 100):
-        """Store multiple documents in batches."""
-        total_stored = 0
-        for i in range(0, len(documents), batch_size):
-            batch = documents[i:i + batch_size]
-            texts = [doc["text"] for doc in batch]
-            embeddings = self.embedding_client.embed_many(texts)
-            
-            with self.driver.session() as session:
-                for doc, embedding in zip(batch, embeddings):
-                    session.run("""
-                        CREATE (d:Document {
-                            id: randomUUID(),
-                            text: $text,
-                            embedding: $embedding,
-                            metadata_str: $metadata_str
-                        })
-                    """, {
-                        "text": doc["text"],
-                        "embedding": embedding if isinstance(embedding, list) else embedding.tolist(),
-                        "metadata_str": json.dumps(doc.get("metadata", {}))
-                    })
-            total_stored += len(batch)
-            print(f"✓ Stored {total_stored}/{len(documents)} documents")
-
-    def create_relationship(self, source_text: str, target_text: str, relationship_type: str):
-        """Create a relationship between two documents."""
-        with self.driver.session() as session:
-            query = f"""
-                MATCH (source:Document {{text: $source_text}})
-                MATCH (target:Document {{text: $target_text}})
-                MERGE (source)-[r:{relationship_type}]->(target)
-            """
-            session.run(query, {
-                "source_text": source_text,
-                "target_text": target_text
-            })
-
-    def search_similar_documents(self, query_text: str, limit: int = 5) -> List[Tuple[str, Dict, float]]:
-        """Search for similar documents using vector similarity."""
-        query_embedding = self.embedding_client.embed(query_text)
-        
-        with self.driver.session() as session:
-            results = session.run("""
-                CALL db.index.vector.queryNodes(
-                    'documentEmbeddings',
-                    $k,
-                    $embedding
-                ) YIELD node, score
-                RETURN node.text AS text, 
-                       node.metadata_str AS metadata_str,
-                       score
-                ORDER BY score DESC
-            """, {
-                "k": limit,
-                "embedding": query_embedding if isinstance(query_embedding, list) else query_embedding.tolist()
-            })
-            
-            return [(record["text"], json.loads(record["metadata_str"]), record["score"]) 
-                    for record in results]
-
-    def graph_enhanced_search(self, query_text: str, limit: int = 5, max_hops: int = 2):
-        """Perform graph-enhanced vector similarity search."""
-        query_embedding = self.embedding_client.embed(query_text)
-        
-        with self.driver.session() as session:
-            query = f"""
-                CALL db.index.vector.queryNodes(
-                    'documentEmbeddings',
-                    $k,
-                    $embedding
-                ) YIELD node, score
-                MATCH path = (node)-[*0..{max_hops}]->(related:Document)
-                RETURN related.text AS text,
-                       related.metadata_str AS metadata_str,
-                       score,
-                       length(path) AS distance
-                ORDER BY score DESC, distance
-                LIMIT $limit
-            """
-            results = session.run(query, {
-                "k": limit,
-                "embedding": query_embedding if isinstance(query_embedding, list) else query_embedding.tolist(),
-                "limit": limit
-            })
-            
-            return [(record["text"], json.loads(record["metadata_str"]), 
-                     record["score"], record["distance"])
-                    for record in results]
-
-    def close(self):
-        """Close the Neo4j driver connection."""
-        self.driver.close()
-
-
-# Example usage
-if __name__ == "__main__":
-    try:
-        # Initialize and set up
-        neo4j_graphbit = Neo4jGraphbit()
-        neo4j_graphbit.setup_vector_schema()
+        # Set up schema
+        setup_vector_schema(driver)
         
         # Prepare sample documents
         documents = [
@@ -509,16 +506,18 @@ if __name__ == "__main__":
         ]
         
         # Store documents
-        neo4j_graphbit.batch_store_documents(documents)
+        batch_store_documents(driver, embedding_client, documents)
         
         # Create relationships
-        neo4j_graphbit.create_relationship(
+        create_relationship(
+            driver,
             documents[0]["text"],
             documents[1]["text"],
             "HAS_FEATURES"
         )
         
-        neo4j_graphbit.create_relationship(
+        create_relationship(
+            driver,
             documents[1]["text"],
             documents[2]["text"],
             "INCLUDES"
@@ -527,21 +526,26 @@ if __name__ == "__main__":
         # Perform searches
         query = "GraphBit core capabilities"
         print(f"\nVector Search Results for: {query}")
-        results = neo4j_graphbit.search_similar_documents(query, limit=2)
+        results = search_similar_documents(driver, embedding_client, query, limit=2)
         for text, metadata, score in results:
             print(f"\nScore: {score:.4f}")
             print(f"Text: {text}")
             print(f"Metadata: {metadata}")
         
         print("\nGraph-Enhanced Search Results:")
-        results = neo4j_graphbit.graph_enhanced_search(query, limit=2)
+        results = graph_enhanced_search(driver, embedding_client, query, limit=2)
         for text, metadata, score, distance in results:
             print(f"\nScore: {score:.4f}, Hops: {distance}")
             print(f"Text: {text}")
             print(f"Metadata: {metadata}")
             
     finally:
-        neo4j_graphbit.close()
+        if driver:
+            driver.close()
+
+
+if __name__ == "__main__":
+    main()
 ```
 
 ---
