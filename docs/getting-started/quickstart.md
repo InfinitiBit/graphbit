@@ -301,6 +301,43 @@ if __name__ == "__main__":
     run_with_provider(ollama_config)
 ```
 
+### Using Multiple Providers in One Workflow
+
+You can use different LLM providers for different nodes within the same workflow. Node-level `llm_config` takes priority over executor-level config:
+
+```python
+# Different providers for different tasks
+anthropic_config = LlmConfig.anthropic(os.getenv("ANTHROPIC_API_KEY"))
+openai_config = LlmConfig.openai(os.getenv("OPENAI_API_KEY"))
+
+workflow = Workflow("Multi-Provider Pipeline")
+
+# Use Anthropic for analysis
+analyzer = Node.agent(
+    name="Analyzer",
+    prompt=f"Analyze this: {input}",
+    agent_id="analyzer",
+    llm_config=anthropic_config  # Node-level config
+)
+
+# Use OpenAI for formatting
+formatter = Node.agent(
+    name="Formatter",
+    prompt=f"Format as JSON: {input}",
+    agent_id="formatter",
+    llm_config=openai_config  # Different provider
+)
+
+id1 = workflow.add_node(analyzer)
+id2 = workflow.add_node(formatter)
+workflow.connect(id1, id2)
+
+# Executor config is fallback for nodes without llm_config
+executor = Executor(openai_config)
+```
+
+For more details, see the [LLM Providers Guide](../user-guide/llm-providers.md#using-multiple-llm-providers-in-a-single-workflow).
+
 ---
 
 ## Performance Optimization
