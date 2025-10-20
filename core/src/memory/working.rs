@@ -120,6 +120,11 @@ impl WorkingMemory {
         self.session_metadata.get(key)
     }
 
+    /// Get all session metadata
+    pub fn get_all_session_metadata(&self) -> HashMap<String, serde_json::Value> {
+        self.session_metadata.clone()
+    }
+
     /// Clear all session metadata
     pub fn clear_session_metadata(&mut self) {
         self.session_metadata.clear();
@@ -131,6 +136,22 @@ impl WorkingMemory {
             storage.list_by_session(session_id).len()
         } else {
             0
+        }
+    }
+
+    /// Clear all working memories in current session
+    pub fn clear_session_memories(&mut self, storage: &mut dyn MemoryStorage) -> GraphBitResult<usize> {
+        if let Some(ref session_id) = self.current_session {
+            let memories = storage.list_by_session(session_id);
+            let count = memories.len();
+            // Collect IDs first to avoid borrow checker issues
+            let ids: Vec<_> = memories.iter().map(|m| m.id.clone()).collect();
+            for id in ids {
+                storage.delete(&id)?;
+            }
+            Ok(count)
+        } else {
+            Ok(0)
         }
     }
 
