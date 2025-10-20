@@ -289,6 +289,138 @@ impl SemanticMemory {
             .cloned()
             .collect()
     }
+
+    /// Calculate similarity between two concepts
+    ///
+    /// Similarity is based on:
+    /// - Shared relationships (Jaccard similarity of related concepts)
+    /// - Confidence score proximity
+    ///
+    /// Returns a score from 0.0 (completely different) to 1.0 (very similar)
+    pub fn calculate_similarity(
+        &self,
+        concept1_name: &str,
+        concept2_name: &str,
+        storage: &dyn MemoryStorage,
+    ) -> f32 {
+        // Get both concepts
+        let concept1 = self.get_concept(concept1_name, storage);
+        let concept2 = self.get_concept(concept2_name, storage);
+
+        if concept1.is_none() || concept2.is_none() {
+            return 0.0;
+        }
+
+        let c1 = concept1.unwrap();
+        let c2 = concept2.unwrap();
+
+        // Calculate Jaccard similarity of related concepts
+        let related1: std::collections::HashSet<_> = c1.related_memories.iter().collect();
+        let related2: std::collections::HashSet<_> = c2.related_memories.iter().collect();
+
+        let intersection = related1.intersection(&related2).count();
+        let union = related1.union(&related2).count();
+
+        let jaccard = if union > 0 {
+            intersection as f32 / union as f32
+        } else {
+            0.0
+        };
+
+        // Calculate confidence proximity
+        let conf1 = c1
+            .metadata
+            .custom
+            .get("confidence")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.5) as f32;
+        let conf2 = c2
+            .metadata
+            .custom
+            .get("confidence")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.5) as f32;
+        let conf_proximity = 1.0 - (conf1 - conf2).abs();
+
+        // Weighted average: 70% relationship similarity, 30% confidence proximity
+        0.7 * jaccard + 0.3 * conf_proximity
+    }
+
+    /// Search for concepts matching a pattern
+    ///
+    /// Searches for concepts whose names contain the given pattern (case-insensitive).
+    /// Results can be filtered by minimum confidence and limited to a maximum number.
+    ///
+    /// # Arguments
+    ///
+    /// * `pattern` - Substring to search for in concept names (case-insensitive)
+    /// * `min_confidence` - Optional minimum confidence threshold (0.0-1.0)
+    /// * `max_results` - Optional limit on number of results to return
+    /// * `storage` - Memory storage reference
+    ///
+    /// # Returns
+    ///
+    /// Vector of MemoryEntry objects matching the criteria, sorted by confidence (descending)
+    pub fn search_concepts(
+        &self,
+        pattern: &str,
+        min_confidence: Option<f32>,
+        max_results: Option<usize>,
+        storage: &dyn MemoryStorage,
+    ) -> Vec<MemoryEntry> {
+        // Get all semantic memories
+        let all_entries = storage.list_by_type(MemoryType::Semantic);
+        let mut all_concepts: Vec<MemoryEntry> = all_entries.into_iter().cloned().collect();
+
+        // Filter by pattern (case-insensitive)
+        // Concept names are stored as tags (second tag after "concept")
+        let pattern_lower = pattern.to_lowercase();
+        all_concepts.retain(|entry| {
+            // Skip the "concept" tag and search in remaining tags
+            for tag in entry.metadata.tags.iter().skip(1) {
+                if tag.to_lowercase().contains(&pattern_lower) {
+                    return true;
+                }
+            }
+            false
+        });
+
+        // Filter by minimum confidence if provided
+        if let Some(min_conf) = min_confidence {
+            all_concepts.retain(|entry| {
+                if let Some(conf) = entry.metadata.custom.get("confidence") {
+                    if let Some(conf_val) = conf.as_f64() {
+                        return conf_val as f32 >= min_conf;
+                    }
+                }
+                false
+            });
+        }
+
+        // Sort by confidence (descending)
+        all_concepts.sort_by(|a, b| {
+            let conf_a = a
+                .metadata
+                .custom
+                .get("confidence")
+                .and_then(|v| v.as_f64())
+                .unwrap_or(0.0) as f32;
+            let conf_b = b
+                .metadata
+                .custom
+                .get("confidence")
+                .and_then(|v| v.as_f64())
+                .unwrap_or(0.0) as f32;
+            conf_b.partial_cmp(&conf_a).unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        // Limit results if max_results is provided
+        if let Some(max) = max_results {
+            all_concepts.truncate(max);
+        }
+
+        all_concepts
+    }
 }
 
 impl Default for SemanticMemory {
