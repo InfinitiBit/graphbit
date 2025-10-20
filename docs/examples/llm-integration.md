@@ -810,7 +810,7 @@ def create_script_writer_workflow():
     # Node 1: Use Anthropic for content analysis
     briefing_node = Node.agent(
         name="Briefing Distiller",
-        prompt="""You are a senior story producer. Extract a concise production brief.
+        prompt=f"""You are a senior story producer. Extract a concise production brief.
         Return JSON with keys: hook, key_messages, target_audience, must_include_facts.
         INPUT: {input}""",
         agent_id="briefing_distiller",
@@ -820,7 +820,7 @@ def create_script_writer_workflow():
     # Node 2: Use OpenAI for structured outline
     outline_node = Node.agent(
         name="Outline Builder",
-        prompt="""Create a timed outline with beats and timecodes.
+        prompt=f"""Create a timed outline with beats and timecodes.
         OUTPUT MARKDOWN with Title, CTA, and beat list.
         INPUT: {input}""",
         agent_id="outline_builder",
@@ -830,7 +830,7 @@ def create_script_writer_workflow():
     # Node 3: Use xAI for creative script writing
     script_node = Node.agent(
         name="Script Drafter",
-        prompt="""Expand the outline into a full script.
+        prompt=f"""Expand the outline into a full script.
         Include: VO, ON-SCREEN TEXT, B-ROLL, SFX, CAPTIONS.
         INPUT: {input}""",
         agent_id="script_drafter",
@@ -840,7 +840,7 @@ def create_script_writer_workflow():
     # Node 4: Use local Ollama for final polish
     polish_node = Node.agent(
         name="Polish & Voice",
-        prompt="""Polish the script for clarity and rhythm.
+        prompt=f"""Polish the script for clarity and rhythm.
         Return: Final Script (markdown) and Shot List table.
         INPUT: {input}""",
         agent_id="polish_voice",

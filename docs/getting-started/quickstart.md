@@ -315,7 +315,7 @@ workflow = Workflow("Multi-Provider Pipeline")
 # Use Anthropic for analysis
 analyzer = Node.agent(
     name="Analyzer",
-    prompt="Analyze this: {input}",
+    prompt=f"Analyze this: {input}",
     agent_id="analyzer",
     llm_config=anthropic_config  # Node-level config
 )
@@ -323,7 +323,7 @@ analyzer = Node.agent(
 # Use OpenAI for formatting
 formatter = Node.agent(
     name="Formatter",
-    prompt="Format as JSON: {input}",
+    prompt=f"Format as JSON: {input}",
     agent_id="formatter",
     llm_config=openai_config  # Different provider
 )

@@ -1557,7 +1557,7 @@ def build_multi_provider_workflow():
     # Use Anthropic for analysis (good at reasoning)
     analyzer = Node.agent(
         name="Content Analyzer",
-        prompt="Analyze this content for key themes and sentiment: {input}",
+        prompt=f"Analyze this content for key themes and sentiment: {input}",
         agent_id="analyzer",
         llm_config=anthropic_config  # Node-level config
     )
@@ -1565,7 +1565,7 @@ def build_multi_provider_workflow():
     # Use OpenAI for structured output (good at JSON)
     formatter = Node.agent(
         name="JSON Formatter",
-        prompt="Convert the analysis to JSON format: {input}",
+        prompt=f"Convert the analysis to JSON format: {input}",
         agent_id="formatter",
         llm_config=openai_config  # Node-level config
     )
@@ -1573,7 +1573,7 @@ def build_multi_provider_workflow():
     # Use local Ollama for final summary (cost-effective)
     summarizer = Node.agent(
         name="Summarizer",
-        prompt="Create a brief summary: {input}",
+        prompt=f"Create a brief summary: {input}",
         agent_id="summarizer",
         llm_config=ollama_config  # Node-level config
     )
