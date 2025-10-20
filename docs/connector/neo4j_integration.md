@@ -32,7 +32,7 @@ from typing import List, Dict, Any, Tuple
 import numpy as np
 import json
 from dotenv import load_dotenv
-from neo4j import GraphDatabase
+from neo4j import GraphDatabase, Driver
 from graphbit import EmbeddingClient, EmbeddingConfig
 
 # Load environment variables
@@ -81,7 +81,8 @@ def verify_connections(driver, embedding_client):
 Create a schema that supports vector similarity search in Neo4j:
 
 ```python
-def setup_vector_schema(driver):
+def setup_vector_schema(driver: Driver):
+    """Initialize Neo4j schema with vector search capabilities."""
     with driver.session() as session:
         # Create document ID constraint
         session.run("""
@@ -90,7 +91,7 @@ def setup_vector_schema(driver):
             REQUIRE n.id IS UNIQUE
         """)
         
-        # Create vector index for embeddings
+        # Create vector index
         session.run("""
             CREATE VECTOR INDEX documentEmbeddings IF NOT EXISTS
             FOR (n:Document)
@@ -100,40 +101,47 @@ def setup_vector_schema(driver):
                 `vector.similarity_function`: 'cosine'
             }}
         """)
+    print("✓ Vector schema initialized")
 
-# Initialize schema
-setup_vector_schema(driver)
+# Example usage
+driver = init_neo4j_driver()
+try:
+    setup_vector_schema(driver)
+finally:
+    driver.close()
+
 ```
-
----
 
 ## Step 4: Store Documents with Embeddings
 
 Store documents and their embeddings in Neo4j:
 
 ```python
-def store_document(driver, embedding_client, text, metadata=None):
-    # Generate embedding
-    embedding = embedding_client.embed(text)
-    
-    # Prepare metadata
-    metadata = metadata or {}
-    
-    with driver.session() as session:
-        result = session.run("""
-            CREATE (d:Document {
-                id: randomUUID(),
-                text: $text,
-                embedding: $embedding,
-                metadata_str: $metadata_str
-            })
-            RETURN d.id as id
-        """, {
-            "text": text,
-            "embedding": embedding.tolist(),
-            "metadata_str": json.dumps(metadata)
-        })
-        return result.single()["id"]
+def batch_store_documents(driver: Driver, embedding_client: EmbeddingClient,
+                        documents: List[Dict[str, Any]], batch_size: int = 100):
+    """Store multiple documents in batches."""
+    total_stored = 0
+    for i in range(0, len(documents), batch_size):
+        batch = documents[i:i + batch_size]
+        texts = [doc["text"] for doc in batch]
+        embeddings = embedding_client.embed_many(texts)
+        
+        with driver.session() as session:
+            for doc, embedding in zip(batch, embeddings):
+                session.run("""
+                    CREATE (d:Document {
+                        id: randomUUID(),
+                        text: $text,
+                        embedding: $embedding,
+                        metadata_str: $metadata_str
+                    })
+                """, {
+                    "text": doc["text"],
+                    "embedding": embedding if isinstance(embedding, list) else embedding.tolist(),
+                    "metadata_str": json.dumps(doc.get("metadata", {}))
+                })
+        total_stored += len(batch)
+        print(f"✓ Stored {total_stored}/{len(documents)} documents")
 
 # Example usage
 documents = [
@@ -152,7 +160,12 @@ documents = [
 ]
 
 # Store documents in batches
-neo4j_graphbit.batch_store_documents(documents)
+driver = init_neo4j_driver()
+embedding_client = init_embedding_client()
+try:
+    batch_store_documents(driver, embedding_client, documents)
+finally:
+    driver.close()
 ```
 
 ---
@@ -162,7 +175,9 @@ neo4j_graphbit.batch_store_documents(documents)
 Search for similar documents using vector similarity:
 
 ```python
-def search_similar_documents(driver, embedding_client, query_text, limit=5):
+def search_similar_documents(driver: Driver, embedding_client: EmbeddingClient,
+                           query_text: str, limit: int = 5) -> List[Tuple[str, Dict, float]]:
+    """Search for similar documents using vector similarity."""
     query_embedding = embedding_client.embed(query_text)
     
     with driver.session() as session:
@@ -178,7 +193,7 @@ def search_similar_documents(driver, embedding_client, query_text, limit=5):
             ORDER BY score DESC
         """, {
             "k": limit,
-            "embedding": query_embedding.tolist()
+            "embedding": query_embedding if isinstance(query_embedding, list) else query_embedding.tolist()
         })
         
         return [(record["text"], json.loads(record["metadata_str"]), record["score"]) 
@@ -191,46 +206,59 @@ queries = [
     "Knowledge representation and search"
 ]
 
-for query in queries:
-    print(f"\nQuery: {query}")
-    results = neo4j_graphbit.search_similar_documents(query, limit=3)
-    for text, metadata, score in results:
-        print(f"\nScore: {score:.4f}")
-        print(f"Text: {text}")
-        print(f"Metadata: {metadata}")
-```
+driver = init_neo4j_driver()
+embedding_client = init_embedding_client()
+try:
+    for query in queries:
+        print(f"\nQuery: {query}")
+        results = search_similar_documents(driver, embedding_client, query, limit=3)
+        for text, metadata, score in results:
+            print(f"\nScore: {score:.4f}")
+            print(f"Text: {text}")
+            print(f"Metadata: {metadata}")
+finally:
+    driver.close()
 
----
+```
 
 ## Step 6: Create Knowledge Graph Relationships
 
 Enhance your graph by creating relationships between documents:
 
 ```python
-def create_relationship(driver, source_text, target_text, relationship_type):
+def create_relationship(driver: Driver, source_text: str, target_text: str, relationship_type: str):
+    """Create a relationship between two documents."""
     with driver.session() as session:
-        session.run("""
-            MATCH (source:Document {text: $source_text})
-            MATCH (target:Document {text: $target_text})
-            MERGE (source)-[r:$relationship_type]->(target)
-        """, {
+        query = f"""
+            MATCH (source:Document {{text: $source_text}})
+            MATCH (target:Document {{text: $target_text}})
+            MERGE (source)-[r:{relationship_type}]->(target)
+        """
+        session.run(query, {
             "source_text": source_text,
-            "target_text": target_text,
-            "relationship_type": relationship_type
+            "target_text": target_text
         })
 
 # Example: Create relationships between documents
-neo4j_graphbit.create_relationship(
-    documents[0]["text"],  # Overview document
-    documents[1]["text"],  # Core features document
-    "HAS_FEATURES"
-)
+driver = init_neo4j_driver()
+try:
+    # Create relationship between overview and features
+    create_relationship(
+        driver,
+        documents[0]["text"],
+        documents[1]["text"],
+        "HAS_FEATURES"
+    )
 
-neo4j_graphbit.create_relationship(
-    documents[1]["text"],  # Core features document
-    documents[2]["text"],  # Agent system document
-    "INCLUDES"
-)
+    # Create relationship between features and agents
+    create_relationship(
+        driver,
+        documents[1]["text"],
+        documents[2]["text"],
+        "INCLUDES"
+    )
+finally:
+    driver.close()
 ```
 
 ---
@@ -240,7 +268,9 @@ neo4j_graphbit.create_relationship(
 Combine vector similarity with graph traversal for enhanced search:
 
 ```python
-def graph_enhanced_search(driver, embedding_client, query_text, limit=5, max_hops=2):
+def graph_enhanced_search(driver: Driver, embedding_client: EmbeddingClient,
+                        query_text: str, limit: int = 5, max_hops: int = 2):
+    """Perform graph-enhanced vector similarity search."""
     query_embedding = embedding_client.embed(query_text)
     
     with driver.session() as session:
@@ -260,7 +290,7 @@ def graph_enhanced_search(driver, embedding_client, query_text, limit=5, max_hop
         """
         results = session.run(query, {
             "k": limit,
-            "embedding": query_embedding.tolist(),
+            "embedding": query_embedding if isinstance(query_embedding, list) else query_embedding.tolist(),
             "limit": limit
         })
         
@@ -269,12 +299,18 @@ def graph_enhanced_search(driver, embedding_client, query_text, limit=5, max_hop
                 for record in results]
 
 # Example: Graph-enhanced search with relationship traversal
-query = "GraphBit features and capabilities"
-results = neo4j_graphbit.graph_enhanced_search(query, limit=3, max_hops=2)
-for text, metadata, score, distance in results:
-    print(f"\nScore: {score:.4f}, Hops: {distance}")
-    print(f"Text: {text}")
-    print(f"Metadata: {metadata}")
+driver = init_neo4j_driver()
+embedding_client = init_embedding_client()
+try:
+    query = "GraphBit features and capabilities"
+    results = graph_enhanced_search(driver, embedding_client, query, limit=3, max_hops=2)
+    for text, metadata, score, distance in results:
+        print(f"\nScore: {score:.4f}, Hops: {distance}")
+        print(f"Text: {text}")
+        print(f"Metadata: {metadata}")
+finally:
+    driver.close()
+
 print("\n" + "="*50)
 ```
 
@@ -358,28 +394,6 @@ def setup_vector_schema(driver: Driver):
             }}
         """)
     print("✓ Vector schema initialized")
-
-def store_document(driver: Driver, embedding_client: EmbeddingClient, 
-                  text: str, metadata: Dict[str, Any] = None) -> str:
-    """Store a single document with its embedding."""
-    metadata = metadata or {}
-    embedding = embedding_client.embed(text)
-    
-    with driver.session() as session:
-        result = session.run("""
-            CREATE (d:Document {
-                id: randomUUID(),
-                text: $text,
-                embedding: $embedding,
-                metadata_str: $metadata_str
-            })
-            RETURN d.id as id
-        """, {
-            "text": text,
-            "embedding": embedding if isinstance(embedding, list) else embedding.tolist(),
-            "metadata_str": json.dumps(metadata)
-        })
-        return result.single()["id"]
 
 def batch_store_documents(driver: Driver, embedding_client: EmbeddingClient,
                         documents: List[Dict[str, Any]], batch_size: int = 100):
