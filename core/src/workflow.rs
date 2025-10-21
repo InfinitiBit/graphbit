@@ -1445,10 +1445,10 @@ impl WorkflowExecutor {
 
                 tokio::spawn(async move {
                     // Create a minimal agent message for this prompt
-                    let message = crate::types::AgentMessage::new(
+                    let message = AgentMessage::new(
                         agent_id_clone.clone(),
                         None, // No specific recipient
-                        crate::types::MessageContent::Text(prompt),
+                        MessageContent::Text(prompt),
                     );
 
                     // Execute the agent task directly using the execute method for better performance
