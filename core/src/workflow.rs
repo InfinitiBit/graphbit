@@ -1032,28 +1032,36 @@ impl WorkflowExecutor {
                 if let Ok(mut response_metadata) = serde_json::to_value(&llm_response) {
                     // Add the request prompt to the metadata
                     if let Some(obj) = response_metadata.as_object_mut() {
-                        obj.insert("prompt".to_string(), serde_json::Value::String(resolved_prompt.clone()));
+                        obj.insert(
+                            "prompt".to_string(),
+                            serde_json::Value::String(resolved_prompt.clone()),
+                        );
                         // Add LLM call duration for accurate latency tracking
-                        obj.insert("duration_ms".to_string(), serde_json::json!(llm_duration_ms));
+                        obj.insert(
+                            "duration_ms".to_string(),
+                            serde_json::json!(llm_duration_ms),
+                        );
                         // Add execution timestamp for chronological ordering
-                        obj.insert("execution_timestamp".to_string(), serde_json::json!(execution_timestamp.to_rfc3339()));
+                        obj.insert(
+                            "execution_timestamp".to_string(),
+                            serde_json::json!(execution_timestamp.to_rfc3339()),
+                        );
                     }
 
                     // Store by node ID
                     ctx.metadata.insert(
-                        format!("node_response_{}", current_node_id),
+                        format!("node_response_{current_node_id}"),
                         response_metadata.clone(),
                     );
                     // Store by node name
-                    ctx.metadata.insert(
-                        format!("node_response_{}", node_name),
-                        response_metadata,
-                    );
+                    ctx.metadata
+                        .insert(format!("node_response_{node_name}"), response_metadata);
                 }
             }
 
             // Return the content as JSON value
-            if let Ok(json_value) = serde_json::from_str::<serde_json::Value>(&llm_response.content) {
+            if let Ok(json_value) = serde_json::from_str::<serde_json::Value>(&llm_response.content)
+            {
                 Ok(json_value)
             } else {
                 Ok(serde_json::Value::String(llm_response.content))
@@ -1123,23 +1131,30 @@ impl WorkflowExecutor {
             if let Ok(mut response_metadata) = serde_json::to_value(&llm_response) {
                 // Add the request prompt to the metadata
                 if let Some(obj) = response_metadata.as_object_mut() {
-                    obj.insert("prompt".to_string(), serde_json::Value::String(prompt.to_string()));
+                    obj.insert(
+                        "prompt".to_string(),
+                        serde_json::Value::String(prompt.to_string()),
+                    );
                     // Add LLM call duration for accurate latency tracking
-                    obj.insert("duration_ms".to_string(), serde_json::json!(llm_duration_ms));
+                    obj.insert(
+                        "duration_ms".to_string(),
+                        serde_json::json!(llm_duration_ms),
+                    );
                     // Add execution timestamp for chronological ordering
-                    obj.insert("execution_timestamp".to_string(), serde_json::json!(execution_timestamp.to_rfc3339()));
+                    obj.insert(
+                        "execution_timestamp".to_string(),
+                        serde_json::json!(execution_timestamp.to_rfc3339()),
+                    );
                 }
 
                 // Store by node ID
                 ctx.metadata.insert(
-                    format!("node_response_{}", node_id),
+                    format!("node_response_{node_id}"),
                     response_metadata.clone(),
                 );
                 // Store by node name
-                ctx.metadata.insert(
-                    format!("node_response_{}", node_name),
-                    response_metadata,
-                );
+                ctx.metadata
+                    .insert(format!("node_response_{node_name}"), response_metadata);
             }
         }
 
