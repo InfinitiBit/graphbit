@@ -178,8 +178,8 @@ def check_qa_status():
             st.session_state["qa_ready"] = current_qa_ready
 
             return current_qa_ready, status_changed
-    except Exception:
-        pass
+    except (requests.exceptions.RequestException, KeyError, ValueError):
+        return st.session_state.get("qa_ready", False), False
 
     return st.session_state.get("qa_ready", False), False
 
