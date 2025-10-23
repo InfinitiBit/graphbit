@@ -460,8 +460,8 @@ impl ReplicateProvider {
 
         // Create usage information
         let usage = LlmUsage::new(
-            0,                                               // Replicate doesn't provide input token count
-            clean_content.split_whitespace().count() as u32, // Rough estimate
+            0, // Replicate doesn't provide input token count
+            u32::try_from(clean_content.split_whitespace().count()), // Rough estimate
         );
 
         let finish_reason = if !tool_calls.is_empty() {

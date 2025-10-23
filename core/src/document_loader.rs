@@ -130,7 +130,7 @@ impl DocumentLoader {
             )
         })?;
 
-        let file_size = metadata.len() as usize;
+        let file_size = usize::try_from(metadata.len());
         if file_size > self.config.max_file_size {
             return Err(GraphBitError::validation(
                 "document_loader",
@@ -222,7 +222,7 @@ impl DocumentLoader {
 
         // Check content length
         if let Some(content_length) = response.content_length() {
-            if content_length as usize > self.config.max_file_size {
+            if usize::try_from(content_length) > self.config.max_file_size {
                 return Err(GraphBitError::validation(
                     "document_loader",
                     format!(
