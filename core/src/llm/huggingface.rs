@@ -90,8 +90,8 @@ impl HuggingFaceProvider {
 
         // `HuggingFace` doesn't provide usage stats in the same way, so we estimate
         let usage = LlmUsage::new(
-            (content.len() / 4) as u32, // Rough estimate: 4 chars per token
-            (content.len() / 4) as u32,
+            u32::try_from(content.len() / 4).unwrap_or(0), // Rough estimate: 4 chars per token
+            u32::try_from(content.len() / 4).unwrap_or(0),
         );
 
         Ok(LlmResponse::new(content, &self.model)
@@ -127,14 +127,14 @@ impl LlmProviderTrait for HuggingFaceProvider {
             parameters.insert(
                 "temperature".to_string(),
                 serde_json::Value::Number(
-                    serde_json::Number::from_f64(temperature as f64).unwrap(),
+                    serde_json::Number::from_f64(f64::from(temperature)).unwrap(),
                 ),
             );
         }
         if let Some(top_p) = request.top_p {
             parameters.insert(
                 "top_p".to_string(),
-                serde_json::Value::Number(serde_json::Number::from_f64(top_p as f64).unwrap()),
+                serde_json::Value::Number(serde_json::Number::from_f64(f64::from(top_p)).unwrap()),
             );
         }
 

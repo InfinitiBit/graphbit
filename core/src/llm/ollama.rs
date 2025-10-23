@@ -273,14 +273,14 @@ impl LlmProviderTrait for OllamaProvider {
         if let Some(temp) = request.temperature {
             options.insert(
                 "temperature".to_string(),
-                serde_json::Value::Number(serde_json::Number::from_f64(temp as f64).unwrap()),
+                serde_json::Value::Number(serde_json::Number::from_f64(f64::from(temp)).unwrap()),
             );
         }
 
         if let Some(top_p) = request.top_p {
             options.insert(
                 "top_p".to_string(),
-                serde_json::Value::Number(serde_json::Number::from_f64(top_p as f64).unwrap()),
+                serde_json::Value::Number(serde_json::Number::from_f64(f64::from(top_p)).unwrap()),
             );
         }
 
