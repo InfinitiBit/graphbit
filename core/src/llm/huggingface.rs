@@ -90,8 +90,8 @@ impl HuggingFaceProvider {
 
         // `HuggingFace` doesn't provide usage stats in the same way, so we estimate
         let usage = LlmUsage::new(
-            u32::try_from(content.len() / 4), // Rough estimate: 4 chars per token
-            u32::try_from(content.len() / 4),
+            u32::try_from(content.len() / 4).unwrap_or(0), // Rough estimate: 4 chars per token
+            u32::try_from(content.len() / 4).unwrap_or(0),
         );
 
         Ok(LlmResponse::new(content, &self.model)

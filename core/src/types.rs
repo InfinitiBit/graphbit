@@ -1057,7 +1057,8 @@ impl ConcurrencyManager {
         {
             let mut stats = self.stats.write().await;
             stats.total_permit_acquisitions += 1;
-            stats.total_wait_time_ms += u64::try_from(start_time.elapsed().as_millis());
+            stats.total_wait_time_ms +=
+                u64::try_from(start_time.elapsed().as_millis()).unwrap_or(0);
             stats.current_active_tasks += 1;
             stats.peak_active_tasks = stats.peak_active_tasks.max(stats.current_active_tasks);
         }

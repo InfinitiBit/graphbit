@@ -640,7 +640,7 @@ impl WorkflowExecutor {
             failed_nodes: total_executed - total_successful,
             avg_execution_time_ms: total_time.as_millis() as f64 / total_executed.max(1) as f64,
             max_concurrent_nodes: self.max_concurrency().await,
-            total_execution_time_ms: u64::try_from(total_time.as_millis()),
+            total_execution_time_ms: u64::try_from(total_time.as_millis()).unwrap_or(0),
             peak_memory_usage_mb: None, // Could add memory tracking here
             semaphore_acquisitions: 0,  // Updated in the loop
             avg_semaphore_wait_ms: 0.0, // Updated in the loop
@@ -686,7 +686,9 @@ impl WorkflowExecutor {
                     );
                     return Ok(
                         NodeExecutionResult::failure(error.to_string(), node.id.clone())
-                            .with_duration(u64::try_from(start_time.elapsed().as_millis()))
+                            .with_duration(
+                                u64::try_from(start_time.elapsed().as_millis()).unwrap_or(0),
+                            )
                             .with_retry_count(attempt),
                     );
                 }
@@ -780,7 +782,7 @@ impl WorkflowExecutor {
 
                     let duration = start_time.elapsed();
                     return Ok(NodeExecutionResult::success(output, node.id.clone())
-                        .with_duration(u64::try_from(duration.as_millis()))
+                        .with_duration(u64::try_from(duration.as_millis()).unwrap_or(0))
                         .with_retry_count(attempt));
                 }
                 Err(error) => {
@@ -813,7 +815,7 @@ impl WorkflowExecutor {
                     let duration = start_time.elapsed();
                     return Ok(
                         NodeExecutionResult::failure(error.to_string(), node.id.clone())
-                            .with_duration(u64::try_from(duration.as_millis()))
+                            .with_duration(u64::try_from(duration.as_millis()).unwrap_or(0))
                             .with_retry_count(attempt),
                     );
                 }

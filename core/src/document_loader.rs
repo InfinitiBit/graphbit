@@ -130,7 +130,12 @@ impl DocumentLoader {
             )
         })?;
 
-        let file_size = usize::try_from(metadata.len());
+        let file_size = usize::try_from(metadata.len()).map_err(|e| {
+            GraphBitError::validation(
+                "document_loader",
+                format!("Failed to convert file size: {}", e),
+            )
+        })?;
         if file_size > self.config.max_file_size {
             return Err(GraphBitError::validation(
                 "document_loader",
@@ -164,7 +169,7 @@ impl DocumentLoader {
         let mut doc_metadata = HashMap::new();
         doc_metadata.insert(
             "file_size".to_string(),
-            serde_json::Value::Number(file_size.into()),
+            serde_json::Value::Number(serde_json::Number::from(file_size)),
         );
         doc_metadata.insert(
             "file_path".to_string(),
@@ -222,7 +227,13 @@ impl DocumentLoader {
 
         // Check content length
         if let Some(content_length) = response.content_length() {
-            if usize::try_from(content_length) > self.config.max_file_size {
+            let file_size = usize::try_from(content_length).map_err(|e| {
+                GraphBitError::validation(
+                    "document_loader",
+                    format!("Failed to convert content length: {}", e),
+                )
+            })?;
+            if file_size > self.config.max_file_size {
                 return Err(GraphBitError::validation(
                     "document_loader",
                     format!(

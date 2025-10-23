@@ -293,8 +293,10 @@ impl EmbeddingProviderTrait for OpenAIEmbeddingProvider {
         // Parse usage
         let usage_data = &response_json["usage"];
         let usage = EmbeddingUsage {
-            prompt_tokens: u32::try_from(usage_data["prompt_tokens"].as_u64().unwrap_or(0)),
-            total_tokens: u32::try_from(usage_data["total_tokens"].as_u64().unwrap_or(0)),
+            prompt_tokens: u32::try_from(usage_data["prompt_tokens"].as_u64().unwrap_or(0))
+                .unwrap_or(0),
+            total_tokens: u32::try_from(usage_data["total_tokens"].as_u64().unwrap_or(0))
+                .unwrap_or(0),
         };
 
         Ok(EmbeddingResponse {
@@ -460,7 +462,7 @@ impl EmbeddingProviderTrait for HuggingFaceEmbeddingProvider {
 
         // Estimate token usage (`HuggingFace` doesn't provide this)
         let total_chars: usize = inputs.iter().map(|s| s.len()).sum();
-        let estimated_tokens = u32::try_from(total_chars / 4); // Rough estimate
+        let estimated_tokens = u32::try_from(total_chars / 4).unwrap_or(0); // Rough estimate
 
         let usage = EmbeddingUsage {
             prompt_tokens: estimated_tokens,
@@ -659,7 +661,7 @@ impl EmbeddingService {
             })
             .collect();
 
-        let total_duration_ms = u64::try_from(start_time.elapsed().as_millis());
+        let total_duration_ms = u64::try_from(start_time.elapsed().as_millis()).unwrap_or(0);
         let avg_response_time_ms = if total_duration_ms > 0 && successful > 0 {
             total_duration_ms as f64 / successful as f64
         } else {
