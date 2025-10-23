@@ -1050,12 +1050,12 @@ impl WorkflowExecutor {
 
                     // Store by node ID
                     ctx.metadata.insert(
-                        format!("node_response_{}", current_node_id),
+                        format!("node_response_{current_node_id}"),
                         response_metadata.clone(),
                     );
                     // Store by node name
                     ctx.metadata
-                        .insert(format!("node_response_{}", node_name), response_metadata);
+                        .insert(format!("node_response_{node_name}"), response_metadata);
                 }
             }
 
@@ -1149,12 +1149,12 @@ impl WorkflowExecutor {
 
                 // Store by node ID
                 ctx.metadata.insert(
-                    format!("node_response_{}", node_id),
+                    format!("node_response_{node_id}"),
                     response_metadata.clone(),
                 );
                 // Store by node name
                 ctx.metadata
-                    .insert(format!("node_response_{}", node_name), response_metadata);
+                    .insert(format!("node_response_{node_name}"), response_metadata);
             }
         }
 
