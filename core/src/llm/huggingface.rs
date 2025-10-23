@@ -127,14 +127,14 @@ impl LlmProviderTrait for HuggingFaceProvider {
             parameters.insert(
                 "temperature".to_string(),
                 serde_json::Value::Number(
-                    serde_json::Number::from_f64(temperature as f64).unwrap(),
+                    serde_json::Number::from_f64(f64::from(temperature)).unwrap(),
                 ),
             );
         }
         if let Some(top_p) = request.top_p {
             parameters.insert(
                 "top_p".to_string(),
-                serde_json::Value::Number(serde_json::Number::from_f64(top_p as f64).unwrap()),
+                serde_json::Value::Number(serde_json::Number::from_f64(f64::from(top_p)).unwrap()),
             );
         }
 

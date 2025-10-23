@@ -321,11 +321,11 @@ impl WorkflowContext {
     pub fn execution_duration_ms(&self) -> Option<u64> {
         if let Some(completed_at) = self.completed_at {
             let duration = completed_at.signed_duration_since(self.started_at);
-            Some(duration.num_milliseconds() as u64)
+            Some(u64::try_from(duration.num_milliseconds().max(0)).unwrap_or(0))
         } else {
             // If not completed, return current duration
             let duration = chrono::Utc::now().signed_duration_since(self.started_at);
-            Some(duration.num_milliseconds() as u64)
+            Some(u64::try_from(duration.num_milliseconds().max(0)).unwrap_or(0))
         }
     }
 
@@ -655,7 +655,9 @@ impl RetryConfig {
         }
 
         let base_delay = (self.initial_delay_ms as f64
-            * self.backoff_multiplier.powi(attempt as i32 - 1))
+            * self
+                .backoff_multiplier
+                .powi(i32::try_from(attempt).unwrap_or(1) - 1))
         .min(self.max_delay_ms as f64);
 
         // Add jitter to prevent thundering herd
@@ -668,7 +670,7 @@ impl RetryConfig {
             0.0
         };
 
-        ((base_delay + jitter).max(0.0) as u64).min(self.max_delay_ms)
+        (u64::try_from((base_delay + jitter).max(0.0) as i64).unwrap_or(0)).min(self.max_delay_ms)
     }
 
     /// Check if an error should trigger a retry
@@ -801,7 +803,12 @@ impl CircuitBreaker {
             CircuitBreakerState::Closed => true,
             CircuitBreakerState::Open { opened_at } => {
                 let now = chrono::Utc::now();
-                let elapsed = now.signed_duration_since(opened_at).num_milliseconds() as u64;
+                let elapsed = u64::try_from(
+                    now.signed_duration_since(opened_at)
+                        .num_milliseconds()
+                        .max(0),
+                )
+                .unwrap_or(0);
 
                 if elapsed >= self.config.recovery_timeout_ms {
                     self.state = CircuitBreakerState::HalfOpen;
@@ -1214,7 +1221,9 @@ impl ConcurrencyStats {
     /// Get utilization percentage (0.0-100.0)
     pub fn get_utilization(&self, max_capacity: usize) -> f64 {
         if max_capacity > 0 {
-            (self.current_active_tasks as f64 / max_capacity as f64) * 100.0
+            let current = self.current_active_tasks as f64;
+            let max_cap = max_capacity as f64;
+            (current / max_cap) * 100.0
         } else {
             0.0
         }

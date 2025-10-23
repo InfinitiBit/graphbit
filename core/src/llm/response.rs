@@ -84,8 +84,8 @@ impl LlmResponse {
 
     /// Estimate the cost of this response (if cost per token is known)
     pub fn estimate_cost(&self, input_cost_per_token: f64, output_cost_per_token: f64) -> f64 {
-        (self.usage.prompt_tokens as f64 * input_cost_per_token)
-            + (self.usage.completion_tokens as f64 * output_cost_per_token)
+        (f64::from(self.usage.prompt_tokens) * input_cost_per_token)
+            + (f64::from(self.usage.completion_tokens) * output_cost_per_token)
     }
 }
 
