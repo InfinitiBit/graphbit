@@ -4,15 +4,15 @@ requires = ["maturin>=1.0,<2.0"]
 
 [project]
 name = "graphbit"
-version = "0.4.0"
+version = "0.5.1"
 description = "GraphBit - Advanced workflow automation and AI agent orchestration library"
 readme = "README.md"
 license = {file = "LICENSE.md"}
 authors = [
-    {name = "GraphBit Team", email = "team@graphbit.ai"}
+    {name = "GraphBit Team", email = "contact@graphbit.ai"}
 ]
 maintainers = [
-    {name = "GraphBit Team", email = "team@graphbit.ai"}
+    {name = "GraphBit Team", email = "contact@graphbit.ai"}
 ]
 keywords = ["ai", "agents", "workflow", "automation", "rust", "python", "llm", "orchestration"]
 classifiers = [
