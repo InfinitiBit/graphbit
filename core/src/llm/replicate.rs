@@ -137,7 +137,7 @@ impl ReplicateProvider {
         for line in content.lines() {
             if line.starts_with("TOOL_CALL:") {
                 // Parse tool call format: TOOL_CALL: tool_name(parameters)
-                if let Some(tool_part) = line.strip_prefix("TOOL_CALL:").map(|s| s.trim()) {
+                if let Some(tool_part) = line.strip_prefix("TOOL_CALL:").map(str::trim) {
                     if let Some(paren_pos) = tool_part.find('(') {
                         let tool_name = tool_part[..paren_pos].trim().to_string();
                         let params_str = &tool_part[paren_pos + 1..];
