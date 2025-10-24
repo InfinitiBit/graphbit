@@ -181,4 +181,4 @@ keywords = ["ai", "automation", "workflow", "agent", "llm"]
 license-file = "LICENSE.md"
 repository = "https://github.com/InfinitiBit/graphbit"
 rust-version = "1.70.0"
-version = "0.5.0"
+version = "0.5.1"
