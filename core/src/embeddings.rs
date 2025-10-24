@@ -330,7 +330,7 @@ impl EmbeddingProviderTrait for OpenAIEmbeddingProvider {
                     params: HashMap::new(),
                 };
                 let response = self.generate_embeddings(test_request).await?;
-                Ok(response.embeddings.first().map(|e| e.len()).unwrap_or(1536))
+                Ok(response.embeddings.first().map(Vec::<f32>::len).unwrap_or(1536))
             }
         }
     }
@@ -371,7 +371,7 @@ impl HuggingFaceEmbeddingProvider {
         self.config
             .base_url
             .as_deref()
-            .map(|url| url.to_string())
+            .map(str::to_string)
             .unwrap_or_else(|| {
                 format!(
                     "https://api-inference.huggingface.co/models/{}",
@@ -491,7 +491,7 @@ impl EmbeddingProviderTrait for HuggingFaceEmbeddingProvider {
             params: HashMap::new(),
         };
         let response = self.generate_embeddings(test_request).await?;
-        Ok(response.embeddings.first().map(|e| e.len()).unwrap_or(768))
+        Ok(response.embeddings.first().map(Vec::<f32>::len).unwrap_or(768))
     }
 
     fn max_batch_size(&self) -> usize {
