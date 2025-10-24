@@ -109,7 +109,9 @@ ehthumbs.db
 Thumbs.db
 
 # Rust-specific
-Cargo.lock
+# Cargo.lock is committed for workspace/binary projects (see: https://doc.rust-lang.org/cargo/guide/cargo-toml-vs-cargo-lock.html)
+# This project is a workspace that builds Python wheels, so Cargo.lock should be tracked
+# to ensure reproducible builds in CI/CD
 target/
 */target/
 **/*.rs.bk
