@@ -152,13 +152,7 @@ impl LlmProviderTrait for AnthropicProvider {
             None
         } else {
             tracing::info!("Converting {} tools for Anthropic", request.tools.len());
-            Some(
-                request
-                    .tools
-                    .iter()
-                    .map(|t| Self::convert_tool(t))
-                    .collect(),
-            )
+            Some(request.tools.iter().map(Self::convert_tool).collect())
         };
 
         let body = AnthropicRequest {
@@ -173,7 +167,7 @@ impl LlmProviderTrait for AnthropicProvider {
 
         tracing::info!(
             "Sending request to Anthropic with {} tools",
-            body.tools.as_ref().map(|t| t.len()).unwrap_or(0)
+            body.tools.as_ref().map_or(0, Vec::len)
         );
 
         let response = self

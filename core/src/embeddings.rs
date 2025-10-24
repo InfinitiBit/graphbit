@@ -64,7 +64,7 @@ impl EmbeddingInput {
     pub fn as_texts(&self) -> Vec<&str> {
         match self {
             Self::Single(text) => vec![text.as_str()],
-            Self::Multiple(texts) => texts.iter().map(|s| s.as_str()).collect(),
+            Self::Multiple(texts) => texts.iter().map(String::as_str).collect(),
         }
     }
 
@@ -330,7 +330,11 @@ impl EmbeddingProviderTrait for OpenAIEmbeddingProvider {
                     params: HashMap::new(),
                 };
                 let response = self.generate_embeddings(test_request).await?;
-                Ok(response.embeddings.first().map(Vec::<f32>::len).unwrap_or(1536))
+                Ok(response
+                    .embeddings
+                    .first()
+                    .map(Vec::<f32>::len)
+                    .unwrap_or(1536))
             }
         }
     }
@@ -491,7 +495,11 @@ impl EmbeddingProviderTrait for HuggingFaceEmbeddingProvider {
             params: HashMap::new(),
         };
         let response = self.generate_embeddings(test_request).await?;
-        Ok(response.embeddings.first().map(Vec::<f32>::len).unwrap_or(768))
+        Ok(response
+            .embeddings
+            .first()
+            .map(Vec::<f32>::len)
+            .unwrap_or(768))
     }
 
     fn max_batch_size(&self) -> usize {
