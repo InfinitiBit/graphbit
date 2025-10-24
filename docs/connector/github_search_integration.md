@@ -203,7 +203,7 @@ executor = Executor(llm_config)
 
 result = executor.execute(workflow)
 if result.is_success():
-    print("Summary:", result.get_variable("node_result_1"))
+    print("Summary:", result.get_node_output("Summarizer"))
 else:
     print("Workflow failed:", result.state())
 ```
