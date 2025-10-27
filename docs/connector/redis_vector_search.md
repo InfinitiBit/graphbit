@@ -21,9 +21,22 @@ This guide shows how to connect Redis Stack to Graphbit for vector similarity se
 ---
 
 ## Step 1: Start Redis Stack
+**If you have docker installed then run this command to run redis:**
 
 ```bash
 docker run -p 6379:6379 -it --rm redis/redis-stack-server:latest
+```
+**If you do not have docker installed then install and run manually**
+```bash
+sudo apt update
+sudo apt install redis-server -y
+sudo systemctl enable redis-server
+sudo systemctl start redis-server
+```
+--- 
+***Check the status***
+```bash
+sudo systemctl status redis-server
 ```
 
 ---
