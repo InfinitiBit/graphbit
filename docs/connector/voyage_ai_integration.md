@@ -90,7 +90,6 @@ print(f"Stored {len(vector_store)} embeddings")
 Generate query embedding and find similar content:
 
 ```python
-import numpy as np
 from graphbit import EmbeddingClient
 
 query = "What is GraphBit used for?"
@@ -223,7 +222,6 @@ print(f"Generated Response: {response}")
 ```python
 import os
 import uuid
-import numpy as np
 import voyageai
 from dotenv import load_dotenv
 from graphbit import EmbeddingClient, LlmClient, LlmConfig
