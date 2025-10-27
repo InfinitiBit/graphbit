@@ -91,7 +91,7 @@ Generate query embedding and find similar content:
 
 ```python
 import numpy as np
-from sklearn.metrics.pairwise import cosine_similarity
+from graphbit import EmbeddingClient
 
 query = "What is GraphBit used for?"
 query_result = vo.embed(
@@ -101,13 +101,13 @@ query_result = vo.embed(
 )
 query_embedding = query_result.embeddings[0]
 
-# Calculate similarities
+# Calculate similarities with Graphbit
 similarities = []
 for item in vector_store:
-    similarity = cosine_similarity(
-        [query_embedding], 
-        [item["embedding"]]
-    )[0][0]
+    similarity = EmbeddingClient.similarity(
+        query_embedding, 
+        item["embedding"]
+    )
     similarities.append((item, similarity))
 
 # Sort by similarity (highest first)
@@ -225,9 +225,8 @@ import os
 import uuid
 import numpy as np
 import voyageai
-from sklearn.metrics.pairwise import cosine_similarity
 from dotenv import load_dotenv
-from graphbit import LlmClient, LlmConfig
+from graphbit import EmbeddingClient, LlmClient, LlmConfig
 
 load_dotenv()
 
@@ -280,13 +279,13 @@ query_result = vo.embed(
 )
 query_embedding = query_result.embeddings[0]
 
-# Calculate similarities
+# Calculate similarities using GraphBit
 similarities = []
 for item in vector_store:
-    similarity = cosine_similarity(
-        [query_embedding], 
-        [item["embedding"]]
-    )[0][0]
+    similarity = EmbeddingClient.similarity(
+        query_embedding, 
+        item["embedding"]
+    )
     similarities.append((item, similarity))
 
 # Sort results by similarity
