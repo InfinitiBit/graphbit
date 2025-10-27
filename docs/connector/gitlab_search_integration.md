@@ -1,28 +1,28 @@
-# Github Search API Integration with Graphbit
+# Gitlab Search API Integration with Graphbit
 
 ## Overview
 
-This guideline explains how to connect the Github Search API to Graphbit, enabling Graphbit to orchestrate the retrieval, processing, and utilization of web search results in your AI workflows. This integration allows you to automate research, enrich LLM prompts, and build intelligent pipelines that leverage real-time web data.
+This guideline explains how to connect the Gitlab Search API to Graphbit, enabling Graphbit to orchestrate the retrieval, processing, and utilization of web search results in your AI workflows. This integration allows you to automate research, enrich LLM prompts, and build intelligent pipelines that leverage real-time web data.
 
 ---
 
 ## Prerequisites
 
-- **Github Token (Not Mandatory)**: Obtain from [Github Personal Access Tokens](https://github.com/settings/personal-access-tokens).
+- **Gitlab Token (Not Mandatory)**: Obtain from [Gitlab Personal Access Tokens](https://docs.gitlab.com/user/profile/personal_access_tokens/)
 - **OpenAI API Key**: For LLM summarization (or another supported LLM provider).
 - **Graphbit installed and configured** (see [installation guide](../getting-started/installation.md)).
 - **Python environment** with `requests`, `python-dotenv`, and `graphbit` installed.
 - **.env file** in your project root with the following variables:
   ```env
-  GITHUB_TOKEN=your_github_token_key_here
+  GITLAB_TOKEN=your_gitlab_token_key_here
   OPENAI_API_KEY=your_openai_api_key_here
   ```
 
 ---
 
-## Step 1: Implement the Github Search Connector
+## Step 1: Implement the Gitlab projects Search Connector
 
-Define a function to query the Github Search API, loading credentials from environment variables:
+Define a function to query the Gitlab Search API, loading credentials from environment variables:
 
 ```python
 import requests
@@ -30,37 +30,48 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv()
-GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+GITLAB_TOKEN = os.getenv("GITLAB_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-def github_search(query, sort="stars", order="desc", per_page=50):
+
+def gitlab_projects_search(query, sort="stars", order="desc", per_page=50):
     """
-    Search GitHub repositories
+    Search GitLab projects (repositories)
     Args:
-        query: Search query (e.g., "machine learning", "language:python stars:>1000")
-        sort: Sort by 'stars', 'forks', 'help-wanted-issues', 'updated'
+        query: Search query (e.g., "machine learning")
+        sort: Sort by 'stars', 'name', 'created_at', 'updated_at', 'last_activity_at'
         order: 'asc' or 'desc'
         per_page: Number of results per page (max 100)
-
     Returns:
         dict: JSON response with search results
     """
-    url = "https://api.github.com/search/repositories"
+    url = "https://gitlab.com/api/v4/projects"
 
-    if GITHUB_TOKEN:
+    if GITLAB_TOKEN:
         headers = {
-            "Accept": "application/vnd.github.v3+json",
-            "Authorization": f"token {GITHUB_TOKEN}",
+            "PRIVATE-TOKEN": GITLAB_TOKEN,
         }
     else:
-        headers = {
-            "Accept": "application/vnd.github.v3+json",
-        }
+        headers = {}
 
-    params = {"q": query, "sort": sort, "order": order, "per_page": per_page}
+    sort_mapping = {
+        "stars": "star_count",
+        "updated": "updated_at",
+        "created": "created_at",
+        "name": "name",
+        "last_activity": "last_activity_at"
+    }
+
+    order_by = sort_mapping.get(sort, "star_count")
+
+    params = {
+        "search": query,
+        "order_by": order_by,
+        "sort": order,
+        "per_page": per_page
+    }
     response = requests.get(url, headers=headers, params=params)
     response.raise_for_status()
-
     return response.json()
 ```
 
@@ -77,7 +88,7 @@ def process_search_results(results, max_snippets=10):
     """
     items = results.get("items", [])[:max_snippets]
     snippets = [
-        f"{item['full_name']} ({item['url']}): {item['stargazers_count']} stars"
+        ','.join(project['tag_list'])
         for item in items
     ]
     return "\n\n".join(snippets)
@@ -90,10 +101,10 @@ def process_search_results(results, max_snippets=10):
 
 ## Step 3: Build the Graphbit Workflow
 
-1. **Run the github Search and process the results:**
+1. **Run the gitlab projects Search and process the results:**
 
 ```python
-search_results = github_search("python")
+search_results = gitlab_projects_search("python")
 snippets_text = process_search_results(search_results, max_snippets=10)
 ```
 
@@ -104,9 +115,9 @@ snippets_text = process_search_results(search_results, max_snippets=10)
 
    agent = Node.agent(
        name="Summarizer",
-       prompt=f"Summarize these search results: {snippets_text}"
+       prompt=f"Summarize projects tags: {snippets_text}"
    )
-   workflow = Workflow("Github Search Workflow")
+   workflow = Workflow("Gitlab Projects Tags Summarizer Workflow")
    workflow.add_node(agent)
    ```
 
@@ -144,62 +155,76 @@ import requests
 from graphbit import Node, Workflow, LlmConfig, Executor
 import os
 from dotenv import load_dotenv
+from graphbit import Node, Workflow
 
 # Load environment variables from .env file
 load_dotenv()
-GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+GITLAB_TOKEN = os.getenv("GITLAB_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-def github_search(query, sort="stars", order="desc", per_page=50):
+
+def gitlab_projects_search(query, sort="stars", order="desc", per_page=50):
     """
-    Search GitHub repositories
+    Search GitLab projects (repositories)
     Args:
-        query: Search query (e.g., "machine learning", "language:python stars:>1000")
-        sort: Sort by 'stars', 'forks', 'help-wanted-issues', 'updated'
+        query: Search query (e.g., "machine learning")
+        sort: Sort by 'stars', 'name', 'created_at', 'updated_at', 'last_activity_at'
         order: 'asc' or 'desc'
         per_page: Number of results per page (max 100)
-
     Returns:
         dict: JSON response with search results
     """
-    url = "https://api.github.com/search/repositories"
+    url = "https://gitlab.com/api/v4/projects"
 
-    if GITHUB_TOKEN:
+    if GITLAB_TOKEN:
         headers = {
-            "Accept": "application/vnd.github.v3+json",
-            "Authorization": f"token {GITHUB_TOKEN}",
+            "PRIVATE-TOKEN": GITLAB_TOKEN,
         }
     else:
-        headers = {
-            "Accept": "application/vnd.github.v3+json",
-        }
+        headers = {}
 
-    params = {"q": query, "sort": sort, "order": order, "per_page": per_page}
+    sort_mapping = {
+        "stars": "star_count",
+        "updated": "updated_at",
+        "created": "created_at",
+        "name": "name",
+        "last_activity": "last_activity_at"
+    }
+
+    order_by = sort_mapping.get(sort, "star_count")
+
+    params = {
+        "search": query,
+        "order_by": order_by,
+        "sort": order,
+        "per_page": per_page
+    }
     response = requests.get(url, headers=headers, params=params)
     response.raise_for_status()
-
     return response.json()
 
 def process_search_results(results, max_snippets=10):
+    """
+    Extracts up to max_snippets search results (default: 3) as formatted strings.
+    """
     items = results.get("items", [])[:max_snippets]
     snippets = [
-        f"{item['title']} ({item['link']}): {item['snippet']}"
+        ','.join(project['tag_list'])
         for item in items
     ]
     return "\n\n".join(snippets)
 
-search_results = github_search("python")
+
+search_results = gitlab_projects_search("python")
 snippets_text = process_search_results(search_results, max_snippets=10)
+
 
 agent = Node.agent(
     name="Summarizer",
-    prompt=f"Summarize these search results: {snippets_text}"
+    prompt=f"Summarize projects tags: {snippets_text}"
 )
-workflow = Workflow("Github Search Workflow")
+workflow = Workflow("Gitlab Projects Tags Summarizer Workflow")
 workflow.add_node(agent)
-
-llm_config = LlmConfig.openai(OPENAI_API_KEY)
-executor = Executor(llm_config)
 
 result = executor.execute(workflow)
 if result.is_success():
