@@ -491,7 +491,7 @@ impl SentenceSplitter {
             strategy: SplitterStrategy::Sentence {
                 chunk_size,
                 chunk_overlap,
-                sentence_endings: Some(endings.iter().map(|s| s.to_string()).collect()),
+                sentence_endings: Some(endings.iter().map(ToString::to_string).collect()),
             },
             ..Default::default()
         };
@@ -862,7 +862,7 @@ impl TextSplitterFactory {
                 sentence_endings,
             } => {
                 if let Some(endings) = sentence_endings {
-                    let endings_refs: Vec<&str> = endings.iter().map(|s| s.as_str()).collect();
+                    let endings_refs: Vec<&str> = endings.iter().map(String::as_str).collect();
                     Ok(Box::new(SentenceSplitter::with_endings(
                         *chunk_size,
                         *chunk_overlap,
