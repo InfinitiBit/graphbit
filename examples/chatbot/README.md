@@ -7,7 +7,7 @@ A chatbot using GraphBit with vector database storage and Streamlit interface.
 ### 1. Prerequisites
 - Python 3.11+
 - OpenAI API key
-- Poetry installed
+- [Poetry installed](https://python-poetry.org/docs/#installation)
 
 ### 2. Installation
 
