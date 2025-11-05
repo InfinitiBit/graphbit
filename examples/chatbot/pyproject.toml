@@ -14,10 +14,14 @@ dependencies = [
   "streamlit (>=1.46.1,<2.0.0)",
   "pydantic (>=2.11.7,<3.0.0)",
   "uvicorn[standard] (>=0.35.0,<0.36.0)",
-  "websockets (>=15.0.1,<16.0.0)"
+  "websockets (>=15.0.1,<16.0.0)",
+  "graphbit (>=0.5.0,<0.6.0)"
 ]
 description = "\"Chatbot using graphbit that stores conversation context in vectordb\""
 name = "chatbot"
 readme = "README.md"
 requires-python = ">=3.11"
 version = "0.1.0"
+
+[tool.poetry]
+package-mode = false
