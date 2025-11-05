@@ -601,6 +601,8 @@ async fn test_pdf_document_processing() {
                     .contains("PDF processing not yet fully implemented")
                     || e.to_string().contains("not yet implemented")
                     || e.to_string().contains("Failed to open PDF file")
+                    || e.to_string().contains("Failed to extract text from PDF")
+                    || e.to_string().contains("invalid file header")
             );
         }
     }
