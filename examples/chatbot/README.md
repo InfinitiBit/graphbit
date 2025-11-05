@@ -11,10 +11,23 @@ A chatbot using GraphBit with vector database storage and Streamlit interface.
 
 ### 2. Installation
 
+#### Create Poetry Environment
+
 ```bash
 cd examples/chatbot
+
 poetry env use <python_version>
+```
+
+#### Activate Environment and Install Dependencies
+
+```bash
 source $(poetry env info --path)/bin/activate
+```
+
+#### Install Dependencies
+
+```bash
 poetry install
 ```
 
