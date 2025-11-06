@@ -152,7 +152,7 @@ impl ReplicateProvider {
                             };
 
                             tool_calls.push(LlmToolCall {
-                                id: format!("call_{}", tool_call_id),
+                                id: format!("call_{tool_call_id}"),
                                 name: tool_name,
                                 parameters,
                             });
@@ -172,7 +172,7 @@ impl ReplicateProvider {
     /// Get the model identifier for API calls
     fn get_model_identifier(&self) -> String {
         if let Some(version) = &self.version {
-            format!("{}:{}", self.model, version)
+            format!("{}:{version}", self.model)
         } else {
             self.model.clone()
         }

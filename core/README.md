@@ -51,7 +51,10 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-graphbit-core = { path = "../core" }
+graphbit-core = "0.5.1"
+
+# Optional features
+graphbit-core = { version = "0.5.1", features = ["python-bindings"] }
 ```
 
 The library uses async/await with Tokio runtime and includes serialization support via Serde.
