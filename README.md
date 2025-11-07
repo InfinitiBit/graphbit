@@ -169,7 +169,20 @@ Three-tier design for reliability and performance:
 
 ## Python API Integrations
 
-GraphBit provides a rich Python API for building and integrating agentic workflows, including executors, nodes, LLM clients, and embeddings. For the complete list of classes, methods, and usage examples, see the [Python API Reference](docs/api-reference/python-api.md).
+GraphBit provides a rich Python API for building and integrating agentic workflows:
+
+- **LLM Clients** - Multi-provider LLM integrations (OpenAI, Anthropic, Azure, and more)
+- **Workflows** - Define and manage multi-agent workflow graphs with state management
+- **Nodes** - Agent nodes, tool nodes, and custom workflow components
+- **Executors** - Workflow execution engine with configuration management
+- **Tool System** - Function decorators, registry, and execution framework for agent tools
+- **Workflow Results** - Execution results with metadata, timing, and output access
+- **Embeddings** - Vector embeddings for semantic search and retrieval
+- **Workflow Context** - Shared state and variables across workflow execution
+- **Document Loaders** - Load and parse documents from multiple formats (PDF, DOCX, TXT, JSON, CSV, XML, HTML)
+- **Text Splitters** - Split documents into chunks (character, token, sentence, recursive)
+
+For the complete list of classes, methods, and usage examples, see the [Python API Reference](docs/api-reference/python-api.md).
 
 ## Contributing to GraphBit
 
