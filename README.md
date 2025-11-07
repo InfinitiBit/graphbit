@@ -221,6 +221,10 @@ GraphBit's modular architecture supports external integrations:
 
 Extensions are developed and maintained by the community.
 
+<p align="center">
+  <img src="assets/Ecosystem.png" alt="GraphBit Ecosystem - Stop Choosing, Start Orchestrating" style="max-width: 100%; height: auto;">
+</p>
+
 ## Contributing to GraphBit
 
 We welcome contributions. To get started, please see the [Contributing](CONTRIBUTING.md) file for development setup and guidelines.
