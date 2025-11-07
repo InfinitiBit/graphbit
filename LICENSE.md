@@ -89,4 +89,4 @@ This License is governed by the laws of the Federal Republic of Germany. Exclusi
 ## 12. Contact
 
 For Enterprise Licensing or commercial inquiries:
-[contact@infinitibit.com](mailto:contact@infinitibit.com) — [https://graphbit.ai](https://graphbit.ai)
+[accounting@infinitibit.com](mailto:accounting@infinitibit.com) — [https://graphbit.ai](https://graphbit.ai)

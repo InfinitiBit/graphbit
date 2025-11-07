@@ -4,8 +4,14 @@
 //! document formats including PDF, TXT, Word, JSON, CSV, XML, and HTML.
 
 use crate::errors::{GraphBitError, GraphBitResult};
+use csv::ReaderBuilder;
+use quick_xml::events::Event;
+use quick_xml::Reader;
+use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::fmt::Write;
+use std::io::Cursor;
 use std::path::Path;
 
 /// Document loader configuration
@@ -137,13 +143,13 @@ impl DocumentLoader {
 
         // Extract content based on document type
         let content = match document_type.to_lowercase().as_str() {
-            "txt" => self.extract_text_content(file_path).await?,
-            "pdf" => self.extract_pdf_content(file_path).await?,
-            "docx" => self.extract_docx_content(file_path).await?,
-            "json" => self.extract_json_content(file_path).await?,
-            "csv" => self.extract_csv_content(file_path).await?,
-            "xml" => self.extract_xml_content(file_path).await?,
-            "html" => self.extract_html_content(file_path).await?,
+            "txt" => Self::extract_text_content(file_path).await?,
+            "pdf" => Self::extract_pdf_content(file_path).await?,
+            "docx" => Self::extract_docx_content(file_path).await?,
+            "json" => Self::extract_json_content(file_path).await?,
+            "csv" => Self::extract_csv_content(file_path).await?,
+            "xml" => Self::extract_xml_content(file_path).await?,
+            "html" => Self::extract_html_content(file_path).await?,
             _ => {
                 return Err(GraphBitError::validation(
                     "document_loader",
@@ -325,7 +331,7 @@ impl DocumentLoader {
     }
 
     /// Extract content from plain text files
-    async fn extract_text_content(&self, file_path: &str) -> GraphBitResult<String> {
+    async fn extract_text_content(file_path: &str) -> GraphBitResult<String> {
         let content = std::fs::read_to_string(file_path).map_err(|e| {
             GraphBitError::validation("document_loader", format!("Failed to read text file: {e}"))
         })?;
@@ -333,7 +339,7 @@ impl DocumentLoader {
     }
 
     /// Extract content from JSON files
-    async fn extract_json_content(&self, file_path: &str) -> GraphBitResult<String> {
+    async fn extract_json_content(file_path: &str) -> GraphBitResult<String> {
         let content = std::fs::read_to_string(file_path).map_err(|e| {
             GraphBitError::validation("document_loader", format!("Failed to read JSON file: {e}"))
         })?;
@@ -350,55 +356,340 @@ impl DocumentLoader {
     }
 
     /// Extract content from CSV files
-    async fn extract_csv_content(&self, file_path: &str) -> GraphBitResult<String> {
+    async fn extract_csv_content(file_path: &str) -> GraphBitResult<String> {
         let content = std::fs::read_to_string(file_path).map_err(|e| {
             GraphBitError::validation("document_loader", format!("Failed to read CSV file: {e}"))
         })?;
 
-        // For now, return the raw CSV content
-        // TODO: Could be enhanced to parse CSV and convert to structured format
-        Ok(content)
+        // Enhanced CSV parsing: convert to structured, readable format
+        match Self::parse_csv_to_structured_text(&content) {
+            Ok(structured_content) => Ok(structured_content),
+            Err(_) => {
+                // Fallback to raw content if parsing fails
+                Ok(content)
+            }
+        }
+    }
+
+    /// Parse CSV content into structured, readable text format
+    fn parse_csv_to_structured_text(
+        csv_content: &str,
+    ) -> Result<String, Box<dyn std::error::Error>> {
+        let mut reader = ReaderBuilder::new()
+            .has_headers(true)
+            .flexible(true)
+            .from_reader(Cursor::new(csv_content));
+
+        let mut result = String::new();
+
+        // Get headers
+        let headers = reader.headers()?.clone();
+        let header_count = headers.len();
+
+        result.push_str("CSV Document Content:\n");
+        write!(
+            result,
+            "Columns ({}): {}\n\n",
+            header_count,
+            headers.iter().collect::<Vec<_>>().join(", ")
+        )
+        .unwrap();
+
+        // Process records
+        let mut row_count = 0;
+        for (index, record) in reader.records().enumerate() {
+            let record = record?;
+            row_count += 1;
+
+            writeln!(result, "Row {}:", index + 1).unwrap();
+
+            for (i, field) in record.iter().enumerate() {
+                if i < header_count {
+                    let header = headers.get(i).unwrap_or("Unknown");
+                    writeln!(result, "  {header}: {}", field.trim()).unwrap();
+                }
+            }
+            result.push('\n');
+
+            // Limit output for very large CSV files
+            if row_count >= 100 {
+                writeln!(
+                    result,
+                    "... and {} more rows (truncated for readability)",
+                    reader.records().count()
+                )
+                .unwrap();
+                break;
+            }
+        }
+
+        writeln!(result, "Total rows processed: {row_count}").unwrap();
+        Ok(result)
     }
 
     /// Extract content from XML files
-    async fn extract_xml_content(&self, file_path: &str) -> GraphBitResult<String> {
+    async fn extract_xml_content(file_path: &str) -> GraphBitResult<String> {
         let content = std::fs::read_to_string(file_path).map_err(|e| {
             GraphBitError::validation("document_loader", format!("Failed to read XML file: {e}"))
         })?;
 
-        // For now, return the raw XML content
-        // TODO: Could be enhanced to parse XML and extract structured data
-        Ok(content)
+        // Enhanced XML parsing: extract structured text content
+        match Self::parse_xml_to_structured_text(&content) {
+            Ok(structured_content) => Ok(structured_content),
+            Err(_) => {
+                // Fallback to raw content if parsing fails
+                Ok(content)
+            }
+        }
+    }
+
+    /// Parse XML content into structured, readable text format
+    fn parse_xml_to_structured_text(
+        xml_content: &str,
+    ) -> Result<String, Box<dyn std::error::Error>> {
+        let mut reader = Reader::from_str(xml_content);
+        reader.config_mut().trim_text(true);
+
+        let mut result = String::new();
+        let mut buf = Vec::new();
+        let mut current_path = Vec::new();
+        let mut text_content = Vec::new();
+
+        result.push_str("XML Document Content:\n\n");
+
+        loop {
+            match reader.read_event_into(&mut buf) {
+                Ok(Event::Start(ref e)) => {
+                    let name = std::str::from_utf8(e.name().as_ref())?.to_string();
+                    current_path.push(name.clone());
+
+                    // Add element structure info
+                    let indent = "  ".repeat(current_path.len() - 1);
+                    writeln!(result, "{indent}Element: {name}").unwrap();
+
+                    // Handle attributes
+                    for attr in e.attributes() {
+                        let attr = attr?;
+                        let key = std::str::from_utf8(attr.key.as_ref())?;
+                        let value = std::str::from_utf8(&attr.value)?;
+                        writeln!(result, "{indent}  @{key}: {value}").unwrap();
+                    }
+                }
+                Ok(Event::End(_)) => {
+                    if !text_content.is_empty() {
+                        let content = text_content.join(" ").trim().to_string();
+                        if !content.is_empty() {
+                            let indent = "  ".repeat(current_path.len());
+                            writeln!(result, "{indent}Text: {content}").unwrap();
+                        }
+                        text_content.clear();
+                    }
+                    current_path.pop();
+                }
+                Ok(Event::Text(e)) => {
+                    let text = e.unescape()?.trim().to_string();
+                    if !text.is_empty() {
+                        text_content.push(text);
+                    }
+                }
+                Ok(Event::CData(e)) => {
+                    let text = std::str::from_utf8(&e)?;
+                    if !text.trim().is_empty() {
+                        text_content.push(text.to_string());
+                    }
+                }
+                Ok(Event::Eof) => break,
+                Err(e) => return Err(format!("Error parsing XML: {e}").into()),
+                _ => {} // Ignore other events
+            }
+            buf.clear();
+        }
+
+        result.push_str("\nXML parsing completed.\n");
+        Ok(result)
     }
 
     /// Extract content from HTML files
-    async fn extract_html_content(&self, file_path: &str) -> GraphBitResult<String> {
+    async fn extract_html_content(file_path: &str) -> GraphBitResult<String> {
         let content = std::fs::read_to_string(file_path).map_err(|e| {
             GraphBitError::validation("document_loader", format!("Failed to read HTML file: {e}"))
         })?;
 
-        // For now, return the raw HTML content
-        // TODO: Could be enhanced to extract text content from HTML tags
-        Ok(content)
+        // Enhanced HTML parsing: extract structured text content
+        match Self::parse_html_to_structured_text(&content) {
+            Ok(structured_content) => Ok(structured_content),
+            Err(_) => {
+                // Fallback to raw content if parsing fails
+                Ok(content)
+            }
+        }
+    }
+
+    /// Parse HTML content into structured, readable text format
+    fn parse_html_to_structured_text(
+        html_content: &str,
+    ) -> Result<String, Box<dyn std::error::Error>> {
+        let document = Html::parse_document(html_content);
+        let mut result = String::new();
+
+        result.push_str("HTML Document Content:\n\n");
+
+        // Extract title
+        if let Ok(title_selector) = Selector::parse("title") {
+            if let Some(title) = document.select(&title_selector).next() {
+                writeln!(
+                    result,
+                    "Title: {}\n",
+                    title.text().collect::<String>().trim()
+                )
+                .unwrap();
+            }
+        }
+
+        // Extract meta description
+        if let Ok(meta_selector) = Selector::parse("meta[name='description']") {
+            if let Some(meta) = document.select(&meta_selector).next() {
+                if let Some(content) = meta.value().attr("content") {
+                    writeln!(result, "Description: {}\n", content.trim()).unwrap();
+                }
+            }
+        }
+
+        // Extract headings with hierarchy
+        for level in 1..=6 {
+            let selector_str = format!("h{level}");
+            if let Ok(heading_selector) = Selector::parse(&selector_str) {
+                for heading in document.select(&heading_selector) {
+                    let text = heading.text().collect::<String>().trim().to_string();
+                    if !text.is_empty() {
+                        let indent = "  ".repeat(level - 1);
+                        writeln!(result, "{indent}H{level}: {text}").unwrap();
+                    }
+                }
+            };
+        }
+
+        // Extract paragraphs
+        if let Ok(p_selector) = Selector::parse("p") {
+            result.push_str("\nParagraphs:\n");
+            for paragraph in document.select(&p_selector) {
+                let text = paragraph.text().collect::<String>().trim().to_string();
+                if !text.is_empty() {
+                    writeln!(result, "  {text}\n").unwrap();
+                }
+            }
+        }
+
+        // Extract lists
+        if let Ok(ul_selector) = Selector::parse("ul, ol") {
+            result.push_str("Lists:\n");
+            for list in document.select(&ul_selector) {
+                let list_type = list.value().name();
+                writeln!(
+                    result,
+                    "  {} List:",
+                    if list_type == "ul" {
+                        "Unordered"
+                    } else {
+                        "Ordered"
+                    }
+                )
+                .unwrap();
+
+                if let Ok(li_selector) = Selector::parse("li") {
+                    for (index, item) in list.select(&li_selector).enumerate() {
+                        let text = item.text().collect::<String>().trim().to_string();
+                        if !text.is_empty() {
+                            let prefix = if list_type == "ul" {
+                                "•".to_string()
+                            } else {
+                                format!("{}.", index + 1)
+                            };
+                            writeln!(result, "    {prefix} {text}").unwrap();
+                        }
+                    }
+                }
+                result.push('\n');
+            }
+        }
+
+        // Extract links
+        if let Ok(a_selector) = Selector::parse("a[href]") {
+            result.push_str("Links:\n");
+            for link in document.select(&a_selector) {
+                let text = link.text().collect::<String>().trim().to_string();
+                if let Some(href) = link.value().attr("href") {
+                    if !text.is_empty() && !href.is_empty() {
+                        writeln!(result, "  {text} -> {href}").unwrap();
+                    }
+                }
+            }
+            result.push('\n');
+        }
+
+        // Extract table data
+        if let Ok(table_selector) = Selector::parse("table") {
+            result.push_str("Tables:\n");
+            for (table_index, table) in document.select(&table_selector).enumerate() {
+                writeln!(result, "  Table {}:", table_index + 1).unwrap();
+
+                // Extract headers
+                if let Ok(th_selector) = Selector::parse("th") {
+                    let headers: Vec<String> = table
+                        .select(&th_selector)
+                        .map(|th| th.text().collect::<String>().trim().to_string())
+                        .filter(|h| !h.is_empty())
+                        .collect();
+
+                    if !headers.is_empty() {
+                        writeln!(result, "    Headers: {}", headers.join(" | ")).unwrap();
+                    }
+                }
+
+                // Extract rows
+                if let Ok(tr_selector) = Selector::parse("tr") {
+                    for (row_index, row) in table.select(&tr_selector).enumerate() {
+                        if let Ok(td_selector) = Selector::parse("td") {
+                            let cells: Vec<String> = row
+                                .select(&td_selector)
+                                .map(|td| td.text().collect::<String>().trim().to_string())
+                                .filter(|c| !c.is_empty())
+                                .collect();
+
+                            if !cells.is_empty() {
+                                writeln!(
+                                    result,
+                                    "    Row {}: {}",
+                                    row_index + 1,
+                                    cells.join(" | ")
+                                )
+                                .unwrap();
+                            }
+                        }
+                    }
+                }
+                result.push('\n');
+            }
+        }
+
+        result.push_str("HTML parsing completed.\n");
+        Ok(result)
     }
 
     /// Extract content from PDF files
-    async fn extract_pdf_content(&self, file_path: &str) -> GraphBitResult<String> {
-        use lopdf::Document;
-
-        let doc = Document::load(file_path).map_err(|e| {
-            GraphBitError::validation("document_loader", format!("Failed to open PDF file: {e}"))
+    async fn extract_pdf_content(file_path: &str) -> GraphBitResult<String> {
+        // Read the PDF file into memory
+        let bytes = std::fs::read(file_path).map_err(|e| {
+            GraphBitError::validation("document_loader", format!("Failed to read PDF file: {e}"))
         })?;
 
-        let mut text_content = String::new();
-
-        // Extract text from each page
-        for page_id in doc.get_pages().keys() {
-            if let Ok(page_text) = doc.extract_text(&[*page_id]) {
-                text_content.push_str(&page_text);
-                text_content.push('\n');
-            }
-        }
+        // Use pdf-extract for better text extraction with proper Unicode support
+        let text_content = pdf_extract::extract_text_from_mem(&bytes).map_err(|e| {
+            GraphBitError::validation(
+                "document_loader",
+                format!("Failed to extract text from PDF: {e}"),
+            )
+        })?;
 
         if text_content.trim().is_empty() {
             return Err(GraphBitError::validation(
@@ -411,7 +702,7 @@ impl DocumentLoader {
     }
 
     /// Extract content from DOCX files
-    async fn extract_docx_content(&self, file_path: &str) -> GraphBitResult<String> {
+    async fn extract_docx_content(file_path: &str) -> GraphBitResult<String> {
         use std::fs::File;
         use std::io::Read;
 

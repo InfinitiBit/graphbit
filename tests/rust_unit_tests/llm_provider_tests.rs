@@ -1,5 +1,5 @@
 use graphbit_core::llm::response::{FinishReason, LlmResponse, LlmUsage};
-use graphbit_core::llm::{LlmConfig, LlmMessage, LlmProviderFactory, LlmRequest, LlmRole};
+use graphbit_core::llm::{LlmConfig, LlmMessage, LlmProviderFactory, LlmRequest, LlmRole, LlmTool};
 
 // `DeepSeek` Provider Tests
 #[tokio::test]
@@ -14,12 +14,12 @@ async fn test_deepseek_provider_creation() {
     assert_eq!(provider.provider_name(), "deepseek");
     assert_eq!(provider.model_name(), "deepseek-chat");
     assert!(provider.supports_function_calling());
-    assert_eq!(provider.max_context_length(), Some(128000));
+    assert_eq!(provider.max_context_length(), Some(128_000));
 
     // Test cost per token
     let (input_cost, output_cost) = provider.cost_per_token().unwrap();
-    assert_eq!(input_cost, 0.00000014);
-    assert_eq!(output_cost, 0.00000028);
+    assert_eq!(input_cost, 0.000_000_14);
+    assert_eq!(output_cost, 0.000_000_28);
 }
 
 #[tokio::test]
@@ -78,6 +78,61 @@ async fn test_fireworks_provider_creation() {
     let (input_cost, output_cost) = provider.cost_per_token().unwrap();
     assert_eq!(input_cost, 0.000_000_2);
     assert_eq!(output_cost, 0.000_000_2);
+}
+
+// `TogetherAI` Provider Tests
+#[tokio::test]
+async fn test_togetherai_provider_creation() {
+    let provider = LlmProviderFactory::create_provider(LlmConfig::TogetherAi {
+        api_key: "test-key".to_string(),
+        model: "openai/gpt-oss-20b".to_string(),
+        base_url: None,
+    })
+    .unwrap();
+
+    assert_eq!(provider.provider_name(), "togetherai");
+    assert_eq!(provider.model_name(), "openai/gpt-oss-20b");
+    assert!(provider.supports_function_calling());
+    assert_eq!(provider.max_context_length(), Some(8192));
+
+    // Test cost per token
+    let (input_cost, output_cost) = provider.cost_per_token().unwrap();
+    assert_eq!(input_cost, 0.000_000_5);
+    assert_eq!(output_cost, 0.000_000_5);
+}
+
+#[tokio::test]
+async fn test_togetherai_model_configs() {
+    let test_models = vec![
+        (
+            "openai/gpt-oss-20b",
+            Some(8192),
+            Some((0.000_000_5, 0.000_000_5)),
+        ),
+        (
+            "moonshotai/Kimi-K2-Instruct-0905",
+            Some(200_000),
+            Some((0.000_001_0, 0.000_001_0)),
+        ),
+        (
+            "Qwen/Qwen3-Next-80B-A3B-Instruct",
+            Some(32_768),
+            Some((0.000_002_0, 0.000_002_0)),
+        ),
+        ("unknown-model", None, None),
+    ];
+
+    for (model, expected_context, expected_cost) in test_models {
+        let provider = LlmProviderFactory::create_provider(LlmConfig::TogetherAi {
+            api_key: "test-key".to_string(),
+            model: model.to_string(),
+            base_url: None,
+        })
+        .unwrap();
+
+        assert_eq!(provider.max_context_length(), expected_context);
+        assert_eq!(provider.cost_per_token(), expected_cost);
+    }
 }
 
 #[tokio::test]
@@ -182,6 +237,109 @@ async fn test_fireworks_with_custom_base_url() {
     );
 }
 
+// `xAI` Provider Tests
+#[tokio::test]
+async fn test_xai_provider_creation() {
+    let provider = LlmProviderFactory::create_provider(LlmConfig::Xai {
+        api_key: "test-key".to_string(),
+        model: "grok-4".to_string(),
+        base_url: None,
+    })
+    .unwrap();
+
+    assert_eq!(provider.provider_name(), "xai");
+    assert_eq!(provider.model_name(), "grok-4");
+    assert!(provider.supports_function_calling());
+    assert_eq!(provider.max_context_length(), Some(256_000));
+
+    // Test cost per token
+    let (input_cost, output_cost) = provider.cost_per_token().unwrap();
+    assert_eq!(input_cost, 0.000_003);
+    assert_eq!(output_cost, 0.000_015);
+}
+
+#[tokio::test]
+async fn test_xai_model_configs() {
+    let test_models = vec![
+        ("grok-4", Some(256_000), Some((0.000_003, 0.000_015))),
+        ("grok-4-0709", Some(256_000), Some((0.000_003, 0.000_015))),
+        (
+            "grok-code-fast-1",
+            Some(256_000),
+            Some((0.000_000_2, 0.000_001_5)),
+        ),
+        ("grok-3", Some(131_072), Some((0.000_003, 0.000_015))),
+        (
+            "grok-3-mini",
+            Some(131_072),
+            Some((0.000_000_3, 0.000_000_5)),
+        ),
+        (
+            "grok-2-vision-1212",
+            Some(32_768),
+            Some((0.000_002, 0.000_010)),
+        ),
+        ("unknown-model", None, None),
+    ];
+
+    for (model, context_length, cost) in test_models {
+        let provider = LlmProviderFactory::create_provider(LlmConfig::Xai {
+            api_key: "test-key".to_string(),
+            model: model.to_string(),
+            base_url: None,
+        })
+        .unwrap();
+
+        assert_eq!(provider.max_context_length(), context_length);
+        assert_eq!(provider.cost_per_token(), cost);
+    }
+}
+
+#[tokio::test]
+async fn test_xai_message_formatting() {
+    let _provider = LlmProviderFactory::create_provider(LlmConfig::Xai {
+        api_key: "test-key".to_string(),
+        model: "grok-4".to_string(),
+        base_url: None,
+    })
+    .unwrap();
+
+    let request = LlmRequest::with_messages(vec![])
+        .with_message(LlmMessage::system("system prompt"))
+        .with_message(LlmMessage::user("user message"))
+        .with_message(LlmMessage::assistant("assistant message"))
+        .with_max_tokens(100)
+        .with_temperature(0.7)
+        .with_top_p(0.9);
+
+    assert_eq!(request.messages.len(), 3);
+    assert!(request
+        .messages
+        .iter()
+        .any(|m| matches!(m.role, LlmRole::System)));
+    assert!(request
+        .messages
+        .iter()
+        .any(|m| matches!(m.role, LlmRole::User)));
+    assert!(request
+        .messages
+        .iter()
+        .any(|m| matches!(m.role, LlmRole::Assistant)));
+}
+
+#[tokio::test]
+async fn test_xai_with_custom_base_url() {
+    let provider = LlmProviderFactory::create_provider(LlmConfig::Xai {
+        api_key: "test-key".to_string(),
+        model: "grok-4".to_string(),
+        base_url: Some("https://custom.x.ai/v1".to_string()),
+    })
+    .unwrap();
+
+    assert_eq!(provider.provider_name(), "xai");
+    assert_eq!(provider.model_name(), "grok-4");
+}
+
 // `Perplexity` Provider Tests
 #[tokio::test]
 async fn test_perplexity_provider_creation() {
@@ -199,23 +357,27 @@ async fn test_perplexity_provider_creation() {
 
     // Test cost per token
     let (input_cost, output_cost) = provider.cost_per_token().unwrap();
-    assert_eq!(input_cost, 0.0000002);
-    assert_eq!(output_cost, 0.0000002);
+    assert_eq!(input_cost, 0.000_000_2);
+    assert_eq!(output_cost, 0.000_000_2);
 }
 
 #[tokio::test]
 async fn test_perplexity_model_configs() {
     let test_models = vec![
-        ("pplx-7b-online", 4096, (0.0000002, 0.0000002)),
-        ("pplx-70b-online", 4096, (0.000001, 0.000001)),
-        ("pplx-7b-chat", 8192, (0.0000002, 0.0000002)),
-        ("pplx-70b-chat", 8192, (0.000001, 0.000001)),
-        ("llama-2-70b-chat", 4096, (0.000001, 0.000001)),
-        ("codellama-34b-instruct", 16384, (0.00000035, 0.00000140)),
-        ("mistral-7b-instruct", 16384, (0.0000002, 0.0000002)),
-        ("sonar", 8192, (0.000001, 0.000001)),
-        ("sonar-reasoning", 8192, (0.000002, 0.000002)),
-        ("sonar-deep-research", 32768, (0.000005, 0.000005)),
+        ("pplx-7b-online", 4096, (0.000_000_2, 0.000_000_2)),
+        ("pplx-70b-online", 4096, (0.000_001, 0.000_001)),
+        ("pplx-7b-chat", 8192, (0.000_000_2, 0.000_000_2)),
+        ("pplx-70b-chat", 8192, (0.000_001, 0.000_001)),
+        ("llama-2-70b-chat", 4096, (0.000_001, 0.000_001)),
+        (
+            "codellama-34b-instruct",
+            16384,
+            (0.000_000_35, 0.000_001_40),
+        ),
+        ("mistral-7b-instruct", 16384, (0.000_000_2, 0.000_000_2)),
+        ("sonar", 8192, (0.000_001, 0.000_001)),
+        ("sonar-reasoning", 8192, (0.000_002, 0.000_002)),
+        ("sonar-deep-research", 32768, (0.000_005, 0.000_005)),
     ];
 
     for (model, context_length, (input_cost, output_cost)) in test_models {

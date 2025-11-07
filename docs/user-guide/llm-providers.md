@@ -6,11 +6,17 @@ GraphBit supports multiple Large Language Model providers through a unified clie
 
 GraphBit supports these LLM providers:
 - **OpenAI** - GPT models including GPT-4o, GPT-4o-mini
+- **Azure OpenAI** - GPT models hosted on Microsoft Azure with enterprise features
 - **Anthropic** - Claude models including Claude-4-Sonnet
+- **MistralAI** - Mistral models including Mistral Large, Mistral Medium, and Mistral Small with function calling support
+- **ByteDance ModelArk** - ByteDance Seed and other models with OpenAI-compatible API
 - **OpenRouter** - Unified access to 400+ models from multiple providers (GPT, Claude, Mistral, etc.)
 - **Perplexity** - Real-time search-enabled models including Sonar models
 - **DeepSeek** - High-performance models including DeepSeek-Chat, DeepSeek-Coder, and DeepSeek-Reasoner
+- **TogetherAI** - Access to open-source models including GPT-OSS, Kimi, and Qwen with competitive pricing
 - **Fireworks AI** - Fast inference for open-source models including Llama, Mixtral, and Qwen
+- **Replicate** - Access to open-source models with function calling support including Glaive, Hermes, and Granite models
+- **xAI** - Grok models with real-time information and advanced reasoning capabilities
 - **Ollama** - Local model execution with various open-source models
 
 ## Configuration
@@ -56,6 +62,99 @@ production_config = LlmConfig.openai(
 
 ```
 
+### Azure OpenAI Configuration
+
+Azure OpenAI provides enterprise-grade access to OpenAI models through Microsoft Azure, offering enhanced security, compliance, and regional availability.
+
+```python
+import os
+
+from graphbit import LlmConfig
+
+# Basic Azure OpenAI configuration
+config = LlmConfig.azure_openai(
+    api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+    deployment_name="gpt-4o-mini",  # Your Azure deployment name
+    endpoint="https://your-resource.openai.azure.com"  # Your Azure OpenAI endpoint
+)
+
+print(f"Provider: {config.provider()}")  # "azure_openai"
+print(f"Model: {config.model()}")        # "gpt-4o-mini"
+```
+
+#### Azure OpenAI with Custom API Version
+
+```python
+# Configuration with specific API version
+config = LlmConfig.azure_openai(
+    api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+    deployment_name="gpt-4o",
+    endpoint="https://your-resource.openai.azure.com",
+    api_version="2024-10-21"  # Optional - defaults to "2024-10-21"
+)
+```
+
+#### Azure OpenAI Setup Requirements
+
+To use Azure OpenAI, you need:
+
+1. **Azure OpenAI Resource**: Create an Azure OpenAI resource in the Azure portal
+2. **Model Deployment**: Deploy a model (e.g., GPT-4o, GPT-4o-mini) in your resource
+3. **API Key**: Get your API key from the Azure portal
+4. **Endpoint URL**: Your resource endpoint (format: `https://{resource-name}.openai.azure.com`)
+
+#### Environment Variables
+
+Set these environment variables for Azure OpenAI:
+
+```bash
+export AZURE_OPENAI_API_KEY="your-azure-openai-api-key"
+export AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com"
+export AZURE_OPENAI_DEPLOYMENT="your-deployment-name"
+export AZURE_OPENAI_API_VERSION="2024-10-21"  # Optional
+```
+
+```python
+# Using environment variables
+config = LlmConfig.azure_openai(
+    api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+    deployment_name=os.getenv("AZURE_OPENAI_DEPLOYMENT"),
+    endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+    api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-10-21")
+)
+```
+
+#### Available Azure OpenAI Models
+
+| Model | Best For | Context Length | Performance |
+|-------|----------|----------------|-------------|
+| `gpt-4o` | Complex reasoning, latest features | 128K | High quality, slower |
+| `gpt-4o-mini` | Balanced performance and cost | 128K | Good quality, faster |
+| `gpt-4-turbo` | Advanced tasks, function calling | 128K | High quality, moderate speed |
+| `gpt-4` | Complex analysis, creative tasks | 8K | High quality, slower |
+| `gpt-3.5-turbo` | General tasks, cost-effective | 16K | Good quality, fast |
+
+```python
+# Model selection examples for Azure OpenAI
+premium_config = LlmConfig.azure_openai(
+    api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+    deployment_name="gpt-4o",  # For complex reasoning and latest features
+    endpoint=os.getenv("AZURE_OPENAI_ENDPOINT")
+)
+
+balanced_config = LlmConfig.azure_openai(
+    api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+    deployment_name="gpt-4o-mini",  # Balanced performance and cost
+    endpoint=os.getenv("AZURE_OPENAI_ENDPOINT")
+)
+
+cost_effective_config = LlmConfig.azure_openai(
+    api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+    deployment_name="gpt-3.5-turbo",  # Cost-effective for general tasks
+    endpoint=os.getenv("AZURE_OPENAI_ENDPOINT")
+)
+```
+
 ### Anthropic Configuration
 
 Configure Anthropic provider for Claude models:
@@ -95,6 +194,203 @@ fast_config = LlmConfig.anthropic(
     api_key=os.getenv("ANTHROPIC_API_KEY"),
     model="claude-3-haiku-20240307"  # For speed and efficiency
 )
+```
+
+### MistralAI Configuration
+
+Configure MistralAI provider for high-performance multilingual models with function calling support:
+
+```python
+import os
+
+from graphbit import LlmConfig
+
+# Basic MistralAI configuration
+config = LlmConfig.mistralai(
+    api_key=os.getenv("MISTRALAI_API_KEY"),
+    model="mistral-large-latest"  # Optional - defaults to mistral-large-latest
+)
+
+print(f"Provider: {config.provider()}")  # "mistralai"
+print(f"Model: {config.model()}")        # "mistral-large-latest"
+```
+
+#### Available MistralAI Models
+
+| Model | Best For | Context Length | Function Calling |
+|-------|----------|----------------|------------------|
+| `mistral-large-latest` | Complex reasoning, multilingual tasks | 128K | ✅ |
+| `mistral-medium-latest` | Balanced performance and cost | 32K | ✅ |
+| `mistral-small-latest` | Fast responses, simple tasks | 32K | ✅ |
+| `open-mistral-7b` | Open source, lightweight | 32K | ❌ |
+| `open-mixtral-8x7b` | Open source, high performance | 32K | ❌ |
+| `open-mixtral-8x22b` | Open source, largest model | 64K | ❌ |
+
+#### Getting Started with MistralAI
+
+1. **Sign up** at [mistral.ai](https://mistral.ai)
+2. **Get your API key** from the platform dashboard
+3. **Set environment variable**: `export MISTRALAI_API_KEY="your-api-key"`
+4. **Start using** with GraphBit
+
+```python
+import os
+from graphbit import LlmClient, LlmConfig
+
+# Create configuration
+config = LlmConfig.mistralai(
+    api_key=os.getenv("MISTRALAI_API_KEY"),
+    model="mistral-large-latest"
+)
+
+# Create client and generate text
+client = LlmClient(config)
+response = client.complete(
+    prompt="Explain machine learning in French and English",
+    max_tokens=200,
+    temperature=0.7
+)
+
+print(f"MistralAI response: {response}")
+```
+
+#### MistralAI Function Calling
+
+MistralAI models support function calling for tool integration:
+
+```python
+import os
+from graphbit import LlmClient, LlmConfig, LlmMessage, LlmTool
+
+# Configure MistralAI with function calling support
+config = LlmConfig.mistralai(
+    api_key=os.getenv("MISTRALAI_API_KEY"),
+    model="mistral-large-latest"  # Function calling supported
+)
+
+client = LlmClient(config)
+
+# Define a tool
+def get_weather(location: str) -> str:
+    """Get current weather for a location."""
+    return f"The weather in {location} is sunny, 22°C"
+
+# Create tool definition
+weather_tool = LlmTool(
+    name="get_weather",
+    description="Get current weather for a location",
+    parameters={
+        "type": "object",
+        "properties": {
+            "location": {
+                "type": "string",
+                "description": "The city and country, e.g. Paris, France"
+            }
+        },
+        "required": ["location"]
+    }
+)
+
+# Chat with function calling
+messages = [
+    LlmMessage.user("What's the weather like in Paris?")
+]
+
+response = client.chat_with_tools(
+    messages=messages,
+    tools=[weather_tool],
+    max_tokens=150
+)
+
+print(f"MistralAI with tools: {response}")
+```
+
+### ByteDance ModelArk Configuration
+
+Configure ByteDance ModelArk provider for access to ByteDance Seed and other models:
+
+```python
+import os
+
+from graphbit import LlmConfig
+
+# Basic ByteDance configuration
+config = LlmConfig.bytedance(
+    api_key=os.getenv("BYTEDANCE_API_KEY"),
+    model="seed-1-6-250915"  # Optional - defaults to seed-1-6-250915
+)
+
+print(f"Provider: {config.provider()}")  # "bytedance"
+print(f"Model: {config.model()}")        # "seed-1-6-250915"
+```
+
+#### Available ByteDance Models
+
+**ByteDance Seed Models:**
+
+| Model | Best For | Context Length | Performance | Cost |
+|-------|----------|----------------|-------------|------|
+| `seed-1-6-flash-250715` | Lightweight tasks | 256K | Fast, efficient | Very low |
+| `seed-1-6-250915` | Professional tasks | 256K | High quality | Medium |
+
+**Other Models:**
+
+| Model | Best For | Context Length | Performance | Cost |
+|-------|----------|----------------|-------------|------|
+| `deepseek-v3-1-250821` | Multi-aspect applications | 256K | High quality | Medium |
+| `gpt-oss-120b-250805` | Advanced high reasoning | 256K | High quality | High |
+| `kimi-k2-250711` | Creative tasks | 128K | High quality | High |
+
+```python
+# Model selection for different use cases
+fast_config = LlmConfig.bytedance(
+    api_key=os.getenv("BYTEDANCE_API_KEY"),
+    model="seed-1-6-flash-250715"  # For fast, cost-effective tasks
+)
+
+professional_config = LlmConfig.bytedance(
+    api_key=os.getenv("BYTEDANCE_API_KEY"),
+    model="seed-1-6-250915"  # For complex reasoning and analysis
+)
+
+multi_aspect_config = LlmConfig.bytedance(
+    api_key=os.getenv("BYTEDANCE_API_KEY"),
+    model="deepseek-v3-1-250821"  # For multi-aspect applications
+)
+```
+
+#### ByteDance with Custom Base URL
+
+```python
+# Configuration with custom endpoint
+config = LlmConfig.bytedance(
+    api_key=os.getenv("BYTEDANCE_API_KEY"),
+    model="seed-1-6-250915",
+    base_url="https://custom.bytedance.com/api/v3"  # Optional custom endpoint
+)
+```
+
+#### Getting Started with ByteDance ModelArk
+
+1. **Sign up** at [ByteDance ModelArk platform](https://ark.ap-southeast.bytepluses.com/)
+2. **Get your API key** from the dashboard
+3. **Set environment variable**: `export BYTEDANCE_API_KEY="your-api-key"`
+4. **Start using** with GraphBit
+
+```python
+import os
+from graphbit import LlmClient, LlmConfig
+
+# Create configuration
+config = LlmConfig.bytedance(
+    api_key=os.getenv("BYTEDANCE_API_KEY"),
+    model="seed-1-6-250915"
+)
+
+# Create client and generate text
+client = LlmClient(config)
+response = client.complete("Explain quantum computing in simple terms.")
+print(response)
 ```
 
 ### OpenRouter Configuration
@@ -194,6 +490,7 @@ reasoning_config = LlmConfig.perplexity(
     api_key=os.getenv("PERPLEXITY_API_KEY"),
     model="sonar-reasoning"  # For complex problem solving
 )
+```
 
 ### DeepSeek Configuration
 
@@ -234,6 +531,85 @@ reasoning_config = LlmConfig.deepseek(
     api_key=os.getenv("DEEPSEEK_API_KEY"),
     model="deepseek-reasoner"  # For complex reasoning tasks
 )
+```
+
+### TogetherAI Configuration
+
+Configure TogetherAI provider for access to open-source models with competitive pricing:
+
+```python
+# Basic TogetherAI configuration
+config = LlmConfig.togetherai(
+    api_key=os.getenv("TOGETHER_API_KEY"),
+    model="openai/gpt-oss-20b"  # Optional - defaults to openai/gpt-oss-20b
+)
+
+# Access configuration details
+print(f"Provider: {config.provider()}")  # "togetherai"
+print(f"Model: {config.model()}")        # "openai/gpt-oss-20b"
+```
+
+#### Available TogetherAI Models
+
+| Model | Best For | Context Length | Cost (per 1M tokens) |
+|-------|----------|----------------|---------------------|
+| `openai/gpt-oss-20b` | General tasks, fast inference | 8K | $0.50 / $0.50 |
+| `moonshotai/Kimi-K2-Instruct-0905` | Long documents, high context | 200K | $1.00 / $1.00 |
+| `Qwen/Qwen3-Next-80B-A3B-Instruct` | Complex reasoning, most capable | 32K | $2.00 / $2.00 |
+
+```python
+# Model selection examples
+fast_config = LlmConfig.togetherai(
+    api_key=os.getenv("TOGETHER_API_KEY"),
+    model="openai/gpt-oss-20b"  # Fast and cost-effective
+)
+
+long_context_config = LlmConfig.togetherai(
+    api_key=os.getenv("TOGETHER_API_KEY"),
+    model="moonshotai/Kimi-K2-Instruct-0905"  # For long documents
+)
+
+capable_config = LlmConfig.togetherai(
+    api_key=os.getenv("TOGETHER_API_KEY"),
+    model="Qwen/Qwen3-Next-80B-A3B-Instruct"  # Most capable
+)
+```
+
+#### TogetherAI Features
+
+- ✅ **Function Calling**: All models support function/tool calling
+- ✅ **Streaming**: Real-time response streaming
+- ✅ **Cost Estimation**: Built-in cost tracking per token
+- ✅ **Context Detection**: Automatic context length detection
+- ✅ **Async Support**: Full async/await compatibility
+
+#### Getting Started with TogetherAI
+
+1. **Sign up**: Create an account at [TogetherAI](https://api.together.xyz/)
+2. **Get API Key**: Generate your API key from the dashboard
+3. **Set Environment Variable**: `export TOGETHER_API_KEY="your-key"`
+4. **Start Building**: Use in your GraphBit workflows
+
+```python
+# Complete example
+import os
+from graphbit import LlmConfig, Executor, Workflow, Node
+
+# Configure TogetherAI
+config = LlmConfig.togetherai(
+    api_key=os.getenv("TOGETHER_API_KEY"),
+    model="openai/gpt-oss-20b"
+)
+
+# Create client and generate text
+client = LlmClient(config)
+response = client.complete(
+    prompt="Explain quantum computing in simple terms",
+    max_tokens=200,
+    temperature=0.7
+)
+
+print(response)
 ```
 
 ### Fireworks AI Configuration
@@ -304,6 +680,209 @@ config = LlmConfig.fireworks(
 client = LlmClient(config)
 response = client.complete(
     prompt="Explain quantum computing in simple terms",
+    max_tokens=200,
+    temperature=0.7
+)
+
+print(response)
+```
+
+### Replicate Configuration
+
+Configure Replicate for access to open-source models with function calling capabilities:
+
+```python
+import os
+
+from graphbit import LlmConfig
+
+# Basic Replicate configuration
+config = LlmConfig.replicate(
+    api_key=os.getenv("REPLICATE_API_KEY"),
+    model="anthropic/claude-4-sonnet"  # openai/gpt-5
+)
+
+print(f"Provider: {config.provider()}")  # "replicate"
+print(f"Model: {config.model()}")        # "anthropic/claude-4-sonnet"
+```
+
+#### Provide Model Version
+
+You can also provide version separately:
+
+```python
+
+# Configuration with specific model version
+config = LlmConfig.replicate(
+    api_key=os.getenv("REPLICATE_API_KEY"),
+    model="lucataco/dolphin-2.9-llama3-8b",
+    version="ee173688d3b8d9e05a5b910f10fb9bab1e9348963ab224579bb90d9fce3fb00b"
+)
+```
+
+#### Getting Started with Replicate
+
+1. **Sign up** at [replicate.com](https://replicate.com)
+2. **Get your API token** from your account settings
+3. **Set environment variable**: `export REPLICATE_API_KEY="your-api-token"`
+4. **Start using** with GraphBit
+
+```python
+import os
+from graphbit import LlmClient, LlmConfig
+
+# Create configuration
+config = LlmConfig.replicate(
+    api_key=os.getenv("REPLICATE_API_KEY"),
+    model="lucataco/glaive-function-calling-v1"
+)
+
+# Create client and generate text
+client = LlmClient(config)
+response = client.complete(
+    prompt="Explain the benefits of open-source AI models",
+    max_tokens=300,
+    temperature=0.7
+)
+
+print(response)
+```
+
+### xAI Configuration
+
+Configure xAI for Grok models with real-time information and advanced reasoning:
+
+```python
+import os
+
+from graphbit import LlmConfig
+
+# Basic xAI configuration
+config = LlmConfig.xai(
+    api_key=os.getenv("XAI_API_KEY"),
+    model="grok-4"  # Optional - defaults to grok-4
+)
+
+print(f"Provider: {config.provider()}")  # "xai"
+print(f"Model: {config.model()}")        # "grok-4"
+```
+
+#### Popular xAI Grok Models
+
+| Model | Best For | Context Length | Performance | Cost |
+|-------|----------|----------------|-------------|------|
+| `grok-4` | Complex reasoning, latest features | 256K | Highest quality | Medium |
+| `grok-4-0709` | Stable version of Grok-4 | 256K | High quality | Medium |
+| `grok-code-fast-1` | Code generation, fast inference | 256K | Fast, efficient | Very low |
+| `grok-3` | General tasks, balanced performance | 131K | Good quality | Medium |
+| `grok-3-mini` | Quick tasks, cost-effective | 131K | Fast, efficient | Very low |
+
+```python
+# Model selection for different use cases
+reasoning_config = LlmConfig.xai(
+    api_key=os.getenv("XAI_API_KEY"),
+    model="grok-4"  # For complex reasoning and latest features
+)
+
+coding_config = LlmConfig.xai(
+    api_key=os.getenv("XAI_API_KEY"),
+    model="grok-code-fast-1"  # For fast code generation
+)
+
+efficient_config = LlmConfig.xai(
+    api_key=os.getenv("XAI_API_KEY"),
+    model="grok-3-mini"  # For cost-effective tasks
+)
+```
+
+#### Getting Started with xAI
+
+1. **Sign up** at [x.ai](https://x.ai)
+2. **Get your API key** from the developer console
+3. **Set environment variable**: `export XAI_API_KEY="your-api-key"`
+4. **Start using** with GraphBit
+
+```python
+import os
+from graphbit import LlmClient, LlmConfig
+
+# Create configuration
+config = LlmConfig.xai(
+    api_key=os.getenv("XAI_API_KEY"),
+    model="grok-4"
+)
+
+# Create client and generate text
+client = LlmClient(config)
+response = client.complete(
+    prompt="Explain quantum computing with real-time examples",
+    max_tokens=200,
+    temperature=0.7
+)
+
+print(response)
+```
+
+### AI21 Labs Configuration
+
+Configure AI21 Labs for Jamba models with real-time information and advanced reasoning:
+
+```python
+import os
+
+from graphbit import LlmConfig
+
+# Basic AI21 configuration
+config = LlmConfig.ai21(
+    api_key=os.getenv("AI21_API_KEY"),
+    model="jamba-mini"  # Optional - defaults to jamba-mini
+)
+
+print(f"Provider: {config.provider()}")  # "ai21"
+print(f"Model: {config.model()}")        # "jamba-mini"
+```
+
+#### AI21 Jamba Models
+
+| Model | Best For | Context Length | Performance | Cost |
+|-------|----------|----------------|-------------|------|
+| `jamba-mini` | General tasks, cost-effective | 256K | Highest quality | Medium |
+| `jamba-large` | General tasks, balanced performance | 256K | High quality | Medium |
+
+```python
+# Model selection for different use cases
+config = LlmConfig.ai21(
+    api_key=os.getenv("AI21_API_KEY"),
+    model="jamba-mini"  
+)
+
+config = LlmConfig.ai21(
+    api_key=os.getenv("AI21_API_KEY"),
+    model="jamba-large"  
+)
+```
+
+#### Getting Started with AI21 Labs
+
+1. **Sign up** at [AI21 Labs](https://ai21labs.com)
+2. **Get your API key** from the developer console
+3. **Set environment variable**: `export AI21_API_KEY="your-api-key"`
+4. **Start using** with GraphBit
+
+```python
+import os
+from graphbit import LlmClient, LlmConfig
+
+# Create configuration
+config = LlmConfig.xai(
+    api_key=os.getenv("AI21_API_KEY"),
+    model="jamba-mini"
+)
+
+# Create client and generate text
+client = LlmClient(config)
+response = client.complete(
+    prompt="Explain quantum computing with real-time examples",
     max_tokens=200,
     temperature=0.7
 )
@@ -739,6 +1318,100 @@ def create_ollama_workflow():
 workflow, executor = create_ollama_workflow()
 ```
 
+### Replicate Workflow Example
+
+```python
+from graphbit import LlmConfig, Workflow, Node, Executor
+import os
+
+def create_replicate_workflow():
+    """Create workflow using Replicate models with function calling"""
+
+    # Configure Replicate with function calling model
+    config = LlmConfig.replicate(
+        api_key=os.getenv("REPLICATE_API_KEY"),
+        model="lucataco/dolphin-2.9-llama3-8b:version"
+    )
+
+    # Create workflow
+    workflow = Workflow("Replicate Function Calling Pipeline")
+
+    # Create analyzer with function calling capabilities
+    analyzer = Node.agent(
+        name="Replicate Function Analyzer",
+        prompt=f"""
+        Analyze the following content and use available tools when needed:
+        - Identify key topics and themes
+        - Extract actionable insights
+        - Suggest relevant tools or functions to call
+        - Provide structured recommendations
+
+        Content: {input}
+
+        Use function calling when appropriate to enhance your analysis.
+        """,
+        agent_id="replicate_analyzer"
+    )
+
+    # Create summarizer using a different Replicate model
+    summarizer = Node.agent(
+        name="Hermes Summarizer",
+        prompt=f"Create a concise summary of this analysis: {input}",
+        agent_id="hermes_summarizer",
+        llm_config=LlmConfig.replicate(
+            api_key=os.getenv("REPLICATE_API_KEY"),
+            model="lucataco/dolphin-2.9-llama3-8b:version"
+        )
+    )
+
+    workflow.add_node(analyzer)
+    workflow.add_node(summarizer)
+    workflow.add_edge(analyzer, summarizer)
+    workflow.validate()
+
+    # Create executor with appropriate timeout for Replicate
+    executor = Executor(config, timeout_seconds=300)  # Longer timeout for prediction-based API
+    return workflow, executor
+
+def create_replicate_enterprise_workflow():
+    """Create workflow using Replicate's enterprise-focused models"""
+
+    # Configure with Granite model for enterprise use
+    config = LlmConfig.replicate(
+        api_key=os.getenv("REPLICATE_API_KEY"),
+        model="lucataco/dolphin-2.9-llama3-8b:version"
+    )
+
+    workflow = Workflow("Enterprise Replicate Pipeline")
+
+    # Enterprise-focused analyzer
+    analyzer = Node.agent(
+        name="Granite Enterprise Analyzer",
+        prompt=f"""
+        Perform enterprise-grade analysis of the following content:
+        - Business impact assessment
+        - Risk analysis and mitigation strategies
+        - Compliance considerations
+        - Strategic recommendations
+
+        Content: {input}
+
+        Provide analysis suitable for enterprise decision-making.
+        """,
+        agent_id="granite_analyzer"
+    )
+
+    workflow.add_node(analyzer)
+    workflow.validate()
+
+    executor = Executor(config, timeout_seconds=300)
+    return workflow, executor
+
+# Usage
+workflow, executor = create_replicate_workflow()
+enterprise_workflow, enterprise_executor = create_replicate_enterprise_workflow()
+```
+
 ## Performance Optimization
 
 ### Timeout Configuration
@@ -759,13 +1432,19 @@ anthropic_executor = Executor(
 )
 
 deepseek_executor = Executor(
-    deepseek_config, 
+    deepseek_config,
     timeout_seconds=90
 )
 
+# Replicate - longer timeout for prediction-based API
+replicate_executor = Executor(
+    replicate_config,
+    timeout_seconds=300
+)
 
+# Ollama - local processing
 ollama_executor = Executor(
-    ollama_config, 
+    ollama_config,
     timeout_seconds=180
 )
 ```
@@ -835,6 +1514,93 @@ def execute_with_error_handling(workflow, executor):
         return None
 ```
 
+## Using Multiple LLM Providers in a Single Workflow
+
+GraphBit supports using different LLM providers for different nodes within the same workflow. This allows you to optimize each step by choosing the most suitable model for specific tasks.
+
+### Hierarchical LLM Configuration
+
+GraphBit uses a hierarchical configuration system with the following precedence:
+
+1. **Node-level LLM configuration** (highest priority) - specified in `Node.agent(llm_config=...)`
+2. **Executor-level LLM configuration** (fallback) - specified in `Executor(llm_config)`
+
+**Node-level configuration always takes priority over executor-level configuration**, ensuring backward compatibility while enabling fine-grained control.
+
+### Multi-Provider Workflow Example
+
+```python
+import os
+from graphbit import init, Workflow, Node, Executor, LlmConfig
+
+def build_multi_provider_workflow():
+    """Example workflow using different providers for different tasks"""
+
+    # Configure multiple LLM providers
+    anthropic_config = LlmConfig.anthropic(
+        api_key=os.getenv("ANTHROPIC_API_KEY"),
+        model="claude-sonnet-4-20250514"
+    )
+
+    openai_config = LlmConfig.openai(
+        api_key=os.getenv("OPENAI_API_KEY"),
+        model="gpt-4o-mini"
+    )
+
+    ollama_config = LlmConfig.ollama(
+        model="llama3.2"
+    )
+
+    # Create workflow
+    workflow = Workflow("Multi-Provider Pipeline")
+
+    # Use Anthropic for analysis (good at reasoning)
+    analyzer = Node.agent(
+        name="Content Analyzer",
+        prompt=f"Analyze this content for key themes and sentiment: {input}",
+        agent_id="analyzer",
+        llm_config=anthropic_config  # Node-level config
+    )
+
+    # Use OpenAI for structured output (good at JSON)
+    formatter = Node.agent(
+        name="JSON Formatter",
+        prompt=f"Convert the analysis to JSON format: {input}",
+        agent_id="formatter",
+        llm_config=openai_config  # Node-level config
+    )
+
+    # Use local Ollama for final summary (cost-effective)
+    summarizer = Node.agent(
+        name="Summarizer",
+        prompt=f"Create a brief summary: {input}",
+        agent_id="summarizer",
+        llm_config=ollama_config  # Node-level config
+    )
+
+    # Connect nodes
+    id1 = workflow.add_node(analyzer)
+    id2 = workflow.add_node(formatter)
+    id3 = workflow.add_node(summarizer)
+
+    workflow.connect(id1, id2)
+    workflow.connect(id2, id3)
+    workflow.validate()
+
+    # Executor config serves as fallback for any nodes without llm_config
+    default_config = LlmConfig.openai(
+        api_key=os.getenv("OPENAI_API_KEY"),
+        model="gpt-4o-mini"
+    )
+
+    executor = Executor(default_config, timeout_seconds=300)
+    return workflow, executor
+
+# Usage
+workflow, executor = build_multi_provider_workflow()
+result = executor.execute(workflow)
+```
+
 ## Best Practices
 
 ### 1. Provider Selection
@@ -855,9 +1621,9 @@ def get_optimal_config(use_case):
             model="claude-sonnet-4-20250514"
         )
     elif use_case == "cost_effective":
-        return LlmConfig.deepseek(
-            api_key=os.getenv("DEEPSEEK_API_KEY"),
-            model="deepseek-chat"
+        return LlmConfig.bytedance(
+            api_key=os.getenv("BYTEDANCE_API_KEY"),
+            model="skylark-lite"
         )
     elif use_case == "coding":
         return LlmConfig.deepseek(
@@ -873,6 +1639,16 @@ def get_optimal_config(use_case):
         return LlmConfig.openrouter(
             api_key=os.getenv("OPENROUTER_API_KEY"),
             model="anthropic/claude-3-5-sonnet"
+        )
+    elif use_case == "function_calling":
+        return LlmConfig.replicate(
+            api_key=os.getenv("REPLICATE_API_KEY"),
+            model="lucataco/dolphin-2.9-llama3-8b:version"
+        )
+    elif use_case == "open_source":
+        return LlmConfig.replicate(
+            api_key=os.getenv("REPLICATE_API_KEY"),
+            model="lucataco/dolphin-2.9-llama3-8b:version"
         )
     elif use_case == "local":
         return LlmConfig.ollama(model="llama3.2")
@@ -895,10 +1671,13 @@ def get_api_key(provider):
     """Securely retrieve API keys"""
     key_mapping = {
         "openai": "OPENAI_API_KEY",
+        "azure_openai": "AZURE_OPENAI_API_KEY",
         "anthropic": "ANTHROPIC_API_KEY",
+        "bytedance": "BYTEDANCE_API_KEY",
         "openrouter": "OPENROUTER_API_KEY",
         "perplexity": "PERPLEXITY_API_KEY",
-        "deepseek": "DEEPSEEK_API_KEY"
+        "deepseek": "DEEPSEEK_API_KEY",
+        "replicate": "REPLICATE_API_KEY"
     }
     
     env_var = key_mapping.get(provider)
@@ -947,6 +1726,11 @@ class LLMManager:
             elif provider == "deepseek":
                 config = LlmConfig.deepseek(
                     api_key=get_api_key("deepseek"),
+                    model=model
+                )
+            elif provider == "replicate":
+                config = LlmConfig.replicate(
+                    api_key=get_api_key("replicate"),
                     model=model
                 )
             elif provider == "ollama":

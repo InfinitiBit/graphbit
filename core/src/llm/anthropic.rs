@@ -108,7 +108,7 @@ impl AnthropicProvider {
         }
 
         let finish_reason = match response.stop_reason.as_deref() {
-            Some("end_turn") | Some("stop_sequence") => FinishReason::Stop,
+            Some("end_turn" | "stop_sequence") => FinishReason::Stop,
             Some("max_tokens") => FinishReason::Length,
             Some("tool_use") => FinishReason::Other("tool_use".into()),
             Some(other) => FinishReason::Other(other.to_string()),
@@ -146,7 +146,7 @@ impl LlmProviderTrait for AnthropicProvider {
 
         let (system_prompt, messages) = Self::convert_messages(&request.messages);
 
-        // Convert tools to Anthropic format
+        // Convert tools to `Anthropic` format
         let tools: Option<Vec<AnthropicTool>> = if request.tools.is_empty() {
             tracing::info!("No tools provided in request");
             None

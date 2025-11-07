@@ -30,6 +30,26 @@ pub enum LlmConfig {
         /// Optional custom base URL
         base_url: Option<String>,
     },
+    /// `Azure OpenAI` LLM provider configuration
+    AzureOpenAI {
+        /// API key for authentication
+        api_key: String,
+        /// Deployment name to use
+        deployment_name: String,
+        /// `Azure OpenAI` endpoint URL
+        endpoint: String,
+        /// API version to use
+        api_version: String,
+    },
+    /// `ByteDance ModelArk` LLM provider configuration
+    ByteDance {
+        /// API key for authentication
+        api_key: String,
+        /// Model name to use (e.g., "skylark-lite", "skylark-pro", "seedance-1.0-pro")
+        model: String,
+        /// Optional custom base URL
+        base_url: Option<String>,
+    },
     /// `DeepSeek` LLM provider configuration
     DeepSeek {
         /// API key for authentication
@@ -86,6 +106,55 @@ pub enum LlmConfig {
         /// Optional custom base URL
         base_url: Option<String>,
     },
+    /// `Replicate` LLM provider configuration
+    Replicate {
+        /// API key for authentication
+        api_key: String,
+        /// Model name to use (e.g., "lucataco/glaive-function-calling-v1", "homanp/llama-2-13b-function-calling")
+        model: String,
+        /// Optional custom base URL
+        base_url: Option<String>,
+        /// Optional model version (if not specified, uses latest)
+        version: Option<String>,
+    },
+    /// `TogetherAI` LLM provider configuration
+    TogetherAi {
+        /// API key for authentication
+        api_key: String,
+        /// Model name to use (e.g., "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo", "mistralai/Mixtral-8x7B-Instruct-v0.1")
+        model: String,
+        /// Optional custom base URL
+        base_url: Option<String>,
+    },
+    /// `xAI` LLM provider configuration for Grok models
+    Xai {
+        /// API key for authentication
+        api_key: String,
+        /// Model name to use (e.g., "grok-4", "grok-3", "grok-code-fast-1")
+        model: String,
+        /// Optional custom base URL
+        base_url: Option<String>,
+    },
+    /// `AI21` LLM provider configuration
+    Ai21 {
+        /// API key for authentication
+        api_key: String,
+        /// Model name to use
+        model: String,
+        /// Optional custom base URL
+        base_url: Option<String>,
+        /// Optional custom organization
+        organization: Option<String>,
+    },
+    /// `MistralAI` LLM provider configuration
+    MistralAI {
+        /// API key for authentication
+        api_key: String,
+        /// Model name to use
+        model: String,
+        /// Optional custom base URL
+        base_url: Option<String>,
+    },
     /// Custom LLM provider configuration
     Custom {
         /// Provider type identifier
@@ -117,6 +186,57 @@ impl LlmConfig {
             api_key: api_key.into(),
             model: model.into(),
             base_url: None,
+        }
+    }
+
+    /// Create `Azure OpenAI` configuration
+    pub fn azure_openai(
+        api_key: impl Into<String>,
+        deployment_name: impl Into<String>,
+        endpoint: impl Into<String>,
+        api_version: impl Into<String>,
+    ) -> Self {
+        Self::AzureOpenAI {
+            api_key: api_key.into(),
+            deployment_name: deployment_name.into(),
+            endpoint: endpoint.into(),
+            api_version: api_version.into(),
+        }
+    }
+
+    /// Create `Azure OpenAI` configuration with default API version
+    pub fn azure_openai_with_defaults(
+        api_key: impl Into<String>,
+        deployment_name: impl Into<String>,
+        endpoint: impl Into<String>,
+    ) -> Self {
+        Self::AzureOpenAI {
+            api_key: api_key.into(),
+            deployment_name: deployment_name.into(),
+            endpoint: endpoint.into(),
+            api_version: "2024-10-21".to_string(),
+        }
+    }
+
+    /// Create `ByteDance ModelArk` configuration
+    pub fn bytedance(api_key: impl Into<String>, model: impl Into<String>) -> Self {
+        Self::ByteDance {
+            api_key: api_key.into(),
+            model: model.into(),
+            base_url: None,
+        }
+    }
+
+    /// Create `ByteDance ModelArk` configuration with custom base URL
+    pub fn bytedance_with_base_url(
+        api_key: impl Into<String>,
+        model: impl Into<String>,
+        base_url: impl Into<String>,
+    ) -> Self {
+        Self::ByteDance {
+            api_key: api_key.into(),
+            model: model.into(),
+            base_url: Some(base_url.into()),
         }
     }
 
@@ -183,6 +303,81 @@ impl LlmConfig {
         }
     }
 
+    /// Create `Replicate` configuration
+    pub fn replicate(api_key: impl Into<String>, model: impl Into<String>) -> Self {
+        Self::Replicate {
+            api_key: api_key.into(),
+            model: model.into(),
+            base_url: None,
+            version: None,
+        }
+    }
+
+    /// Create `Replicate` configuration with version
+    pub fn replicate_with_version(
+        api_key: impl Into<String>,
+        model: impl Into<String>,
+        version: impl Into<String>,
+    ) -> Self {
+        Self::Replicate {
+            api_key: api_key.into(),
+            model: model.into(),
+            base_url: None,
+            version: Some(version.into()),
+        }
+    }
+
+    /// Create `TogetherAI` configuration
+    pub fn togetherai(api_key: impl Into<String>, model: impl Into<String>) -> Self {
+        Self::TogetherAi {
+            api_key: api_key.into(),
+            model: model.into(),
+            base_url: None,
+        }
+    }
+
+    /// Create `xAI` configuration for Grok models
+    pub fn xai(api_key: impl Into<String>, model: impl Into<String>) -> Self {
+        Self::Xai {
+            api_key: api_key.into(),
+            model: model.into(),
+            base_url: None,
+        }
+    }
+
+    /// Create `AI21` configuration
+    pub fn ai21(api_key: impl Into<String>, model: impl Into<String>) -> Self {
+        Self::Ai21 {
+            api_key: api_key.into(),
+            model: model.into(),
+            base_url: None,
+            organization: None,
+        }
+    }
+
+    /// Create `AI21` configuration with organization
+    pub fn ai21_with_organization(
+        api_key: impl Into<String>,
+        model: impl Into<String>,
+        organization: impl Into<String>,
+    ) -> Self {
+        Self::Ai21 {
+            api_key: api_key.into(),
+            model: model.into(),
+            base_url: None,
+            organization: Some(organization.into()),
+        }
+    }
+
+    /// Create `MistralAI` configuration
+    pub fn mistralai(api_key: impl Into<String>, model: impl Into<String>) -> Self {
+        Self::MistralAI {
+            api_key: api_key.into(),
+            model: model.into(),
+            base_url: None,
+        }
+    }
+
     /// Create `Ollama` configuration
     pub fn ollama(model: impl Into<String>) -> Self {
         Self::Ollama {
@@ -202,35 +397,51 @@ impl LlmConfig {
     /// Get the provider name
     pub fn provider_name(&self) -> &str {
         match self {
-            LlmConfig::OpenAI { .. } => "openai",
-            LlmConfig::Anthropic { .. } => "anthropic",
-            LlmConfig::DeepSeek { .. } => "deepseek",
-            LlmConfig::HuggingFace { .. } => "huggingface",
-            LlmConfig::Ollama { .. } => "ollama",
-            LlmConfig::Perplexity { .. } => "perplexity",
-            LlmConfig::OpenRouter { .. } => "openrouter",
-            LlmConfig::Fireworks { .. } => "fireworks",
-            LlmConfig::Custom { provider_type, .. } => provider_type,
-            LlmConfig::Unconfigured { .. } => "unconfigured",
+            Self::OpenAI { .. } => "openai",
+            Self::Anthropic { .. } => "anthropic",
+            Self::AzureOpenAI { .. } => "azure_openai",
+            Self::ByteDance { .. } => "bytedance",
+            Self::DeepSeek { .. } => "deepseek",
+            Self::HuggingFace { .. } => "huggingface",
+            Self::Ollama { .. } => "ollama",
+            Self::Perplexity { .. } => "perplexity",
+            Self::OpenRouter { .. } => "openrouter",
+            Self::Fireworks { .. } => "fireworks",
+            Self::Replicate { .. } => "replicate",
+            Self::TogetherAi { .. } => "togetherai",
+            Self::Xai { .. } => "xai",
+            Self::Ai21 { .. } => "ai21",
+            Self::MistralAI { .. } => "mistralai",
+            Self::Custom { provider_type, .. } => provider_type,
+            Self::Unconfigured { .. } => "unconfigured",
         }
     }
 
     /// Get the model name
     pub fn model_name(&self) -> &str {
         match self {
-            LlmConfig::OpenAI { model, .. } => model,
-            LlmConfig::Anthropic { model, .. } => model,
-            LlmConfig::DeepSeek { model, .. } => model,
-            LlmConfig::HuggingFace { model, .. } => model,
-            LlmConfig::Ollama { model, .. } => model,
-            LlmConfig::Perplexity { model, .. } => model,
-            LlmConfig::OpenRouter { model, .. } => model,
-            LlmConfig::Fireworks { model, .. } => model,
-            LlmConfig::Custom { config, .. } => config
+            Self::OpenAI { model, .. } => model,
+            Self::Anthropic { model, .. } => model,
+            Self::AzureOpenAI {
+                deployment_name, ..
+            } => deployment_name,
+            Self::ByteDance { model, .. } => model,
+            Self::DeepSeek { model, .. } => model,
+            Self::HuggingFace { model, .. } => model,
+            Self::Ollama { model, .. } => model,
+            Self::Perplexity { model, .. } => model,
+            Self::OpenRouter { model, .. } => model,
+            Self::Fireworks { model, .. } => model,
+            Self::Replicate { model, .. } => model,
+            Self::TogetherAi { model, .. } => model,
+            Self::Xai { model, .. } => model,
+            Self::Ai21 { model, .. } => model,
+            Self::MistralAI { model, .. } => model,
+            Self::Custom { config, .. } => config
                 .get("model")
                 .and_then(|v| v.as_str())
                 .unwrap_or("unknown"),
-            LlmConfig::Unconfigured { .. } => "none",
+            Self::Unconfigured { .. } => "none",
         }
     }
 }

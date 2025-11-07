@@ -87,8 +87,9 @@ async fn test_csv_document_loading() {
 
     assert!(result.is_ok());
     let document = result.unwrap();
-    assert!(document.content.contains("Name,Age,City"));
-    assert!(document.content.contains("John Doe"));
+    assert!(document.content.contains("CSV Document Content"));
+    assert!(document.content.contains("Columns (3): Name, Age, City"));
+    assert!(document.content.contains("Name: John Doe"));
     assert_eq!(document.document_type, "csv");
 }
 
@@ -600,6 +601,8 @@ async fn test_pdf_document_processing() {
                     .contains("PDF processing not yet fully implemented")
                     || e.to_string().contains("not yet implemented")
                     || e.to_string().contains("Failed to open PDF file")
+                    || e.to_string().contains("Failed to extract text from PDF")
+                    || e.to_string().contains("invalid file header")
             );
         }
     }
@@ -813,9 +816,9 @@ async fn test_document_content_preservation() {
 
     assert!(result.is_ok());
     let document = result.unwrap();
-    assert!(document.content.contains("<?xml version=\"1.0\""));
-    assert!(document.content.contains("<emphasis>emphasis</emphasis>"));
-    assert!(document.content.contains("    <title>")); // Preserves indentation
+    assert!(document.content.contains("XML Document Content"));
+    assert!(document.content.contains("Element: document"));
+    assert!(document.content.contains("Text: Test Document"));
 }
 
 #[tokio::test]
@@ -825,7 +828,7 @@ async fn test_document_loader_performance() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
 
     // Create documents of varying sizes
-    let sizes = [1024, 10240, 102400]; // 1KB, 10KB, 100KB
+    let sizes = [1024, 10_240, 102_400]; // 1KB, 10KB, 100KB
     let mut file_paths = Vec::new();
 
     for (i, size) in sizes.iter().enumerate() {

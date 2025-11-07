@@ -34,51 +34,27 @@ Designed to run **multi-agent workflows in parallel**, Graphbit persists memory 
 - **Tool Selection** - LLMs intelligently select tools based on descriptions
 - **Type Safety** - Strong typing throughout the execution pipeline
 - **Reliability** - Circuit breakers, retry policies, and error handling
-- **Multi-LLM Support** - OpenAI, Anthropic, OpenRouter, DeepSeek, Ollama
+- **Multi-LLM Support** - OpenAI, Azure OpenAI, Anthropic, OpenRouter, DeepSeek, Replicate, Ollama, TogetherAI
 - **Resource Management** - Concurrency controls and memory optimization
 - **Observability** - Built-in metrics and execution tracing
 
 ##  Quick Start
 
-### Installation
-Clone the repository
-```bash
-git clone https://github.com/InfinitiBit/graphbit.git
-cd graphbit
-```
+### Installation 
 
-Install Rust
-- **Linux/macOS**: 
-```bash
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh && source $HOME/.cargo/env
-```  
-- **Windows**: Download & run [rustup-init.exe](https://win.rustup.rs/x86_64)  
+Recommended to use virtual environment.
 
-Install Poetry
 ```bash
-curl -sSL https://install.python-poetry.org | python3 -
-```
-
-Install dependencies (recommended to use a Python virtual environment)
-```bash
-poetry install --no-root
-```
-
-Build from source
-```bash
-cargo build --release
-```
-
-Build Python bindings
-```bash
-cd python/
-maturin develop --release
+pip install graphbit
 ```
 
 ### Environment Setup
-First, set up your API keys:
+Set up API keys you want to use in your project:
 ```bash
+# OpenAI (optional – required if using OpenAI models)
 export OPENAI_API_KEY=your_openai_api_key_here
+
+# Anthropic (optional – required if using Anthropic models)
 export ANTHROPIC_API_KEY=your_anthropic_api_key_here
 ```
 
@@ -159,6 +135,6 @@ We welcome contributions. To get started, please see the [Contributing](CONTRIBU
 
 GraphBit is built by a wonderful community of researchers and engineers.
 
-<a href="https://github.com/InfinitiBit/graphbit/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=InfinitiBit/graphbit&columns=10" />
+<a href="https://github.com/Infinitibit/graphbit/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=Infinitibit/graphbit" />
 </a>

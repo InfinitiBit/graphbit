@@ -65,7 +65,7 @@ impl WorkflowGraph {
     }
 
     /// Rebuild the graph structure from serialized data
-    /// This must be called after deserialization since graph and `node_map` are not serialized
+    /// This must be called after deserialization since `graph` and `node_map` are not serialized
     pub fn rebuild_graph(&mut self) -> GraphBitResult<()> {
         // Clear existing graph structures
         self.graph = DiGraph::new();

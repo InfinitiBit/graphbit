@@ -16,6 +16,7 @@ use graphbit_core::llm::LlmConfig;
 use serde_json::json;
 use std::sync::Arc;
 use std::time::Duration;
+use async_trait::async_trait;
 
 fn has_openai_key() -> bool {
     std::env::var("OPENAI_API_KEY").is_ok()
@@ -149,9 +150,41 @@ async fn test_workflow_with_ollama() {
     assert!(true);
 }
 
+// ---- Dummy LLM provider for testing ----
+struct DummyLlmProvider;
+
+#[async_trait]
+impl graphbit_core::llm::LlmProviderTrait for DummyLlmProvider {
+    fn provider_name(&self) -> &str {
+        "dummy"
+    }
+
+    fn model_name(&self) -> &str {
+        "dummy-model"
+    }
+
+    async fn complete(&self, _request: graphbit_core::llm::LlmRequest) -> graphbit_core::errors::GraphBitResult<graphbit_core::llm::LlmResponse> {
+        // Return a dummy response
+        Ok(graphbit_core::llm::LlmResponse {
+            content: "dummy response".to_string(),
+            usage: graphbit_core::llm::LlmUsage {
+                prompt_tokens: 10,
+                completion_tokens: 5,
+                total_tokens: 15,
+            },
+            finish_reason: graphbit_core::llm::FinishReason::Stop,
+            model: "dummy-model".to_string(),
+            tool_calls: vec![],
+            metadata: std::collections::HashMap::new(),
+            id: Some("dummy-id".to_string()),
+        })
+    }
+}
+
 // ---- Dummy agent for workflow execution tests (no external API) ----
 struct DummyAgent {
     cfg: graphbit_core::agents::AgentConfig,
+    llm_provider: graphbit_core::llm::LlmProvider,
 }
 
 #[async_trait::async_trait]
@@ -199,7 +232,7 @@ impl graphbit_core::agents::AgentTrait for DummyAgent {
     }
 
     fn llm_provider(&self) -> &graphbit_core::llm::LlmProvider {
-        unimplemented!()
+        &self.llm_provider
     }
 }
 
@@ -212,7 +245,12 @@ fn build_dummy_agent(name: &str) -> (graphbit_core::types::AgentId, std::sync::A
     )
     .with_id(id.clone())
     .with_capabilities(vec![graphbit_core::types::AgentCapability::TextProcessing]);
-    (id.clone(), std::sync::Arc::new(DummyAgent { cfg }))
+
+    // Create dummy LLM provider
+    let dummy_provider = Box::new(DummyLlmProvider);
+    let llm_provider = graphbit_core::llm::LlmProvider::new(dummy_provider, graphbit_core::llm::LlmConfig::default());
+
+    (id.clone(), std::sync::Arc::new(DummyAgent { cfg, llm_provider }))
 }
 
 #[tokio::test]
@@ -435,7 +473,9 @@ async fn test_workflow_with_llm() {
 
     workflow.add_node(node).unwrap();
 
-    let executor = WorkflowExecutor::new();
+    // Create executor with default LLM configuration
+    let executor = WorkflowExecutor::new().with_default_llm_config(llm_config.clone());
+
     let agent = AgentBuilder::new("test_agent", llm_config)
         .description("Test agent")
         .with_id(agent_id.clone())

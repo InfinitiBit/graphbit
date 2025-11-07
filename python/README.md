@@ -1,271 +1,137 @@
-# GraphBit Python API
+<div align="center">
 
-Python bindings for GraphBit - a declarative agentic workflow automation framework.
+# GraphBit - High Performance Agentic Framework
 
-## Installation
+<p align="center">
+    <img src="assets/logo(circle).png" width="160px" alt="Logo" />
+</p>
 
-### From PyPI (Recommended)
+<!-- Added placeholders for links, fill it up when the corresponding links are available. -->
+<p align="center">
+    <a href="https://graphbit.ai/">Website</a> | 
+    <a href="https://docs.graphbit.ai/">Docs</a> |
+    <a href="https://discord.com/invite/huVJwkyu">Discord</a>
+    <br /><br />
+</p>
+
+[![Build Status](https://img.shields.io/github/actions/workflow/status/InfinitiBit/graphbit/update-docs.yml?branch=main)](https://github.com/InfinitiBit/graphbit/actions/workflows/update-docs.yml)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/InfinitiBit/graphbit/blob/main/CONTRIBUTING.md)
+[![Rust Version](https://img.shields.io/badge/rust-1.70+-blue.svg)](https://www.rust-lang.org)
+[![Python Version](https://img.shields.io/badge/python-3.10--3.13-blue.svg)](https://www.python.org)
+
+**Type-Safe AI Agent Workflows with Rust Performance**
+
+</div>
+
+Graphbit is an **industry-grade agentic AI framework** built for developers and AI teams that demand stability, scalability, and low resource usage. 
+
+Written in **Rust** for maximum performance and safety, it delivers up to **68× lower CPU usage** and **140× lower memory** footprint than certain leading alternatives while consistently using far fewer resources than the rest, all while maintaining comparable throughput and execution speed. See [benchmarks](benchmarks/report/framework-benchmark-report.md) for more details.
+
+Designed to run **multi-agent workflows in parallel**, Graphbit persists memory across steps, recovers from failures, and ensures **100% task success** under load. Its lightweight, resource-efficient architecture enables deployment in both **high-scale enterprise environments** and **low-resource edge scenarios**. With built-in observability and concurrency support, Graphbit eliminates the bottlenecks that slow decision-making and erode ROI. 
+
+##  Key Features
+
+- **Tool Selection** - LLMs intelligently select tools based on descriptions
+- **Type Safety** - Strong typing throughout the execution pipeline
+- **Reliability** - Circuit breakers, retry policies, and error handling
+- **Multi-LLM Support** - OpenAI, Azure OpenAI, Anthropic, OpenRouter, DeepSeek, Replicate, Ollama, TogetherAI
+- **Resource Management** - Concurrency controls and memory optimization
+- **Observability** - Built-in metrics and execution tracing
+
+##  Quick Start
+
+### Installation 
+
+Recommended to use virtual environment.
 
 ```bash
 pip install graphbit
 ```
 
-### From Source
-
+### Environment Setup
+Set up API keys you want to use in your project:
 ```bash
-git clone https://github.com/InfinitiBit/graphbit.git
-cd graphbit/
-cargo build --release
-cd python/
-cargo build --release
-maturin develop --release
+# OpenAI (optional – required if using OpenAI models)
+export OPENAI_API_KEY=your_openai_api_key_here
+
+# Anthropic (optional – required if using Anthropic models)
+export ANTHROPIC_API_KEY=your_anthropic_api_key_here
 ```
 
-## Quick Start
+> **Security Note**: Never commit API keys to version control. Always use environment variables or secure secret management.
 
+### Basic Usage
 ```python
-import graphbit
 import os
 
-graphbit.init()
+from graphbit import LlmConfig, Executor, Workflow, Node, tool
 
-api_key = os.getenv("OPENAI_API_KEY")
-config = graphbit.LlmConfig.openai(api_key, "gpt-4")
+# Initialize and configure
+config = LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4o-mini")
 
-workflow = graphbit.Workflow("Hello World")
+# Create executor
+executor = Executor(config)
 
-node = graphbit.Node.agent(
-    "Greeter", 
-    "Say hello to the world!", 
-    "greeter"
+# Create tools with clear descriptions for LLM selection
+@tool(_description="Get current weather information for any city")
+def get_weather(location: str) -> dict:
+    return {"location": location, "temperature": 22, "condition": "sunny"}
+
+@tool(_description="Perform mathematical calculations and return results")
+def calculate(expression: str) -> str:
+    return f"Result: {eval(expression)}"
+
+# Build workflow
+workflow = Workflow("Analysis Pipeline")
+
+# Create agent nodes
+smart_agent = Node.agent(
+    name="Smart Agent",
+    prompt="What's the weather in Paris and calculate 15 + 27?",
+    system_prompt="You are an assistant skilled in weather lookup and math calculations. Use tools to answer queries accurately.",
+    tools=[get_weather, calculate]
 )
 
-node_id = workflow.add_node(node)
-workflow.validate()
+processor = Node.agent(
+    name="Data Processor",
+    prompt="Process the results obtained from Smart Agent.",
+    system_prompt="""You process and organize results from other agents.
 
-executor = graphbit.Executor(config)
-context = executor.execute(workflow)
+    - Summarize and clarify key points
+    - Structure your output for easy reading
+    - Focus on actionable insights
+    """
+)
 
-print(f"Result: {context.get_variable('node_result_1')}")
+# Connect and execute
+id1 = workflow.add_node(smart_agent)
+id2 = workflow.add_node(processor)
+workflow.connect(id1, id2)
+
+result = executor.execute(workflow)
+print(f"Workflow completed: {result.is_success()}")
+print("\nSmart Agent Output: \n", result.get_node_output("Smart Agent"))
+print("\nData Processor Output: \n", result.get_node_output("Data Processor"))
 ```
 
-## Core Classes
+## High-Level Architecture
 
-### LlmConfig
+<p align="center">
+  <img src="assets/architecture.svg" height="250" alt="GraphBit Architecture">
+</p>
 
-Configuration for LLM providers.
+Three-tier design for reliability and performance:
+- **Rust Core** - Workflow engine, agents, and LLM providers
+- **Orchestration Layer** - Project management and execution
+- **Python API** - PyO3 bindings with async support
 
-```python
-openai_config = graphbit.LlmConfig.openai(api_key, "gpt-4")
+## Python API Integrations
 
-anthropic_config = graphbit.LlmConfig.anthropic(api_key, "claude-3-sonnet-20240229")
+GraphBit provides a rich Python API for building and integrating agentic workflows, including executors, nodes, LLM clients, and embeddings. For the complete list of classes, methods, and usage examples, see the [Python API Reference](docs/api-reference/python-api.md).
 
-fireworks_config = graphbit.LlmConfig.fireworks(api_key, "accounts/fireworks/models/llama-v3p1-8b-instruct")
-```
+## Contributing to GraphBit
 
-### EmbeddingConfig & EmbeddingClient
+We welcome contributions. To get started, please see the [Contributing](CONTRIBUTING.md) file for development setup and guidelines.
 
-Service for generating text embeddings.
+GraphBit is built by a wonderful community of researchers and engineers.
 
-```python
-config = graphbit.EmbeddingConfig.openai(api_key, "text-embedding-ada-002")
-embedding_client = graphbit.EmbeddingClient(config)
-
-# Single embedding
-embedding = embedding_client.embed("Hello world")
-
-# Batch embedding
-embeddings = embedding_client.embed_many(["First text", "Second text"])
-```
-
-### Workflow
-
-Pattern for creating workflows.
-
-```python
-workflow = graphbit.Workflow("My Workflow")
-
-agent_node = graphbit.Node.agent(
-    name="Analyzer", 
-    prompt=f"Analyzes input data: {input}",
-    agent_id="analyzer"
-)
-
-node_id = workflow.add_node(agent_node)
-
-transform_node = graphbit.Node.transform(
-    "Uppercase",
-    "uppercase"
-)
-
-transform_id = workflow.add_node(transform_node)
-
-workflow.connect(node_id, transform_id)
-
-workflow.validate()
-```
-
-### Node
-
-Factory for creating different types of workflow nodes.
-
-```python
-# Agent node
-agent = graphbit.Node.agent(
-    "Content Writer", 
-    f"Write an article about {topic}", 
-    "writer"
-)
-
-# Transform node
-transform = graphbit.Node.transform(
-    "Uppercase", 
-    "uppercase"
-)
-# Available transformations: "uppercase", "lowercase", "json_extract", "split", "join"
-
-# Condition node
-condition = graphbit.Node.condition(
-    "Quality Check", 
-    "quality_score > 0.8"
-)
-```
-
-### DocumentLoaderConfig & DocumentLoader
-
-Service for loading documents
-
-```python
-from graphbit import DocumentLoaderConfig, DocumentLoader
-
-# Basic configuration
-config = DocumentLoaderConfig(
-    max_file_size=50_000_000,    # 50MB limit
-    default_encoding="utf-8",    # Text encoding
-    preserve_formatting=True     # Keep formatting
-)
-loader = DocumentLoader(config)
-
-# PDF processing
-config = DocumentLoaderConfig(preserve_formatting=True)
-config.extraction_settings = {
-    "ocr_enabled": True,
-    "table_detection": True
-}
-loader = DocumentLoader(config)
-content = loader.load_document("report.pdf", "pdf")
-
-# Text files processing
-config = DocumentLoaderConfig(default_encoding="utf-8")
-loader = DocumentLoader(config)
-content = loader.load_document("notes.txt", "txt")
-
-# Structured data processing
-# JSON, CSV, XML automatically parsed as text
-loader = DocumentLoader()
-json_content = loader.load_document("data.json", "json")
-csv_content = loader.load_document("data.csv", "csv")
-```
-
-### TextSplitterConfig & TextSplitter
-
-Factory for creating different types of test splitters.
-
-```python
-# Character configuration
-config = graphbit.TextSplitterConfig.character(
-    chunk_size=1000,
-    chunk_overlap=200
-)
-
-# Token configuration
-config = graphbit.TextSplitterConfig.token(
-    chunk_size=100,
-    chunk_overlap=20,
-    token_pattern=r'\w+'
-)
-
-# Code splitter configuration
-config = graphbit.TextSplitterConfig.code(
-    chunk_size=500,
-    chunk_overlap=50,
-    language="python"
-)
-
-# Markdown splitter configuration
-config = graphbit.TextSplitterConfig.markdown(
-    chunk_size=1000,
-    chunk_overlap=100,
-    split_by_headers=True
-)
-
-# Create a character splitter
-splitter = graphbit.CharacterSplitter(
-    chunk_size=1000,      # Maximum characters per chunk
-    chunk_overlap=200     # Overlap between chunks
-)
-
-# Create a token splitter
-splitter = graphbit.TokenSplitter(
-    chunk_size=100,       # Maximum tokens per chunk
-    chunk_overlap=20,     # Token overlap
-    token_pattern=None    # Optional custom regex pattern
-)
-
-# Create a sentence splitter
-splitter = graphbit.SentenceSplitter(
-    chunk_size=500,       # Target size in characters
-    chunk_overlap=1       # Number of sentences to overlap
-    sentence_endings=None # Optional list of sentence endings
-)
-
-# Create a recursive splitter
-splitter = graphbit.RecursiveSplitter(
-    chunk_size=1000,      # Target size in characters
-    chunk_overlap=100     # Overlap between chunks
-    separators=None       # Optional list of separators
-
-)
-```
-
-### Executor
-
-Executes workflows with the configured LLM.
-
-```python
-# Basic executor configuration
-executor = graphbit.Executor(openai_config)
-
-# High-throughput executor configuration
-high_throughput_executor = graphbit.Executor.new_high_throughput(config)
-
-# Low-latency executor configuration
-low_latency_executor = graphbit.Executor.new_low_latency(config)
-
-# Memory-optimized executor configuration
-memory_optimized_executor = graphbit.Executor.new_memory_optimized(config)
-
-context = executor.execute(workflow)
-
-print(f"Workflow Status: {context.state()}")
-print(f"Workflow Success: {context.is_success()}")
-print(f"Workflow Failed: {context.is_failed()}")
-print(f"Workflow Execution time: {context.execution_time_ms()}ms")
-print(f"All variables: {context.get_all_variables()}")
-```
-
-## API Reference Summary
-
-### Core Classes
-- `LlmConfig`: LLM provider configuration
-- `EmbeddingConfig`: Embedding service configuration
-- `EmbeddingClient`: Text embedding generation
-- `Node`: Workflow node factory (agent, transform, condition)
-- `Workflow`: Workflow definition and operations
-- `DocumentLoaderConfig`: Documents loading service configuration
-- `DocumentLoader`: Loading documents 
-- `TextSplitterConfig`: Text splitter service configuration
-- `TextSplitter`: Text splitters for text processing
-- `Executor`: Workflow execution engine
-
-This API provides everything needed to build agentic workflows with Python, from simple automation to multi-step pipelines.

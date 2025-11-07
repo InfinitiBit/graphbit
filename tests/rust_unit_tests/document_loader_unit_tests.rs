@@ -349,27 +349,43 @@ async fn test_document_content_structure() {
 #[tokio::test]
 async fn test_load_csv_xml_html_return_raw() {
     let mut tmp_csv = NamedTempFile::new().expect("tmp");
-    write!(tmp_csv, "a,b,c\n1,2,3").unwrap();
+    write!(tmp_csv, "name,age,city\nJohn,25,NYC\nJane,30,LA").unwrap();
     let path_csv = tmp_csv.path().to_str().unwrap().to_string();
 
     let loader = DocumentLoader::new();
     let csv = loader.load_document(&path_csv, "csv").await.expect("csv");
-    assert!(csv.content.contains("a,b,c"));
+    // Should contain structured CSV content, not raw CSV
+    assert!(csv.content.contains("CSV Document Content"));
+    assert!(csv.content.contains("Columns (3): name, age, city"));
+    assert!(csv.content.contains("name: John"));
+    assert!(csv.content.contains("age: 25"));
+    assert!(csv.content.contains("city: NYC"));
 
     let mut tmp_xml = NamedTempFile::new().expect("tmp");
-    write!(tmp_xml, "<root><x>1</x></root>").unwrap();
+    write!(
+        tmp_xml,
+        "<root><person name=\"John\"><age>25</age><city>NYC</city></person></root>"
+    )
+    .unwrap();
     let path_xml = tmp_xml.path().to_str().unwrap().to_string();
     let xml = loader.load_document(&path_xml, "xml").await.expect("xml");
-    assert!(xml.content.contains("<root>"));
+    // Should contain structured XML content, not raw XML
+    assert!(xml.content.contains("XML Document Content"));
+    assert!(xml.content.contains("Element: root"));
+    assert!(xml.content.contains("Element: person"));
 
     let mut tmp_html = NamedTempFile::new().expect("tmp");
-    write!(tmp_html, "<html><body>hi</body></html>").unwrap();
+    write!(tmp_html, "<html><head><title>Test Page</title></head><body><h1>Welcome</h1><p>Hello World</p></body></html>").unwrap();
     let path_html = tmp_html.path().to_str().unwrap().to_string();
     let html = loader
         .load_document(&path_html, "html")
         .await
         .expect("html");
-    assert!(html.content.contains("<html>"));
+    // Should contain structured HTML content, not raw HTML
+    assert!(html.content.contains("HTML Document Content"));
+    assert!(html.content.contains("Title: Test Page"));
+    assert!(html.content.contains("H1: Welcome"));
+    assert!(html.content.contains("Hello World"));
 }
 
 #[tokio::test]

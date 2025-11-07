@@ -3,14 +3,18 @@ pyo3 = {workspace = true, optional = true}
 anyhow.workspace = true
 async-trait.workspace = true
 chrono.workspace = true
+csv.workspace = true
 docx-rs.workspace = true
 futures.workspace = true
 lazy_static.workspace = true
 lopdf.workspace = true
+pdf-extract.workspace = true
 petgraph.workspace = true
+quick-xml.workspace = true
 rand.workspace = true
 regex.workspace = true
 reqwest.workspace = true
+scraper.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
@@ -39,6 +43,17 @@ license-file.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 version.workspace = true
+
+# Enable vendored OpenSSL for aarch64 cross-compilation
+# Cross-compilation containers lack aarch64-specific OpenSSL dev packages
+[target.aarch64-unknown-linux-gnu]
+[target.aarch64-unknown-linux-gnu.dependencies]
+openssl = {version = "0.10", features = ["vendored"]}
+
+# Enable vendored OpenSSL for musl targets (Alpine Linux)
+# musl containers don't have OpenSSL dev packages, so we compile from source
+[target.'cfg(target_env = "musl")'.dependencies]
+openssl = {version = "0.10", features = ["vendored"]}
 
 [target.'cfg(unix)'.dependencies]
 jemallocator.workspace = true

@@ -473,7 +473,7 @@ impl WorkflowExecutor {
         }
 
         // Execute nodes in dependency-aware batches (parents before children)
-        let batches = self.create_dependency_batches(&workflow.graph).await?;
+        let batches = Self::create_dependency_batches(&workflow.graph).await?;
         tracing::info!(
             batch_count = batches.len(),
             "Planned dependency-aware batches"
@@ -885,28 +885,8 @@ impl WorkflowExecutor {
                 "Implicit preamble: checking direct parents and available outputs"
             );
 
-            // Build a set of keys to include: each parent by id and by name (if known)
-            let mut include_keys: Vec<String> = Vec::new();
-            if let Some(map) = id_name_obj {
-                for pid in &parent_ids {
-                    include_keys.push(pid.clone());
-                    if let Some(name_val) = map.get(pid).and_then(|v| v.as_str()) {
-                        include_keys.push(name_val.to_string());
-                    }
-                }
-            } else {
-                include_keys.extend(parent_ids.iter().cloned());
-            }
-
             // Preserve order by iterating parent_ids, using id->name for titles, and fetching outputs by key
             for pid in &parent_ids {
-                // Determine title from id->name map; fallback to id
-                let title = id_name_obj
-                    .and_then(|m| m.get(pid))
-                    .and_then(|v| v.as_str())
-                    .unwrap_or(pid.as_str())
-                    .to_string();
-
                 // Prefer fetching by id first, then by name key
                 let val_opt = ctx.node_outputs.get(pid).or_else(|| {
                     id_name_obj
@@ -920,37 +900,19 @@ impl WorkflowExecutor {
                         serde_json::Value::String(s) => s.clone(),
                         _ => value.to_string(),
                     };
-                    // Original titled section
-                    sections.push(format!("=== {title} ===\n{value_str}"));
+
+                    // Clean, natural format: just add the output value directly
+                    sections.push(value_str.clone());
 
                     // Always add to JSON context by id as a fallback key
                     parents_json.insert(pid.to_string(), value.clone());
 
-                    // Also add a generic alias label derived from parent name (fully generic behavior)
+                    // Also add to JSON context by name if available
                     if let Some(parent_name) = id_name_obj
                         .and_then(|m| m.get(pid))
                         .and_then(|v| v.as_str())
                     {
-                        // Add to JSON context by name
                         parents_json.insert(parent_name.to_string(), value.clone());
-
-                        // Generic alias label: normalize separators, title-case tokens, uppercased heading
-                        let generic_label = parent_name
-                            .replace(['_', '-'], " ")
-                            .split_whitespace()
-                            .map(|w| {
-                                let mut ch = w.chars();
-                                match ch.next() {
-                                    Some(first) => {
-                                        first.to_uppercase().collect::<String>() + ch.as_str()
-                                    }
-                                    None => String::new(),
-                                }
-                            })
-                            .collect::<Vec<_>>()
-                            .join(" ")
-                            .to_uppercase();
-                        sections.push(format!("{generic_label}:\n{value_str}"));
                     }
                 } else {
                     // Debug: could not find value for this parent id/name
@@ -967,40 +929,23 @@ impl WorkflowExecutor {
                 }
             }
 
-            // Append a CrewAI-style Context JSON block aggregating direct parent outputs
-            let context_json_block = if parents_json.is_empty() {
-                String::new()
-            } else {
-                let pretty = serde_json::to_string_pretty(&serde_json::Value::Object(parents_json))
-                    .unwrap_or("{}".to_string());
-                format!("\n[Context JSON]\n{pretty}\n\n")
-            };
-
             // Debug: summarize what we built
             tracing::debug!(
                 current_node_id = %cur_id_str,
                 section_count = sections.len(),
-                has_context_json = !context_json_block.is_empty(),
-                "Implicit preamble: built sections and JSON presence"
+                "Implicit preamble: built sections"
             );
 
-            let implicit_preamble = if sections.is_empty() && context_json_block.is_empty() {
-                // No alias sections and no context JSON -> no preamble
+            // Build clean, natural prompt with context
+            let implicit_preamble = if sections.is_empty() {
+                // No prior outputs -> no preamble
                 "".to_string()
             } else {
-                // Strong CrewAI-style directive to ensure models use the JSON context
-                let directive_line = "Instruction: You MUST use the [Context JSON] below as prior outputs from your direct parents. Base your answer strictly on it.";
-                let sections_block = if sections.is_empty() {
-                    String::new()
-                } else {
-                    sections.join("\n\n") + "\n\n"
-                };
-                format!(
-                    "Context from prior nodes (auto-injected):\n{sections_block}{directive_line}\n{context_json_block}",
-                )
+                // Clean format: just include the prior outputs naturally
+                sections.join("\n\n") + "\n\n"
             };
 
-            let combined = format!("{implicit_preamble}[Task]\n{prompt_template}");
+            let combined = format!("{implicit_preamble}{prompt_template}");
             let resolved = Self::resolve_template_variables(&combined, &ctx);
             // Debug log the resolved prompt (trimmed) to verify implicit context presence
             let preview: String = resolved.chars().take(400).collect();
@@ -1030,20 +975,97 @@ impl WorkflowExecutor {
             tracing::info!("Executing agent with tools - prompt: '{resolved_prompt}'");
             tracing::info!("ENTERING execute_agent_with_tools function");
 
-            let result =
-                Self::execute_agent_with_tools(agent_id, &resolved_prompt, node_config, agent)
-                    .await;
+            // Get node name from context
+            let node_name = {
+                let ctx = context.lock().await;
+                ctx.metadata
+                    .get("node_id_to_name")
+                    .and_then(|m| m.as_object())
+                    .and_then(|m| m.get(&current_node_id.to_string()))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("unknown")
+                    .to_string()
+            };
+
+            let result = Self::execute_agent_with_tools(
+                agent_id,
+                &resolved_prompt,
+                node_config,
+                agent,
+                current_node_id,
+                &node_name,
+                context.clone(),
+            )
+            .await;
             tracing::info!("Agent with tools execution result: {:?}", result);
             result
         } else {
             // Execute agent without tools (original behavior)
             tracing::info!("NO TOOLS DETECTED - using standard agent execution");
-            let message = AgentMessage::new(
-                agent_id.clone(),
-                None,
-                MessageContent::Text(resolved_prompt),
-            );
-            agent.execute(message).await
+
+            // Call LLM provider directly to capture metadata
+            use crate::llm::LlmRequest;
+            let request = LlmRequest::new(resolved_prompt.clone());
+
+            // Measure LLM call duration and capture execution timestamp
+            let execution_timestamp = chrono::Utc::now();
+            let llm_start = std::time::Instant::now();
+            let llm_response = agent.llm_provider().complete(request).await?;
+            let llm_duration_ms = llm_start.elapsed().as_secs_f64() * 1000.0;
+
+            // Store LLM response metadata AND request prompt in context for observability
+            {
+                // First, get the node name before mutable borrow
+                let node_name = {
+                    let ctx = context.lock().await;
+                    ctx.metadata
+                        .get("node_id_to_name")
+                        .and_then(|m| m.as_object())
+                        .and_then(|m| m.get(&current_node_id.to_string()))
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string())
+                        .unwrap_or_else(|| "unknown".to_string())
+                };
+
+                // Now store the metadata
+                let mut ctx = context.lock().await;
+                if let Ok(mut response_metadata) = serde_json::to_value(&llm_response) {
+                    // Add the request prompt to the metadata
+                    if let Some(obj) = response_metadata.as_object_mut() {
+                        obj.insert(
+                            "prompt".to_string(),
+                            serde_json::Value::String(resolved_prompt.clone()),
+                        );
+                        // Add LLM call duration for accurate latency tracking
+                        obj.insert(
+                            "duration_ms".to_string(),
+                            serde_json::json!(llm_duration_ms),
+                        );
+                        // Add execution timestamp for chronological ordering
+                        obj.insert(
+                            "execution_timestamp".to_string(),
+                            serde_json::json!(execution_timestamp.to_rfc3339()),
+                        );
+                    }
+
+                    // Store by node ID
+                    ctx.metadata.insert(
+                        format!("node_response_{current_node_id}"),
+                        response_metadata.clone(),
+                    );
+                    // Store by node name
+                    ctx.metadata
+                        .insert(format!("node_response_{node_name}"), response_metadata);
+                }
+            }
+
+            // Return the content as JSON value
+            if let Ok(json_value) = serde_json::from_str::<serde_json::Value>(&llm_response.content)
+            {
+                Ok(json_value)
+            } else {
+                Ok(serde_json::Value::String(llm_response.content))
+            }
         }
     }
 
@@ -1053,6 +1075,9 @@ impl WorkflowExecutor {
         prompt: &str,
         node_config: &std::collections::HashMap<String, serde_json::Value>,
         agent: Arc<dyn AgentTrait>,
+        node_id: &NodeId,
+        node_name: &str,
+        context: Arc<Mutex<WorkflowContext>>,
     ) -> GraphBitResult<serde_json::Value> {
         tracing::info!("Starting execute_agent_with_tools for agent: {_agent_id}");
         use crate::llm::{LlmRequest, LlmTool};
@@ -1093,7 +1118,45 @@ impl WorkflowExecutor {
             "About to call LLM provider with {} tools",
             request.tools.len()
         );
+
+        // Measure LLM call duration and capture execution timestamp
+        let execution_timestamp = chrono::Utc::now();
+        let llm_start = std::time::Instant::now();
         let llm_response = agent.llm_provider().complete(request).await?;
+        let llm_duration_ms = llm_start.elapsed().as_secs_f64() * 1000.0;
+
+        // Store LLM response metadata AND request prompt in context for observability
+        {
+            let mut ctx = context.lock().await;
+            if let Ok(mut response_metadata) = serde_json::to_value(&llm_response) {
+                // Add the request prompt to the metadata
+                if let Some(obj) = response_metadata.as_object_mut() {
+                    obj.insert(
+                        "prompt".to_string(),
+                        serde_json::Value::String(prompt.to_string()),
+                    );
+                    // Add LLM call duration for accurate latency tracking
+                    obj.insert(
+                        "duration_ms".to_string(),
+                        serde_json::json!(llm_duration_ms),
+                    );
+                    // Add execution timestamp for chronological ordering
+                    obj.insert(
+                        "execution_timestamp".to_string(),
+                        serde_json::json!(execution_timestamp.to_rfc3339()),
+                    );
+                }
+
+                // Store by node ID
+                ctx.metadata.insert(
+                    format!("node_response_{node_id}"),
+                    response_metadata.clone(),
+                );
+                // Store by node name
+                ctx.metadata
+                    .insert(format!("node_response_{node_name}"), response_metadata);
+            }
+        }
 
         // DEBUG: Log LLM response details
         tracing::info!("LLM Response - Content: '{}'", llm_response.content);
@@ -1382,10 +1445,10 @@ impl WorkflowExecutor {
 
                 tokio::spawn(async move {
                     // Create a minimal agent message for this prompt
-                    let message = crate::types::AgentMessage::new(
+                    let message = AgentMessage::new(
                         agent_id_clone.clone(),
                         None, // No specific recipient
-                        crate::types::MessageContent::Text(prompt),
+                        MessageContent::Text(prompt),
                     );
 
                     // Execute the agent task directly using the execute method for better performance
@@ -1441,7 +1504,6 @@ impl WorkflowExecutor {
 
     /// Create batches that strictly respect dependencies: only direct-ready nodes per layer
     async fn create_dependency_batches(
-        &self,
         graph: &WorkflowGraph,
     ) -> GraphBitResult<Vec<Vec<WorkflowNode>>> {
         use std::collections::HashSet;

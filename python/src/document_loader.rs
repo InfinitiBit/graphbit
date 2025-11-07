@@ -211,10 +211,15 @@ impl PyDocumentContent {
     /// Get a preview of the content (first n characters)
     #[pyo3(signature = (max_length=500))]
     fn preview(&self, max_length: usize) -> String {
-        if self.inner.content.len() <= max_length {
+        // Use char-based iteration to respect UTF-8 character boundaries
+        let char_count = self.inner.content.chars().count();
+
+        if char_count <= max_length {
             self.inner.content.clone()
         } else {
-            format!("{}...", &self.inner.content[..max_length])
+            // Take the first max_length characters (not bytes)
+            let preview: String = self.inner.content.chars().take(max_length).collect();
+            format!("{preview}...")
         }
     }
 

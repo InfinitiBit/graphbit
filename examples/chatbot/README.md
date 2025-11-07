@@ -6,20 +6,35 @@ A chatbot using GraphBit with vector database storage and Streamlit interface.
 
 ### 1. Prerequisites
 - Python 3.11+
-- GraphBit installed
 - OpenAI API key
+- [Poetry installed](https://python-poetry.org/docs/#installation)
 
 ### 2. Installation
 
+#### Create Poetry Environment
+
 ```bash
 cd examples/chatbot
+
+poetry env use <python_version>
+```
+
+#### Activate Environment and Install Dependencies
+
+```bash
+source $(poetry env info --path)/bin/activate
+```
+
+#### Install Dependencies
+
+```bash
 poetry install
 ```
 
 ### 3. Configuration
 
 ```bash
-export OPENAI_API_KEY="api_key"
+export OPENAI_API_KEY="your_api_key"
 ```
 
 ### 4. Run the Application

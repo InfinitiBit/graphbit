@@ -321,5 +321,67 @@ def async_operation(url: str, timeout: int = 30) -> Dict[str, Any]:
     return loop.run_until_complete(fetch_async())
 ```
 
+## Provider Tool Calling Support
+
+GraphBit supports tool calling across multiple AI providers. The following tables show which models support tool calling functionality for each provider.
+
+### OpenAI
+
+| Model Name | Tool Calling Support | Context Length | Type |
+|------------|---------------------|----------------|--------------|
+| `gpt-4o` | ✅ | 128K | General purpose reasoning |
+| `gpt-4o-mini` | ✅ | 128K | Quick reasoning |
+| `gpt-4-turbo` | ✅ | 128K | Optimized |
+| `gpt-4` | ✅ | 8K / also 32K | Standard |
+| `gpt-3.5-turbo` | ✅ | 4K / also 16K | Lightweight |
+
+### Anthropic
+
+| Model Name | Tool Calling Support | Context Length | Type |
+|------------|---------------------|----------------|--------------|
+| `claude-opus-4-1-20250805` | ✅ | 200K | Complex reasoning |
+| `claude-sonnet-4-20250514` | ✅ | 200K / also upto 1M | Balanced performance |
+| `claude-3-haiku-20240307` | ✅ | 200K | Lightweight |
+
+### DeepSeek
+
+| Model Name | Tool Calling Support | Context Length | Type |
+|------------|---------------------|----------------|----------|
+| `deepseek-chat` | ✅ | ~128K | General conversation, instruction following |
+| `deepseek-coder` | ✅ | ~128K | Code generation, programming tasks |
+| `deepseek-reasoner` | ✅ | ~128K | Complex reasoning, mathematics |
+
+### Perplexity
+
+| Model Name | Tool Calling Support | Context Length | Type |
+|------------|---------------------|----------------|----------|
+| `sonar` | ❌ | 8K | Real-time search capabilities |
+| `sonar-reasoning` | ❌ | 8K | Enhanced reasoning with search |
+| `sonar-deep-research` | ❌ | 32K | Deep research capabilities |
+
+### xAI 
+
+| Model Name | Tool Calling Support | Context Length | Type |
+|------------|---------------------|----------------|----------|
+| `grok-4` | ✅ | 256K | Complex Reasoning |
+| `grok-4-0709` | ✅ | 256K | Stable version of grok-4 |
+| `grok-code-fast-1` | ✅ | 256K | Code Generation |
+| `grok-3` | ✅ | 131K | General purpose |
+| `grok-3-mini` | ✅ | 141K | Quick tasks |
+
+### Ollama (Local Models)
+
+| Model Name | Tool Calling Support | Context Length | Type |
+|------------|---------------------|----------------|------|
+| `llama3.2` | ✅ | 8K-128K | General purpose |
+| `llama3.1` | ✅ | 8K-128K | General purpose |
+| `codellama` | ✅ | 16K-100K+ | Code generation |
+
+
+---
+
+#### N.B.: Tool calling support for OpenRouter, FireworksAI, ReplicateAI and TogetherAI depends on the specific model being used. Check their official documentations for more details.
+
+---
 
 This comprehensive guide covers various aspects of GraphBit's tool calling system. Use it as a reference for building powerful, tool-enabled workflows that can interact with external systems, process data, and perform complex operations through LLM agents.
