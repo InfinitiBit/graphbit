@@ -36,12 +36,29 @@ GraphBit is built for production workloads, from enterprise AI systems to low-re
 
 ##  Key Features
 
-- **Tool Selection** - LLMs intelligently choose tools based on descriptions 
+- **Tool Selection** - LLMs intelligently choose tools based on descriptions
 - **Type Safety** -  Strong typing through every execution layer
-- **Reliability** - Circuit breakers, retry policies, and error handling and fault recovery 
+- **Reliability** - Circuit breakers, retry policies, and error handling and fault recovery
 - **Multi-LLM Support** - OpenAI, Azure OpenAI, Anthropic, OpenRouter, DeepSeek, Replicate, Ollama, TogetherAI and more
 - **Resource Management** - Concurrency controls and memory optimization
 - **Observability** - Built-in tracing, structured logs, and performance metrics
+
+## Benchmark
+
+GraphBit was built for efficiency at scale, not theoretical claims, but measured results.
+
+Our internal benchmark suite compared GraphBit to leading Python-based agent frameworks across identical workloads.
+
+| Metric              | GraphBit        | Other Frameworks | Gain                     |
+|:--------------------|:---------------:|:----------------:|:-------------------------|
+| CPU Usage           | 1.0× baseline   | 68.3× higher     | ~68× CPU                 |
+| Memory Footprint    | 1.0× baseline   | 140× higher      | ~140× Memory             |
+| Execution Speed     | ≈ equal / faster| —                | Consistent throughput    |
+| Determinism         | 100% success    | Variable         | Guaranteed reliability   |
+
+GraphBit consistently delivers production-grade efficiency across LLM calls, tool invocations, and multi-agent chains.
+
+🎥 Watch the benchmark demo: Benchmark Video (coming soon)
 
 ##  Quick Start
 
