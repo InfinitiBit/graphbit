@@ -1,4 +1,4 @@
-use graphbit_core::validation::{CustomValidator, TypeValidator, ValidationError, ValidationRule};
+use graphbit_core::validation::{CustomValidator, TypeValidator, ValidationError, ValidationRule, ValidationResult};
 use graphbit_core::*;
 use std::collections::HashMap;
 
@@ -392,4 +392,216 @@ fn test_unknown_custom_validator() {
         .errors
         .iter()
         .any(|e| e.error_code == "UNKNOWN_VALIDATOR"));
+}
+
+// Additional tests to achieve 100% coverage for validation.rs
+
+#[test]
+fn test_validation_result_merge_with_metadata() {
+    let mut result1 = ValidationResult::success()
+        .with_metadata("key1".to_string(), serde_json::Value::String("value1".to_string()));
+
+    let result2 = ValidationResult::success()
+        .with_metadata("key2".to_string(), serde_json::Value::String("value2".to_string()));
+
+    result1.merge(result2);
+
+    assert!(result1.is_valid);
+    assert_eq!(result1.metadata.len(), 2);
+    assert_eq!(result1.metadata.get("key1"), Some(&serde_json::Value::String("value1".to_string())));
+    assert_eq!(result1.metadata.get("key2"), Some(&serde_json::Value::String("value2".to_string())));
+}
+
+#[test]
+fn test_validation_result_merge_with_errors() {
+    let mut result1 = ValidationResult::success();
+    let error1 = ValidationError::new("field1", "error1", "ERROR1");
+    result1.add_error(error1);
+
+    let mut result2 = ValidationResult::success();
+    let error2 = ValidationError::new("field2", "error2", "ERROR2");
+    result2.add_error(error2);
+
+    result1.merge(result2);
+
+    assert!(!result1.is_valid);
+    assert_eq!(result1.errors.len(), 2);
+    assert_eq!(result1.errors[0].field_path, "field1");
+    assert_eq!(result1.errors[1].field_path, "field2");
+}
+
+#[test]
+fn test_invalid_schema_validation() {
+    let validator = TypeValidator::new();
+
+    // Test with non-object schema
+    let invalid_schema = serde_json::Value::String("not an object".to_string());
+    let result = validator.validate_against_schema("\"test\"", &invalid_schema);
+
+    assert!(!result.is_valid);
+    assert!(result.errors.iter().any(|e| e.error_code == "INVALID_SCHEMA"));
+}
+
+#[test]
+fn test_null_type_validation() {
+    let validator = TypeValidator::new();
+
+    let null_schema = serde_json::json!({"type": "null"});
+    let result = validator.validate_against_schema("null", &null_schema);
+    assert!(result.is_valid);
+
+    let result = validator.validate_against_schema("\"not null\"", &null_schema);
+    assert!(!result.is_valid);
+    assert!(result.errors.iter().any(|e| e.error_code == "TYPE_MISMATCH"));
+}
+
+#[test]
+fn test_object_required_properties_validation() {
+    let validator = TypeValidator::new();
+
+    let schema = serde_json::json!({
+        "type": "object",
+        "properties": {
+            "name": {"type": "string"},
+            "age": {"type": "number"}
+        },
+        "required": ["name", "age"]
+    });
+
+    // Valid object
+    let valid_data = r#"{"name": "John", "age": 30}"#;
+    let result = validator.validate_against_schema(valid_data, &schema);
+    assert!(result.is_valid);
+
+    // Missing required property
+    let invalid_data = r#"{"name": "John"}"#;
+    let result = validator.validate_against_schema(invalid_data, &schema);
+    assert!(!result.is_valid);
+    assert!(result.errors.iter().any(|e| e.error_code == "MISSING_REQUIRED_PROPERTY"));
+}
+
+#[test]
+fn test_nested_object_validation() {
+    let validator = TypeValidator::new();
+
+    let schema = serde_json::json!({
+        "type": "object",
+        "properties": {
+            "user": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "email": {"type": "string", "pattern": "^[^@]+@[^@]+\\.[^@]+$"}
+                }
+            }
+        }
+    });
+
+    // Valid nested object
+    let valid_data = r#"{"user": {"name": "John", "email": "john@example.com"}}"#;
+    let result = validator.validate_against_schema(valid_data, &schema);
+    assert!(result.is_valid);
+
+    // Invalid nested object (bad email pattern)
+    let invalid_data = r#"{"user": {"name": "John", "email": "invalid-email"}}"#;
+    let result = validator.validate_against_schema(invalid_data, &schema);
+    assert!(!result.is_valid);
+    assert!(result.errors.iter().any(|e| e.error_code == "PATTERN_MISMATCH"));
+}
+
+#[test]
+fn test_array_items_validation() {
+    let validator = TypeValidator::new();
+
+    let schema = serde_json::json!({
+        "type": "array",
+        "items": {"type": "string"}
+    });
+
+    // Valid array
+    let valid_data = r#"["hello", "world"]"#;
+    let result = validator.validate_against_schema(valid_data, &schema);
+    assert!(result.is_valid);
+
+    // Invalid array item
+    let invalid_data = r#"["hello", 123]"#;
+    let result = validator.validate_against_schema(invalid_data, &schema);
+    assert!(!result.is_valid);
+    assert!(result.errors.iter().any(|e| e.error_code == "TYPE_MISMATCH"));
+}
+
+#[test]
+fn test_invalid_regex_pattern() {
+    let validator = TypeValidator::new();
+
+    let schema = serde_json::json!({
+        "type": "string",
+        "pattern": "[invalid regex pattern"  // Missing closing bracket
+    });
+
+    let result = validator.validate_against_schema("\"test\"", &schema);
+    assert!(!result.is_valid);
+    assert!(result.errors.iter().any(|e| e.error_code == "INVALID_REGEX_PATTERN"));
+}
+
+#[test]
+fn test_number_constraints_validation() {
+    let validator = TypeValidator::new();
+
+    let schema = serde_json::json!({
+        "type": "number",
+        "minimum": 10,
+        "maximum": 100
+    });
+
+    // Valid number
+    let result = validator.validate_against_schema("50", &schema);
+    assert!(result.is_valid);
+
+    // Too small
+    let result = validator.validate_against_schema("5", &schema);
+    assert!(!result.is_valid);
+    assert!(result.errors.iter().any(|e| e.error_code == "NUMBER_TOO_SMALL"));
+
+    // Too large
+    let result = validator.validate_against_schema("150", &schema);
+    assert!(!result.is_valid);
+    assert!(result.errors.iter().any(|e| e.error_code == "NUMBER_TOO_LARGE"));
+}
+
+#[test]
+fn test_custom_validator_error_handling() {
+    let mut validator = TypeValidator::new();
+
+    // Register a custom validator that returns an error
+    let custom_validator = Box::new(ErrorValidator);
+    validator.register_validator("error_validator".to_string(), custom_validator).unwrap();
+
+    let rule = ValidationRule::new("test_rule", "Test rule with error validator")
+        .with_validator("error_validator");
+
+    let result = validator.validate_against_rule("test data", &rule);
+    assert!(!result.is_valid);
+    assert!(result.errors.iter().any(|e| e.error_code == "CUSTOM_VALIDATION_ERROR"));
+}
+
+// Helper struct for testing custom validator errors
+struct ErrorValidator;
+
+impl CustomValidator for ErrorValidator {
+    fn validate(
+        &self,
+        _data: &str,
+        _config: &HashMap<String, serde_json::Value>,
+    ) -> GraphBitResult<ValidationResult> {
+        Err(GraphBitError::validation("test_field", "Test error"))
+    }
+
+    fn name(&self) -> &str {
+        "error_validator"
+    }
+
+    fn description(&self) -> &str {
+        "A validator that always returns an error"
+    }
 }

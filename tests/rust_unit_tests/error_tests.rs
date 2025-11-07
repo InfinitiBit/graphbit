@@ -275,3 +275,150 @@ fn test_error_chaining_with_context() {
         _ => panic!("Expected Network error variant"),
     }
 }
+
+// Additional tests to achieve 100% coverage for errors.rs
+
+#[test]
+fn test_additional_error_constructors() {
+    // Test error constructors using direct enum variants
+    let network_error = GraphBitError::Network { message: "connection timeout".to_string() };
+    assert!(network_error.to_string().contains("connection timeout"));
+    assert!(network_error.is_retryable());
+    assert_eq!(network_error.retry_delay(), Some(1));
+
+    let serialization_error = GraphBitError::Serialization { message: "invalid JSON".to_string() };
+    assert!(serialization_error.to_string().contains("invalid JSON"));
+    assert!(!serialization_error.is_retryable());
+    assert_eq!(serialization_error.retry_delay(), None);
+
+    let internal_error = GraphBitError::Internal { message: "unexpected error".to_string() };
+    assert!(internal_error.to_string().contains("unexpected error"));
+    assert!(!internal_error.is_retryable());
+    assert_eq!(internal_error.retry_delay(), None);
+
+    let io_error = GraphBitError::Io { message: "file not found".to_string() };
+    assert!(io_error.to_string().contains("file not found"));
+    assert!(!io_error.is_retryable());
+    assert_eq!(io_error.retry_delay(), None);
+}
+
+#[test]
+fn test_error_equality_and_debug() {
+    // Test error equality through string representation
+    let error1 = GraphBitError::config("test message");
+    let error2 = GraphBitError::config("test message");
+    assert_eq!(error1.to_string(), error2.to_string());
+
+    // Test debug formatting for all error types
+    let errors = vec![
+        GraphBitError::config("config error"),
+        GraphBitError::llm_provider("openai", "provider error"),
+        GraphBitError::llm("llm error"),
+        GraphBitError::workflow_execution("workflow error"),
+        GraphBitError::graph("graph error"),
+        GraphBitError::agent("agent-1", "agent error"),
+        GraphBitError::agent_not_found("agent-2"),
+        GraphBitError::validation("field", "validation error"),
+        GraphBitError::authentication("provider", "auth error"),
+        GraphBitError::rate_limit("provider", 30),
+        GraphBitError::concurrency("concurrency error"),
+        GraphBitError::Network { message: "network error".to_string() },
+        GraphBitError::Serialization { message: "serialization error".to_string() },
+        GraphBitError::Internal { message: "internal error".to_string() },
+        GraphBitError::Io { message: "io error".to_string() },
+    ];
+
+    for error in errors {
+        let debug_str = format!("{error:?}");
+        assert!(!debug_str.is_empty());
+
+        let display_str = format!("{error}");
+        assert!(!display_str.is_empty());
+    }
+}
+
+#[test]
+fn test_comprehensive_retry_logic() {
+    // Test retry logic for all error variants
+    let retryable_errors = vec![
+        GraphBitError::Network { message: "network error".to_string() },
+        GraphBitError::rate_limit("provider", 45),
+        GraphBitError::llm_provider("openai", "provider error"),
+        GraphBitError::llm("llm error"),
+    ];
+
+    for error in retryable_errors {
+        assert!(error.is_retryable());
+        assert!(error.retry_delay().is_some());
+    }
+
+    let non_retryable_errors = vec![
+        GraphBitError::config("config error"),
+        GraphBitError::workflow_execution("workflow error"),
+        GraphBitError::graph("graph error"),
+        GraphBitError::agent("agent-1", "agent error"),
+        GraphBitError::agent_not_found("agent-2"),
+        GraphBitError::validation("field", "validation error"),
+        GraphBitError::authentication("provider", "auth error"),
+        GraphBitError::concurrency("concurrency error"),
+        GraphBitError::Serialization { message: "serialization error".to_string() },
+        GraphBitError::Internal { message: "internal error".to_string() },
+        GraphBitError::Io { message: "io error".to_string() },
+    ];
+
+    for error in non_retryable_errors {
+        assert!(!error.is_retryable());
+        assert_eq!(error.retry_delay(), None);
+    }
+}
+
+#[test]
+fn test_error_from_trait_coverage() {
+    // Test all From trait implementations
+
+    // Test reqwest::Error -> GraphBitError
+    let client = reqwest::Client::new();
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    let reqwest_error = rt.block_on(async {
+        client.get("http://127.0.0.1:9999").send().await.unwrap_err()
+    });
+    let graphbit_error = GraphBitError::from(reqwest_error);
+    assert!(matches!(graphbit_error, GraphBitError::Network { .. }));
+
+    // Test serde_json::Error -> GraphBitError
+    let json_error = serde_json::from_str::<serde_json::Value>("invalid json").unwrap_err();
+    let graphbit_error = GraphBitError::from(json_error);
+    assert!(matches!(graphbit_error, GraphBitError::Serialization { .. }));
+
+    // Test anyhow::Error -> GraphBitError
+    let anyhow_error = anyhow::anyhow!("test error");
+    let graphbit_error = GraphBitError::from(anyhow_error);
+    assert!(matches!(graphbit_error, GraphBitError::Internal { .. }));
+
+    // Test std::io::Error -> GraphBitError
+    let io_error = std::io::Error::new(std::io::ErrorKind::NotFound, "file not found");
+    let graphbit_error = GraphBitError::from(io_error);
+    assert!(matches!(graphbit_error, GraphBitError::Io { .. }));
+}
+
+#[test]
+fn test_error_variant_specific_retry_delays() {
+    // Test specific retry delays for different error types
+    assert_eq!(GraphBitError::Network { message: "error".to_string() }.retry_delay(), Some(1));
+    assert_eq!(GraphBitError::llm("error").retry_delay(), Some(1));
+    assert_eq!(GraphBitError::llm_provider("provider", "error").retry_delay(), Some(2));
+    assert_eq!(GraphBitError::rate_limit("provider", 15).retry_delay(), Some(15));
+
+    // Test that non-retryable errors return None
+    assert_eq!(GraphBitError::config("error").retry_delay(), None);
+    assert_eq!(GraphBitError::validation("field", "error").retry_delay(), None);
+    assert_eq!(GraphBitError::authentication("provider", "error").retry_delay(), None);
+    assert_eq!(GraphBitError::Internal { message: "error".to_string() }.retry_delay(), None);
+    assert_eq!(GraphBitError::Io { message: "error".to_string() }.retry_delay(), None);
+    assert_eq!(GraphBitError::Serialization { message: "error".to_string() }.retry_delay(), None);
+    assert_eq!(GraphBitError::concurrency("error").retry_delay(), None);
+    assert_eq!(GraphBitError::workflow_execution("error").retry_delay(), None);
+    assert_eq!(GraphBitError::graph("error").retry_delay(), None);
+    assert_eq!(GraphBitError::agent("agent", "error").retry_delay(), None);
+    assert_eq!(GraphBitError::agent_not_found("agent").retry_delay(), None);
+}
