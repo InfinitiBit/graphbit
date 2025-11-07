@@ -23,20 +23,25 @@
 
 </div>
 
-Graphbit is an **industry-grade agentic AI framework** built for developers and AI teams that demand stability, scalability, and low resource usage. 
+GraphBit is an open-source agentic AI framework for developers who need deterministic, concurrent, and low-overhead execution. 
 
-Written in **Rust** for maximum performance and safety, it delivers up to **68× lower CPU usage** and **140× lower memory** footprint than certain leading alternatives while consistently using far fewer resources than the rest, all while maintaining comparable throughput and execution speed. See [benchmarks](benchmarks/report/framework-benchmark-report.md) for more details.
+## Why GraphBit? 
+Efficiency decides who scales, GraphBit is built for developers who need deterministic, concurrent, and ultra-efficient AI execution without the overhead. 
 
-Designed to run **multi-agent workflows in parallel**, Graphbit persists memory across steps, recovers from failures, and ensures **100% task success** under load. Its lightweight, resource-efficient architecture enables deployment in both **high-scale enterprise environments** and **low-resource edge scenarios**. With built-in observability and concurrency support, Graphbit eliminates the bottlenecks that slow decision-making and erode ROI. 
+Built with a Rust core and a minimal Python layer, GraphBit delivers up to 68× lower CPU usage and 140× lower memory footprint than other frameworks, while maintaining equal or greater throughput. 
+
+It powers multi-agent workflows that run in parallel, persist memory across steps, self-recover from failures, and ensure 100 % task reliability. 
+GraphBit is built for production workloads, from enterprise AI systems to low-resource edge deployments.  
+
 
 ##  Key Features
 
-- **Tool Selection** - LLMs intelligently select tools based on descriptions
-- **Type Safety** - Strong typing throughout the execution pipeline
-- **Reliability** - Circuit breakers, retry policies, and error handling
-- **Multi-LLM Support** - OpenAI, Azure OpenAI, Anthropic, OpenRouter, DeepSeek, Replicate, Ollama, TogetherAI
+- **Tool Selection** - LLMs intelligently choose tools based on descriptions 
+- **Type Safety** -  Strong typing through every execution layer
+- **Reliability** - Circuit breakers, retry policies, and error handling and fault recovery 
+- **Multi-LLM Support** - OpenAI, Azure OpenAI, Anthropic, OpenRouter, DeepSeek, Replicate, Ollama, TogetherAI and more
 - **Resource Management** - Concurrency controls and memory optimization
-- **Observability** - Built-in metrics and execution tracing
+- **Observability** - Built-in tracing, structured logs, and performance metrics
 
 ##  Quick Start
 
@@ -48,7 +53,19 @@ Recommended to use virtual environment.
 pip install graphbit
 ```
 
+### Quick Start Video Tutorial
+
+Watch this quick video guide to get started with GraphBit:
+
+<div align="center">
+  <a href="https://youtu.be/ti0wbHFKKFM?si=hnxi-1W823z5I_zs">
+    <img src="https://img.youtube.com/vi/ti0wbHFKKFM/maxresdefault.jpg" alt="GraphBit Quick Start Tutorial" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>Click the image above to watch the Quick Start tutorial on YouTube</em></p>
+</div>
+
 ### Environment Setup
+
 Set up API keys you want to use in your project:
 ```bash
 # OpenAI (optional – required if using OpenAI models)
