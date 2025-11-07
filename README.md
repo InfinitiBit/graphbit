@@ -8,7 +8,7 @@
 
 <!-- Added placeholders for links, fill it up when the corresponding links are available. -->
 <p align="center">
-    <a href="https://graphbit.ai/">Website</a> | 
+    <a href="https://graphbit.ai/">Website</a> |
     <a href="https://docs.graphbit.ai/">Docs</a> |
     <a href="https://discord.com/invite/huVJwkyu">Discord</a>
     <br /><br />
@@ -23,15 +23,15 @@
 
 </div>
 
-GraphBit is an open-source agentic AI framework for developers who need deterministic, concurrent, and low-overhead execution. 
+GraphBit is an open-source agentic AI framework for developers who need deterministic, concurrent, and low-overhead execution.
 
-## Why GraphBit? 
-Efficiency decides who scales, GraphBit is built for developers who need deterministic, concurrent, and ultra-efficient AI execution without the overhead. 
+## Why GraphBit?
+Efficiency decides who scales, GraphBit is built for developers who need deterministic, concurrent, and ultra-efficient AI execution without the overhead.
 
-Built with a Rust core and a minimal Python layer, GraphBit delivers up to 68× lower CPU usage and 140× lower memory footprint than other frameworks, while maintaining equal or greater throughput. 
+Built with a Rust core and a minimal Python layer, GraphBit delivers up to 68× lower CPU usage and 140× lower memory footprint than other frameworks, while maintaining equal or greater throughput.
 
-It powers multi-agent workflows that run in parallel, persist memory across steps, self-recover from failures, and ensure 100 % task reliability. 
-GraphBit is built for production workloads, from enterprise AI systems to low-resource edge deployments.  
+It powers multi-agent workflows that run in parallel, persist memory across steps, self-recover from failures, and ensure 100 % task reliability.
+GraphBit is built for production workloads, from enterprise AI systems to low-resource edge deployments.
 
 
 ##  Key Features
@@ -73,7 +73,7 @@ If you're scaling beyond prototypes or care about runtime determinism, GraphBit 
 
 ##  Quick Start
 
-### Installation 
+### Installation
 
 Recommended to use virtual environment.
 
@@ -167,6 +167,17 @@ print("\nData Processor Output: \n", result.get_node_output("Data Processor"))
   <p><em>Watch the Making Agent Workflow by GraphBit tutorial</em></p>
 </div>
 
+## Observability & Tracing
+
+GraphBit Tracer captures and monitors LLM calls and AI workflows with minimal configuration. It wraps GraphBit LLM clients and workflow executors to trace prompts, responses, token usage, latency, and errors without changing your code.
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=nzwrxSiRl2U">
+    <img src="https://img.youtube.com/vi/nzwrxSiRl2U/maxresdefault.jpg" alt="GraphBit Observability & Tracing" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>Watch the GraphBit Observability & Tracing tutorial</em></p>
+</div>
+
 ## High-Level Architecture
 
 <p align="center">
@@ -219,3 +230,17 @@ GraphBit is built by a wonderful community of researchers and engineers.
 <a href="https://github.com/Infinitibit/graphbit/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=Infinitibit/graphbit" />
 </a>
+
+## Security
+
+GraphBit is committed to maintaining security standards for our agentic framework. We recommend using environment variables for API keys, keeping GraphBit updated, and using proper secret management for production environments. If you discover a security vulnerability, please report it responsibly through GitHub Security or via email rather than creating a public issue.
+
+For detailed reporting procedures and response timelines, see our [Security Policy](SECURITY.md).
+
+## License
+
+GraphBit is licensed under a three-tier model: **Model A (Free Use)** for individuals, academic institutions, and small teams (up to 10 employees/users), **Model B (Free Trial)** for 30-day evaluation, and **Model C (Enterprise)** for commercial/production use. Redistribution is prohibited under all models without an explicit Enterprise License.
+
+For complete terms and conditions, see the [Full License](LICENSE.md).
+
+Copyright © 2023–2025 InfinitiBit GmbH. All rights reserved.
