@@ -19,13 +19,28 @@ cd graphbit
 ```bash
 cargo build --release
 ```
-4. Then, install Poetry and necessary packages (make sure that you have properly created a virtual environment for Python):
+4. Install Python dependencies using either Poetry or uv (both are fully supported):
+
+**Option A: Using Poetry**
 ```bash
 pip install poetry
 poetry lock
 poetry install
-#If you do not want to install the Python dependencies for benchmark, use --with dev
+# If you do not want to install the Python dependencies for benchmark, use --with dev
 poetry install --with dev
+```
+
+**Option B: Using uv (faster alternative)**
+```bash
+# Install uv if you haven't already
+curl -LsSf https://astral.sh/uv/install.sh | sh  # Linux/macOS
+# or: pip install uv
+
+# Sync all dependencies (creates .venv automatically)
+uv sync
+
+# Or sync without benchmark dependencies
+uv sync --extra dev
 ```
 5. Now, let's create the Python release version:
 ```bash
