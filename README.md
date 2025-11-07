@@ -130,7 +130,7 @@ print("\nSmart Agent Output: \n", result.get_node_output("Smart Agent"))
 print("\nData Processor Output: \n", result.get_node_output("Data Processor"))
 ```
 
-### Making Agent Workflow by GraphBit
+### Building Your First Agent Workflow by GraphBit
 
 <div align="center">
   <a href="https://www.youtube.com/watch?v=gKvkMc2qZcA">
