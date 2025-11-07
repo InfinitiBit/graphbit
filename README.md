@@ -60,6 +60,17 @@ GraphBit consistently delivers production-grade efficiency across LLM calls, too
 
 🎥 Watch the benchmark demo: Benchmark Video (coming soon)
 
+## When to Use GraphBit
+
+Choose GraphBit if you need:
+
+- Production-grade multi-agent systems that won't collapse under load
+- Type-safe execution and reproducible outputs
+- Real-time orchestration for hybrid or streaming AI applications
+- Rust-level efficiency with Python-level ergonomics
+
+If you're scaling beyond prototypes or care about runtime determinism, GraphBit is for you.
+
 ##  Quick Start
 
 ### Installation 
@@ -183,6 +194,21 @@ GraphBit provides a rich Python API for building and integrating agentic workflo
 - **Text Splitters** - Split documents into chunks (character, token, sentence, recursive)
 
 For the complete list of classes, methods, and usage examples, see the [Python API Reference](docs/api-reference/python-api.md).
+
+## Ecosystem & Extensions
+
+GraphBit's modular architecture supports external integrations:
+
+| Category          | Examples                                                                                      |
+|:------------------|:----------------------------------------------------------------------------------------------|
+| LLM Providers     | OpenAI, Anthropic, Azure OpenAI, DeepSeek, Together, Ollama, OpenRouter, Fireworks, Mistral AI, Replicate, Perplexity, HuggingFace, AI21, Bytedance, xAI, and more |
+| Vector Stores     | Pinecone, Qdrant, Chroma, Milvus, Weaviate, FAISS, Elasticsearch, AstraDB, Redis, and more   |
+| Databases         | PostgreSQL (PGVector), MongoDB, MariaDB, IBM DB2, Redis, and more                             |
+| Cloud Platforms   | AWS (Boto3), Azure, Google Cloud Platform, and more                                           |
+| Search APIs       | Serper, Google Search, GitHub Search, GitLab Search, and more                                 |
+| Embedding Models  | OpenAI Embeddings, Voyage AI, and more                                                        |
+
+Extensions are developed and maintained by the community.
 
 ## Contributing to GraphBit
 
