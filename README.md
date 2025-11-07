@@ -55,13 +55,12 @@ pip install graphbit
 
 ### Quick Start Video Tutorial
 
-Watch this quick video guide to get started with GraphBit:
-
 <div align="center">
   <a href="https://youtu.be/ti0wbHFKKFM?si=hnxi-1W823z5I_zs">
     <img src="https://img.youtube.com/vi/ti0wbHFKKFM/maxresdefault.jpg" alt="GraphBit Quick Start Tutorial" style="max-width: 100%; height: auto;">
   </a>
-  <p><em>Click the image above to watch the Quick Start tutorial on YouTube</em></p>
+  <p><em>Watch the Install GraphBit via PyPI | Full Example & Run Guide
+ tutorial</em></p>
 </div>
 
 ### Environment Setup
@@ -130,6 +129,15 @@ print(f"Workflow completed: {result.is_success()}")
 print("\nSmart Agent Output: \n", result.get_node_output("Smart Agent"))
 print("\nData Processor Output: \n", result.get_node_output("Data Processor"))
 ```
+
+### Making Agent Workflow by GraphBit
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=gKvkMc2qZcA">
+    <img src="https://img.youtube.com/vi/gKvkMc2qZcA/maxresdefault.jpg" alt="Making Agent Workflow by GraphBit" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>Watch the Making Agent Workflow by GraphBit tutorial</em></p>
+</div>
 
 ## High-Level Architecture
 
