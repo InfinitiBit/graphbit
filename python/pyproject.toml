@@ -36,3 +36,4 @@ module-name = "graphbit"
 profile = "release"
 # Build optimizations
 strip = true
+python-source = "python-src"

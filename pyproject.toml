@@ -37,13 +37,15 @@ dependencies = [
     "aiohttp>=3.12.15",
     "python-dotenv>=1.0.0",
     "rich>=13.0.0",
-    "typer>=0.9.0"
+    "typer>=0.9.0",
+    "huggingface_hub>=0.33.4"
 ]
 
 [project.optional-dependencies]
 ai = [
     "anthropic>=0.24.0",
-    "openai>=1.30.0"
+    "openai>=1.30.0",
+    "huggingface_hub>=0.33.4"
 ]
 vector-db = [
     "astrapy>=1.0.0",
@@ -82,11 +84,6 @@ benchmark = [
     "llama-index-llms-anthropic>=0.8.5",
     "llama-index-llms-ollama>=0.7.1",
     "pydantic-ai>=0.0.5"
-]
-full = [
-    "graphbit[ai,vector-db,databases,benchmark]",
-    "requests>=2.25.0",
-    "types-pyyaml>=6.0.12.20250822"
 ]
 
 [project.urls]
@@ -171,7 +168,7 @@ skip-auditwheel = false
 # Build optimizations
 strip = true
 # Python interpreter finding
-python-source = "auto"
+python-source = "python-src"
 # Manifest path for the Rust project
 manifest-path = "python/Cargo.toml"
 
@@ -216,6 +213,7 @@ click = {version = "^8.2.1", optional = true}
 crewai = {version = ">=0.41.0", optional = true}
 elasticsearch = {version = ">=8.0.0", optional = true}
 faiss-cpu = {version = ">=1.7.0", optional = true}
+huggingface_hub = ">=0.33.4"
 ibm-db = {version = ">=3.1.0", optional = true}
 langchain = {version = ">=0.1.0", optional = true}
 langchain-anthropic = {version = "^0.3.19", optional = true}
@@ -321,6 +319,7 @@ full = [
   "types-pyyaml",
   "aiohttp"
 ]
+huggingface = ["huggingface_hub"]
 mariadb = ["mariadb", "numpy"]
 milvus = ["pymilvus"]
 mongodb = ["pymongo"]
