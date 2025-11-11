@@ -45,6 +45,9 @@ ai = [
     "anthropic>=0.24.0",
     "openai>=1.30.0"
 ]
+vllm = [
+    "vllm>=0.6.0"
+]
 vector-db = [
     "astrapy>=1.0.0",
     "chromadb>=0.4.0",
@@ -82,11 +85,6 @@ benchmark = [
     "llama-index-llms-anthropic>=0.8.5",
     "llama-index-llms-ollama>=0.7.1",
     "pydantic-ai>=0.0.5"
-]
-full = [
-    "graphbit[ai,vector-db,databases,benchmark]",
-    "requests>=2.25.0",
-    "types-pyyaml>=6.0.12.20250822"
 ]
 
 [project.urls]
@@ -248,6 +246,7 @@ seaborn = {version = ">=0.12.0", optional = true}
 tabulate = {version = ">=0.9.0", optional = true}
 typer = ">=0.9.0"
 types-pyyaml = {version = "^6.0.12.20250822", optional = true}
+vllm = {version = ">=0.6.0", optional = true}
 weaviate-client = {version = ">=4.4.0", optional = true}
 
 # Optional dependency groups for pip install
@@ -319,7 +318,8 @@ full = [
   "requests",
   "weaviate-client",
   "types-pyyaml",
-  "aiohttp"
+  "aiohttp",
+  "vllm"
 ]
 mariadb = ["mariadb", "numpy"]
 milvus = ["pymilvus"]
@@ -328,6 +328,7 @@ pgvector = ["psycopg2"]
 pinecone = ["pinecone"]
 qdrant = ["qdrant-client"]
 requests = ["requests"]
+vllm = ["vllm"]
 weaviate = ["weaviate-client"]
 
 [tool.poetry.group.dev.dependencies]
