@@ -19,7 +19,7 @@ tracing-subscriber.workspace = true
 
 [features]
 cli = []
-default = []
+default = ["cli"]
 # Production features
 production = ["tracing-subscriber/json"]
 # Performance profiling features

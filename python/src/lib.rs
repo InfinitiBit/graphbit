@@ -62,6 +62,9 @@ mod tools;
 mod validation;
 mod workflow;
 
+#[cfg(feature = "cli")]
+mod cli;
+
 // Re-export all public types and functions
 pub use document_loader::{PyDocumentContent, PyDocumentLoader, PyDocumentLoaderConfig};
 pub use embeddings::{EmbeddingClient, EmbeddingConfig};
@@ -420,6 +423,14 @@ fn graphbit(m: &Bound<'_, PyModule>) -> PyResult<()> {
         workflow::node::sync_global_tools_to_workflow,
         m
     )?)?;
+
+    // CLI functions (only available when cli feature is enabled)
+    #[cfg(feature = "cli")]
+    {
+        m.add_function(wrap_pyfunction!(cli::init_project, m)?)?;
+        m.add_function(wrap_pyfunction!(cli::run_agent, m)?)?;
+        m.add_function(wrap_pyfunction!(cli::deploy_to_e2b, m)?)?;
+    }
 
     // Module metadata
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
