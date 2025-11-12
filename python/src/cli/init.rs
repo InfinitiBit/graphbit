@@ -8,7 +8,7 @@ use std::path::Path;
 /// Initialize a new GraphBit project with E2B-compatible structure
 #[pyfunction]
 #[pyo3(signature = (project_name, target_dir=None, template=None))]
-pub fn init_project(
+pub(crate) fn init_project(
     py: Python<'_>,
     project_name: String,
     target_dir: Option<String>,

@@ -11,13 +11,13 @@ mod init;
 mod run;
 mod deploy;
 
-pub use init::init_project;
-pub use run::run_agent;
-pub use deploy::deploy_to_e2b;
+pub(crate) use init::init_project;
+pub(crate) use run::run_agent;
+pub(crate) use deploy::deploy_to_e2b;
 
 /// CLI error types
 #[derive(Debug)]
-pub enum CliError {
+pub(crate) enum CliError {
     IoError(std::io::Error),
     ProjectExists(String),
     InvalidPath(String),
@@ -44,7 +44,7 @@ impl std::fmt::Display for CliError {
 impl std::error::Error for CliError {}
 
 /// Convert CLI error to Python exception
-pub fn to_py_cli_error(err: CliError) -> PyErr {
+pub(crate) fn to_py_cli_error(err: CliError) -> PyErr {
     use pyo3::exceptions::{PyFileExistsError, PyIOError, PyValueError};
     
     match err {
@@ -56,7 +56,7 @@ pub fn to_py_cli_error(err: CliError) -> PyErr {
 }
 
 /// Utility function to create directory if it doesn't exist
-pub fn ensure_dir(path: &Path) -> Result<(), CliError> {
+pub(crate) fn ensure_dir(path: &Path) -> Result<(), CliError> {
     if !path.exists() {
         fs::create_dir_all(path)?;
     }
@@ -64,7 +64,7 @@ pub fn ensure_dir(path: &Path) -> Result<(), CliError> {
 }
 
 /// Utility function to write file with content
-pub fn write_file(path: &Path, content: &str) -> Result<(), CliError> {
+pub(crate) fn write_file(path: &Path, content: &str) -> Result<(), CliError> {
     fs::write(path, content)?;
     Ok(())
 }

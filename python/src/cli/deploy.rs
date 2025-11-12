@@ -9,7 +9,7 @@ use std::process::Command;
 /// Deploy GraphBit project to E2B sandbox
 #[pyfunction]
 #[pyo3(signature = (project_dir=None, template=None, env_file=None, timeout=300))]
-pub fn deploy_to_e2b(
+pub(crate) fn deploy_to_e2b(
     py: Python<'_>,
     project_dir: Option<String>,
     template: Option<String>,
@@ -148,9 +148,9 @@ fn parse_deployment_output(output: &str) -> Result<DeploymentInfo, CliError> {
 fn create_deployment_script(
     _project_path: &Path,
     api_key: &str,
-    template: Option<&str>,
+    _template: Option<&str>,
 ) -> Result<String, CliError> {
-    let template_name = template.unwrap_or("python");
+
     
     let script = format!(r#"#!/usr/bin/env python3
 """
@@ -182,27 +182,27 @@ def main():
     # Create sandbox
     print("📦 Creating E2B sandbox...")
     try:
-        sandbox = Sandbox.create(template='{template_name}')
-        print(f"✅ Sandbox created: {{sandbox.id}}")
-        
+        sandbox = Sandbox.create()  # Use default template
+        print(f"✅ Sandbox created: {{sandbox.sandbox_id}}")
+
         # Upload project files
         print("📤 Uploading project files...")
         upload_project_files(sandbox)
-        
+
         # Install dependencies
         print("📦 Installing dependencies...")
         install_dependencies(sandbox)
-        
+
         # Run initial setup
         print("🔧 Running project setup...")
         setup_result = run_project_setup(sandbox)
-        
+
         # Output deployment information
-        print(f"SANDBOX_ID:{{sandbox.id}}")
-        print(f"SANDBOX_URL:https://{{sandbox.id}}.e2b.dev")
+        print(f"SANDBOX_ID:{{sandbox.sandbox_id}}")
+        print(f"SANDBOX_URL:https://{{sandbox.sandbox_id}}.e2b.dev")
         
         print("✅ Deployment completed successfully!")
-        print(f"🌐 Access your sandbox at: https://{{sandbox.id}}.e2b.dev")
+        print(f"🌐 Access your sandbox at: https://{{sandbox.sandbox_id}}.e2b.dev")
         
     except Exception as e:
         print(f"❌ Deployment failed: {{str(e)}}")
@@ -211,45 +211,62 @@ def main():
 def upload_project_files(sandbox):
     """Upload all project files to the sandbox."""
     project_root = Path('.')
-    
-    # Files and directories to upload
-    items_to_upload = [
-        'agents/',
-        'workflows/', 
-        'tools/',
-        'data/',
-        'main.py',
-        'requirements.txt'
-    ]
-    
-    for item in items_to_upload:
-        item_path = project_root / item
-        if item_path.exists():
-            if item_path.is_file():
-                # Upload file
-                with open(item_path, 'r', encoding='utf-8') as f:
+
+    # Upload all project files (excluding common ignore patterns)
+    # Note: .env files are now included for deployment functionality
+    ignore_patterns = {{
+        '__pycache__', '.git', '.gitignore', '.DS_Store',
+        '*.pyc', '*.pyo', '*.pyd', '.pytest_cache', '.coverage',
+        'venv', '.venv', 'node_modules'
+    }}
+
+    # Directories to ignore (but not files with same names)
+    ignore_dirs = {{'venv', 'env', '.venv', '__pycache__', '.git', 'node_modules'}}
+
+    files_to_upload = []
+    for root, dirs, files in os.walk('.'):
+        # Filter out ignored directories
+        dirs[:] = [d for d in dirs if d not in ignore_dirs]
+
+        for file in files:
+            # Skip ignored files and patterns
+            if file in ignore_patterns or any(file.endswith(ext) for ext in ['.pyc', '.pyo', '.pyd']):
+                continue
+
+            rel_path = os.path.relpath(os.path.join(root, file), '.')
+            # Allow .env files but skip other hidden files that start with .
+            if rel_path.startswith('.') and not rel_path.endswith('.env'):
+                continue
+            files_to_upload.append(rel_path)
+
+    print(f"📦 Uploading {{len(files_to_upload)}} files...")
+
+    for file_name in files_to_upload:
+        file_path = project_root / file_name
+        if file_path.exists() and file_path.is_file():
+            try:
+                # Try to read as text first
+                with open(file_path, 'r', encoding='utf-8') as f:
                     content = f.read()
-                sandbox.filesystem.write(f'/home/user/{{item}}', content)
-                print(f"  📄 Uploaded {{item}}")
-            elif item_path.is_dir():
-                # Upload directory recursively
-                upload_directory(sandbox, item_path, f'/home/user/{{item}}')
-                print(f"  📁 Uploaded {{item}}")
+
+                # Create directory structure in sandbox if needed
+                remote_path = f'/home/user/{{file_name}}'
+                remote_dir = os.path.dirname(remote_path)
+                if remote_dir and remote_dir != '/home/user':
+                    sandbox.run_code(f"import os; os.makedirs('{{remote_dir}}', exist_ok=True)")
+
+                sandbox.files.write(remote_path, content)
+                print(f"  📄 Uploaded {{file_name}}")
+            except UnicodeDecodeError:
+                # Skip binary files for now (could be enhanced to handle them)
+                print(f"  ⚠️  Skipped binary file: {{file_name}}")
+            except Exception as e:
+                print(f"  ❌ Failed to upload {{file_name}}: {{e}}")
 
 def upload_directory(sandbox, local_dir, remote_dir):
     """Recursively upload a directory."""
-    for item in local_dir.rglob('*'):
-        if item.is_file() and not item.name.startswith('.'):
-            relative_path = item.relative_to(local_dir)
-            remote_path = f'{{remote_dir}}/{{relative_path}}'
-            
-            try:
-                with open(item, 'r', encoding='utf-8') as f:
-                    content = f.read()
-                sandbox.filesystem.write(remote_path, content)
-            except UnicodeDecodeError:
-                # Skip binary files
-                pass
+    # Simplified - not used in current implementation
+    pass
 
 def install_dependencies(sandbox):
     """Install Python dependencies in the sandbox."""
@@ -301,7 +318,7 @@ except Exception as e:
 
 if __name__ == "__main__":
     main()
-"#, api_key = api_key, template_name = template_name);
+"#, api_key = api_key);
     
     Ok(script)
 }

@@ -9,7 +9,7 @@ use std::process::Command;
 /// Run a GraphBit agent or workflow locally
 #[pyfunction]
 #[pyo3(signature = (file_path, config_file=None, env_file=None, verbose=false))]
-pub fn run_agent(
+pub(crate) fn run_agent(
     py: Python<'_>,
     file_path: String,
     config_file: Option<String>,
@@ -123,7 +123,7 @@ fn execute_python_file(
 }
 
 /// Parse a line from .env file
-pub fn parse_env_line(line: &str) -> Option<(String, String)> {
+pub(super) fn parse_env_line(line: &str) -> Option<(String, String)> {
     let line = line.trim();
     
     // Skip comments and empty lines
@@ -151,7 +151,7 @@ pub fn parse_env_line(line: &str) -> Option<(String, String)> {
 }
 
 /// Validate GraphBit project structure
-pub fn validate_project_structure(project_dir: &Path) -> Result<(), CliError> {
+pub(super) fn validate_project_structure(project_dir: &Path) -> Result<(), CliError> {
     // Check for main.py (required for simplified structure)
     let main_py_path = project_dir.join("main.py");
     if !main_py_path.exists() {
