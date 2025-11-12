@@ -1,9 +1,9 @@
+use async_trait::async_trait;
 use graphbit_core::types::RetryConfig;
 use graphbit_core::*;
 use serde_json::json;
 use std::sync::Arc;
 use std::time::Duration;
-use async_trait::async_trait;
 
 fn has_openai_key() -> bool {
     std::env::var("OPENAI_API_KEY").is_ok()
@@ -48,7 +48,10 @@ impl graphbit_core::llm::LlmProviderTrait for DummyLlmProvider {
         "dummy-model"
     }
 
-    async fn complete(&self, _request: graphbit_core::llm::LlmRequest) -> graphbit_core::errors::GraphBitResult<graphbit_core::llm::LlmResponse> {
+    async fn complete(
+        &self,
+        _request: graphbit_core::llm::LlmRequest,
+    ) -> graphbit_core::errors::GraphBitResult<graphbit_core::llm::LlmResponse> {
         // Return a dummy response
         Ok(graphbit_core::llm::LlmResponse {
             content: "dummy response".to_string(),
@@ -133,9 +136,15 @@ fn build_dummy_agent(name: &str) -> (graphbit_core::types::AgentId, std::sync::A
 
     // Create dummy LLM provider
     let dummy_provider = Box::new(DummyLlmProvider);
-    let llm_provider = graphbit_core::llm::LlmProvider::new(dummy_provider, graphbit_core::llm::LlmConfig::default());
+    let llm_provider = graphbit_core::llm::LlmProvider::new(
+        dummy_provider,
+        graphbit_core::llm::LlmConfig::default(),
+    );
 
-    (id.clone(), std::sync::Arc::new(DummyAgent { cfg, llm_provider }))
+    (
+        id.clone(),
+        std::sync::Arc::new(DummyAgent { cfg, llm_provider }),
+    )
 }
 
 #[tokio::test]

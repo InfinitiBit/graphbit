@@ -134,4 +134,3 @@ GraphBit provides a rich Python API for building and integrating agentic workflo
 We welcome contributions. To get started, please see the [Contributing](CONTRIBUTING.md) file for development setup and guidelines.
 
 GraphBit is built by a wonderful community of researchers and engineers.
-

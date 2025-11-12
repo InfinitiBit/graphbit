@@ -469,3 +469,37 @@ async fn test_embedding_dimensions_for_different_models() {
     assert!(dimensions.is_ok());
     assert_eq!(dimensions.unwrap(), 3072);
 }
+
+// Tests moved from core/src/embeddings.rs mod tests
+#[test]
+fn test_embedding_input_methods() {
+    let single = EmbeddingInput::Single("test".to_string());
+    assert_eq!(single.len(), 1);
+    assert_eq!(single.as_texts(), vec!["test"]);
+    assert!(!single.is_empty());
+
+    let multiple = EmbeddingInput::Multiple(vec!["test1".to_string(), "test2".to_string()]);
+    assert_eq!(multiple.len(), 2);
+    assert_eq!(multiple.as_texts(), vec!["test1", "test2"]);
+    assert!(!multiple.is_empty());
+
+    // Test empty cases
+    let empty_single = EmbeddingInput::Single("".to_string());
+    assert!(empty_single.is_empty());
+
+    let empty_multiple = EmbeddingInput::Multiple(vec![]);
+    assert!(empty_multiple.is_empty());
+}
+
+#[test]
+fn test_cosine_similarity_basic() {
+    let a = vec![1.0, 0.0, 0.0];
+    let b = vec![0.0, 1.0, 0.0];
+    let similarity = EmbeddingService::cosine_similarity(&a, &b).unwrap();
+    assert!((similarity - 0.0).abs() < f32::EPSILON);
+
+    let a = vec![1.0, 0.0];
+    let b = vec![1.0, 0.0];
+    let similarity = EmbeddingService::cosine_similarity(&a, &b).unwrap();
+    assert!((similarity - 1.0).abs() < f32::EPSILON);
+}

@@ -548,7 +548,6 @@ pub(crate) fn validate_api_key(api_key: &str, provider: &str) -> PyResult<()> {
     let min_length = match provider.to_lowercase().as_str() {
         "openai" => 20,
         "anthropic" => 15,
-        "huggingface" => 10,
         _ => 8,
     };
 
