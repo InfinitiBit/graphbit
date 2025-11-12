@@ -1,0 +1,225 @@
+<h1>Research Paper Summarizer Agent</h1>
+
+<p>
+  A powerful research paper analysis and Q&amp;A system built with the <strong>GraphBit framework</strong>.
+  This application automatically extracts, summarizes, and enables intelligent questioning of research papers
+  using advanced AI capabilities.
+</p>
+
+<h2>🌟 Features</h2>
+
+<ul>
+  <li><strong>📄 PDF Processing</strong>: Upload and automatically process research papers in PDF format</li>
+  <li><strong>📝 Section-wise Summarization</strong>: Intelligent extraction and summarization of paper sections (Abstract, Introduction, Methods, Results, etc.)</li>
+  <li><strong>🔍 Semantic Search</strong>: Advanced vector-based search through paper content using embeddings</li>
+  <li><strong>💬 Interactive Q&amp;A</strong>: Ask natural language questions about the paper content</li>
+  <li><strong>⚡ Caching System</strong>: Smart caching for faster re-processing of previously analyzed papers</li>
+  <li><strong>🎨 Modern UI</strong>: Clean, responsive Streamlit interface with enhanced user experience</li>
+  <li><strong>🔧 GraphBit Integration</strong>: Built on GraphBit's powerful workflow automation framework</li>
+</ul>
+
+<h2>🏗️ Architecture</h2>
+
+<p>The application follows a modern microservices architecture powered by GraphBit's native document processing:</p>
+
+<pre><code>┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Frontend      │    │    Backend      │    │   GraphBit      │
+│   (Streamlit)   │◄──►│   (FastAPI)     │◄──►│   Framework     │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+                              │
+                              ▼
+                       ┌─────────────────┐
+                       │  Vector Store   │
+                       │    (FAISS)      │
+                       └─────────────────┘</code></pre>
+
+<h3>Components</h3>
+
+<ul>
+  <li><strong>Frontend</strong>: Streamlit web application for user interaction</li>
+  <li><strong>Backend</strong>: FastAPI server handling PDF processing and Q&amp;A</li>
+  <li><strong>GraphBit Framework</strong>: Core AI workflow orchestration with native document processing</li>
+  <li><strong>Vector Store</strong>: FAISS-based semantic search and retrieval</li>
+  <li><strong>Caching Layer</strong>: Persistent storage for processed papers</li>
+</ul>
+
+<h3>🚀 GraphBit Document Processing Enhancements</h3>
+
+<p>This application leverages GraphBit's advanced document processing capabilities:</p>
+
+<ul>
+  <li><strong>Native PDF Processing</strong>: Uses GraphBit's <code>DocumentLoader</code> for robust PDF text extraction with formatting preservation</li>
+  <li><strong>Intelligent Text Splitting</strong>: Employs GraphBit's <code>TextSplitter</code> with recursive splitting strategy that:
+    <ul>
+      <li>Preserves semantic boundaries (paragraphs, sentences)</li>
+      <li>Maintains context across chunks with intelligent overlap</li>
+      <li>Adapts chunk sizes based on section types (methods, results, etc.)</li>
+      <li>Handles academic text structure optimally</li>
+    </ul>
+  </li>
+  <li><strong>Context-Aware Chunking</strong>: Section-specific chunking strategies that preserve research paper structure</li>
+  <li><strong>Enhanced Retrieval</strong>: Better context preservation leads to more accurate question answering</li>
+</ul>
+
+<h2>📖 Usage Guide</h2>
+
+<h3>1. Upload a Research Paper</h3>
+
+<ol>
+  <li>Open the application in your browser</li>
+  <li>Click "Choose a PDF file" and select your research paper</li>
+  <li>Wait for the processing to complete (this may take 1-2 minutes for the first time)</li>
+  <li>View the generated section-wise summaries</li>
+</ol>
+
+<h3>2. Explore Summaries</h3>
+
+<ul>
+  <li><strong>Tabbed View</strong>: For papers with many sections, summaries are organized in tabs</li>
+  <li><strong>Expandable Sections</strong>: For shorter papers, use expandable sections</li>
+  <li><strong>Section Order</strong>: Summaries follow standard academic paper structure</li>
+</ul>
+
+<h3>3. Ask Questions</h3>
+
+<ol>
+  <li>Scroll to the "Q&amp;A about the Paper" section</li>
+  <li>Type your question in the text area</li>
+  <li>Click "Ask Question" to get an AI-generated answer</li>
+  <li>View conversation history and ask follow-up questions</li>
+</ol>
+
+<h2>📁 Project Structure</h2>
+
+<pre><code>research-paper-summarizer-agent/
+├── README.md                 # Documentation
+├── pyproject.toml            # Project dependencies
+├── backend/                  # FastAPI backend
+│   ├── main-server.py       # API endpoints
+│   ├── paper_manager.py     # Core paper processing logic
+│   ├── summarizer.py        # PDF processing and summarization
+│   ├── faiss_store.py       # Vector storage and search
+│   ├── constant.py          # Configuration constants
+│   └── utils/
+│       └── caching.py       # Caching utilities
+├── frontend/                # Streamlit frontend
+│   ├── app.py               # Main application
+│   └── test.py              # Testing utilities
+├── docs/                    # Documentation files
+├── cache/                   # Cached processed papers
+└── logs/                    # Application logs</code></pre>
+
+<h2>🔌 API Reference</h2>
+
+<h3>Endpoints</h3>
+
+<ul>
+  <li><code>POST /upload/</code> - Upload and process a PDF file</li>
+  <li><code>POST /ask/</code> - Ask a question about a processed paper</li>
+  <li><code>GET /sessions/</code> - List active sessions</li>
+  <li><code>GET /sessions/{session_id}/summaries/</code> - Get summaries for a session</li>
+  <li><code>DELETE /sessions/{session_id}/</code> - Clear a specific session</li>
+  <li><code>GET /stats/</code> - Get application statistics</li>
+</ul>
+
+<h3>Request/Response Examples</h3>
+
+<h4>Upload PDF</h4>
+<p><strong>Request:</strong></p>
+<pre><code>POST /upload/
+Content-Type: multipart/form-data
+
+file: [PDF file]</code></pre>
+
+<p><strong>Response:</strong></p>
+<pre><code>{
+  "session_id": "unique-session-id",
+  "summaries": {
+    "Abstract": "Summary text...",
+    "Introduction": "Summary text...",
+    ...
+  },
+  "message": "PDF processed successfully"
+}</code></pre>
+
+<h4>Ask Question</h4>
+<p><strong>Request:</strong></p>
+<pre><code>POST /ask/
+Content-Type: application/json
+
+{
+  "session_id": "unique-session-id",
+  "query": "What are the main findings of this paper?"
+}</code></pre>
+
+<p><strong>Response:</strong></p>
+<pre><code>{
+  "answer": "The main findings include...",
+  "sources": ["Abstract", "Results"]
+}</code></pre>
+
+<h2>⚙️ Configuration</h2>
+
+<p>Configuration constants are defined in <code>backend/constant.py</code>:</p>
+
+<h3>LLM Configuration</h3>
+<ul>
+  <li><code>LLM_MODEL</code>: GPT model for summarization and Q&amp;A (default: gpt-4o)</li>
+  <li><code>LLM_TEMPERATURE</code>: Temperature for response generation (default: 0.1)</li>
+  <li><code>LLM_MAX_TOKENS</code>: Maximum tokens in LLM response (default: 2048)</li>
+  <li><code>EMBEDDING_MODEL</code>: Embedding model for vector search (default: text-embedding-3-small)</li>
+</ul>
+
+<h3>PDF Processing Configuration</h3>
+<ul>
+  <li><code>MAX_CHUNK_WORDS</code>: Maximum words per chunk (default: 250)</li>
+  <li><code>MIN_CHUNK_LENGTH</code>: Minimum chunk length (default: 50)</li>
+  <li><code>MAX_SECTION_LENGTH</code>: Maximum section length (default: 20000)</li>
+  <li><code>MAX_FILE_SIZE</code>: Maximum upload file size (default: 20MB)</li>
+</ul>
+
+<h3>Performance Configuration</h3>
+<ul>
+  <li><code>MAX_PARALLEL_WORKERS</code>: Maximum parallel workers for summarization (default: 8)</li>
+  <li><code>EMBEDDING_BATCH_SIZE</code>: Batch size for embedding generation (default: 25)</li>
+  <li><code>SUMMARIZATION_TIMEOUT</code>: Timeout for section summarization (default: 30 seconds)</li>
+  <li><code>TOP_K_RESULTS</code>: Number of similar chunks to retrieve (default: 6)</li>
+</ul>
+
+<h3>Section Headers</h3>
+<p>The system recognizes the following section headers for intelligent parsing:</p>
+<ul>
+  <li>Abstract</li>
+  <li>Introduction</li>
+  <li>Background</li>
+  <li>Related Work</li>
+  <li>Dataset</li>
+  <li>Methods / Methodology</li>
+  <li>Benchmark</li>
+  <li>Experiment</li>
+  <li>Results</li>
+  <li>Discussion</li>
+  <li>Limitations</li>
+  <li>Conclusion</li>
+  <li>References</li>
+  <li>Acknowledgments</li>
+</ul>
+
+<h2>🤝 Contributing</h2>
+
+<ol>
+  <li>Fork the repository</li>
+  <li>Create a feature branch: <code>git checkout -b feature-name</code></li>
+  <li>Make your changes and add tests</li>
+  <li>Commit your changes: <code>git commit -am 'Add feature'</code></li>
+  <li>Push to the branch: <code>git push origin feature-name</code></li>
+  <li>Submit a pull request</li>
+</ol>
+
+<h2>📄 License</h2>
+
+<p>This project is part of the GraphBit framework and follows the same licensing terms.</p>
+
+<hr>
+
+<p>For more information about GraphBit framework, visit the <a href="https://github.com/InfinitiBit/graphbit">main repository</a>.</p>
