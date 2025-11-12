@@ -23,8 +23,6 @@ cargo build --release
 
 **Option A: Using Poetry**
 ```bash
-pip install poetry
-poetry lock
 poetry install
 # If you do not want to install the Python dependencies for benchmark, use --with dev
 poetry install --with dev
@@ -32,10 +30,6 @@ poetry install --with dev
 
 **Option B: Using uv (faster alternative)**
 ```bash
-# Install uv if you haven't already
-curl -LsSf https://astral.sh/uv/install.sh | sh  # Linux/macOS
-# or: pip install uv
-
 # Sync all dependencies (creates .venv automatically)
 uv sync
 

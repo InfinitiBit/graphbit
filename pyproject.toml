@@ -4,7 +4,7 @@ requires = ["maturin>=1.0,<2.0"]
 
 [project]
 authors = [
-  {name = "GraphBit Team", email = "contact@graphbit.ai"}
+  {name = "InfinitiBit Team", email = "contact@infinitibit.ai"}
 ]
 classifiers = [
   "Development Status :: 4 - Beta",
@@ -33,7 +33,7 @@ description = "GraphBit - Advanced workflow automation and AI agent orchestratio
 keywords = ["ai", "agents", "workflow", "automation", "rust", "python", "llm", "orchestration"]
 license = {file = "LICENSE.md"}
 maintainers = [
-  {name = "GraphBit Team", email = "contact@graphbit.ai"}
+  {name = "InfinitiBit Team", email = "contact@infinitibit.ai"}
 ]
 name = "graphbit"
 readme = "README.md"
@@ -228,7 +228,7 @@ warn_unused_configs = true
 warn_unused_ignores = true
 
 [tool.poetry]
-authors = ["GraphBit Team"]
+authors = ["InfinitiBit Team"]
 description = "GraphBit - Advanced workflow automation and AI agent orchestration library"
 homepage = "https://github.com/InfinitiBit/graphbit"
 name = "graphbit"
