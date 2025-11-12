@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>GraphBit Chatbot — Setup Instructions</title>
+</head>
+<body>
+  <h1>GraphBit Chatbot — Setup Instructions</h1>
+
+  <h2>Prerequisites</h2>
+  <ul>
+    <li>Python 3.11+</li>
+    <li>OpenAI API key</li>
+    <li>Poetry installed (see: https://python-poetry.org/docs/#installation)</li>
+  </ul>
+
+  <h2>Installation</h2>
+  <ol>
+    <li><strong>Clone the repository</strong> (to access the example):</li>
+  </ol>
+  <pre>
+    git clone https://github.com/InfinitiBit/graphbit.git
+    cd graphbit/examples/chatbot
+  </pre>
+
+  <ol start="2">
+    <li><strong>Install dependencies</strong>:</li>
+  </ol>
+  <pre>
+    poetry install
+  </pre>
+  <p>This will automatically install GraphBit and all other required dependencies listed in <code>pyproject.toml</code>.</p>
+
+  <ol start="3">
+    <li><strong>Set up environment variables</strong>:</li>
+  </ol>
+  <pre>
+    # Set your OpenAI API key
+    export OPENAI_API_KEY="your_api_key_here"
+  </pre>
+
+  <h2>Running the Application (Using Poetry)</h2>
+  <ol>
+    <li><strong>Start the backend server</strong>:</li>
+  </ol>
+  <pre>
+    poetry run uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+  </pre>
+
+  <ol start="2">
+    <li><strong>Start the frontend application</strong>:</li>
+  </ol>
+  <pre>
+    poetry run streamlit run frontend/chatbot.py --server.port 8501 --server.address 0.0.0.0
+  </pre>
+
+  <p><strong>Note:</strong> The application will automatically initialize the vector database on first use.</p>
+
+  <h2>Access the Application</h2>
+  <ul>
+    <li>Frontend: <code>http://localhost:8501</code></li>
+    <li>Backend API: <code>http://localhost:8000</code></li>
+    <li>API Documentation: <code>http://localhost:8000/docs</code></li>
+  </ul>
+
+  <hr>
+
+  <h2>Appendix — API & Protocol (for setup verification)</h2>
+  <h3>REST Endpoints</h3>
+  <ul>
+    <li><code>GET /</code> — Root endpoint returning welcome message</li>
+    <li><code>POST /index/</code> — Create or recreate the vector store index from the knowledge base file</li>
+    <li><code>POST /chat/</code> — Send a chat message and receive a response (non-streaming)</li>
+    <li><code>WebSocket /ws/chat/</code> — Real-time chat with streaming responses</li>
+  </ul>
+
+  <h3>WebSocket Message Shapes</h3>
+  <p><em>Client → Server</em></p>
+  <pre>
+{
+  "message": "Your question here",
+  "session_id": "unique-session-id"
+}
+  </pre>
+
+  <p><em>Server → Client</em></p>
+  <pre>
+{
+  "response": "token or full response",
+  "session_id": "unique-session-id",
+  "type": "chunk|end"
+}
+  </pre>
+</body>
+</html>
