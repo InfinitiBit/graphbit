@@ -765,7 +765,7 @@ pub fn detect_document_type(file_path: &str) -> Option<String> {
     Path::new(file_path)
         .extension()
         .and_then(|ext| ext.to_str())
-        .map(|ext| ext.to_lowercase())
+        .map(str::to_lowercase)
         .filter(|ext| supported_types.contains(&ext.as_str()))
 }
 
