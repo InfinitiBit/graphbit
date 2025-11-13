@@ -311,6 +311,10 @@ All patterns are included - implement the one you need!
 """
 
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Choose your pattern - uncomment ONE of these:
 

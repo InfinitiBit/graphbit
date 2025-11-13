@@ -104,8 +104,12 @@ fn deploy_project(
     
     // Parse deployment output
     let output_str = String::from_utf8_lossy(&output.stdout);
+
+    // Display the full deployment output (including E2B execution results)
+    println!("{}", output_str);
+
     let deployment_info = parse_deployment_output(&output_str)?;
-    
+
     Ok(DeploymentResult {
         sandbox_id: deployment_info.sandbox_id,
         sandbox_url: deployment_info.sandbox_url,
@@ -197,12 +201,48 @@ def main():
         print("🔧 Running project setup...")
         setup_result = run_project_setup(sandbox)
 
-        # Output deployment information
-        print(f"SANDBOX_ID:{{sandbox.sandbox_id}}")
-        print(f"SANDBOX_URL:https://{{sandbox.sandbox_id}}.e2b.dev")
+        # Project deployed successfully
+        print("\\n✅ Project deployed successfully!")
         
-        print("✅ Deployment completed successfully!")
-        print(f"🌐 Access your sandbox at: https://{{sandbox.sandbox_id}}.e2b.dev")
+
+
+        # Execute the GraphBit project
+        print("\\n🚀 Running your GraphBit project...")
+        print("=" * 60)
+
+        execution_result = sandbox.run_code('''
+import sys
+import os
+sys.path.append('/home/user')
+os.chdir('/home/user')
+
+try:
+    exec(open('main.py').read())
+except Exception as e:
+    print(f"Error executing main.py: {{e}}")
+        ''')
+
+        # Display clean execution results
+        if execution_result and hasattr(execution_result, 'logs'):
+            if execution_result.logs.stdout:
+                for line in execution_result.logs.stdout:
+                    print(line.strip())
+            if execution_result.logs.stderr:
+                for line in execution_result.logs.stderr:
+                    print(f"Error: {{line.strip()}}")
+
+        print("=" * 60)
+
+        # Output deployment information
+        print(f"\\n🎉 Deployment completed successfully!")
+        print(f"🌐 Sandbox ID: {{sandbox.sandbox_id}}")
+        print("\\n📋 Access your deployed project:")
+        print("   🌍 E2B Dashboard: https://e2b.dev/dashboard")
+        print(f"   🔍 Sandbox ID: {{sandbox.sandbox_id}}")
+
+        # Output machine-readable info for CLI tools
+        print(f"SANDBOX_ID:{{sandbox.sandbox_id}}")
+        print(f"SANDBOX_URL:https://e2b.dev/dashboard")
         
     except Exception as e:
         print(f"❌ Deployment failed: {{str(e)}}")
@@ -301,27 +341,29 @@ try:
     # Test import
     import main
     print("✅ Project setup successful - main.py can be imported")
-    
+
     # Try to run main function if it exists
     if hasattr(main, 'main'):
         print("🚀 Running main function...")
         main.main()
     else:
         print("ℹ️  No main() function found in main.py")
-        
+
 except Exception as e:
     print(f"⚠️  Setup warning: {{e}}")
     print("This might be normal if the project requires specific configuration.")
 """)
-    
+
     return result
 
 if __name__ == "__main__":
     main()
 "#, api_key = api_key);
-    
+
     Ok(script)
 }
+
+
 
 /// Get E2B API key from environment or .env file
 fn get_e2b_api_key(env_file: Option<&str>) -> PyResult<String> {
