@@ -550,4 +550,4 @@ cargo test -- --show-output
 
 ## License
 
-See the LICENSE file in the repository root for license information.
+See the [License](../LICENSE.md) file in the repository root for more information.
