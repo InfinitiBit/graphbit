@@ -3,25 +3,10 @@
 <h2>Prerequisites</h2>
 
 <ul>
-  <li>Python 3.10 or higher (3.11+ recommended)</li>
-  <li>Rust (for building GraphBit Python bindings)</li>
-  <li>Poetry (for dependency management)</li>
+  <li>Python 3.11 or higher</li>
   <li>OpenAI API key</li>
+  <li>Poetry installed (see: https://python-poetry.org/docs/#installation)</li>
 </ul>
-
-<h3>Install Rust</h3>
-<p>If not already installed:</p>
-
-<p><strong>Linux/macOS:</strong></p>
-<pre><code>curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-source $HOME/.cargo/env</code></pre>
-
-<p><strong>Windows:</strong></p>
-<p>Download and run rustup-init.exe from <a href="https://rustup.rs/">https://rustup.rs/</a></p>
-
-<h3>Install Poetry</h3>
-<p>If not already installed:</p>
-<pre><code>pip install poetry</code></pre>
 
 <h2>Installation</h2>
 
@@ -31,23 +16,14 @@ source $HOME/.cargo/env</code></pre>
 unzip research-paper-summarizer-agent.zip
 cd research-paper-summarizer-agent</code></pre>
 
-<h3>2. Install GraphBit and dependencies</h3>
-<pre><code># Install Poetry if not already installed
-pip install poetry
+<h3>2. Install dependencies</h3>
+<pre><code>
+poetry install</code></pre>
 
-# Install GraphBit dependencies
-poetry install --no-root --extras faiss
-
-# Build GraphBit Python bindings
-cd python
-maturin develop
-cd ..
-
-# Install additional dependencies for the research paper summarizer
-poetry add fastapi==0.116.0 streamlit pydantic uvicorn python-dotenv requests python-multipart faiss</code></pre>
+<p>This will automatically install GraphBit and all other required dependencies listed in <code>pyproject.toml</code>.</p>
 
 <h3>3. Set up environment variables</h3>
-<pre><code># Create a .env file using the example file
+<pre><code>
 cp .env.example .env</code></pre>
 
 <p>Edit the <code>.env</code> file and add your OpenAI API key:</p>
