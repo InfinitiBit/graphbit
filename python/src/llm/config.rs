@@ -267,6 +267,42 @@ impl LlmConfig {
         })
     }
 
+    #[staticmethod]
+    #[pyo3(signature = (api_key, model=None))]
+    fn huggingface_python(api_key: String, model: Option<String>) -> PyResult<Self> {
+        validate_api_key(&api_key, "HuggingFace")?;
+
+        Python::with_gil(|py| {
+            // Import the Python HuggingFace class
+            let hf_module = py
+                .import("graphbit.integrations.huggingface.llm")
+                .map_err(|e| {
+                    pyo3::exceptions::PyImportError::new_err(format!(
+                        "Failed to import HuggingFace module: {e}"
+                    ))
+                })?;
+            let hf_class = hf_module.getattr("HuggingfaceLLM").map_err(|e| {
+                pyo3::exceptions::PyAttributeError::new_err(format!(
+                    "Failed to get HuggingfaceLLM class: {e}"
+                ))
+            })?;
+
+            // Create instance with API key (token parameter)
+            let hf_instance = hf_class.call1((api_key,)).map_err(|e| {
+                pyo3::exceptions::PyRuntimeError::new_err(format!(
+                    "Failed to create HuggingfaceLLM instance: {e}"
+                ))
+            })?;
+
+            let config = CoreLlmConfig::PythonBridge {
+                python_instance: std::sync::Arc::new(hf_instance.into()),
+                model: model.unwrap_or_else(|| "microsoft/DialoGPT-medium".to_string()),
+            };
+
+            Ok(Self { inner: config })
+        })
+    }
+
     fn provider(&self) -> String {
         self.inner.provider_name().to_string()
     }
