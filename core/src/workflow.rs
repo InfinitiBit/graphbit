@@ -368,8 +368,9 @@ impl WorkflowExecutor {
 
                 // If agent doesn't exist, create and register a default agent
                 if !agent_exists {
-                    // Find the node configuration for this agent to extract system_prompt and LLM config
+                    // Find the node configuration for this agent to extract system_prompt, temperature, and LLM config
                     let mut system_prompt = String::new();
+                    let mut temperature: Option<f32> = None;
                     let mut resolved_llm_config = self.default_llm_config.clone()
                         .unwrap_or_else(|| crate::llm::LlmConfig::Unconfigured {
                             message: "No LLM configuration provided for agent creation. Please explicitly configure an LLM provider.".to_string()
@@ -386,6 +387,13 @@ impl WorkflowExecutor {
                                 if let Some(prompt_value) = node.config.get("system_prompt") {
                                     if let Some(prompt_str) = prompt_value.as_str() {
                                         system_prompt = prompt_str.to_string();
+                                    }
+                                }
+
+                                // Extract temperature from node config if available
+                                if let Some(temp_value) = node.config.get("temperature") {
+                                    if let Some(temp_num) = temp_value.as_f64() {
+                                        temperature = Some(temp_num as f32);
                                     }
                                 }
 
@@ -409,6 +417,11 @@ impl WorkflowExecutor {
                     // Set system prompt if found in node configuration
                     if !system_prompt.is_empty() {
                         default_config = default_config.with_system_prompt(system_prompt);
+                    }
+
+                    // Set temperature if found in node configuration
+                    if let Some(temp) = temperature {
+                        default_config = default_config.with_temperature(temp);
                     }
 
                     // Try to create agent - if it fails due to config issues, fail the workflow
