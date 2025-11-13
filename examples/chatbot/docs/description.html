@@ -1,15 +1,21 @@
-<h1>GraphBit Chatbot — Detailed Description</h1>
-<p><strong>GraphBit Chatbot</strong> is an intelligent conversational AI built on the <strong>GraphBit</strong> framework. It delivers real-time, token-by-token streaming chat with context-aware responses powered by a ChromaDB vector database, a FastAPI backend, and a Streamlit-based UI.</p>
+<h1>GraphBit Chatbot</h1>
+
+<p>
+  An intelligent conversational AI chatbot built with the <strong>GraphBit framework</strong>.
+  This application provides real-time chat capabilities with context-aware responses powered by
+  vector database memory and advanced AI.
+</p>
 
 <h2>Features</h2>
+
 <ul>
-  <li><strong>Real-time Chat:</strong> WebSocket-based streaming responses for instant interaction</li>
-  <li><strong>Context-Aware Memory:</strong> ChromaDB vector database for intelligent conversation context retrieval</li>
-  <li><strong>Knowledge Base:</strong> Automatic indexing and retrieval of relevant information</li>
-  <li><strong>Session Management:</strong> Persistent conversation history across sessions</li>
-  <li><strong>Streaming Responses:</strong> Token-by-token response streaming for better user experience</li>
-  <li><strong>Modern UI:</strong> Clean, responsive Streamlit interface with emoji avatars</li>
-  <li><strong>GraphBit Integration:</strong> Built on GraphBit's powerful LLM and embedding clients</li>
+  <li><strong>Real-time Chat</strong>: WebSocket-based streaming responses for instant interaction</li>
+  <li><strong>Context-Aware Memory</strong>: ChromaDB vector database for intelligent conversation context retrieval</li>
+  <li><strong>Knowledge Base</strong>: Automatic indexing and retrieval of relevant information</li>
+  <li><strong>Session Management</strong>: Persistent conversation history across sessions</li>
+  <li><strong>Streaming Responses</strong>: Token-by-token response streaming for better user experience</li>
+  <li><strong>Modern UI</strong>: Clean, responsive Streamlit interface with emoji avatars</li>
+  <li><strong>GraphBit Integration</strong>: Built on GraphBit's powerful LLM and embedding clients</li>
 </ul>
 
 <h2>Architecture</h2>
@@ -116,7 +122,9 @@ chatbot/
 }
 </pre>
 
-<h2>Configuration (backend/const.py)</h2>
+<h2>Configuration</h2>
+
+<p>Configuration constants are defined in <code>backend/const.py</code>:</p>
 <ul>
   <li><code>OPENAI_LLM_MODEL</code>: GPT model for chat responses (default: <code>gpt-3.5-turbo</code>)</li>
   <li><code>OPENAI_EMBEDDING_MODEL</code>: Embedding model for vector search (default: <code>text-embedding-3-small</code>)</li>
@@ -132,7 +140,7 @@ chatbot/
   <li>Fork the repository</li>
   <li>Create a feature branch: <code>git checkout -b feature-name</code></li>
   <li>Make your changes and add tests</li>
-  <li>Commit your changes: <code>git commit -am 'Add feature'</code></li>
+  <li>Commit your changes: <code>git commit -m 'Add feature'</code></li>
   <li>Push to the branch: <code>git push origin feature-name</code></li>
   <li>Submit a pull request</li>
 </ol>
