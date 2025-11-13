@@ -1,4 +1,4 @@
-<h1>🚀 Quick Start</h1>
+<h1>Setup Instructions</h1>
 
 <h2>Prerequisites</h2>
 
@@ -7,7 +7,6 @@
   <li>Rust (for building GraphBit Python bindings)</li>
   <li>Poetry (for dependency management)</li>
   <li>OpenAI API key</li>
-  <li>Git</li>
 </ul>
 
 <h3>Install Rust</h3>
@@ -26,9 +25,11 @@ source $HOME/.cargo/env</code></pre>
 
 <h2>Installation</h2>
 
-<h3>1. Clone the repository</h3>
-<pre><code>git clone https://github.com/InfinitiBit/graphbit.git
-cd graphbit</code></pre>
+<h3>1. Download and extract the template</h3>
+<p>Download the research paper summarizer template ZIP file and extract it to your desired location:</p>
+<pre><code>
+unzip research-paper-summarizer-agent.zip
+cd research-paper-summarizer-agent</code></pre>
 
 <h3>2. Install GraphBit and dependencies</h3>
 <pre><code># Install Poetry if not already installed
@@ -47,7 +48,7 @@ poetry add fastapi==0.116.0 streamlit pydantic uvicorn python-dotenv requests py
 
 <h3>3. Set up environment variables</h3>
 <pre><code># Create a .env file using the example file
-cp examples/research-paper-summarizer-agent/.env.example examples/research-paper-summarizer-agent/.env</code></pre>
+cp .env.example .env</code></pre>
 
 <p>Edit the <code>.env</code> file and add your OpenAI API key:</p>
 <pre><code>OPENAI_API_KEY=your_api_key_here</code></pre>
@@ -57,12 +58,12 @@ cp examples/research-paper-summarizer-agent/.env.example examples/research-paper
 <h3>Using Poetry</h3>
 
 <p><strong>Step 1: Start the backend server</strong></p>
-<p>In terminal 1 - from the main graphbit directory:</p>
-<pre><code>poetry run uvicorn examples.research-paper-summarizer-agent.backend.main-server:app --reload --host 0.0.0.0 --port 8000</code></pre>
+<p>In terminal 1:</p>
+<pre><code>poetry run uvicorn backend.main-server:app --reload --host 0.0.0.0 --port 8000</code></pre>
 
 <p><strong>Step 2: Start the frontend application</strong></p>
-<p>In terminal 2 - from the main graphbit directory:</p>
-<pre><code>poetry run streamlit run examples/research-paper-summarizer-agent/frontend/app.py --server.port 8501 --server.address 0.0.0.0</code></pre>
+<p>In terminal 2:</p>
+<pre><code>poetry run streamlit run frontend/app.py --server.port 8501 --server.address 0.0.0.0</code></pre>
 
 <p><strong>Note:</strong> The startup scripts require GraphBit to be properly installed and available in your Python environment.</p>
 
