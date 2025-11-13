@@ -107,21 +107,24 @@ impl CharacterSplitter {
     }
 
     /// Split text into chunks
-    fn split_text(&self, text: &str) -> PyResult<Vec<TextChunk>> {
-        let chunks = self.inner.split_text(text).map_err(to_py_runtime_error)?;
+    fn split_text(&self, text: &str, py: Python<'_>) -> PyResult<Vec<TextChunk>> {
+        // CRITICAL FIX: Release GIL during text splitting for true parallelism
+        py.allow_threads(|| {
+            let chunks = self.inner.split_text(text).map_err(to_py_runtime_error)?;
 
-        Ok(chunks
-            .into_iter()
-            .map(|chunk| TextChunk { inner: chunk })
-            .collect())
+            Ok(chunks
+                .into_iter()
+                .map(|chunk| TextChunk { inner: chunk })
+                .collect())
+        })
     }
 
     /// Split a list of texts
-    fn split_texts(&self, texts: Vec<String>) -> PyResult<Vec<Vec<TextChunk>>> {
+    fn split_texts(&self, texts: Vec<String>, py: Python<'_>) -> PyResult<Vec<Vec<TextChunk>>> {
         let mut all_chunks = Vec::new();
 
         for text in texts {
-            let chunks = self.split_text(&text)?;
+            let chunks = self.split_text(&text, py)?;
             all_chunks.push(chunks);
         }
 
@@ -180,21 +183,24 @@ impl TokenSplitter {
     }
 
     /// Split text into chunks
-    fn split_text(&self, text: &str) -> PyResult<Vec<TextChunk>> {
-        let chunks = self.inner.split_text(text).map_err(to_py_runtime_error)?;
+    fn split_text(&self, text: &str, py: Python<'_>) -> PyResult<Vec<TextChunk>> {
+        // CRITICAL FIX: Release GIL during text splitting for true parallelism
+        py.allow_threads(|| {
+            let chunks = self.inner.split_text(text).map_err(to_py_runtime_error)?;
 
-        Ok(chunks
-            .into_iter()
-            .map(|chunk| TextChunk { inner: chunk })
-            .collect())
+            Ok(chunks
+                .into_iter()
+                .map(|chunk| TextChunk { inner: chunk })
+                .collect())
+        })
     }
 
     /// Split a list of texts
-    fn split_texts(&self, texts: Vec<String>) -> PyResult<Vec<Vec<TextChunk>>> {
+    fn split_texts(&self, texts: Vec<String>, py: Python<'_>) -> PyResult<Vec<Vec<TextChunk>>> {
         let mut all_chunks = Vec::new();
 
         for text in texts {
-            let chunks = self.split_text(&text)?;
+            let chunks = self.split_text(&text, py)?;
             all_chunks.push(chunks);
         }
 
@@ -252,21 +258,24 @@ impl SentenceSplitter {
     }
 
     /// Split text into chunks
-    fn split_text(&self, text: &str) -> PyResult<Vec<TextChunk>> {
-        let chunks = self.inner.split_text(text).map_err(to_py_runtime_error)?;
+    fn split_text(&self, text: &str, py: Python<'_>) -> PyResult<Vec<TextChunk>> {
+        // CRITICAL FIX: Release GIL during text splitting for true parallelism
+        py.allow_threads(|| {
+            let chunks = self.inner.split_text(text).map_err(to_py_runtime_error)?;
 
-        Ok(chunks
-            .into_iter()
-            .map(|chunk| TextChunk { inner: chunk })
-            .collect())
+            Ok(chunks
+                .into_iter()
+                .map(|chunk| TextChunk { inner: chunk })
+                .collect())
+        })
     }
 
     /// Split a list of texts
-    fn split_texts(&self, texts: Vec<String>) -> PyResult<Vec<Vec<TextChunk>>> {
+    fn split_texts(&self, texts: Vec<String>, py: Python<'_>) -> PyResult<Vec<Vec<TextChunk>>> {
         let mut all_chunks = Vec::new();
 
         for text in texts {
-            let chunks = self.split_text(&text)?;
+            let chunks = self.split_text(&text, py)?;
             all_chunks.push(chunks);
         }
 
@@ -325,21 +334,24 @@ impl RecursiveSplitter {
     }
 
     /// Split text into chunks
-    fn split_text(&self, text: &str) -> PyResult<Vec<TextChunk>> {
-        let chunks = self.inner.split_text(text).map_err(to_py_runtime_error)?;
+    fn split_text(&self, text: &str, py: Python<'_>) -> PyResult<Vec<TextChunk>> {
+        // CRITICAL FIX: Release GIL during text splitting for true parallelism
+        py.allow_threads(|| {
+            let chunks = self.inner.split_text(text).map_err(to_py_runtime_error)?;
 
-        Ok(chunks
-            .into_iter()
-            .map(|chunk| TextChunk { inner: chunk })
-            .collect())
+            Ok(chunks
+                .into_iter()
+                .map(|chunk| TextChunk { inner: chunk })
+                .collect())
+        })
     }
 
     /// Split a list of texts
-    fn split_texts(&self, texts: Vec<String>) -> PyResult<Vec<Vec<TextChunk>>> {
+    fn split_texts(&self, texts: Vec<String>, py: Python<'_>) -> PyResult<Vec<Vec<TextChunk>>> {
         let mut all_chunks = Vec::new();
 
         for text in texts {
-            let chunks = self.split_text(&text)?;
+            let chunks = self.split_text(&text, py)?;
             all_chunks.push(chunks);
         }
 

@@ -871,7 +871,7 @@ impl WorkflowExecutor {
                 .and_then(|v| v.as_array())
                 .map(|arr| {
                     arr.iter()
-                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                        .filter_map(|v| v.as_str().map(str::to_string))
                         .collect::<Vec<String>>()
                 })
                 .unwrap_or_default();
@@ -919,7 +919,7 @@ impl WorkflowExecutor {
                     let name_try = id_name_obj
                         .and_then(|m| m.get(pid))
                         .and_then(|v| v.as_str())
-                        .map(|s| s.to_string());
+                        .map(str::to_string);
                     tracing::debug!(
                         current_node_id = %cur_id_str,
                         parent_id = %pid,
@@ -1023,7 +1023,7 @@ impl WorkflowExecutor {
                         .and_then(|m| m.as_object())
                         .and_then(|m| m.get(&current_node_id.to_string()))
                         .and_then(|v| v.as_str())
-                        .map(|s| s.to_string())
+                        .map(str::to_string)
                         .unwrap_or_else(|| "unknown".to_string())
                 };
 
