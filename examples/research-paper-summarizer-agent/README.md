@@ -54,26 +54,9 @@ This application leverages GraphBit's advanced document processing capabilities:
 
 ### Prerequisites
 
-- Python 3.10 or higher (3.11+ recommended)
-- Rust (for building GraphBit Python bindings)
-- Poetry (for dependency management)
+- Python 3.11 or higher
 - OpenAI API key
-- Git
-
-**Install Rust** (if not already installed):
-```bash
-# Linux/macOS
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-source $HOME/.cargo/env
-
-# Windows
-# Download and run rustup-init.exe from https://rustup.rs/
-```
-
-**Install Poetry** (if not already installed):
-```bash
-pip install poetry
-```
+- Poetry installed (see: https://python-poetry.org/docs/#installation)
 
 ### Installation
 
@@ -83,46 +66,40 @@ pip install poetry
    cd graphbit
    ```
 
-2. **Install GraphBit and dependencies**:
+2. **Install dependencies**:
    ```bash
-   # Install Poetry if not already installed
-   pip install poetry
-
-   # Install GraphBit dependencies
-   poetry install --no-root --extras faiss
-
-   # Build GraphBit Python bindings
-   cd python
-   maturin develop
-   cd ..
-
-   # Install additional dependencies for the research paper summarizer
-   poetry add fastapi==0.116.0 streamlit pydantic uvicorn python-dotenv requests python-multipart faiss
+   poetry install
    ```
+
+   This will automatically install GraphBit from PyPI along with all other required dependencies listed in `pyproject.toml`.
 
 3. **Set up environment variables**:
    ```bash
-   # Create a .env file using the example file
    cp examples/research-paper-summarizer-agent/.env.example examples/research-paper-summarizer-agent/.env
+   ```
+
+   Edit the `.env` file and add your OpenAI API key:
+   ```bash
+   OPENAI_API_KEY=your_api_key_here
    ```
 
 ### Running the Application
 
 #### Using Poetry
 
-1. Start the backend server:
+1. **Start the backend server**:
    ```bash
    # In terminal 1 - from the main graphbit directory
    poetry run uvicorn examples.research-paper-summarizer-agent.backend.main-server:app --reload --host 0.0.0.0 --port 8000
    ```
 
-2. Start the frontend application:
+2. **Start the frontend application**:
    ```bash
    # In terminal 2 - from the main graphbit directory
    poetry run streamlit run examples/research-paper-summarizer-agent/frontend/app.py --server.port 8501 --server.address 0.0.0.0
    ```
 
-**Note**: The startup scripts require GraphBit to be properly installed and available in your Python environment.
+**Note**: The application will automatically use the GraphBit framework installed from PyPI.
 
 ### Access the Application
 
