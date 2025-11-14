@@ -236,6 +236,25 @@ GraphBit 提供豐富的 Python API 用於建立和整合智慧體工作流程�
 
 完整文件請造訪：[https://docs.graphbit.ai/](https://docs.graphbit.ai/)
 
+## 生態系統與擴展
+
+GraphBit 的模組化架構支援外部整合：
+
+| 類別              | 範例                                                                                          |
+|:------------------|:----------------------------------------------------------------------------------------------|
+| LLM 提供商        | OpenAI, Anthropic, Azure OpenAI, DeepSeek, Together, Ollama, OpenRouter, Fireworks, Mistral AI, Replicate, Perplexity, HuggingFace, AI21, Bytedance, xAI, 等 |
+| 向量儲存          | Pinecone, Qdrant, Chroma, Milvus, Weaviate, FAISS, Elasticsearch, AstraDB, Redis, 等         |
+| 資料庫            | PostgreSQL (PGVector), MongoDB, MariaDB, IBM DB2, Redis, 等                                   |
+| 雲端平台          | AWS (Boto3), Azure, Google Cloud Platform, 等                                                 |
+| 搜尋 API          | Serper, Google Search, GitHub Search, GitLab Search, 等                                       |
+| 嵌入模型          | OpenAI Embeddings, Voyage AI, 等                                                              |
+
+擴展由社群開發和維護。
+
+<p align="center">
+  <img src="assets/Ecosystem.png" alt="GraphBit Ecosystem - Stop Choosing, Start Orchestrating" style="max-width: 100%; height: auto;">
+</p>
+
 
 ### 使用 GraphBit 建立您的第一個智慧體工作流程
 
@@ -246,9 +265,15 @@ GraphBit 提供豐富的 Python API 用於建立和整合智慧體工作流程�
   <p><em>觀看使用 GraphBit 建立智慧體工作流程教學</em></p>
 </div>
 
-## 貢獻
+## 為 GraphBit 做出貢獻
 
-我們歡迎貢獻！請查看 [Contributing](CONTRIBUTING.md) 檔案了解開發設定和指南。
+我們歡迎貢獻。要開始，請參閱 [Contributing](CONTRIBUTING.md) 檔案以了解開發設定和指南。
+
+GraphBit 由一個優秀的研究人員和工程師社群建立。
+
+<a href="https://github.com/Infinitibit/graphbit/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=Infinitibit/graphbit" />
+</a>
 
 ## 安全性
 

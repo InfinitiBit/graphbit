@@ -236,6 +236,25 @@ print("\nData Processor Output: \n", result.get_node_output("Data Processor"))
 
 للحصول على التوثيق الكامل، قم بزيارة: [https://docs.graphbit.ai/](https://docs.graphbit.ai/)
 
+## النظام البيئي والإضافات
+
+تدعم بنية GraphBit المعيارية التكاملات الخارجية:
+
+| الفئة             | أمثلة                                                                                         |
+|:------------------|:----------------------------------------------------------------------------------------------|
+| مزودو LLM         | OpenAI, Anthropic, Azure OpenAI, DeepSeek, Together, Ollama, OpenRouter, Fireworks, Mistral AI, Replicate, Perplexity, HuggingFace, AI21, Bytedance, xAI, والمزيد |
+| مخازن المتجهات    | Pinecone, Qdrant, Chroma, Milvus, Weaviate, FAISS, Elasticsearch, AstraDB, Redis, والمزيد    |
+| قواعد البيانات    | PostgreSQL (PGVector), MongoDB, MariaDB, IBM DB2, Redis, والمزيد                              |
+| منصات السحابة      | AWS (Boto3), Azure, Google Cloud Platform, والمزيد                                            |
+| واجهات برمجة البحث | Serper, Google Search, GitHub Search, GitLab Search, والمزيد                                  |
+| نماذج التضمين     | OpenAI Embeddings, Voyage AI, والمزيد                                                         |
+
+يتم تطوير الإضافات وصيانتها من قبل المجتمع.
+
+<p align="center">
+  <img src="assets/Ecosystem.png" alt="GraphBit Ecosystem - Stop Choosing, Start Orchestrating" style="max-width: 100%; height: auto;">
+</p>
+
 
 ### بناء أول سير عمل للوكيل الخاص بك باستخدام GraphBit
 
@@ -246,9 +265,15 @@ print("\nData Processor Output: \n", result.get_node_output("Data Processor"))
   <p><em>شاهد البرنامج التعليمي لإنشاء سير عمل الوكيل باستخدام GraphBit</em></p>
 </div>
 
-## المساهمة
+## المساهمة في GraphBit
 
-نرحب بالمساهمات! راجع ملف [Contributing](CONTRIBUTING.md) للحصول على إعداد التطوير والإرشادات.
+نرحب بالمساهمات. للبدء، يرجى الاطلاع على ملف [Contributing](CONTRIBUTING.md) للحصول على إعداد التطوير والإرشادات.
+
+تم بناء GraphBit بواسطة مجتمع رائع من الباحثين والمهندسين.
+
+<a href="https://github.com/Infinitibit/graphbit/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=Infinitibit/graphbit" />
+</a>
 
 ## الأمان
 

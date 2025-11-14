@@ -236,6 +236,25 @@ Per l'elenco completo di classi, metodi ed esempi di utilizzo, consulta il [Rife
 
 Per la documentazione completa, visitare: [https://docs.graphbit.ai/](https://docs.graphbit.ai/)
 
+## Ecosistema ed Estensioni
+
+L'architettura modulare di GraphBit supporta integrazioni esterne:
+
+| Categoria         | Esempi                                                                                        |
+|:------------------|:----------------------------------------------------------------------------------------------|
+| Provider LLM      | OpenAI, Anthropic, Azure OpenAI, DeepSeek, Together, Ollama, OpenRouter, Fireworks, Mistral AI, Replicate, Perplexity, HuggingFace, AI21, Bytedance, xAI, e altro |
+| Archivi Vettoriali | Pinecone, Qdrant, Chroma, Milvus, Weaviate, FAISS, Elasticsearch, AstraDB, Redis, e altro   |
+| Database          | PostgreSQL (PGVector), MongoDB, MariaDB, IBM DB2, Redis, e altro                              |
+| Piattaforme Cloud | AWS (Boto3), Azure, Google Cloud Platform, e altro                                            |
+| API di Ricerca    | Serper, Google Search, GitHub Search, GitLab Search, e altro                                  |
+| Modelli di Embedding | OpenAI Embeddings, Voyage AI, e altro                                                      |
+
+Le estensioni sono sviluppate e mantenute dalla comunità.
+
+<p align="center">
+  <img src="assets/Ecosystem.png" alt="GraphBit Ecosystem - Stop Choosing, Start Orchestrating" style="max-width: 100%; height: auto;">
+</p>
+
 
 ### Costruire il Tuo Primo Flusso di Lavoro dell'Agente con GraphBit
 
@@ -246,9 +265,15 @@ Per la documentazione completa, visitare: [https://docs.graphbit.ai/](https://do
   <p><em>Guarda il tutorial di Creazione del Flusso di Lavoro dell'Agente con GraphBit</em></p>
 </div>
 
-## Contribuire
+## Contribuire a GraphBit
 
-Accogliamo i contributi! Consultare il file [Contributing](CONTRIBUTING.md) per la configurazione dello sviluppo e le linee guida.
+Accogliamo contributi. Per iniziare, consulta il file [Contributing](CONTRIBUTING.md) per la configurazione dello sviluppo e le linee guida.
+
+GraphBit è costruito da una meravigliosa comunità di ricercatori e ingegneri.
+
+<a href="https://github.com/Infinitibit/graphbit/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=Infinitibit/graphbit" />
+</a>
 
 ## Sicurezza
 

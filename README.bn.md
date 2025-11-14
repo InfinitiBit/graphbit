@@ -236,6 +236,25 @@ GraphBit এজেন্টিক ওয়ার্কফ্লো তৈরি
 
 সম্পূর্ণ ডকুমেন্টেশনের জন্য, দেখুন: [https://docs.graphbit.ai/](https://docs.graphbit.ai/)
 
+## ইকোসিস্টেম এবং এক্সটেনশন
+
+GraphBit এর মডুলার আর্কিটেকচার বাহ্যিক ইন্টিগ্রেশন সমর্থন করে:
+
+| বিভাগ             | উদাহরণ                                                                                       |
+|:------------------|:----------------------------------------------------------------------------------------------|
+| LLM প্রদানকারী    | OpenAI, Anthropic, Azure OpenAI, DeepSeek, Together, Ollama, OpenRouter, Fireworks, Mistral AI, Replicate, Perplexity, HuggingFace, AI21, Bytedance, xAI, এবং আরও |
+| ভেক্টর স্টোর      | Pinecone, Qdrant, Chroma, Milvus, Weaviate, FAISS, Elasticsearch, AstraDB, Redis, এবং আরও   |
+| ডেটাবেস          | PostgreSQL (PGVector), MongoDB, MariaDB, IBM DB2, Redis, এবং আরও                             |
+| ক্লাউড প্ল্যাটফর্ম | AWS (Boto3), Azure, Google Cloud Platform, এবং আরও                                           |
+| সার্চ API         | Serper, Google Search, GitHub Search, GitLab Search, এবং আরও                                 |
+| এম্বেডিং মডেল    | OpenAI Embeddings, Voyage AI, এবং আরও                                                        |
+
+এক্সটেনশনগুলি কমিউনিটি দ্বারা বিকশিত এবং রক্ষণাবেক্ষণ করা হয়।
+
+<p align="center">
+  <img src="assets/Ecosystem.png" alt="GraphBit Ecosystem - Stop Choosing, Start Orchestrating" style="max-width: 100%; height: auto;">
+</p>
+
 
 ### GraphBit দিয়ে আপনার প্রথম এজেন্ট ওয়ার্কফ্লো তৈরি করা
 
@@ -246,9 +265,15 @@ GraphBit এজেন্টিক ওয়ার্কফ্লো তৈরি
   <p><em>GraphBit দিয়ে এজেন্ট ওয়ার্কফ্লো তৈরির টিউটোরিয়াল দেখুন</em></p>
 </div>
 
-## অবদান
+## GraphBit-এ অবদান
 
-আমরা অবদানকে স্বাগত জানাই! ডেভেলপমেন্ট সেটআপ এবং নির্দেশিকাগুলির জন্য [Contributing](CONTRIBUTING.md) ফাইল দেখুন।
+আমরা অবদানকে স্বাগত জানাই। শুরু করতে, ডেভেলপমেন্ট সেটআপ এবং নির্দেশিকাগুলির জন্য অনুগ্রহ করে [Contributing](CONTRIBUTING.md) ফাইল দেখুন।
+
+GraphBit গবেষক এবং প্রকৌশলীদের একটি চমৎকার সম্প্রদায় দ্বারা নির্মিত।
+
+<a href="https://github.com/Infinitibit/graphbit/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=Infinitibit/graphbit" />
+</a>
 
 ## নিরাপত্তা
 

@@ -236,6 +236,25 @@ GraphBit은 에이전트 워크플로우를 구축하고 통합하기 위한 풍
 
 전체 문서는 [https://docs.graphbit.ai/](https://docs.graphbit.ai/)를 참조하세요.
 
+## 생태계 및 확장
+
+GraphBit의 모듈식 아키텍처는 외부 통합을 지원합니다:
+
+| 카테고리          | 예시                                                                                          |
+|:------------------|:----------------------------------------------------------------------------------------------|
+| LLM 제공자        | OpenAI, Anthropic, Azure OpenAI, DeepSeek, Together, Ollama, OpenRouter, Fireworks, Mistral AI, Replicate, Perplexity, HuggingFace, AI21, Bytedance, xAI, 등 |
+| 벡터 저장소       | Pinecone, Qdrant, Chroma, Milvus, Weaviate, FAISS, Elasticsearch, AstraDB, Redis, 등         |
+| 데이터베이스      | PostgreSQL (PGVector), MongoDB, MariaDB, IBM DB2, Redis, 등                                   |
+| 클라우드 플랫폼   | AWS (Boto3), Azure, Google Cloud Platform, 등                                                 |
+| 검색 API          | Serper, Google Search, GitHub Search, GitLab Search, 등                                       |
+| 임베딩 모델       | OpenAI Embeddings, Voyage AI, 등                                                              |
+
+확장 기능은 커뮤니티에서 개발하고 유지 관리합니다.
+
+<p align="center">
+  <img src="assets/Ecosystem.png" alt="GraphBit Ecosystem - Stop Choosing, Start Orchestrating" style="max-width: 100%; height: auto;">
+</p>
+
 
 ### GraphBit으로 첫 번째 에이전트 워크플로우 구축하기
 
@@ -246,9 +265,15 @@ GraphBit은 에이전트 워크플로우를 구축하고 통합하기 위한 풍
   <p><em>GraphBit으로 에이전트 워크플로우 만들기 튜토리얼 보기</em></p>
 </div>
 
-## 기여
+## GraphBit에 기여하기
 
-기여를 환영합니다! 개발 설정 및 가이드라인은 [Contributing](CONTRIBUTING.md) 파일을 참조하세요.
+기여를 환영합니다. 시작하려면 개발 설정 및 가이드라인에 대한 [Contributing](CONTRIBUTING.md) 파일을 참조하세요.
+
+GraphBit은 훌륭한 연구자 및 엔지니어 커뮤니티에 의해 구축되었습니다.
+
+<a href="https://github.com/Infinitibit/graphbit/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=Infinitibit/graphbit" />
+</a>
 
 ## 보안
 

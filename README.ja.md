@@ -236,6 +236,25 @@ GraphBit は、エージェントワークフローを構築および統合す�
 
 完全なドキュメントについては、[https://docs.graphbit.ai/](https://docs.graphbit.ai/)をご覧ください。
 
+## エコシステムと拡張機能
+
+GraphBit のモジュラーアーキテクチャは外部統合をサポートします：
+
+| カテゴリ          | 例                                                                                            |
+|:------------------|:----------------------------------------------------------------------------------------------|
+| LLM プロバイダー  | OpenAI, Anthropic, Azure OpenAI, DeepSeek, Together, Ollama, OpenRouter, Fireworks, Mistral AI, Replicate, Perplexity, HuggingFace, AI21, Bytedance, xAI, など |
+| ベクトルストア    | Pinecone, Qdrant, Chroma, Milvus, Weaviate, FAISS, Elasticsearch, AstraDB, Redis, など       |
+| データベース      | PostgreSQL (PGVector), MongoDB, MariaDB, IBM DB2, Redis, など                                 |
+| クラウドプラットフォーム | AWS (Boto3), Azure, Google Cloud Platform, など                                        |
+| 検索 API          | Serper, Google Search, GitHub Search, GitLab Search, など                                     |
+| 埋め込みモデル    | OpenAI Embeddings, Voyage AI, など                                                            |
+
+拡張機能はコミュニティによって開発および維持されています。
+
+<p align="center">
+  <img src="assets/Ecosystem.png" alt="GraphBit Ecosystem - Stop Choosing, Start Orchestrating" style="max-width: 100%; height: auto;">
+</p>
+
 
 ### GraphBit で最初のエージェントワークフローを構築する
 
@@ -246,9 +265,15 @@ GraphBit は、エージェントワークフローを構築および統合す�
   <p><em>GraphBit でエージェントワークフローを作成するチュートリアルを見る</em></p>
 </div>
 
-## 貢献
+## GraphBit への貢献
 
-貢献を歓迎します！開発セットアップとガイドラインについては、[Contributing](CONTRIBUTING.md)ファイルをご覧ください。
+貢献を歓迎します。開始するには、開発セットアップとガイドラインについて [Contributing](CONTRIBUTING.md) ファイルを参照してください。
+
+GraphBit は素晴らしい研究者とエンジニアのコミュニティによって構築されています。
+
+<a href="https://github.com/Infinitibit/graphbit/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=Infinitibit/graphbit" />
+</a>
 
 ## セキュリティ
 
