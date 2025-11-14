@@ -116,6 +116,16 @@ Si consiglia di utilizzare un ambiente virtuale.
 pip install graphbit
 ```
 
+### Tutorial Video di Avvio Rapido
+
+<div align="center">
+  <a href="https://youtu.be/ti0wbHFKKFM?si=hnxi-1W823z5I_zs">
+    <img src="https://img.youtube.com/vi/ti0wbHFKKFM/maxresdefault.jpg" alt="GraphBit Quick Start Tutorial" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>Guarda il tutorial di Installazione di GraphBit tramite PyPI | Guida Completa all'Esempio e all'Esecuzione</em></p>
+</div>
+
+
 ### Configurazione dell'Ambiente
 
 Creare un file `.env`:
@@ -144,6 +154,16 @@ print(result)
 ## Documentazione
 
 Per la documentazione completa, visitare: [https://docs.graphbit.ai/](https://docs.graphbit.ai/)
+
+
+### Costruire il Tuo Primo Flusso di Lavoro dell'Agente con GraphBit
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=gKvkMc2qZcA">
+    <img src="https://img.youtube.com/vi/gKvkMc2qZcA/maxresdefault.jpg" alt="Making Agent Workflow by GraphBit" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>Guarda il tutorial di Creazione del Flusso di Lavoro dell'Agente con GraphBit</em></p>
+</div>
 
 ## Contribuire
 

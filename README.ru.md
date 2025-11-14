@@ -116,6 +116,16 @@ GraphBit последовательно обеспечивает эффекти�
 pip install graphbit
 ```
 
+### Видеоурок по Быстрому Старту
+
+<div align="center">
+  <a href="https://youtu.be/ti0wbHFKKFM?si=hnxi-1W823z5I_zs">
+    <img src="https://img.youtube.com/vi/ti0wbHFKKFM/maxresdefault.jpg" alt="GraphBit Quick Start Tutorial" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>Посмотрите руководство по установке GraphBit через PyPI | Полное руководство по примеру и запуску</em></p>
+</div>
+
+
 ### Настройка Окружения
 
 Создать файл `.env`:
@@ -144,6 +154,16 @@ print(result)
 ## Документация
 
 Для полной документации посетите: [https://docs.graphbit.ai/](https://docs.graphbit.ai/)
+
+
+### Создание Вашего Первого Рабочего Процесса Агента с GraphBit
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=gKvkMc2qZcA">
+    <img src="https://img.youtube.com/vi/gKvkMc2qZcA/maxresdefault.jpg" alt="Making Agent Workflow by GraphBit" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>Посмотрите руководство по созданию рабочего процесса агента с GraphBit</em></p>
+</div>
 
 ## Вклад
 

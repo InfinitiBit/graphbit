@@ -116,6 +116,16 @@ GraphBit 在 LLM 调用、工具调用和多智能体链中始终提供生产级
 pip install graphbit
 ```
 
+### 快速入门视频教程
+
+<div align="center">
+  <a href="https://youtu.be/ti0wbHFKKFM?si=hnxi-1W823z5I_zs">
+    <img src="https://img.youtube.com/vi/ti0wbHFKKFM/maxresdefault.jpg" alt="GraphBit Quick Start Tutorial" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>观看通过 PyPI 安装 GraphBit | 完整示例和运行指南教程</em></p>
+</div>
+
+
 ### 环境设置
 
 创建 `.env` 文件：
@@ -144,6 +154,16 @@ print(result)
 ## 文档
 
 完整文档请访问：[https://docs.graphbit.ai/](https://docs.graphbit.ai/)
+
+
+### 使用 GraphBit 构建您的第一个智能体工作流
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=gKvkMc2qZcA">
+    <img src="https://img.youtube.com/vi/gKvkMc2qZcA/maxresdefault.jpg" alt="Making Agent Workflow by GraphBit" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>观看使用 GraphBit 创建智能体工作流教程</em></p>
+</div>
 
 ## 贡献
 

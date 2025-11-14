@@ -116,6 +116,16 @@ GraphBit は、LLM 呼び出し、ツール呼び出し、マルチエージェ�
 pip install graphbit
 ```
 
+### クイックスタートビデオチュートリアル
+
+<div align="center">
+  <a href="https://youtu.be/ti0wbHFKKFM?si=hnxi-1W823z5I_zs">
+    <img src="https://img.youtube.com/vi/ti0wbHFKKFM/maxresdefault.jpg" alt="GraphBit Quick Start Tutorial" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>PyPI 経由で GraphBit をインストール | 完全な例と実行ガイドのチュートリアルを見る</em></p>
+</div>
+
+
 ### 環境設定
 
 `.env`ファイルを作成：
@@ -144,6 +154,16 @@ print(result)
 ## ドキュメント
 
 完全なドキュメントについては、[https://docs.graphbit.ai/](https://docs.graphbit.ai/)をご覧ください。
+
+
+### GraphBit で最初のエージェントワークフローを構築する
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=gKvkMc2qZcA">
+    <img src="https://img.youtube.com/vi/gKvkMc2qZcA/maxresdefault.jpg" alt="Making Agent Workflow by GraphBit" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>GraphBit でエージェントワークフローを作成するチュートリアルを見る</em></p>
+</div>
 
 ## 貢献
 

@@ -116,6 +116,16 @@ GraphBit ধারাবাহিকভাবে LLM কল, টুল ইনভ
 pip install graphbit
 ```
 
+### দ্রুত শুরু ভিডিও টিউটোরিয়াল
+
+<div align="center">
+  <a href="https://youtu.be/ti0wbHFKKFM?si=hnxi-1W823z5I_zs">
+    <img src="https://img.youtube.com/vi/ti0wbHFKKFM/maxresdefault.jpg" alt="GraphBit Quick Start Tutorial" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>PyPI এর মাধ্যমে GraphBit ইনস্টল করুন | সম্পূর্ণ উদাহরণ এবং রান গাইড টিউটোরিয়াল দেখুন</em></p>
+</div>
+
+
 ### এনভায়রনমেন্ট সেটআপ
 
 `.env` ফাইল তৈরি করুন:
@@ -144,6 +154,16 @@ print(result)
 ## ডকুমেন্টেশন
 
 সম্পূর্ণ ডকুমেন্টেশনের জন্য, দেখুন: [https://docs.graphbit.ai/](https://docs.graphbit.ai/)
+
+
+### GraphBit দিয়ে আপনার প্রথম এজেন্ট ওয়ার্কফ্লো তৈরি করা
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=gKvkMc2qZcA">
+    <img src="https://img.youtube.com/vi/gKvkMc2qZcA/maxresdefault.jpg" alt="Making Agent Workflow by GraphBit" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>GraphBit দিয়ে এজেন্ট ওয়ার্কফ্লো তৈরির টিউটোরিয়াল দেখুন</em></p>
+</div>
 
 ## অবদান
 

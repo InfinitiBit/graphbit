@@ -116,6 +116,16 @@ GraphBit은 LLM 호출, 도구 호출 및 다중 에이전트 체인 전반에 �
 pip install graphbit
 ```
 
+### 빠른 시작 비디오 튜토리얼
+
+<div align="center">
+  <a href="https://youtu.be/ti0wbHFKKFM?si=hnxi-1W823z5I_zs">
+    <img src="https://img.youtube.com/vi/ti0wbHFKKFM/maxresdefault.jpg" alt="GraphBit Quick Start Tutorial" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>PyPI를 통한 GraphBit 설치 | 전체 예제 및 실행 가이드 튜토리얼 보기</em></p>
+</div>
+
+
 ### 환경 설정
 
 `.env` 파일 생성:
@@ -144,6 +154,16 @@ print(result)
 ## 문서
 
 전체 문서는 [https://docs.graphbit.ai/](https://docs.graphbit.ai/)를 참조하세요.
+
+
+### GraphBit으로 첫 번째 에이전트 워크플로우 구축하기
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=gKvkMc2qZcA">
+    <img src="https://img.youtube.com/vi/gKvkMc2qZcA/maxresdefault.jpg" alt="Making Agent Workflow by GraphBit" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>GraphBit으로 에이전트 워크플로우 만들기 튜토리얼 보기</em></p>
+</div>
 
 ## 기여
 

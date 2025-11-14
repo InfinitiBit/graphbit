@@ -116,6 +116,16 @@ GraphBit هو إطار عمل ذكاء اصطناعي مفتوح المصدر ل
 pip install graphbit
 ```
 
+### فيديو تعليمي للبدء السريع
+
+<div align="center">
+  <a href="https://youtu.be/ti0wbHFKKFM?si=hnxi-1W823z5I_zs">
+    <img src="https://img.youtube.com/vi/ti0wbHFKKFM/maxresdefault.jpg" alt="GraphBit Quick Start Tutorial" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>شاهد تثبيت GraphBit عبر PyPI | دليل المثال والتشغيل الكامل</em></p>
+</div>
+
+
 ### إعداد البيئة
 
 إنشاء ملف `.env`:
@@ -144,6 +154,16 @@ print(result)
 ## التوثيق
 
 للحصول على التوثيق الكامل، قم بزيارة: [https://docs.graphbit.ai/](https://docs.graphbit.ai/)
+
+
+### بناء أول سير عمل للوكيل الخاص بك باستخدام GraphBit
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=gKvkMc2qZcA">
+    <img src="https://img.youtube.com/vi/gKvkMc2qZcA/maxresdefault.jpg" alt="Making Agent Workflow by GraphBit" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>شاهد البرنامج التعليمي لإنشاء سير عمل الوكيل باستخدام GraphBit</em></p>
+</div>
 
 ## المساهمة
 
