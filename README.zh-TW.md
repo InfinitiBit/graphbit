@@ -3,7 +3,7 @@
 # GraphBit - 高效能智慧體框架 (繁體中文)
 
 <p align="center">
-    <img src="assets/logo(circle).png" width="160px" alt="Logo" />
+    <img src="assets/GraphBit_Final_GB_Github_GIF.gif" width="160px" alt="Logo" />
 </p>
 
 <p align="center">
