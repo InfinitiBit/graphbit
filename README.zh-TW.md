@@ -193,6 +193,45 @@ print("\nSmart Agent Output: \n", result.get_node_output("Smart Agent"))
 print("\nData Processor Output: \n", result.get_node_output("Data Processor"))
 ```
 
+## 可觀測性與追蹤
+
+GraphBit Tracer 以最小配置捕獲和監控 LLM 呼叫和 AI 工作流程。它包裝 GraphBit LLM 客戶端和工作流程執行器，以追蹤提示、回應、令牌使用、延遲和錯誤，而無需更改您的程式碼。
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=nzwrxSiRl2U">
+    <img src="https://img.youtube.com/vi/nzwrxSiRl2U/maxresdefault.jpg" alt="GraphBit Observability & Tracing" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>觀看 GraphBit 可觀測性與追蹤教學</em></p>
+</div>
+
+## 高層架構
+
+<p align="center">
+  <img src="assets/architecture.svg" height="250" alt="GraphBit Architecture">
+</p>
+
+三層設計確保可靠性和效能：
+- **Rust 核心** - 工作流程引擎、智慧體和 LLM 提供商
+- **編排層** - 專案管理和執行
+- **Python API** - PyO3 綁定，支援非同步
+
+## Python API 整合
+
+GraphBit 提供豐富的 Python API 用於建立和整合智慧體工作流程：
+
+- **LLM 客戶端** - 多提供商 LLM 整合（OpenAI、Anthropic、Azure 等）
+- **工作流程** - 定義和管理具有狀態管理的多智慧體工作流程圖
+- **節點** - 智慧體節點、工具節點和自訂工作流程元件
+- **執行器** - 具有配置管理的工作流程執行引擎
+- **工具系統** - 智慧體工具的函式裝飾器、註冊表和執行框架
+- **工作流程結果** - 帶有中繼資料、時間和輸出存取的執行結果
+- **嵌入** - 用於語義搜尋和檢索的向量嵌入
+- **工作流程上下文** - 工作流程執行過程中的共享狀態和變數
+- **文件載入器** - 從多種格式載入和解析文件（PDF、DOCX、TXT、JSON、CSV、XML、HTML）
+- **文字分割器** - 將文件分割成塊（字元、令牌、句子、遞迴）
+
+有關類別、方法和使用範例的完整清單，請參閱 [Python API 參考](docs/api-reference/python-api.md)。
+
 ## 文件
 
 完整文件請造訪：[https://docs.graphbit.ai/](https://docs.graphbit.ai/)

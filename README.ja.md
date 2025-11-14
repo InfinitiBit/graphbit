@@ -193,6 +193,45 @@ print("\nSmart Agent Output: \n", result.get_node_output("Smart Agent"))
 print("\nData Processor Output: \n", result.get_node_output("Data Processor"))
 ```
 
+## 可観測性とトレーシング
+
+GraphBit Tracer は、最小限の設定で LLM 呼び出しと AI ワークフローをキャプチャおよび監視します。GraphBit LLM クライアントとワークフローエグゼキューターをラップして、コードを変更することなくプロンプト、レスポンス、トークン使用量、レイテンシ、エラーを追跡します。
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=nzwrxSiRl2U">
+    <img src="https://img.youtube.com/vi/nzwrxSiRl2U/maxresdefault.jpg" alt="GraphBit Observability & Tracing" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>GraphBit 可観測性とトレーシングのチュートリアルを見る</em></p>
+</div>
+
+## 高レベルアーキテクチャ
+
+<p align="center">
+  <img src="assets/architecture.svg" height="250" alt="GraphBit Architecture">
+</p>
+
+信頼性とパフォーマンスのための3層設計：
+- **Rust コア** - ワークフローエンジン、エージェント、LLM プロバイダー
+- **オーケストレーション層** - プロジェクト管理と実行
+- **Python API** - 非同期サポート付き PyO3 バインディング
+
+## Python API 統合
+
+GraphBit は、エージェントワークフローを構築および統合するための豊富な Python API を提供します：
+
+- **LLM クライアント** - マルチプロバイダー LLM 統合（OpenAI、Anthropic、Azure など）
+- **ワークフロー** - 状態管理を備えたマルチエージェントワークフローグラフの定義と管理
+- **ノード** - エージェントノード、ツールノード、カスタムワークフローコンポーネント
+- **エグゼキューター** - 設定管理を備えたワークフロー実行エンジン
+- **ツールシステム** - エージェントツール用の関数デコレーター、レジストリ、実行フレームワーク
+- **ワークフロー結果** - メタデータ、タイミング、出力アクセスを含む実行結果
+- **埋め込み** - セマンティック検索と取得のためのベクトル埋め込み
+- **ワークフローコンテキスト** - ワークフロー実行全体での共有状態と変数
+- **ドキュメントローダー** - 複数の形式（PDF、DOCX、TXT、JSON、CSV、XML、HTML）からドキュメントを読み込んで解析
+- **テキストスプリッター** - ドキュメントをチャンクに分割（文字、トークン、文、再帰的）
+
+クラス、メソッド、使用例の完全なリストについては、[Python API リファレンス](docs/api-reference/python-api.md)を参照してください。
+
 ## ドキュメント
 
 完全なドキュメントについては、[https://docs.graphbit.ai/](https://docs.graphbit.ai/)をご覧ください。

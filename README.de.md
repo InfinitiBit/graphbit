@@ -193,6 +193,45 @@ print("\nSmart Agent Output: \n", result.get_node_output("Smart Agent"))
 print("\nData Processor Output: \n", result.get_node_output("Data Processor"))
 ```
 
+## Beobachtbarkeit und Tracing
+
+GraphBit Tracer erfasst und überwacht LLM-Aufrufe und KI-Workflows mit minimaler Konfiguration. Es umschließt GraphBit LLM-Clients und Workflow-Executors, um Prompts, Antworten, Token-Nutzung, Latenz und Fehler zu verfolgen, ohne Ihren Code zu ändern.
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=nzwrxSiRl2U">
+    <img src="https://img.youtube.com/vi/nzwrxSiRl2U/maxresdefault.jpg" alt="GraphBit Observability & Tracing" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>Sehen Sie sich das Tutorial zu GraphBit Beobachtbarkeit und Tracing an</em></p>
+</div>
+
+## High-Level-Architektur
+
+<p align="center">
+  <img src="assets/architecture.svg" height="250" alt="GraphBit Architecture">
+</p>
+
+Dreistufiges Design für Zuverlässigkeit und Leistung:
+- **Rust-Kern** - Workflow-Engine, Agenten und LLM-Anbieter
+- **Orchestrierungsschicht** - Projektverwaltung und Ausführung
+- **Python-API** - PyO3-Bindungen mit asynchroner Unterstützung
+
+## Python-API-Integrationen
+
+GraphBit bietet eine umfangreiche Python-API zum Erstellen und Integrieren agentischer Workflows:
+
+- **LLM-Clients** - Multi-Provider-LLM-Integrationen (OpenAI, Anthropic, Azure und mehr)
+- **Workflows** - Definieren und verwalten Sie Multi-Agenten-Workflow-Graphen mit Zustandsverwaltung
+- **Knoten** - Agentenknoten, Werkzeugknoten und benutzerdefinierte Workflow-Komponenten
+- **Executors** - Workflow-Ausführungs-Engine mit Konfigurationsverwaltung
+- **Werkzeugsystem** - Funktionsdekoratoren, Registry und Ausführungs-Framework für Agentenwerkzeuge
+- **Workflow-Ergebnisse** - Ausführungsergebnisse mit Metadaten, Timing und Ausgabezugriff
+- **Embeddings** - Vektor-Embeddings für semantische Suche und Abruf
+- **Workflow-Kontext** - Gemeinsamer Zustand und Variablen über die Workflow-Ausführung hinweg
+- **Dokumenten-Loader** - Laden und Parsen von Dokumenten aus mehreren Formaten (PDF, DOCX, TXT, JSON, CSV, XML, HTML)
+- **Text-Splitter** - Dokumente in Chunks aufteilen (Zeichen, Token, Satz, rekursiv)
+
+Für die vollständige Liste der Klassen, Methoden und Verwendungsbeispiele siehe die [Python-API-Referenz](docs/api-reference/python-api.md).
+
 ## Dokumentation
 
 Für vollständige Dokumentation besuchen Sie: [https://docs.graphbit.ai/](https://docs.graphbit.ai/)

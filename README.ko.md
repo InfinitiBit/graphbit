@@ -193,6 +193,45 @@ print("\nSmart Agent Output: \n", result.get_node_output("Smart Agent"))
 print("\nData Processor Output: \n", result.get_node_output("Data Processor"))
 ```
 
+## 관찰성 및 추적
+
+GraphBit Tracer는 최소한의 구성으로 LLM 호출 및 AI 워크플로우를 캡처하고 모니터링합니다. GraphBit LLM 클라이언트와 워크플로우 실행기를 래핑하여 코드를 변경하지 않고 프롬프트, 응답, 토큰 사용량, 지연 시간 및 오류를 추적합니다.
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=nzwrxSiRl2U">
+    <img src="https://img.youtube.com/vi/nzwrxSiRl2U/maxresdefault.jpg" alt="GraphBit Observability & Tracing" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>GraphBit 관찰성 및 추적 튜토리얼 보기</em></p>
+</div>
+
+## 고수준 아키텍처
+
+<p align="center">
+  <img src="assets/architecture.svg" height="250" alt="GraphBit Architecture">
+</p>
+
+신뢰성과 성능을 위한 3계층 설계:
+- **Rust 코어** - 워크플로우 엔진, 에이전트 및 LLM 제공자
+- **오케스트레이션 계층** - 프로젝트 관리 및 실행
+- **Python API** - 비동기 지원이 포함된 PyO3 바인딩
+
+## Python API 통합
+
+GraphBit은 에이전트 워크플로우를 구축하고 통합하기 위한 풍부한 Python API를 제공합니다:
+
+- **LLM 클라이언트** - 다중 제공자 LLM 통합(OpenAI, Anthropic, Azure 등)
+- **워크플로우** - 상태 관리를 갖춘 다중 에이전트 워크플로우 그래프 정의 및 관리
+- **노드** - 에이전트 노드, 도구 노드 및 사용자 정의 워크플로우 구성 요소
+- **실행기** - 구성 관리를 갖춘 워크플로우 실행 엔진
+- **도구 시스템** - 에이전트 도구를 위한 함수 데코레이터, 레지스트리 및 실행 프레임워크
+- **워크플로우 결과** - 메타데이터, 타이밍 및 출력 액세스가 포함된 실행 결과
+- **임베딩** - 의미론적 검색 및 검색을 위한 벡터 임베딩
+- **워크플로우 컨텍스트** - 워크플로우 실행 전반에 걸친 공유 상태 및 변수
+- **문서 로더** - 여러 형식(PDF, DOCX, TXT, JSON, CSV, XML, HTML)에서 문서 로드 및 구문 분석
+- **텍스트 분할기** - 문서를 청크로 분할(문자, 토큰, 문장, 재귀)
+
+클래스, 메서드 및 사용 예제의 전체 목록은 [Python API 참조](docs/api-reference/python-api.md)를 참조하세요.
+
 ## 문서
 
 전체 문서는 [https://docs.graphbit.ai/](https://docs.graphbit.ai/)를 참조하세요.

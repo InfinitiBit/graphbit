@@ -193,6 +193,45 @@ print("\nSmart Agent Output: \n", result.get_node_output("Smart Agent"))
 print("\nData Processor Output: \n", result.get_node_output("Data Processor"))
 ```
 
+## 可观测性与追踪
+
+GraphBit Tracer 以最小配置捕获和监控 LLM 调用和 AI 工作流。它包装 GraphBit LLM 客户端和工作流执行器，以追踪提示、响应、令牌使用、延迟和错误，而无需更改您的代码。
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=nzwrxSiRl2U">
+    <img src="https://img.youtube.com/vi/nzwrxSiRl2U/maxresdefault.jpg" alt="GraphBit Observability & Tracing" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>观看 GraphBit 可观测性与追踪教程</em></p>
+</div>
+
+## 高层架构
+
+<p align="center">
+  <img src="assets/architecture.svg" height="250" alt="GraphBit Architecture">
+</p>
+
+三层设计确保可靠性和性能：
+- **Rust 核心** - 工作流引擎、智能体和 LLM 提供商
+- **编排层** - 项目管理和执行
+- **Python API** - PyO3 绑定，支持异步
+
+## Python API 集成
+
+GraphBit 提供丰富的 Python API 用于构建和集成智能体工作流：
+
+- **LLM 客户端** - 多提供商 LLM 集成（OpenAI、Anthropic、Azure 等）
+- **工作流** - 定义和管理具有状态管理的多智能体工作流图
+- **节点** - 智能体节点、工具节点和自定义工作流组件
+- **执行器** - 具有配置管理的工作流执行引擎
+- **工具系统** - 智能体工具的函数装饰器、注册表和执行框架
+- **工作流结果** - 带有元数据、时间和输出访问的执行结果
+- **嵌入** - 用于语义搜索和检索的向量嵌入
+- **工作流上下文** - 工作流执行过程中的共享状态和变量
+- **文档加载器** - 从多种格式加载和解析文档（PDF、DOCX、TXT、JSON、CSV、XML、HTML）
+- **文本分割器** - 将文档分割成块（字符、令牌、句子、递归）
+
+有关类、方法和使用示例的完整列表，请参阅 [Python API 参考](docs/api-reference/python-api.md)。
+
 ## 文档
 
 完整文档请访问：[https://docs.graphbit.ai/](https://docs.graphbit.ai/)

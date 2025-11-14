@@ -193,6 +193,45 @@ print("\nSmart Agent Output: \n", result.get_node_output("Smart Agent"))
 print("\nData Processor Output: \n", result.get_node_output("Data Processor"))
 ```
 
+## Osservabilità e Tracciamento
+
+GraphBit Tracer cattura e monitora le chiamate LLM e i flussi di lavoro AI con configurazione minima. Avvolge i client LLM GraphBit e gli esecutori di flusso di lavoro per tracciare prompt, risposte, utilizzo dei token, latenza ed errori senza modificare il codice.
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=nzwrxSiRl2U">
+    <img src="https://img.youtube.com/vi/nzwrxSiRl2U/maxresdefault.jpg" alt="GraphBit Observability & Tracing" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>Guarda il tutorial su Osservabilità e Tracciamento di GraphBit</em></p>
+</div>
+
+## Architettura di Alto Livello
+
+<p align="center">
+  <img src="assets/architecture.svg" height="250" alt="GraphBit Architecture">
+</p>
+
+Design a tre livelli per affidabilità e prestazioni:
+- **Nucleo Rust** - Motore di flusso di lavoro, agenti e fornitori LLM
+- **Livello di Orchestrazione** - Gestione ed esecuzione dei progetti
+- **API Python** - Binding PyO3 con supporto asincrono
+
+## Integrazioni API Python
+
+GraphBit fornisce un'API Python ricca per costruire e integrare flussi di lavoro agentici:
+
+- **Client LLM** - Integrazioni LLM multi-provider (OpenAI, Anthropic, Azure e altro)
+- **Flussi di Lavoro** - Definire e gestire grafi di flusso di lavoro multi-agente con gestione dello stato
+- **Nodi** - Nodi agente, nodi strumento e componenti di flusso di lavoro personalizzati
+- **Esecutori** - Motore di esecuzione del flusso di lavoro con gestione della configurazione
+- **Sistema di Strumenti** - Decoratori di funzioni, registro e framework di esecuzione per strumenti agente
+- **Risultati del Flusso di Lavoro** - Risultati di esecuzione con metadati, timing e accesso all'output
+- **Embeddings** - Embeddings vettoriali per ricerca semantica e recupero
+- **Contesto del Flusso di Lavoro** - Stato condiviso e variabili attraverso l'esecuzione del flusso di lavoro
+- **Caricatori di Documenti** - Caricare e analizzare documenti da più formati (PDF, DOCX, TXT, JSON, CSV, XML, HTML)
+- **Divisori di Testo** - Dividere documenti in blocchi (carattere, token, frase, ricorsivo)
+
+Per l'elenco completo di classi, metodi ed esempi di utilizzo, consulta il [Riferimento API Python](docs/api-reference/python-api.md).
+
 ## Documentazione
 
 Per la documentazione completa, visitare: [https://docs.graphbit.ai/](https://docs.graphbit.ai/)

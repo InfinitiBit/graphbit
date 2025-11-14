@@ -193,6 +193,45 @@ print("\nSmart Agent Output: \n", result.get_node_output("Smart Agent"))
 print("\nData Processor Output: \n", result.get_node_output("Data Processor"))
 ```
 
+## Observabilité et Traçage
+
+GraphBit Tracer capture et surveille les appels LLM et les flux de travail IA avec une configuration minimale. Il enveloppe les clients LLM GraphBit et les exécuteurs de flux de travail pour tracer les prompts, les réponses, l'utilisation des tokens, la latence et les erreurs sans modifier votre code.
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=nzwrxSiRl2U">
+    <img src="https://img.youtube.com/vi/nzwrxSiRl2U/maxresdefault.jpg" alt="GraphBit Observability & Tracing" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>Regardez le tutoriel sur l'Observabilité et le Traçage de GraphBit</em></p>
+</div>
+
+## Architecture de Haut Niveau
+
+<p align="center">
+  <img src="assets/architecture.svg" height="250" alt="GraphBit Architecture">
+</p>
+
+Conception à trois niveaux pour la fiabilité et les performances :
+- **Noyau Rust** - Moteur de flux de travail, agents et fournisseurs LLM
+- **Couche d'Orchestration** - Gestion et exécution de projets
+- **API Python** - Liaisons PyO3 avec support asynchrone
+
+## Intégrations API Python
+
+GraphBit fournit une API Python riche pour construire et intégrer des flux de travail agentiques :
+
+- **Clients LLM** - Intégrations LLM multi-fournisseurs (OpenAI, Anthropic, Azure et plus)
+- **Flux de Travail** - Définir et gérer des graphes de flux de travail multi-agents avec gestion d'état
+- **Nœuds** - Nœuds d'agent, nœuds d'outils et composants de flux de travail personnalisés
+- **Exécuteurs** - Moteur d'exécution de flux de travail avec gestion de configuration
+- **Système d'Outils** - Décorateurs de fonctions, registre et framework d'exécution pour les outils d'agent
+- **Résultats de Flux de Travail** - Résultats d'exécution avec métadonnées, timing et accès aux sorties
+- **Embeddings** - Embeddings vectoriels pour la recherche sémantique et la récupération
+- **Contexte de Flux de Travail** - État partagé et variables à travers l'exécution du flux de travail
+- **Chargeurs de Documents** - Charger et analyser des documents de plusieurs formats (PDF, DOCX, TXT, JSON, CSV, XML, HTML)
+- **Diviseurs de Texte** - Diviser les documents en morceaux (caractère, token, phrase, récursif)
+
+Pour la liste complète des classes, méthodes et exemples d'utilisation, consultez la [Référence API Python](docs/api-reference/python-api.md).
+
 ## Documentation
 
 Pour la documentation complète, visitez : [https://docs.graphbit.ai/](https://docs.graphbit.ai/)
