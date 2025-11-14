@@ -80,7 +80,14 @@ Our internal benchmark suite compared GraphBit to leading Python-based agent fra
 
 GraphBit consistently delivers production-grade efficiency across LLM calls, tool invocations, and multi-agent chains.
 
-🎥 Watch the benchmark demo: Benchmark Video (coming soon)
+### Benchmark Demo
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=MaCl5oENeAY">
+    <img src="https://img.youtube.com/vi/MaCl5oENeAY/maxresdefault.jpg" alt="GraphBit Benchmark Demo" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>Watch the GraphBit Benchmark Demo</em></p>
+</div>
 
 ## When to Use GraphBit
 
