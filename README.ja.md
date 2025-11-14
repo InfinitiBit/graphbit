@@ -128,27 +128,69 @@ pip install graphbit
 
 ### 環境設定
 
-`.env`ファイルを作成：
+プロジェクトで使用したい API キーを設定します：
+```bash
+# OpenAI（オプション – OpenAI モデルを使用する場合は必須）
+export OPENAI_API_KEY=your_openai_api_key_here
 
-```env
-OPENAI_API_KEY=your_api_key_here
+# Anthropic（オプション – Anthropic モデルを使用する場合は必須）
+export ANTHROPIC_API_KEY=your_anthropic_api_key_here
 ```
 
-### 基本的な例
+> **セキュリティ注意事項**：API キーをバージョン管理にコミットしないでください。常に環境変数または安全なシークレット管理を使用してください。
 
+### 基本的な使用方法
 ```python
-from graphbit import Agent
+import os
 
-# エージェントを作成
-agent = Agent(
-    name="assistant",
-    model="gpt-4",
-    instructions="You are a helpful assistant."
+from graphbit import LlmConfig, Executor, Workflow, Node, tool
+
+# 初期化と設定
+config = LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4o-mini")
+
+# エグゼキューターを作成
+executor = Executor(config)
+
+# LLM 選択のための明確な説明を持つツールを作成
+@tool(_description="任意の都市の現在の天気情報を取得")
+def get_weather(location: str) -> dict:
+    return {"location": location, "temperature": 22, "condition": "sunny"}
+
+@tool(_description="数学計算を実行して結果を返す")
+def calculate(expression: str) -> str:
+    return f"Result: {eval(expression)}"
+
+# ワークフローを構築
+workflow = Workflow("Analysis Pipeline")
+
+# エージェントノードを作成
+smart_agent = Node.agent(
+    name="Smart Agent",
+    prompt="What's the weather in Paris and calculate 15 + 27?",
+    system_prompt="You are an assistant skilled in weather lookup and math calculations. Use tools to answer queries accurately.",
+    tools=[get_weather, calculate]
 )
 
-# エージェントを実行
-result = agent.run("Hello, GraphBit!")
-print(result)
+processor = Node.agent(
+    name="Data Processor",
+    prompt="Process the results obtained from Smart Agent.",
+    system_prompt="""You process and organize results from other agents.
+
+    - Summarize and clarify key points
+    - Structure your output for easy reading
+    - Focus on actionable insights
+    """
+)
+
+# 接続して実行
+id1 = workflow.add_node(smart_agent)
+id2 = workflow.add_node(processor)
+workflow.connect(id1, id2)
+
+result = executor.execute(workflow)
+print(f"Workflow completed: {result.is_success()}")
+print("\nSmart Agent Output: \n", result.get_node_output("Smart Agent"))
+print("\nData Processor Output: \n", result.get_node_output("Data Processor"))
 ```
 
 ## ドキュメント

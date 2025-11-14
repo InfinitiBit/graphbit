@@ -128,27 +128,69 @@ pip install graphbit
 
 ### Настройка Окружения
 
-Создать файл `.env`:
+Настройте API-ключи, которые вы хотите использовать в своем проекте:
+```bash
+# OpenAI (необязательно – требуется при использовании моделей OpenAI)
+export OPENAI_API_KEY=your_openai_api_key_here
 
-```env
-OPENAI_API_KEY=your_api_key_here
+# Anthropic (необязательно – требуется при использовании моделей Anthropic)
+export ANTHROPIC_API_KEY=your_anthropic_api_key_here
 ```
 
-### Базовый Пример
+> **Примечание по Безопасности**: Никогда не фиксируйте API-ключи в системе контроля версий. Всегда используйте переменные окружения или безопасное управление секретами.
 
+### Базовое Использование
 ```python
-from graphbit import Agent
+import os
 
-# Создать агента
-agent = Agent(
-    name="assistant",
-    model="gpt-4",
-    instructions="You are a helpful assistant."
+from graphbit import LlmConfig, Executor, Workflow, Node, tool
+
+# Инициализация и настройка
+config = LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4o-mini")
+
+# Создать исполнителя
+executor = Executor(config)
+
+# Создать инструменты с четкими описаниями для выбора LLM
+@tool(_description="Получить текущую информацию о погоде для любого города")
+def get_weather(location: str) -> dict:
+    return {"location": location, "temperature": 22, "condition": "sunny"}
+
+@tool(_description="Выполнить математические вычисления и вернуть результаты")
+def calculate(expression: str) -> str:
+    return f"Result: {eval(expression)}"
+
+# Построить рабочий процесс
+workflow = Workflow("Analysis Pipeline")
+
+# Создать узлы агентов
+smart_agent = Node.agent(
+    name="Smart Agent",
+    prompt="What's the weather in Paris and calculate 15 + 27?",
+    system_prompt="You are an assistant skilled in weather lookup and math calculations. Use tools to answer queries accurately.",
+    tools=[get_weather, calculate]
 )
 
-# Запустить агента
-result = agent.run("Hello, GraphBit!")
-print(result)
+processor = Node.agent(
+    name="Data Processor",
+    prompt="Process the results obtained from Smart Agent.",
+    system_prompt="""You process and organize results from other agents.
+
+    - Summarize and clarify key points
+    - Structure your output for easy reading
+    - Focus on actionable insights
+    """
+)
+
+# Подключить и выполнить
+id1 = workflow.add_node(smart_agent)
+id2 = workflow.add_node(processor)
+workflow.connect(id1, id2)
+
+result = executor.execute(workflow)
+print(f"Workflow completed: {result.is_success()}")
+print("\nSmart Agent Output: \n", result.get_node_output("Smart Agent"))
+print("\nData Processor Output: \n", result.get_node_output("Data Processor"))
 ```
 
 ## Документация

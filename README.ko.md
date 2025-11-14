@@ -128,27 +128,69 @@ pip install graphbit
 
 ### 환경 설정
 
-`.env` 파일 생성:
+프로젝트에서 사용할 API 키를 설정합니다:
+```bash
+# OpenAI (선택 사항 – OpenAI 모델을 사용하는 경우 필수)
+export OPENAI_API_KEY=your_openai_api_key_here
 
-```env
-OPENAI_API_KEY=your_api_key_here
+# Anthropic (선택 사항 – Anthropic 모델을 사용하는 경우 필수)
+export ANTHROPIC_API_KEY=your_anthropic_api_key_here
 ```
 
-### 기본 예제
+> **보안 참고사항**: API 키를 버전 관리에 커밋하지 마세요. 항상 환경 변수 또는 안전한 비밀 관리를 사용하세요.
 
+### 기본 사용법
 ```python
-from graphbit import Agent
+import os
 
-# 에이전트 생성
-agent = Agent(
-    name="assistant",
-    model="gpt-4",
-    instructions="You are a helpful assistant."
+from graphbit import LlmConfig, Executor, Workflow, Node, tool
+
+# 초기화 및 구성
+config = LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4o-mini")
+
+# 실행기 생성
+executor = Executor(config)
+
+# LLM 선택을 위한 명확한 설명이 있는 도구 생성
+@tool(_description="모든 도시의 현재 날씨 정보 가져오기")
+def get_weather(location: str) -> dict:
+    return {"location": location, "temperature": 22, "condition": "sunny"}
+
+@tool(_description="수학 계산을 수행하고 결과 반환")
+def calculate(expression: str) -> str:
+    return f"Result: {eval(expression)}"
+
+# 워크플로우 구축
+workflow = Workflow("Analysis Pipeline")
+
+# 에이전트 노드 생성
+smart_agent = Node.agent(
+    name="Smart Agent",
+    prompt="What's the weather in Paris and calculate 15 + 27?",
+    system_prompt="You are an assistant skilled in weather lookup and math calculations. Use tools to answer queries accurately.",
+    tools=[get_weather, calculate]
 )
 
-# 에이전트 실행
-result = agent.run("Hello, GraphBit!")
-print(result)
+processor = Node.agent(
+    name="Data Processor",
+    prompt="Process the results obtained from Smart Agent.",
+    system_prompt="""You process and organize results from other agents.
+
+    - Summarize and clarify key points
+    - Structure your output for easy reading
+    - Focus on actionable insights
+    """
+)
+
+# 연결 및 실행
+id1 = workflow.add_node(smart_agent)
+id2 = workflow.add_node(processor)
+workflow.connect(id1, id2)
+
+result = executor.execute(workflow)
+print(f"Workflow completed: {result.is_success()}")
+print("\nSmart Agent Output: \n", result.get_node_output("Smart Agent"))
+print("\nData Processor Output: \n", result.get_node_output("Data Processor"))
 ```
 
 ## 문서

@@ -128,27 +128,69 @@ pip install graphbit
 
 ### 环境设置
 
-创建 `.env` 文件：
+设置您想在项目中使用的 API 密钥：
+```bash
+# OpenAI（可选 – 如果使用 OpenAI 模型则需要）
+export OPENAI_API_KEY=your_openai_api_key_here
 
-```env
-OPENAI_API_KEY=your_api_key_here
+# Anthropic（可选 – 如果使用 Anthropic 模型则需要）
+export ANTHROPIC_API_KEY=your_anthropic_api_key_here
 ```
 
-### 基本示例
+> **安全提示**：切勿将 API 密钥提交到版本控制。始终使用环境变量或安全的密钥管理。
 
+### 基本用法
 ```python
-from graphbit import Agent
+import os
 
-# 创建智能体
-agent = Agent(
-    name="assistant",
-    model="gpt-4",
-    instructions="You are a helpful assistant."
+from graphbit import LlmConfig, Executor, Workflow, Node, tool
+
+# 初始化和配置
+config = LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4o-mini")
+
+# 创建执行器
+executor = Executor(config)
+
+# 创建具有清晰描述的工具以供 LLM 选择
+@tool(_description="获取任何城市的当前天气信息")
+def get_weather(location: str) -> dict:
+    return {"location": location, "temperature": 22, "condition": "sunny"}
+
+@tool(_description="执行数学计算并返回结果")
+def calculate(expression: str) -> str:
+    return f"Result: {eval(expression)}"
+
+# 构建工作流
+workflow = Workflow("Analysis Pipeline")
+
+# 创建智能体节点
+smart_agent = Node.agent(
+    name="Smart Agent",
+    prompt="What's the weather in Paris and calculate 15 + 27?",
+    system_prompt="You are an assistant skilled in weather lookup and math calculations. Use tools to answer queries accurately.",
+    tools=[get_weather, calculate]
 )
 
-# 运行智能体
-result = agent.run("Hello, GraphBit!")
-print(result)
+processor = Node.agent(
+    name="Data Processor",
+    prompt="Process the results obtained from Smart Agent.",
+    system_prompt="""You process and organize results from other agents.
+
+    - Summarize and clarify key points
+    - Structure your output for easy reading
+    - Focus on actionable insights
+    """
+)
+
+# 连接和执行
+id1 = workflow.add_node(smart_agent)
+id2 = workflow.add_node(processor)
+workflow.connect(id1, id2)
+
+result = executor.execute(workflow)
+print(f"Workflow completed: {result.is_success()}")
+print("\nSmart Agent Output: \n", result.get_node_output("Smart Agent"))
+print("\nData Processor Output: \n", result.get_node_output("Data Processor"))
 ```
 
 ## 文档
