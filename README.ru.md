@@ -71,6 +71,41 @@ GraphBit — это агентный ИИ-фреймворк с открытым
 - **Управление Ресурсами** - Контроль параллелизма и оптимизация памяти
 - **Наблюдаемость** - Встроенная трассировка, структурированные логи и метрики производительности
 
+## Бенчмарк
+
+GraphBit был создан для эффективности в масштабе, не теоретических утверждений, а измеренных результатов.
+
+Наш внутренний набор бенчмарков сравнил GraphBit с ведущими фреймворками агентов на основе Python при идентичных рабочих нагрузках.
+
+| Метрика             | GraphBit        | Другие Фреймворки | Выигрыш                  |
+|:--------------------|:---------------:|:----------------:|:-------------------------|
+| Использование CPU   | 1.0× базовый    | 68.3× выше       | ~68× CPU                 |
+| Объем Памяти        | 1.0× базовый    | 140× выше        | ~140× Память             |
+| Скорость Выполнения | ≈ равно / быстрее | —              | Стабильная пропускная способность |
+| Детерминизм         | 100% успех      | Переменный       | Гарантированная надежность |
+
+GraphBit последовательно обеспечивает эффективность производственного уровня для вызовов LLM, вызовов инструментов и цепочек мультиагентов.
+
+### Демо Бенчмарка
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=MaCl5oENeAY">
+    <img src="https://img.youtube.com/vi/MaCl5oENeAY/maxresdefault.jpg" alt="GraphBit Benchmark Demo" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>Посмотреть Демо Бенчмарка GraphBit</em></p>
+</div>
+
+## Когда Использовать GraphBit
+
+Выбирайте GraphBit, если вам нужно:
+
+- Мультиагентные системы производственного уровня, которые не рухнут под нагрузкой
+- Типобезопасное выполнение и воспроизводимые результаты
+- Оркестрация в реальном времени для гибридных или потоковых AI-приложений
+- Эффективность уровня Rust с эргономикой уровня Python
+
+Если вы масштабируетесь за пределы прототипов или заботитесь о детерминизме во время выполнения, GraphBit для вас.
+
 ## Быстрый Старт
 
 ### Установка
@@ -81,38 +116,164 @@ GraphBit — это агентный ИИ-фреймворк с открытым
 pip install graphbit
 ```
 
+### Видеоурок по Быстрому Старту
+
+<div align="center">
+  <a href="https://youtu.be/ti0wbHFKKFM?si=hnxi-1W823z5I_zs">
+    <img src="https://img.youtube.com/vi/ti0wbHFKKFM/maxresdefault.jpg" alt="GraphBit Quick Start Tutorial" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>Посмотрите руководство по установке GraphBit через PyPI | Полное руководство по примеру и запуску</em></p>
+</div>
+
+
 ### Настройка Окружения
 
-Создать файл `.env`:
+Настройте API-ключи, которые вы хотите использовать в своем проекте:
+```bash
+# OpenAI (необязательно – требуется при использовании моделей OpenAI)
+export OPENAI_API_KEY=your_openai_api_key_here
 
-```env
-OPENAI_API_KEY=your_api_key_here
+# Anthropic (необязательно – требуется при использовании моделей Anthropic)
+export ANTHROPIC_API_KEY=your_anthropic_api_key_here
 ```
 
-### Базовый Пример
+> **Примечание по Безопасности**: Никогда не фиксируйте API-ключи в системе контроля версий. Всегда используйте переменные окружения или безопасное управление секретами.
 
+### Базовое Использование
 ```python
-from graphbit import Agent
+import os
 
-# Создать агента
-agent = Agent(
-    name="assistant",
-    model="gpt-4",
-    instructions="You are a helpful assistant."
+from graphbit import LlmConfig, Executor, Workflow, Node, tool
+
+# Инициализация и настройка
+config = LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4o-mini")
+
+# Создать исполнителя
+executor = Executor(config)
+
+# Создать инструменты с четкими описаниями для выбора LLM
+@tool(_description="Получить текущую информацию о погоде для любого города")
+def get_weather(location: str) -> dict:
+    return {"location": location, "temperature": 22, "condition": "sunny"}
+
+@tool(_description="Выполнить математические вычисления и вернуть результаты")
+def calculate(expression: str) -> str:
+    return f"Result: {eval(expression)}"
+
+# Построить рабочий процесс
+workflow = Workflow("Analysis Pipeline")
+
+# Создать узлы агентов
+smart_agent = Node.agent(
+    name="Smart Agent",
+    prompt="What's the weather in Paris and calculate 15 + 27?",
+    system_prompt="You are an assistant skilled in weather lookup and math calculations. Use tools to answer queries accurately.",
+    tools=[get_weather, calculate]
 )
 
-# Запустить агента
-result = agent.run("Hello, GraphBit!")
-print(result)
+processor = Node.agent(
+    name="Data Processor",
+    prompt="Process the results obtained from Smart Agent.",
+    system_prompt="""You process and organize results from other agents.
+
+    - Summarize and clarify key points
+    - Structure your output for easy reading
+    - Focus on actionable insights
+    """
+)
+
+# Подключить и выполнить
+id1 = workflow.add_node(smart_agent)
+id2 = workflow.add_node(processor)
+workflow.connect(id1, id2)
+
+result = executor.execute(workflow)
+print(f"Workflow completed: {result.is_success()}")
+print("\nSmart Agent Output: \n", result.get_node_output("Smart Agent"))
+print("\nData Processor Output: \n", result.get_node_output("Data Processor"))
 ```
+
+## Наблюдаемость и Трассировка
+
+GraphBit Tracer захватывает и отслеживает вызовы LLM и рабочие процессы ИИ с минимальной конфигурацией. Он оборачивает клиенты GraphBit LLM и исполнители рабочих процессов для отслеживания промптов, ответов, использования токенов, задержки и ошибок без изменения вашего кода.
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=nzwrxSiRl2U">
+    <img src="https://img.youtube.com/vi/nzwrxSiRl2U/maxresdefault.jpg" alt="GraphBit Observability & Tracing" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>Посмотрите руководство по Наблюдаемости и Трассировке GraphBit</em></p>
+</div>
+
+## Высокоуровневая Архитектура
+
+<p align="center">
+  <img src="assets/architecture.svg" height="250" alt="GraphBit Architecture">
+</p>
+
+Трехуровневый дизайн для надежности и производительности:
+- **Ядро Rust** - Движок рабочих процессов, агенты и провайдеры LLM
+- **Слой Оркестрации** - Управление проектами и выполнение
+- **Python API** - Привязки PyO3 с поддержкой асинхронности
+
+## Интеграции Python API
+
+GraphBit предоставляет богатый Python API для создания и интеграции агентных рабочих процессов:
+
+- **Клиенты LLM** - Интеграции LLM с несколькими провайдерами (OpenAI, Anthropic, Azure и другие)
+- **Рабочие Процессы** - Определение и управление графами рабочих процессов с несколькими агентами с управлением состоянием
+- **Узлы** - Узлы агентов, узлы инструментов и пользовательские компоненты рабочих процессов
+- **Исполнители** - Движок выполнения рабочих процессов с управлением конфигурацией
+- **Система Инструментов** - Декораторы функций, реестр и фреймворк выполнения для инструментов агентов
+- **Результаты Рабочих Процессов** - Результаты выполнения с метаданными, временем и доступом к выводу
+- **Эмбеддинги** - Векторные эмбеддинги для семантического поиска и извлечения
+- **Контекст Рабочего Процесса** - Общее состояние и переменные в процессе выполнения рабочего процесса
+- **Загрузчики Документов** - Загрузка и разбор документов из нескольких форматов (PDF, DOCX, TXT, JSON, CSV, XML, HTML)
+- **Разделители Текста** - Разделение документов на фрагменты (символ, токен, предложение, рекурсивный)
+
+Для полного списка классов, методов и примеров использования см. [Справочник Python API](docs/api-reference/python-api.md).
 
 ## Документация
 
 Для полной документации посетите: [https://docs.graphbit.ai/](https://docs.graphbit.ai/)
 
-## Вклад
+## Экосистема и Расширения
 
-Мы приветствуем вклад! См. файл [Contributing](CONTRIBUTING.md) для настройки разработки и руководств.
+Модульная архитектура GraphBit поддерживает внешние интеграции:
+
+| Категория         | Примеры                                                                                       |
+|:------------------|:----------------------------------------------------------------------------------------------|
+| Провайдеры LLM    | OpenAI, Anthropic, Azure OpenAI, DeepSeek, Together, Ollama, OpenRouter, Fireworks, Mistral AI, Replicate, Perplexity, HuggingFace, AI21, Bytedance, xAI, и другие |
+| Векторные Хранилища | Pinecone, Qdrant, Chroma, Milvus, Weaviate, FAISS, Elasticsearch, AstraDB, Redis, и другие |
+| Базы Данных       | PostgreSQL (PGVector), MongoDB, MariaDB, IBM DB2, Redis, и другие                             |
+| Облачные Платформы | AWS (Boto3), Azure, Google Cloud Platform, и другие                                          |
+| API Поиска        | Serper, Google Search, GitHub Search, GitLab Search, и другие                                 |
+| Модели Эмбеддингов | OpenAI Embeddings, Voyage AI, и другие                                                       |
+
+Расширения разрабатываются и поддерживаются сообществом.
+
+<p align="center">
+  <img src="assets/Ecosystem.png" alt="GraphBit Ecosystem - Stop Choosing, Start Orchestrating" style="max-width: 100%; height: auto;">
+</p>
+
+
+### Создание Вашего Первого Рабочего Процесса Агента с GraphBit
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=gKvkMc2qZcA">
+    <img src="https://img.youtube.com/vi/gKvkMc2qZcA/maxresdefault.jpg" alt="Making Agent Workflow by GraphBit" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>Посмотрите руководство по созданию рабочего процесса агента с GraphBit</em></p>
+</div>
+
+## Вклад в GraphBit
+
+Мы приветствуем вклад. Чтобы начать, пожалуйста, см. файл [Contributing](CONTRIBUTING.md) для настройки разработки и руководств.
+
+GraphBit создан замечательным сообществом исследователей и инженеров.
+
+<a href="https://github.com/Infinitibit/graphbit/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=Infinitibit/graphbit" />
+</a>
 
 ## Безопасность
 

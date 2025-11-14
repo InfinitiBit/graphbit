@@ -71,6 +71,41 @@ GraphBit هو إطار عمل ذكاء اصطناعي مفتوح المصدر ل
 - **إدارة الموارد** - ضوابط التزامن وتحسين الذاكرة
 - **قابلية المراقبة** - تتبع مدمج، وسجلات منظمة، ومقاييس الأداء
 
+## المعيار
+
+تم بناء GraphBit من أجل الكفاءة على نطاق واسع، وليس ادعاءات نظرية، بل نتائج مقاسة.
+
+قارنت مجموعة المعايير الداخلية لدينا GraphBit بأطر عمل الوكلاء الرائدة المستندة إلى Python عبر أحمال عمل متطابقة.
+
+| المقياس             | GraphBit        | أطر أخرى        | الكسب                    |
+|:--------------------|:---------------:|:----------------:|:-------------------------|
+| استخدام CPU        | 1.0× أساس       | 68.3× أعلى       | ~68× CPU                 |
+| بصمة الذاكرة        | 1.0× أساس       | 140× أعلى        | ~140× ذاكرة              |
+| سرعة التنفيذ        | ≈ متساوٍ / أسرع | —                | إنتاجية متسقة            |
+| الحتمية             | 100% نجاح       | متغير            | موثوقية مضمونة           |
+
+يقدم GraphBit باستمرار كفاءة على مستوى الإنتاج عبر استدعاءات LLM واستدعاءات الأدوات وسلاسل الوكلاء المتعددة.
+
+### عرض توضيحي للمعيار
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=MaCl5oENeAY">
+    <img src="https://img.youtube.com/vi/MaCl5oENeAY/maxresdefault.jpg" alt="GraphBit Benchmark Demo" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>شاهد العرض التوضيحي لمعيار GraphBit</em></p>
+</div>
+
+## متى تستخدم GraphBit
+
+اختر GraphBit إذا كنت بحاجة إلى:
+
+- أنظمة وكلاء متعددة على مستوى الإنتاج لا تنهار تحت الحمل
+- تنفيذ آمن من حيث النوع ومخرجات قابلة للتكرار
+- تنسيق في الوقت الفعلي لتطبيقات الذكاء الاصطناعي الهجينة أو المتدفقة
+- كفاءة على مستوى Rust مع بيئة عمل على مستوى Python
+
+إذا كنت تتوسع خارج النماذج الأولية أو تهتم بالحتمية في وقت التشغيل، فإن GraphBit مناسب لك.
+
 ## البدء السريع
 
 ### التثبيت
@@ -81,38 +116,164 @@ GraphBit هو إطار عمل ذكاء اصطناعي مفتوح المصدر ل
 pip install graphbit
 ```
 
+### فيديو تعليمي للبدء السريع
+
+<div align="center">
+  <a href="https://youtu.be/ti0wbHFKKFM?si=hnxi-1W823z5I_zs">
+    <img src="https://img.youtube.com/vi/ti0wbHFKKFM/maxresdefault.jpg" alt="GraphBit Quick Start Tutorial" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>شاهد تثبيت GraphBit عبر PyPI | دليل المثال والتشغيل الكامل</em></p>
+</div>
+
+
 ### إعداد البيئة
 
-إنشاء ملف `.env`:
+قم بإعداد مفاتيح API التي تريد استخدامها في مشروعك:
+```bash
+# OpenAI (اختياري – مطلوب إذا كنت تستخدم نماذج OpenAI)
+export OPENAI_API_KEY=your_openai_api_key_here
 
-```env
-OPENAI_API_KEY=your_api_key_here
+# Anthropic (اختياري – مطلوب إذا كنت تستخدم نماذج Anthropic)
+export ANTHROPIC_API_KEY=your_anthropic_api_key_here
 ```
 
-### مثال أساسي
+> **ملاحظة أمنية**: لا تقم أبدًا بتثبيت مفاتيح API في التحكم في الإصدار. استخدم دائمًا متغيرات البيئة أو إدارة الأسرار الآمنة.
 
+### الاستخدام الأساسي
 ```python
-from graphbit import Agent
+import os
 
-# إنشاء وكيل
-agent = Agent(
-    name="assistant",
-    model="gpt-4",
-    instructions="You are a helpful assistant."
+from graphbit import LlmConfig, Executor, Workflow, Node, tool
+
+# التهيئة والتكوين
+config = LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4o-mini")
+
+# إنشاء المنفذ
+executor = Executor(config)
+
+# إنشاء أدوات بأوصاف واضحة لاختيار LLM
+@tool(_description="الحصول على معلومات الطقس الحالية لأي مدينة")
+def get_weather(location: str) -> dict:
+    return {"location": location, "temperature": 22, "condition": "sunny"}
+
+@tool(_description="إجراء العمليات الحسابية الرياضية وإرجاع النتائج")
+def calculate(expression: str) -> str:
+    return f"Result: {eval(expression)}"
+
+# بناء سير العمل
+workflow = Workflow("Analysis Pipeline")
+
+# إنشاء عقد الوكيل
+smart_agent = Node.agent(
+    name="Smart Agent",
+    prompt="What's the weather in Paris and calculate 15 + 27?",
+    system_prompt="You are an assistant skilled in weather lookup and math calculations. Use tools to answer queries accurately.",
+    tools=[get_weather, calculate]
 )
 
-# تشغيل الوكيل
-result = agent.run("Hello, GraphBit!")
-print(result)
+processor = Node.agent(
+    name="Data Processor",
+    prompt="Process the results obtained from Smart Agent.",
+    system_prompt="""You process and organize results from other agents.
+
+    - Summarize and clarify key points
+    - Structure your output for easy reading
+    - Focus on actionable insights
+    """
+)
+
+# الاتصال والتنفيذ
+id1 = workflow.add_node(smart_agent)
+id2 = workflow.add_node(processor)
+workflow.connect(id1, id2)
+
+result = executor.execute(workflow)
+print(f"Workflow completed: {result.is_success()}")
+print("\nSmart Agent Output: \n", result.get_node_output("Smart Agent"))
+print("\nData Processor Output: \n", result.get_node_output("Data Processor"))
 ```
+
+## القابلية للمراقبة والتتبع
+
+يلتقط GraphBit Tracer ويراقب استدعاءات LLM وسير عمل الذكاء الاصطناعي بأقل قدر من التكوين. يقوم بتغليف عملاء GraphBit LLM ومنفذي سير العمل لتتبع المطالبات والاستجابات واستخدام الرموز والكمون والأخطاء دون تغيير الكود الخاص بك.
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=nzwrxSiRl2U">
+    <img src="https://img.youtube.com/vi/nzwrxSiRl2U/maxresdefault.jpg" alt="GraphBit Observability & Tracing" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>شاهد البرنامج التعليمي حول القابلية للمراقبة والتتبع في GraphBit</em></p>
+</div>
+
+## البنية عالية المستوى
+
+<p align="center">
+  <img src="assets/architecture.svg" height="250" alt="GraphBit Architecture">
+</p>
+
+تصميم ثلاثي الطبقات للموثوقية والأداء:
+- **نواة Rust** - محرك سير العمل والوكلاء ومزودي LLM
+- **طبقة التنسيق** - إدارة المشاريع والتنفيذ
+- **Python API** - روابط PyO3 مع دعم غير متزامن
+
+## تكاملات Python API
+
+يوفر GraphBit واجهة برمجة تطبيقات Python غنية لبناء ودمج سير عمل الوكلاء:
+
+- **عملاء LLM** - تكاملات LLM متعددة المزودين (OpenAI وAnthropic وAzure والمزيد)
+- **سير العمل** - تحديد وإدارة رسوم بيانية لسير عمل متعدد الوكلاء مع إدارة الحالة
+- **العقد** - عقد الوكيل وعقد الأدوات ومكونات سير العمل المخصصة
+- **المنفذون** - محرك تنفيذ سير العمل مع إدارة التكوين
+- **نظام الأدوات** - مزخرفات الوظائف والسجل وإطار التنفيذ لأدوات الوكيل
+- **نتائج سير العمل** - نتائج التنفيذ مع البيانات الوصفية والتوقيت والوصول إلى المخرجات
+- **التضمينات** - تضمينات متجهة للبحث الدلالي والاسترجاع
+- **سياق سير العمل** - الحالة المشتركة والمتغيرات عبر تنفيذ سير العمل
+- **محملات المستندات** - تحميل وتحليل المستندات من تنسيقات متعددة (PDF وDOCX وTXT وJSON وCSV وXML وHTML)
+- **مقسمات النص** - تقسيم المستندات إلى أجزاء (حرف ورمز وجملة وتكراري)
+
+للحصول على القائمة الكاملة للفئات والطرق وأمثلة الاستخدام، راجع [مرجع Python API](docs/api-reference/python-api.md).
 
 ## التوثيق
 
 للحصول على التوثيق الكامل، قم بزيارة: [https://docs.graphbit.ai/](https://docs.graphbit.ai/)
 
-## المساهمة
+## النظام البيئي والإضافات
 
-نرحب بالمساهمات! راجع ملف [Contributing](CONTRIBUTING.md) للحصول على إعداد التطوير والإرشادات.
+تدعم بنية GraphBit المعيارية التكاملات الخارجية:
+
+| الفئة             | أمثلة                                                                                         |
+|:------------------|:----------------------------------------------------------------------------------------------|
+| مزودو LLM         | OpenAI, Anthropic, Azure OpenAI, DeepSeek, Together, Ollama, OpenRouter, Fireworks, Mistral AI, Replicate, Perplexity, HuggingFace, AI21, Bytedance, xAI, والمزيد |
+| مخازن المتجهات    | Pinecone, Qdrant, Chroma, Milvus, Weaviate, FAISS, Elasticsearch, AstraDB, Redis, والمزيد    |
+| قواعد البيانات    | PostgreSQL (PGVector), MongoDB, MariaDB, IBM DB2, Redis, والمزيد                              |
+| منصات السحابة      | AWS (Boto3), Azure, Google Cloud Platform, والمزيد                                            |
+| واجهات برمجة البحث | Serper, Google Search, GitHub Search, GitLab Search, والمزيد                                  |
+| نماذج التضمين     | OpenAI Embeddings, Voyage AI, والمزيد                                                         |
+
+يتم تطوير الإضافات وصيانتها من قبل المجتمع.
+
+<p align="center">
+  <img src="assets/Ecosystem.png" alt="GraphBit Ecosystem - Stop Choosing, Start Orchestrating" style="max-width: 100%; height: auto;">
+</p>
+
+
+### بناء أول سير عمل للوكيل الخاص بك باستخدام GraphBit
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=gKvkMc2qZcA">
+    <img src="https://img.youtube.com/vi/gKvkMc2qZcA/maxresdefault.jpg" alt="Making Agent Workflow by GraphBit" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>شاهد البرنامج التعليمي لإنشاء سير عمل الوكيل باستخدام GraphBit</em></p>
+</div>
+
+## المساهمة في GraphBit
+
+نرحب بالمساهمات. للبدء، يرجى الاطلاع على ملف [Contributing](CONTRIBUTING.md) للحصول على إعداد التطوير والإرشادات.
+
+تم بناء GraphBit بواسطة مجتمع رائع من الباحثين والمهندسين.
+
+<a href="https://github.com/Infinitibit/graphbit/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=Infinitibit/graphbit" />
+</a>
 
 ## الأمان
 

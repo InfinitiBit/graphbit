@@ -71,6 +71,41 @@ Rust 코어와 최소한의 Python 레이어로 구축된 GraphBit은 다른 프
 - **리소스 관리** - 동시성 제어 및 메모리 최적화
 - **관찰 가능성** - 내장 추적, 구조화된 로그 및 성능 메트릭
 
+## 벤치마크
+
+GraphBit은 이론적 주장이 아닌 측정된 결과를 위해 대규모 효율성을 위해 구축되었습니다.
+
+우리의 내부 벤치마크 제품군은 동일한 워크로드에서 GraphBit을 주요 Python 기반 에이전트 프레임워크와 비교했습니다.
+
+| 메트릭              | GraphBit        | 다른 프레임워크  | 이득                     |
+|:--------------------|:---------------:|:----------------:|:-------------------------|
+| CPU 사용량          | 1.0× 기준       | 68.3× 더 높음    | ~68× CPU                 |
+| 메모리 풋프린트     | 1.0× 기준       | 140× 더 높음     | ~140× 메모리             |
+| 실행 속도           | ≈ 동등 / 더 빠름 | —               | 일관된 처리량            |
+| 결정성              | 100% 성공       | 가변적           | 보장된 신뢰성            |
+
+GraphBit은 LLM 호출, 도구 호출 및 다중 에이전트 체인 전반에 걸쳐 일관되게 프로덕션 급 효율성을 제공합니다.
+
+### 벤치마크 데모
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=MaCl5oENeAY">
+    <img src="https://img.youtube.com/vi/MaCl5oENeAY/maxresdefault.jpg" alt="GraphBit Benchmark Demo" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>GraphBit 벤치마크 데모 보기</em></p>
+</div>
+
+## GraphBit을 사용해야 하는 경우
+
+다음이 필요한 경우 GraphBit을 선택하세요:
+
+- 부하 하에서 무너지지 않는 프로덕션 급 다중 에이전트 시스템
+- 타입 안전 실행 및 재현 가능한 출력
+- 하이브리드 또는 스트리밍 AI 애플리케이션을 위한 실시간 오케스트레이션
+- Rust 수준의 효율성과 Python 수준의 인체공학
+
+프로토타입을 넘어 확장하거나 런타임 결정성을 중요하게 생각한다면 GraphBit이 적합합니다.
+
 ## 빠른 시작
 
 ### 설치
@@ -81,38 +116,164 @@ Rust 코어와 최소한의 Python 레이어로 구축된 GraphBit은 다른 프
 pip install graphbit
 ```
 
+### 빠른 시작 비디오 튜토리얼
+
+<div align="center">
+  <a href="https://youtu.be/ti0wbHFKKFM?si=hnxi-1W823z5I_zs">
+    <img src="https://img.youtube.com/vi/ti0wbHFKKFM/maxresdefault.jpg" alt="GraphBit Quick Start Tutorial" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>PyPI를 통한 GraphBit 설치 | 전체 예제 및 실행 가이드 튜토리얼 보기</em></p>
+</div>
+
+
 ### 환경 설정
 
-`.env` 파일 생성:
+프로젝트에서 사용할 API 키를 설정합니다:
+```bash
+# OpenAI (선택 사항 – OpenAI 모델을 사용하는 경우 필수)
+export OPENAI_API_KEY=your_openai_api_key_here
 
-```env
-OPENAI_API_KEY=your_api_key_here
+# Anthropic (선택 사항 – Anthropic 모델을 사용하는 경우 필수)
+export ANTHROPIC_API_KEY=your_anthropic_api_key_here
 ```
 
-### 기본 예제
+> **보안 참고사항**: API 키를 버전 관리에 커밋하지 마세요. 항상 환경 변수 또는 안전한 비밀 관리를 사용하세요.
 
+### 기본 사용법
 ```python
-from graphbit import Agent
+import os
 
-# 에이전트 생성
-agent = Agent(
-    name="assistant",
-    model="gpt-4",
-    instructions="You are a helpful assistant."
+from graphbit import LlmConfig, Executor, Workflow, Node, tool
+
+# 초기화 및 구성
+config = LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4o-mini")
+
+# 실행기 생성
+executor = Executor(config)
+
+# LLM 선택을 위한 명확한 설명이 있는 도구 생성
+@tool(_description="모든 도시의 현재 날씨 정보 가져오기")
+def get_weather(location: str) -> dict:
+    return {"location": location, "temperature": 22, "condition": "sunny"}
+
+@tool(_description="수학 계산을 수행하고 결과 반환")
+def calculate(expression: str) -> str:
+    return f"Result: {eval(expression)}"
+
+# 워크플로우 구축
+workflow = Workflow("Analysis Pipeline")
+
+# 에이전트 노드 생성
+smart_agent = Node.agent(
+    name="Smart Agent",
+    prompt="What's the weather in Paris and calculate 15 + 27?",
+    system_prompt="You are an assistant skilled in weather lookup and math calculations. Use tools to answer queries accurately.",
+    tools=[get_weather, calculate]
 )
 
-# 에이전트 실행
-result = agent.run("Hello, GraphBit!")
-print(result)
+processor = Node.agent(
+    name="Data Processor",
+    prompt="Process the results obtained from Smart Agent.",
+    system_prompt="""You process and organize results from other agents.
+
+    - Summarize and clarify key points
+    - Structure your output for easy reading
+    - Focus on actionable insights
+    """
+)
+
+# 연결 및 실행
+id1 = workflow.add_node(smart_agent)
+id2 = workflow.add_node(processor)
+workflow.connect(id1, id2)
+
+result = executor.execute(workflow)
+print(f"Workflow completed: {result.is_success()}")
+print("\nSmart Agent Output: \n", result.get_node_output("Smart Agent"))
+print("\nData Processor Output: \n", result.get_node_output("Data Processor"))
 ```
+
+## 관찰성 및 추적
+
+GraphBit Tracer는 최소한의 구성으로 LLM 호출 및 AI 워크플로우를 캡처하고 모니터링합니다. GraphBit LLM 클라이언트와 워크플로우 실행기를 래핑하여 코드를 변경하지 않고 프롬프트, 응답, 토큰 사용량, 지연 시간 및 오류를 추적합니다.
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=nzwrxSiRl2U">
+    <img src="https://img.youtube.com/vi/nzwrxSiRl2U/maxresdefault.jpg" alt="GraphBit Observability & Tracing" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>GraphBit 관찰성 및 추적 튜토리얼 보기</em></p>
+</div>
+
+## 고수준 아키텍처
+
+<p align="center">
+  <img src="assets/architecture.svg" height="250" alt="GraphBit Architecture">
+</p>
+
+신뢰성과 성능을 위한 3계층 설계:
+- **Rust 코어** - 워크플로우 엔진, 에이전트 및 LLM 제공자
+- **오케스트레이션 계층** - 프로젝트 관리 및 실행
+- **Python API** - 비동기 지원이 포함된 PyO3 바인딩
+
+## Python API 통합
+
+GraphBit은 에이전트 워크플로우를 구축하고 통합하기 위한 풍부한 Python API를 제공합니다:
+
+- **LLM 클라이언트** - 다중 제공자 LLM 통합(OpenAI, Anthropic, Azure 등)
+- **워크플로우** - 상태 관리를 갖춘 다중 에이전트 워크플로우 그래프 정의 및 관리
+- **노드** - 에이전트 노드, 도구 노드 및 사용자 정의 워크플로우 구성 요소
+- **실행기** - 구성 관리를 갖춘 워크플로우 실행 엔진
+- **도구 시스템** - 에이전트 도구를 위한 함수 데코레이터, 레지스트리 및 실행 프레임워크
+- **워크플로우 결과** - 메타데이터, 타이밍 및 출력 액세스가 포함된 실행 결과
+- **임베딩** - 의미론적 검색 및 검색을 위한 벡터 임베딩
+- **워크플로우 컨텍스트** - 워크플로우 실행 전반에 걸친 공유 상태 및 변수
+- **문서 로더** - 여러 형식(PDF, DOCX, TXT, JSON, CSV, XML, HTML)에서 문서 로드 및 구문 분석
+- **텍스트 분할기** - 문서를 청크로 분할(문자, 토큰, 문장, 재귀)
+
+클래스, 메서드 및 사용 예제의 전체 목록은 [Python API 참조](docs/api-reference/python-api.md)를 참조하세요.
 
 ## 문서
 
 전체 문서는 [https://docs.graphbit.ai/](https://docs.graphbit.ai/)를 참조하세요.
 
-## 기여
+## 생태계 및 확장
 
-기여를 환영합니다! 개발 설정 및 가이드라인은 [Contributing](CONTRIBUTING.md) 파일을 참조하세요.
+GraphBit의 모듈식 아키텍처는 외부 통합을 지원합니다:
+
+| 카테고리          | 예시                                                                                          |
+|:------------------|:----------------------------------------------------------------------------------------------|
+| LLM 제공자        | OpenAI, Anthropic, Azure OpenAI, DeepSeek, Together, Ollama, OpenRouter, Fireworks, Mistral AI, Replicate, Perplexity, HuggingFace, AI21, Bytedance, xAI, 등 |
+| 벡터 저장소       | Pinecone, Qdrant, Chroma, Milvus, Weaviate, FAISS, Elasticsearch, AstraDB, Redis, 등         |
+| 데이터베이스      | PostgreSQL (PGVector), MongoDB, MariaDB, IBM DB2, Redis, 등                                   |
+| 클라우드 플랫폼   | AWS (Boto3), Azure, Google Cloud Platform, 등                                                 |
+| 검색 API          | Serper, Google Search, GitHub Search, GitLab Search, 등                                       |
+| 임베딩 모델       | OpenAI Embeddings, Voyage AI, 등                                                              |
+
+확장 기능은 커뮤니티에서 개발하고 유지 관리합니다.
+
+<p align="center">
+  <img src="assets/Ecosystem.png" alt="GraphBit Ecosystem - Stop Choosing, Start Orchestrating" style="max-width: 100%; height: auto;">
+</p>
+
+
+### GraphBit으로 첫 번째 에이전트 워크플로우 구축하기
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=gKvkMc2qZcA">
+    <img src="https://img.youtube.com/vi/gKvkMc2qZcA/maxresdefault.jpg" alt="Making Agent Workflow by GraphBit" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>GraphBit으로 에이전트 워크플로우 만들기 튜토리얼 보기</em></p>
+</div>
+
+## GraphBit에 기여하기
+
+기여를 환영합니다. 시작하려면 개발 설정 및 가이드라인에 대한 [Contributing](CONTRIBUTING.md) 파일을 참조하세요.
+
+GraphBit은 훌륭한 연구자 및 엔지니어 커뮤니티에 의해 구축되었습니다.
+
+<a href="https://github.com/Infinitibit/graphbit/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=Infinitibit/graphbit" />
+</a>
 
 ## 보안
 

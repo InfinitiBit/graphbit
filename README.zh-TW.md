@@ -71,6 +71,41 @@ GraphBit 採用 Rust 核心和最小化的 Python 層，與其他框架相比，
 - **資源管理** - 並行控制和記憶體最佳化
 - **可觀測性** - 內建追蹤、結構化日誌和效能指標
 
+## 基準測試
+
+GraphBit 為大規模效率而構建，不是理論聲明，而是實測結果。
+
+我們的內部基準測試套件在相同工作負載下將 GraphBit 與領先的基於 Python 的智慧體框架進行了比較。
+
+| 指標                | GraphBit        | 其他框架         | 增益                     |
+|:--------------------|:---------------:|:----------------:|:-------------------------|
+| CPU 使用率          | 1.0× 基準       | 68.3× 更高       | ~68× CPU                 |
+| 記憶體佔用          | 1.0× 基準       | 140× 更高        | ~140× 記憶體             |
+| 執行速度            | ≈ 相等 / 更快   | —                | 一致的吞吐量             |
+| 確定性              | 100% 成功       | 可變             | 保證的可靠性             |
+
+GraphBit 在 LLM 呼叫、工具呼叫和多智慧體鏈中始終提供生產級效率。
+
+### 基準測試演示
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=MaCl5oENeAY">
+    <img src="https://img.youtube.com/vi/MaCl5oENeAY/maxresdefault.jpg" alt="GraphBit Benchmark Demo" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>觀看 GraphBit 基準測試演示</em></p>
+</div>
+
+## 何時使用 GraphBit
+
+如果您需要以下功能，請選擇 GraphBit：
+
+- 不會在負載下崩潰的生產級多智慧體系統
+- 類型安全的執行和可重現的輸出
+- 用於混合或串流 AI 應用的即時編排
+- Rust 級別的效率和 Python 級別的人體工程學
+
+如果您正在擴展原型之外或關心執行時確定性，GraphBit 適合您。
+
 ## 快速開始
 
 ### 安裝
@@ -81,38 +116,164 @@ GraphBit 採用 Rust 核心和最小化的 Python 層，與其他框架相比，
 pip install graphbit
 ```
 
+### 快速入門影片教學
+
+<div align="center">
+  <a href="https://youtu.be/ti0wbHFKKFM?si=hnxi-1W823z5I_zs">
+    <img src="https://img.youtube.com/vi/ti0wbHFKKFM/maxresdefault.jpg" alt="GraphBit Quick Start Tutorial" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>觀看透過 PyPI 安裝 GraphBit | 完整範例和執行指南教學</em></p>
+</div>
+
+
 ### 環境設定
 
-建立 `.env` 檔案：
+設定您想在專案中使用的 API 金鑰：
+```bash
+# OpenAI（選用 – 如果使用 OpenAI 模型則需要）
+export OPENAI_API_KEY=your_openai_api_key_here
 
-```env
-OPENAI_API_KEY=your_api_key_here
+# Anthropic（選用 – 如果使用 Anthropic 模型則需要）
+export ANTHROPIC_API_KEY=your_anthropic_api_key_here
 ```
 
-### 基本範例
+> **安全提示**：切勿將 API 金鑰提交到版本控制。始終使用環境變數或安全的金鑰管理。
 
+### 基本用法
 ```python
-from graphbit import Agent
+import os
 
-# 建立智慧體
-agent = Agent(
-    name="assistant",
-    model="gpt-4",
-    instructions="You are a helpful assistant."
+from graphbit import LlmConfig, Executor, Workflow, Node, tool
+
+# 初始化和配置
+config = LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4o-mini")
+
+# 建立執行器
+executor = Executor(config)
+
+# 建立具有清晰描述的工具以供 LLM 選擇
+@tool(_description="取得任何城市的當前天氣資訊")
+def get_weather(location: str) -> dict:
+    return {"location": location, "temperature": 22, "condition": "sunny"}
+
+@tool(_description="執行數學計算並返回結果")
+def calculate(expression: str) -> str:
+    return f"Result: {eval(expression)}"
+
+# 建立工作流程
+workflow = Workflow("Analysis Pipeline")
+
+# 建立智慧體節點
+smart_agent = Node.agent(
+    name="Smart Agent",
+    prompt="What's the weather in Paris and calculate 15 + 27?",
+    system_prompt="You are an assistant skilled in weather lookup and math calculations. Use tools to answer queries accurately.",
+    tools=[get_weather, calculate]
 )
 
-# 執行智慧體
-result = agent.run("Hello, GraphBit!")
-print(result)
+processor = Node.agent(
+    name="Data Processor",
+    prompt="Process the results obtained from Smart Agent.",
+    system_prompt="""You process and organize results from other agents.
+
+    - Summarize and clarify key points
+    - Structure your output for easy reading
+    - Focus on actionable insights
+    """
+)
+
+# 連接和執行
+id1 = workflow.add_node(smart_agent)
+id2 = workflow.add_node(processor)
+workflow.connect(id1, id2)
+
+result = executor.execute(workflow)
+print(f"Workflow completed: {result.is_success()}")
+print("\nSmart Agent Output: \n", result.get_node_output("Smart Agent"))
+print("\nData Processor Output: \n", result.get_node_output("Data Processor"))
 ```
+
+## 可觀測性與追蹤
+
+GraphBit Tracer 以最小配置捕獲和監控 LLM 呼叫和 AI 工作流程。它包裝 GraphBit LLM 客戶端和工作流程執行器，以追蹤提示、回應、令牌使用、延遲和錯誤，而無需更改您的程式碼。
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=nzwrxSiRl2U">
+    <img src="https://img.youtube.com/vi/nzwrxSiRl2U/maxresdefault.jpg" alt="GraphBit Observability & Tracing" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>觀看 GraphBit 可觀測性與追蹤教學</em></p>
+</div>
+
+## 高層架構
+
+<p align="center">
+  <img src="assets/architecture.svg" height="250" alt="GraphBit Architecture">
+</p>
+
+三層設計確保可靠性和效能：
+- **Rust 核心** - 工作流程引擎、智慧體和 LLM 提供商
+- **編排層** - 專案管理和執行
+- **Python API** - PyO3 綁定，支援非同步
+
+## Python API 整合
+
+GraphBit 提供豐富的 Python API 用於建立和整合智慧體工作流程：
+
+- **LLM 客戶端** - 多提供商 LLM 整合（OpenAI、Anthropic、Azure 等）
+- **工作流程** - 定義和管理具有狀態管理的多智慧體工作流程圖
+- **節點** - 智慧體節點、工具節點和自訂工作流程元件
+- **執行器** - 具有配置管理的工作流程執行引擎
+- **工具系統** - 智慧體工具的函式裝飾器、註冊表和執行框架
+- **工作流程結果** - 帶有中繼資料、時間和輸出存取的執行結果
+- **嵌入** - 用於語義搜尋和檢索的向量嵌入
+- **工作流程上下文** - 工作流程執行過程中的共享狀態和變數
+- **文件載入器** - 從多種格式載入和解析文件（PDF、DOCX、TXT、JSON、CSV、XML、HTML）
+- **文字分割器** - 將文件分割成塊（字元、令牌、句子、遞迴）
+
+有關類別、方法和使用範例的完整清單，請參閱 [Python API 參考](docs/api-reference/python-api.md)。
 
 ## 文件
 
 完整文件請造訪：[https://docs.graphbit.ai/](https://docs.graphbit.ai/)
 
-## 貢獻
+## 生態系統與擴展
 
-我們歡迎貢獻！請查看 [Contributing](CONTRIBUTING.md) 檔案了解開發設定和指南。
+GraphBit 的模組化架構支援外部整合：
+
+| 類別              | 範例                                                                                          |
+|:------------------|:----------------------------------------------------------------------------------------------|
+| LLM 提供商        | OpenAI, Anthropic, Azure OpenAI, DeepSeek, Together, Ollama, OpenRouter, Fireworks, Mistral AI, Replicate, Perplexity, HuggingFace, AI21, Bytedance, xAI, 等 |
+| 向量儲存          | Pinecone, Qdrant, Chroma, Milvus, Weaviate, FAISS, Elasticsearch, AstraDB, Redis, 等         |
+| 資料庫            | PostgreSQL (PGVector), MongoDB, MariaDB, IBM DB2, Redis, 等                                   |
+| 雲端平台          | AWS (Boto3), Azure, Google Cloud Platform, 等                                                 |
+| 搜尋 API          | Serper, Google Search, GitHub Search, GitLab Search, 等                                       |
+| 嵌入模型          | OpenAI Embeddings, Voyage AI, 等                                                              |
+
+擴展由社群開發和維護。
+
+<p align="center">
+  <img src="assets/Ecosystem.png" alt="GraphBit Ecosystem - Stop Choosing, Start Orchestrating" style="max-width: 100%; height: auto;">
+</p>
+
+
+### 使用 GraphBit 建立您的第一個智慧體工作流程
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=gKvkMc2qZcA">
+    <img src="https://img.youtube.com/vi/gKvkMc2qZcA/maxresdefault.jpg" alt="Making Agent Workflow by GraphBit" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>觀看使用 GraphBit 建立智慧體工作流程教學</em></p>
+</div>
+
+## 為 GraphBit 做出貢獻
+
+我們歡迎貢獻。要開始，請參閱 [Contributing](CONTRIBUTING.md) 檔案以了解開發設定和指南。
+
+GraphBit 由一個優秀的研究人員和工程師社群建立。
+
+<a href="https://github.com/Infinitibit/graphbit/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=Infinitibit/graphbit" />
+</a>
 
 ## 安全性
 

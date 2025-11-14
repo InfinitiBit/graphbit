@@ -71,6 +71,41 @@ Rust कोर और न्यूनतम Python लेयर के साथ
 - **संसाधन प्रबंधन** - समवर्ती नियंत्रण और मेमोरी अनुकूलन
 - **अवलोकनीयता** - अंतर्निहित ट्रेसिंग, संरचित लॉग और प्रदर्शन मेट्रिक्स
 
+## बेंचमार्क
+
+GraphBit बड़े पैमाने पर दक्षता के लिए बनाया गया था, सैद्धांतिक दावों के लिए नहीं, बल्कि मापे गए परिणामों के लिए।
+
+हमारे आंतरिक बेंचमार्क सूट ने समान वर्कलोड पर GraphBit की तुलना प्रमुख Python-आधारित एजेंट फ्रेमवर्क से की।
+
+| मेट्रिक             | GraphBit        | अन्य फ्रेमवर्क  | लाभ                      |
+|:--------------------|:---------------:|:----------------:|:-------------------------|
+| CPU उपयोग          | 1.0× आधार      | 68.3× अधिक      | ~68× CPU                 |
+| मेमोरी फुटप्रिंट   | 1.0× आधार      | 140× अधिक       | ~140× मेमोरी             |
+| निष्पादन गति       | ≈ समान / तेज़   | —                | सुसंगत थ्रूपुट          |
+| निर्धारणवाद        | 100% सफलता     | परिवर्तनशील     | गारंटीकृत विश्वसनीयता   |
+
+GraphBit लगातार LLM कॉल, टूल इनवोकेशन और मल्टी-एजेंट चेन में उत्पादन-ग्रेड दक्षता प्रदान करता है।
+
+### बेंचमार्क डेमो
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=MaCl5oENeAY">
+    <img src="https://img.youtube.com/vi/MaCl5oENeAY/maxresdefault.jpg" alt="GraphBit Benchmark Demo" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>GraphBit बेंचमार्क डेमो देखें</em></p>
+</div>
+
+## GraphBit का उपयोग कब करें
+
+यदि आपको निम्नलिखित की आवश्यकता है तो GraphBit चुनें:
+
+- उत्पादन-ग्रेड मल्टी-एजेंट सिस्टम जो लोड के तहत ढहते नहीं हैं
+- टाइप-सेफ निष्पादन और पुनरुत्पादन योग्य आउटपुट
+- हाइब्रिड या स्ट्रीमिंग AI एप्लिकेशन के लिए रीयल-टाइम ऑर्केस्ट्रेशन
+- Rust-स्तरीय दक्षता के साथ Python-स्तरीय एर्गोनॉमिक्स
+
+यदि आप प्रोटोटाइप से आगे स्केलिंग कर रहे हैं या रनटाइम निर्धारणवाद की परवाह करते हैं, तो GraphBit आपके लिए है।
+
 ## त्वरित शुरुआत
 
 ### स्थापना
@@ -81,38 +116,164 @@ Rust कोर और न्यूनतम Python लेयर के साथ
 pip install graphbit
 ```
 
-### वातावरण सेटअप
+### त्वरित प्रारंभ वीडियो ट्यूटोरियल
 
-`.env` फ़ाइल बनाएं:
+<div align="center">
+  <a href="https://youtu.be/ti0wbHFKKFM?si=hnxi-1W823z5I_zs">
+    <img src="https://img.youtube.com/vi/ti0wbHFKKFM/maxresdefault.jpg" alt="GraphBit Quick Start Tutorial" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>PyPI के माध्यम से GraphBit इंस्टॉल करें | पूर्ण उदाहरण और रन गाइड ट्यूटोरियल देखें</em></p>
+</div>
 
-```env
-OPENAI_API_KEY=your_api_key_here
+
+### पर्यावरण सेटअप
+
+अपने प्रोजेक्ट में उपयोग करने के लिए API कुंजियाँ सेट करें:
+```bash
+# OpenAI (वैकल्पिक – OpenAI मॉडल का उपयोग करने पर आवश्यक)
+export OPENAI_API_KEY=your_openai_api_key_here
+
+# Anthropic (वैकल्पिक – Anthropic मॉडल का उपयोग करने पर आवश्यक)
+export ANTHROPIC_API_KEY=your_anthropic_api_key_here
 ```
 
-### बुनियादी उदाहरण
+> **सुरक्षा नोट**: API कुंजियों को कभी भी संस्करण नियंत्रण में कमिट न करें। हमेशा पर्यावरण चर या सुरक्षित गुप्त प्रबंधन का उपयोग करें।
 
+### बुनियादी उपयोग
 ```python
-from graphbit import Agent
+import os
 
-# एजेंट बनाएं
-agent = Agent(
-    name="assistant",
-    model="gpt-4",
-    instructions="You are a helpful assistant."
+from graphbit import LlmConfig, Executor, Workflow, Node, tool
+
+# आरंभ और कॉन्फ़िगर करें
+config = LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4o-mini")
+
+# निष्पादक बनाएं
+executor = Executor(config)
+
+# LLM चयन के लिए स्पष्ट विवरण के साथ उपकरण बनाएं
+@tool(_description="किसी भी शहर के लिए वर्तमान मौसम की जानकारी प्राप्त करें")
+def get_weather(location: str) -> dict:
+    return {"location": location, "temperature": 22, "condition": "sunny"}
+
+@tool(_description="गणितीय गणना करें और परिणाम लौटाएं")
+def calculate(expression: str) -> str:
+    return f"Result: {eval(expression)}"
+
+# वर्कफ़्लो बनाएं
+workflow = Workflow("Analysis Pipeline")
+
+# एजेंट नोड बनाएं
+smart_agent = Node.agent(
+    name="Smart Agent",
+    prompt="What's the weather in Paris and calculate 15 + 27?",
+    system_prompt="You are an assistant skilled in weather lookup and math calculations. Use tools to answer queries accurately.",
+    tools=[get_weather, calculate]
 )
 
-# एजेंट चलाएं
-result = agent.run("Hello, GraphBit!")
-print(result)
+processor = Node.agent(
+    name="Data Processor",
+    prompt="Process the results obtained from Smart Agent.",
+    system_prompt="""You process and organize results from other agents.
+
+    - Summarize and clarify key points
+    - Structure your output for easy reading
+    - Focus on actionable insights
+    """
+)
+
+# कनेक्ट करें और निष्पादित करें
+id1 = workflow.add_node(smart_agent)
+id2 = workflow.add_node(processor)
+workflow.connect(id1, id2)
+
+result = executor.execute(workflow)
+print(f"Workflow completed: {result.is_success()}")
+print("\nSmart Agent Output: \n", result.get_node_output("Smart Agent"))
+print("\nData Processor Output: \n", result.get_node_output("Data Processor"))
 ```
+
+## अवलोकनीयता और ट्रेसिंग
+
+GraphBit Tracer न्यूनतम कॉन्फ़िगरेशन के साथ LLM कॉल और AI वर्कफ़्लो को कैप्चर और मॉनिटर करता है। यह आपके कोड को बदले बिना प्रॉम्प्ट, प्रतिक्रियाओं, टोकन उपयोग, विलंबता और त्रुटियों को ट्रैक करने के लिए GraphBit LLM क्लाइंट और वर्कफ़्लो निष्पादकों को लपेटता है।
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=nzwrxSiRl2U">
+    <img src="https://img.youtube.com/vi/nzwrxSiRl2U/maxresdefault.jpg" alt="GraphBit Observability & Tracing" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>GraphBit अवलोकनीयता और ट्रेसिंग ट्यूटोरियल देखें</em></p>
+</div>
+
+## उच्च-स्तरीय आर्किटेक्चर
+
+<p align="center">
+  <img src="assets/architecture.svg" height="250" alt="GraphBit Architecture">
+</p>
+
+विश्वसनीयता और प्रदर्शन के लिए तीन-स्तरीय डिज़ाइन:
+- **Rust कोर** - वर्कफ़्लो इंजन, एजेंट और LLM प्रदाता
+- **ऑर्केस्ट्रेशन लेयर** - प्रोजेक्ट प्रबंधन और निष्पादन
+- **Python API** - एसिंक समर्थन के साथ PyO3 बाइंडिंग
+
+## Python API एकीकरण
+
+GraphBit एजेंटिक वर्कफ़्लो बनाने और एकीकृत करने के लिए एक समृद्ध Python API प्रदान करता है:
+
+- **LLM क्लाइंट** - मल्टी-प्रोवाइडर LLM एकीकरण (OpenAI, Anthropic, Azure और अधिक)
+- **वर्कफ़्लो** - स्टेट प्रबंधन के साथ मल्टी-एजेंट वर्कफ़्लो ग्राफ़ को परिभाषित और प्रबंधित करें
+- **नोड्स** - एजेंट नोड्स, टूल नोड्स और कस्टम वर्कफ़्लो घटक
+- **निष्पादक** - कॉन्फ़िगरेशन प्रबंधन के साथ वर्कफ़्लो निष्पादन इंजन
+- **टूल सिस्टम** - एजेंट टूल के लिए फ़ंक्शन डेकोरेटर, रजिस्ट्री और निष्पादन फ्रेमवर्क
+- **वर्कफ़्लो परिणाम** - मेटाडेटा, टाइमिंग और आउटपुट एक्सेस के साथ निष्पादन परिणाम
+- **एम्बेडिंग** - सिमेंटिक खोज और पुनर्प्राप्ति के लिए वेक्टर एम्बेडिंग
+- **वर्कफ़्लो संदर्भ** - वर्कफ़्लो निष्पादन में साझा स्थिति और चर
+- **दस्तावेज़ लोडर** - कई प्रारूपों (PDF, DOCX, TXT, JSON, CSV, XML, HTML) से दस्तावेज़ लोड और पार्स करें
+- **टेक्स्ट स्प्लिटर** - दस्तावेज़ों को खंडों में विभाजित करें (वर्ण, टोकन, वाक्य, पुनरावर्ती)
+
+कक्षाओं, विधियों और उपयोग उदाहरणों की पूरी सूची के लिए, [Python API संदर्भ](docs/api-reference/python-api.md) देखें।
 
 ## दस्तावेज़ीकरण
 
 पूर्ण दस्तावेज़ीकरण के लिए, देखें: [https://docs.graphbit.ai/](https://docs.graphbit.ai/)
 
-## योगदान
+## पारिस्थितिकी तंत्र और एक्सटेंशन
 
-हम योगदान का स्वागत करते हैं! विकास सेटअप और दिशानिर्देशों के लिए [Contributing](CONTRIBUTING.md) फ़ाइल देखें।
+GraphBit की मॉड्यूलर आर्किटेक्चर बाहरी एकीकरण का समर्थन करती है:
+
+| श्रेणी            | उदाहरण                                                                                        |
+|:------------------|:----------------------------------------------------------------------------------------------|
+| LLM प्रदाता       | OpenAI, Anthropic, Azure OpenAI, DeepSeek, Together, Ollama, OpenRouter, Fireworks, Mistral AI, Replicate, Perplexity, HuggingFace, AI21, Bytedance, xAI, और अधिक |
+| वेक्टर स्टोर      | Pinecone, Qdrant, Chroma, Milvus, Weaviate, FAISS, Elasticsearch, AstraDB, Redis, और अधिक   |
+| डेटाबेस          | PostgreSQL (PGVector), MongoDB, MariaDB, IBM DB2, Redis, और अधिक                             |
+| क्लाउड प्लेटफ़ॉर्म | AWS (Boto3), Azure, Google Cloud Platform, और अधिक                                           |
+| खोज API           | Serper, Google Search, GitHub Search, GitLab Search, और अधिक                                 |
+| एम्बेडिंग मॉडल   | OpenAI Embeddings, Voyage AI, और अधिक                                                        |
+
+एक्सटेंशन समुदाय द्वारा विकसित और बनाए रखे जाते हैं।
+
+<p align="center">
+  <img src="assets/Ecosystem.png" alt="GraphBit Ecosystem - Stop Choosing, Start Orchestrating" style="max-width: 100%; height: auto;">
+</p>
+
+
+### GraphBit के साथ अपना पहला एजेंट वर्कफ़्लो बनाना
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=gKvkMc2qZcA">
+    <img src="https://img.youtube.com/vi/gKvkMc2qZcA/maxresdefault.jpg" alt="Making Agent Workflow by GraphBit" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>GraphBit के साथ एजेंट वर्कफ़्लो बनाने का ट्यूटोरियल देखें</em></p>
+</div>
+
+## GraphBit में योगदान
+
+हम योगदान का स्वागत करते हैं। शुरू करने के लिए, कृपया विकास सेटअप और दिशानिर्देशों के लिए [Contributing](CONTRIBUTING.md) फ़ाइल देखें।
+
+GraphBit शोधकर्ताओं और इंजीनियरों के एक अद्भुत समुदाय द्वारा बनाया गया है।
+
+<a href="https://github.com/Infinitibit/graphbit/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=Infinitibit/graphbit" />
+</a>
 
 ## सुरक्षा
 
