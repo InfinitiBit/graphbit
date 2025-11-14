@@ -3,7 +3,7 @@
 # GraphBit - উচ্চ কর্মক্ষমতা এজেন্টিক ফ্রেমওয়ার্ক (বাংলা)
 
 <p align="center">
-    <img src="assets/logo(circle).png" width="160px" alt="Logo" />
+    <img src="assets/GraphBit_Final_GB_Github_GIF.gif" width="160px" alt="Logo" />
 </p>
 
 <p align="center">

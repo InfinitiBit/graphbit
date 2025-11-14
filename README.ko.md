@@ -3,7 +3,7 @@
 # GraphBit - 고성능 에이전트 프레임워크 (한국어)
 
 <p align="center">
-    <img src="assets/logo(circle).png" width="160px" alt="Logo" />
+    <img src="assets/GraphBit_Final_GB_Github_GIF.gif" width="160px" alt="Logo" />
 </p>
 
 <p align="center">
