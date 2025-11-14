@@ -71,6 +71,41 @@ GraphBit 采用 Rust 核心和最小化的 Python 层，与其他框架相比，
 - **资源管理** - 并发控制和内存优化
 - **可观测性** - 内置跟踪、结构化日志和性能指标
 
+## 基准测试
+
+GraphBit 为大规模效率而构建，不是理论声明，而是实测结果。
+
+我们的内部基准测试套件在相同工作负载下将 GraphBit 与领先的基于 Python 的智能体框架进行了比较。
+
+| 指标                | GraphBit        | 其他框架         | 增益                     |
+|:--------------------|:---------------:|:----------------:|:-------------------------|
+| CPU 使用率          | 1.0× 基准       | 68.3× 更高       | ~68× CPU                 |
+| 内存占用            | 1.0× 基准       | 140× 更高        | ~140× 内存               |
+| 执行速度            | ≈ 相等 / 更快   | —                | 一致的吞吐量             |
+| 确定性              | 100% 成功       | 可变             | 保证的可靠性             |
+
+GraphBit 在 LLM 调用、工具调用和多智能体链中始终提供生产级效率。
+
+### 基准测试演示
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=MaCl5oENeAY">
+    <img src="https://img.youtube.com/vi/MaCl5oENeAY/maxresdefault.jpg" alt="GraphBit Benchmark Demo" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>观看 GraphBit 基准测试演示</em></p>
+</div>
+
+## 何时使用 GraphBit
+
+如果您需要以下功能，请选择 GraphBit：
+
+- 不会在负载下崩溃的生产级多智能体系统
+- 类型安全的执行和可重现的输出
+- 用于混合或流式 AI 应用的实时编排
+- Rust 级别的效率和 Python 级别的人体工程学
+
+如果您正在扩展原型之外或关心运行时确定性，GraphBit 适合您。
+
 ## 快速开始
 
 ### 安装

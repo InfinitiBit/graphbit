@@ -71,6 +71,41 @@ Impulsa flujos de trabajo multi-agente que se ejecutan en paralelo, persisten me
 - **Gestión de Recursos** - Controles de concurrencia y optimización de memoria
 - **Observabilidad** - Trazado integrado, logs estructurados y métricas de rendimiento
 
+## Benchmark
+
+GraphBit fue construido para eficiencia a escala, no afirmaciones teóricas, sino resultados medidos.
+
+Nuestro conjunto de pruebas interno comparó GraphBit con los principales frameworks de agentes basados en Python en cargas de trabajo idénticas.
+
+| Métrica             | GraphBit        | Otros Frameworks | Ganancia                 |
+|:--------------------|:---------------:|:----------------:|:-------------------------|
+| Uso de CPU          | 1.0× base       | 68.3× mayor      | ~68× CPU                 |
+| Huella de Memoria   | 1.0× base       | 140× mayor       | ~140× Memoria            |
+| Velocidad de Ejecución | ≈ igual / más rápido | —         | Rendimiento consistente  |
+| Determinismo        | 100% éxito      | Variable         | Fiabilidad garantizada   |
+
+GraphBit ofrece consistentemente eficiencia de grado de producción en llamadas LLM, invocaciones de herramientas y cadenas multi-agente.
+
+### Demo de Benchmark
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=MaCl5oENeAY">
+    <img src="https://img.youtube.com/vi/MaCl5oENeAY/maxresdefault.jpg" alt="GraphBit Benchmark Demo" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>Ver la Demo de Benchmark de GraphBit</em></p>
+</div>
+
+## Cuándo Usar GraphBit
+
+Elija GraphBit si necesita:
+
+- Sistemas multi-agente de grado de producción que no colapsen bajo carga
+- Ejecución con seguridad de tipos y salidas reproducibles
+- Orquestación en tiempo real para aplicaciones de IA híbridas o de streaming
+- Eficiencia a nivel de Rust con ergonomía a nivel de Python
+
+Si está escalando más allá de prototipos o le importa el determinismo en tiempo de ejecución, GraphBit es para usted.
+
 ## Inicio Rápido
 
 ### Instalación

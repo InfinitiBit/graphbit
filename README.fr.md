@@ -71,6 +71,41 @@ Il alimente des workflows multi-agents qui s'exécutent en parallèle, persisten
 - **Gestion des Ressources** - Contrôles de concurrence et optimisation de la mémoire
 - **Observabilité** - Traçage intégré, logs structurés et métriques de performance
 
+## Benchmark
+
+GraphBit a été conçu pour l'efficacité à grande échelle, non pas des affirmations théoriques, mais des résultats mesurés.
+
+Notre suite de benchmarks interne a comparé GraphBit aux principaux frameworks d'agents basés sur Python sur des charges de travail identiques.
+
+| Métrique            | GraphBit        | Autres Frameworks | Gain                     |
+|:--------------------|:---------------:|:----------------:|:-------------------------|
+| Utilisation CPU     | 1.0× base       | 68.3× supérieur  | ~68× CPU                 |
+| Empreinte Mémoire   | 1.0× base       | 140× supérieur   | ~140× Mémoire            |
+| Vitesse d'Exécution | ≈ égal / plus rapide | —            | Débit cohérent           |
+| Déterminisme        | 100% succès     | Variable         | Fiabilité garantie       |
+
+GraphBit offre systématiquement une efficacité de niveau production pour les appels LLM, les invocations d'outils et les chaînes multi-agents.
+
+### Démo Benchmark
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=MaCl5oENeAY">
+    <img src="https://img.youtube.com/vi/MaCl5oENeAY/maxresdefault.jpg" alt="GraphBit Benchmark Demo" style="max-width: 100%; height: auto;">
+  </a>
+  <p><em>Regarder la Démo Benchmark de GraphBit</em></p>
+</div>
+
+## Quand Utiliser GraphBit
+
+Choisissez GraphBit si vous avez besoin de :
+
+- Systèmes multi-agents de niveau production qui ne s'effondrent pas sous la charge
+- Exécution type-safe et sorties reproductibles
+- Orchestration en temps réel pour applications IA hybrides ou en streaming
+- Efficacité niveau Rust avec ergonomie niveau Python
+
+Si vous dépassez les prototypes ou si le déterminisme d'exécution vous importe, GraphBit est fait pour vous.
+
 ## Démarrage Rapide
 
 ### Installation
