@@ -46,8 +46,12 @@ class ChatbotManager:
         openai_api_key = ConfigConstants.OPENAI_API_KEY
         if not openai_api_key:
             raise ValueError("OPENAI_API_KEY environment variable is not set. Please set it in your environment.")
+        tracing_api_key = ConfigConstants.GRAPHBIT_TRACING_API_KEY
+        traceable_project = ConfigConstants.GRAPHBIT_TRACEABLE_PROJECT
+        tracing_api_url = ConfigConstants.GRAPHBIT_TRACING_API_URL
+        
 
-        self.llm_manager = LLMManager(openai_api_key)
+        self.llm_manager = LLMManager(openai_api_key, tracing_api_key, traceable_project, tracing_api_url)
 
         # Initialize ChromaDB
         self.vector_db_manager = VectorDBManager(index_name=self.index_name, llm_manager=self.llm_manager)

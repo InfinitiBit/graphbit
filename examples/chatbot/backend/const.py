@@ -6,6 +6,8 @@ application, including file paths, model settings, and API configurations.
 """
 
 import os
+from dotenv import load_dotenv
+load_dotenv()
 
 
 class ConfigConstants:
@@ -14,6 +16,9 @@ class ConfigConstants:
     VECTOR_DB_TEXT_FILE = "backend/data/vectordb.txt"
     VECTOR_DB_INDEX_NAME = "vector_index_chatbot"
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+    GRAPHBIT_TRACING_API_KEY = os.getenv("GRAPHBIT_TRACING_API_KEY", "")
+    GRAPHBIT_TRACEABLE_PROJECT = os.getenv("GRAPHBIT_TRACEABLE_PROJECT", "Chatbot")
+    GRAPHBIT_TRACING_API_URL = os.getenv("GRAPHBIT_TRACING_API_URL", "localhost:3001/api/v1/tracing/single-run")
     CHUNK_SIZE = 1000
     OVERLAP_SIZE = 100
     RETRIEVE_CONTEXT_N_RESULTS = 5

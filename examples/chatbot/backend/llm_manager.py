@@ -13,6 +13,7 @@ from typing import List, Optional
 from dotenv import load_dotenv
 
 from graphbit import EmbeddingClient, EmbeddingConfig, LlmClient, LlmConfig
+from graphbit_tracer import AutoTracer
 
 from .const import ConfigConstants
 
@@ -27,10 +28,10 @@ class LLMManager:
     LLMManager handles the configuration and interaction with the language model client.
 
     This class manages the OpenAI language model and embedding clients, providing methods
-    for generating responses, embeddings, and streaming chat completions.
+    for generating responses, embeddings, and streaming chat completions with automatic tracing.
     """
 
-    def __init__(self, api_key: Optional[str] = ConfigConstants.OPENAI_API_KEY):
+    def __init__(self, api_key: Optional[str] = ConfigConstants.OPENAI_API_KEY, tracing_api_key: Optional[str] = ConfigConstants.GRAPHBIT_TRACING_API_KEY, traceable_project: Optional[str] = ConfigConstants.GRAPHBIT_TRACEABLE_PROJECT, tracing_api_url: Optional[str] = ConfigConstants.GRAPHBIT_TRACING_API_URL):
         """
         Initialize the LLMManager with the OpenAI API key.
 
@@ -43,11 +44,43 @@ class LLMManager:
 
         # Configure LLM
         self.llm_config = LlmConfig.openai(model=ConfigConstants.OPENAI_LLM_MODEL, api_key=api_key)
-        self.llm_client = LlmClient(self.llm_config)
+        self._llm_client = LlmClient(self.llm_config)
+        self._traced_client = None
 
         # Configure embeddings
         self.embedding_config = EmbeddingConfig.openai(model=ConfigConstants.OPENAI_EMBEDDING_MODEL, api_key=api_key)
         self.embedding_client = EmbeddingClient(self.embedding_config)
+
+        # Control tracing
+        self._tracing_api_key = tracing_api_key
+        self._traceable_project = traceable_project
+        self._tracing_api_url = tracing_api_url
+        self._tracer = None
+        self._tracing_initialized = False
+
+    async def _ensure_traced_client(self):
+        """Ensure the traced LLM client is initialized (lazy initialization)."""
+        if not self._tracing_initialized and self._tracing_api_key and self._traceable_project and self._tracing_api_url:
+            try:
+                self._tracer = await AutoTracer.create()
+                self._traced_client = self._tracer.wrap_client(self._llm_client, self.llm_config)
+                self._tracing_initialized = True
+                logging.info("LLM client wrapped with tracer")
+            except Exception as e:
+                logging.warning(f"Failed to initialize tracing, falling back to non-traced client: {e}")
+                self._traced_client = self._llm_client
+                self._tracing_initialized = True
+
+    @property
+    def llm_client(self):
+        """Get the LLM client (traced if available, otherwise base client)."""
+        print(f"Tracing initialized: {self._tracing_initialized}")
+        print(f"Traced client: {self._traced_client is not None}")
+        print(f"Base client: {self._llm_client is not None}")
+        if self._traced_client is not None:
+            print("Using traced client")
+            return self._traced_client
+        return self._llm_client
 
     def embed(self, text: str) -> List[float]:
         """Generate embeddings for the given text using the configured embedding model."""
@@ -70,6 +103,24 @@ class LLMManager:
         Yields:
             str: Individual response tokens from the streaming completion.
         """
-        response = await self.llm_client.complete_stream(prompt, max_tokens=ConfigConstants.MAX_TOKENS)
+        # Ensure traced client is initialized before making LLM calls
+        await self._ensure_traced_client()
+        print(f"Tracing initialized: {self._tracing_initialized}")
+        print(f"API Key: {self._tracing_api_key}")
+        print(f"Project: {self._traceable_project}")
+        print(f"API URL: {self._tracing_api_url}")
+
+        response = await self.llm_client.complete_full_async(prompt, max_tokens=ConfigConstants.MAX_TOKENS)
+        print("llm_client: ", self.llm_client)
         for chunk in response:
             yield chunk
+
+        # Send traces to API if tracing is enabled
+        if self._tracer:
+            try:
+                print("Tracer: ", self._tracer)
+                results = await self._tracer.send_to_api()
+                print("Results: ", results)
+                logging.info(f"Traces sent - Sent: {results['sent']}, Failed: {results['failed']}")
+            except Exception as e:
+                logging.warning(f"Failed to send traces: {e}")
