@@ -63,7 +63,7 @@ lowercase_node = Node.agent(
 # Agent with temperature and max_tokens control
 creative_writer = Node.agent(
     name="Creative Writer",
-    prompt="Write a creative story about: {topic}",
+    prompt=f"Write a creative story about: {topic}",
     temperature=1.2,      # Higher for creativity (0.0-2.0)
     max_tokens=2000       # Limit response length
 )
@@ -71,7 +71,7 @@ creative_writer = Node.agent(
 # Agent with precise output control
 data_analyst = Node.agent(
     name="Data Analyst",
-    prompt="Analyze: {data}",
+    prompt=f"Analyze: {data}",
     temperature=0.2,      # Lower for focused output
     max_tokens=500        # Concise response
 )

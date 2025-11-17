@@ -88,7 +88,7 @@ from graphbit import Node
 # Creative writing agent with high temperature
 creative_agent = Node.agent(
     name="Creative Writer",
-    prompt="Write a creative story about: {topic}",
+    prompt=f"Write a creative story about: {topic}",
     temperature=1.2,      # Higher temperature for more creativity
     max_tokens=2000       # Limit response length
 )
@@ -96,7 +96,7 @@ creative_agent = Node.agent(
 # Precise analysis agent with low temperature
 analytical_agent = Node.agent(
     name="Data Analyst",
-    prompt="Analyze this dataset: {data}",
+    prompt=f"Analyze this dataset: {data}",
     temperature=0.2,      # Lower temperature for focused, deterministic output
     max_tokens=500        # Concise response
 )
@@ -104,7 +104,7 @@ analytical_agent = Node.agent(
 # Balanced agent
 balanced_agent = Node.agent(
     name="General Assistant",
-    prompt="Help with: {task}",
+    prompt=f"Help with: {task}",
     temperature=0.7,      # Balanced creativity and focus
     max_tokens=1000       # Moderate response length
 )
