@@ -1,6 +1,6 @@
 """Summarization module for research papers using GraphBit framework."""
 
-import concurrent.futures
+import asyncio
 import re
 from typing import Dict, List, Tuple
 
@@ -211,7 +211,7 @@ def chunk_text_with_context(text: str, section_title: str = "", max_words: int =
         return chunk_text(text, max_words)
 
 
-def summarize_section(section_title: str, section_text: str) -> str:
+async def summarize_section(section_title: str, section_text: str) -> str:
     """Summarize a section of a research paper using GraphBit LLM client."""
     prompt = f"Give detailed summary of the following section of a research paper titled '{section_title}':\n\n{section_text}\n\nSummary:"
 
@@ -224,11 +224,11 @@ def summarize_section(section_title: str, section_text: str) -> str:
     llm_client = LlmClient(config)
 
     # Generate summary
-    summary = llm_client.complete(prompt=prompt, max_tokens=ConfigConstants.LLM_MAX_TOKENS, temperature=ConfigConstants.LLM_TEMPERATURE)
+    summary = await llm_client.complete_async(prompt=prompt, max_tokens=ConfigConstants.LLM_MAX_TOKENS, temperature=ConfigConstants.LLM_TEMPERATURE)
     return summary
 
 
-def summarize_section_worker(section_data: Tuple[str, str]) -> Tuple[str, str]:
+async def summarize_section_worker(section_data: Tuple[str, str]) -> Tuple[str, str]:
     """Worker function for parallel section summarization with timeout handling."""
     title, content = section_data
     truncated_content = content[: ConfigConstants.MAX_SECTION_LENGTH]
@@ -236,7 +236,7 @@ def summarize_section_worker(section_data: Tuple[str, str]) -> Tuple[str, str]:
     try:
         # Add timeout protection for individual section summarization
         print(title)
-        summary = summarize_section(title, truncated_content)
+        summary = await summarize_section(title, truncated_content)
         return title, summary
     except Exception as e:
         # Fallback summary if summarization fails
@@ -245,19 +245,13 @@ def summarize_section_worker(section_data: Tuple[str, str]) -> Tuple[str, str]:
         return title, fallback_summary
 
 
-def summarize_pdf_sections_parallel(pdf_path: str, max_workers: int = 3):
+async def summarize_pdf_sections_parallel(pdf_path: str, max_workers: int = 3):
     """
     Extract text from PDF, split into sections, and generate summaries in parallel.
 
     Args:
-        pdf
-    # Embedding Configuration
-    EMBEDDING_MODEL = "text-embedding-3-small"
-
-    # Cache Configuration
-    CACHE_DIR = "examples/research-paper-summarizer-agent/cache"
-    _path: Path to the PDF file
-        max_workers: Maximum number of parallel workers for summarization
+        pdf_path: Path to the PDF file
+        max_workers: Maximum number of parallel workers for summarization (controls concurrency)
 
     Returns:
         Tuple of (summaries_dict, sections_dict)
@@ -268,36 +262,45 @@ def summarize_pdf_sections_parallel(pdf_path: str, max_workers: int = 3):
     # Prepare section data for parallel processing
     section_items = list(sections.items())
 
-    # Use ThreadPoolExecutor for parallel API calls
+    # Use asyncio.gather for parallel async API calls with concurrency control
     summaries = {}
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        # Submit all summarization tasks
-        future_to_section = {executor.submit(summarize_section_worker, (title, content)): title for title, content in section_items}
 
-        # Collect results as they complete
-        for future in concurrent.futures.as_completed(future_to_section):
-            try:
-                title, summary = future.result()
-                summaries[title] = summary
-            except Exception as e:
-                section_title = future_to_section[future]
-                print(f"Warning: Failed to summarize section '{section_title}': {e}")
-                # Fallback to a simple summary
-                summaries[section_title] = f"Summary generation failed for section: {section_title}"
+    # Create a semaphore to limit concurrent API calls
+    semaphore = asyncio.Semaphore(max_workers)
+
+    async def bounded_worker(section_data):
+        """Worker with semaphore-based concurrency control."""
+        async with semaphore:
+            return await summarize_section_worker(section_data)
+
+    # Create tasks for all sections with concurrency limit
+    tasks = [bounded_worker((title, content)) for title, content in section_items]
+
+    # Execute all tasks concurrently (but limited by semaphore)
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    # Process results
+    for (title, _), result in zip(section_items, results):
+        if isinstance(result, Exception):
+            print(f"Warning: Failed to summarize section '{title}': {result}")
+            summaries[title] = f"Summary generation failed for section: {title}"
+        else:
+            result_title, summary = result
+            summaries[result_title] = summary
 
     return summaries, sections
 
 
-def summarize_pdf_sections(pdf_path: str):
+async def summarize_pdf_sections(pdf_path: str):
     """
     Extract text from PDF, split into sections, and generate summaries.
 
     Uses parallel processing for better performance.
     """
-    return summarize_pdf_sections_parallel(pdf_path, max_workers=3)
+    return await summarize_pdf_sections_parallel(pdf_path, max_workers=3)
 
 
-def answer_question(retrieved_context: str, user_question: str) -> str:
+async def answer_question(retrieved_context: str, user_question: str) -> str:
     """Answer a question based on retrieved context using GraphBit LLM client."""
     prompt = f"You are an AI research assistant. Given the following excerpts from a research paper:\n\n" f"{retrieved_context}\n\n" f"Answer the user's question:\n{user_question}\n\nAnswer:"
 
@@ -310,5 +313,5 @@ def answer_question(retrieved_context: str, user_question: str) -> str:
     llm_client = LlmClient(config)
 
     # Generate answer
-    response = llm_client.complete(prompt=prompt, max_tokens=ConfigConstants.LLM_MAX_TOKENS, temperature=0.2)
+    response = await llm_client.complete_async(prompt=prompt, max_tokens=ConfigConstants.LLM_MAX_TOKENS, temperature=0.2)
     return response

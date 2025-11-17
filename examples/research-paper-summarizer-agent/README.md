@@ -136,11 +136,11 @@ research-paper-summarizer-agent/
 ├── README.md                 # This file
 ├── pyproject.toml            # Project dependencies
 ├── backend/                  # FastAPI backend
-│   ├── main.py              # API endpoints
+│   ├── main-server.py       # API endpoints
 │   ├── paper_manager.py     # Core paper processing logic
 │   ├── summarizer.py        # PDF processing and summarization
 │   ├── faiss_store.py       # Vector storage and search
-│   ├── const.py             # Configuration constants
+│   ├── constant.py          # Configuration constants
 │   └── utils/
 │       └── caching.py       # Caching utilities
 └── frontend/                # Streamlit frontend

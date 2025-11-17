@@ -72,7 +72,7 @@ async def upload_pdf(file: UploadFile = File(...), background_tasks: BackgroundT
 
         try:
             # Phase 1: Process the PDF for immediate summarization
-            session_id, summaries = paper_manager.process_pdf_phase1(pdf_path)
+            session_id, summaries = await paper_manager.process_pdf_phase1(pdf_path)
 
             # Start Phase 2 in background thread (not using BackgroundTasks to avoid blocking)
             def run_phase2():
@@ -135,7 +135,7 @@ async def ask_question(session_id: str = Form(...), query: str = Form(...)):
         HTTPException: If there's an error processing the question.
     """
     try:
-        answer = paper_manager.ask_question(session_id, query)
+        answer = await paper_manager.ask_question(session_id, query)
         return {"answer": answer}
 
     except ValueError as e:

@@ -59,7 +59,7 @@ class PaperManager:
         # Session storage for processed papers
         self.sessions: Dict[str, Dict[str, Any]] = {}
 
-    def process_pdf_phase1(self, pdf_path: str) -> tuple[str, Dict[str, str]]:
+    async def process_pdf_phase1(self, pdf_path: str) -> tuple[str, Dict[str, str]]:
         """
         Phase 1: Process PDF for immediate summarization (fast response).
 
@@ -94,7 +94,7 @@ class PaperManager:
             else:
                 logging.info(f"Processing new PDF with hash: {hash_id} - Phase 1")
                 # Generate summaries using parallel processing
-                summaries, sections = summarize_pdf_sections_parallel(pdf_path, max_workers=ConfigConstants.MAX_PARALLEL_WORKERS)
+                summaries, sections = await summarize_pdf_sections_parallel(pdf_path, max_workers=ConfigConstants.MAX_PARALLEL_WORKERS)
 
                 # Store Phase 1 session data (summaries only)
                 self.sessions[hash_id] = {
@@ -192,7 +192,7 @@ class PaperManager:
             "num_sections": len(session_data.get("summaries", {})),
         }
 
-    def process_pdf(self, pdf_path: str) -> tuple[str, Dict[str, str]]:
+    async def process_pdf(self, pdf_path: str) -> tuple[str, Dict[str, str]]:
         """
         Process a PDF file and return session ID and summaries.
 
@@ -214,7 +214,7 @@ class PaperManager:
             else:
                 logging.info(f"Processing new PDF with hash: {hash_id}")
                 # Generate summaries and process sections using parallel processing
-                summaries, sections = summarize_pdf_sections_parallel(pdf_path, max_workers=ConfigConstants.MAX_PARALLEL_WORKERS)
+                summaries, sections = await summarize_pdf_sections_parallel(pdf_path, max_workers=ConfigConstants.MAX_PARALLEL_WORKERS)
 
                 # Create chunks for vector storage with enhanced context preservation
                 chunk_dict = defaultdict(list)
@@ -245,7 +245,7 @@ class PaperManager:
             logging.error(f"Error processing PDF: {str(e)}")
             raise
 
-    def ask_question(self, session_id: str, query: str) -> str:
+    async def ask_question(self, session_id: str, query: str) -> str:
         """
         Answer a question about a processed paper.
 
@@ -273,7 +273,7 @@ class PaperManager:
             context = "\n\n".join([chunk for _, chunk in results])
 
             # Generate answer using GraphBit LLM
-            answer = answer_question(context, query)
+            answer = await answer_question(context, query)
 
             logging.info(f"Successfully answered question for session {session_id}")
             return answer
