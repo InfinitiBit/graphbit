@@ -2,19 +2,31 @@
 
 import asyncio
 import re
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 
 from dotenv import load_dotenv
 
-from graphbit import DocumentLoader, DocumentLoaderConfig, LlmClient, LlmConfig, TextSplitter, TextSplitterConfig
+from graphbit import DocumentLoader, DocumentLoaderConfig, TextSplitter, TextSplitterConfig
 
 from .constant import ConfigConstants
+from .llm_manager import LLMManager
 
 load_dotenv()
 
 # SECTION HEADERS in display order
 SECTION_HEADERS = ConfigConstants.SECTION_HEADERS
 HEADER_REGEX = r"(" + "|".join(SECTION_HEADERS) + r")"
+
+# Global LLM manager instance (initialized lazily)
+_llm_manager: Optional[LLMManager] = None
+
+
+def get_llm_manager() -> LLMManager:
+    """Get or create the global LLM manager instance."""
+    global _llm_manager
+    if _llm_manager is None:
+        _llm_manager = LLMManager()
+    return _llm_manager
 
 
 def extract_text_from_pdf(pdf_path: str) -> str:
@@ -212,19 +224,16 @@ def chunk_text_with_context(text: str, section_title: str = "", max_words: int =
 
 
 async def summarize_section(section_title: str, section_text: str) -> str:
-    """Summarize a section of a research paper using GraphBit LLM client."""
+    """Summarize a section of a research paper using GraphBit LLM client with tracing."""
     prompt = f"Give detailed summary of the following section of a research paper titled '{section_title}':\n\n{section_text}\n\nSummary:"
 
-    # Configure LLM
-    openai_api_key = ConfigConstants.OPENAI_API_KEY
-    if not openai_api_key:
-        raise ValueError("OPENAI_API_KEY environment variable is not set")
-
-    config = LlmConfig.openai(openai_api_key, ConfigConstants.LLM_MODEL)
-    llm_client = LlmClient(config)
-
-    # Generate summary
-    summary = await llm_client.complete_async(prompt=prompt, max_tokens=ConfigConstants.LLM_MAX_TOKENS, temperature=ConfigConstants.LLM_TEMPERATURE)
+    # Get LLM manager and generate summary with tracing
+    llm_manager = get_llm_manager()
+    summary = await llm_manager.complete_async(
+        prompt=prompt,
+        max_tokens=ConfigConstants.LLM_MAX_TOKENS,
+        temperature=ConfigConstants.LLM_TEMPERATURE
+    )
     return summary
 
 
@@ -301,17 +310,14 @@ async def summarize_pdf_sections(pdf_path: str):
 
 
 async def answer_question(retrieved_context: str, user_question: str) -> str:
-    """Answer a question based on retrieved context using GraphBit LLM client."""
+    """Answer a question based on retrieved context using GraphBit LLM client with tracing."""
     prompt = f"You are an AI research assistant. Given the following excerpts from a research paper:\n\n" f"{retrieved_context}\n\n" f"Answer the user's question:\n{user_question}\n\nAnswer:"
 
-    # Configure LLM
-    openai_api_key = ConfigConstants.OPENAI_API_KEY
-    if not openai_api_key:
-        raise ValueError("OPENAI_API_KEY environment variable is not set")
-
-    config = LlmConfig.openai(openai_api_key, ConfigConstants.LLM_MODEL)
-    llm_client = LlmClient(config)
-
-    # Generate answer
-    response = await llm_client.complete_async(prompt=prompt, max_tokens=ConfigConstants.LLM_MAX_TOKENS, temperature=0.2)
+    # Get LLM manager and generate answer with tracing
+    llm_manager = get_llm_manager()
+    response = await llm_manager.complete_async(
+        prompt=prompt,
+        max_tokens=ConfigConstants.LLM_MAX_TOKENS,
+        temperature=0.2
+    )
     return response
