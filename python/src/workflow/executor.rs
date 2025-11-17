@@ -247,8 +247,8 @@ impl Executor {
     }
 
     /// Execute a workflow with comprehensive error handling and monitoring
-    #[instrument(skip(self, workflow), fields(workflow_name = %workflow.inner.name))]
-    fn execute(&mut self, workflow: &Workflow) -> PyResult<WorkflowResult> {
+    #[instrument(skip(self, py, workflow), fields(workflow_name = %workflow.inner.name))]
+    fn execute(&mut self, py: Python<'_>, workflow: &Workflow) -> PyResult<WorkflowResult> {
         let start_time = Instant::now();
 
         // Validate workflow
@@ -279,12 +279,16 @@ impl Executor {
             debug!("Starting workflow execution with mode: {:?}", config.mode);
         }
 
-        let result = get_runtime().block_on(async move {
-            // Apply timeout to the entire execution
-            tokio::time::timeout(timeout_duration, async move {
-                Self::execute_workflow_internal(llm_config, workflow_clone, config).await
+        // Release the GIL before entering the async runtime to prevent deadlocks
+        // when the async code needs to call back into Python
+        let result = py.allow_threads(|| {
+            get_runtime().block_on(async move {
+                // Apply timeout to the entire execution
+                tokio::time::timeout(timeout_duration, async move {
+                    Self::execute_workflow_internal(llm_config, workflow_clone, config).await
+                })
+                .await
             })
-            .await
         });
 
         let duration = start_time.elapsed();

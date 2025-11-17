@@ -275,7 +275,7 @@ impl LlmConfig {
         Python::with_gil(|py| {
             // Import the Python HuggingFace class
             let hf_module = py
-                .import("graphbit.integrations.huggingface.llm")
+                .import("graphbit.providers.huggingface.llm")
                 .map_err(|e| {
                     pyo3::exceptions::PyImportError::new_err(format!(
                         "Failed to import HuggingFace module: {e}"

@@ -158,16 +158,13 @@ impl LlmProviderTrait for PythonBridgeProvider {
     }
 
     async fn complete(&self, request: LlmRequest) -> GraphBitResult<LlmResponse> {
-        // Execute Python call in a blocking context
-        // We use block_in_place instead of spawn_blocking to avoid GIL deadlocks
-        // block_in_place runs the blocking code on the current thread, which is safer for Python GIL
+        // Execute Python call directly without spawn_blocking or block_in_place
+        // The Python GIL will be acquired and released as needed
+        // The caller (Python bindings) must release the GIL before entering the async runtime
         let python_instance = Arc::clone(&self.python_instance);
         let model = self.model.clone();
 
-        // Use block_in_place to run blocking Python code without moving to a different thread
-        // This avoids potential GIL deadlocks that can occur with spawn_blocking
-        tokio::task::block_in_place(|| {
-            Python::with_gil(|py| {
+        Python::with_gil(|py| {
                 // Convert Rust messages to Python format
                 let messages = PyList::empty(py);
                 for msg in &request.messages {
@@ -244,7 +241,6 @@ impl LlmProviderTrait for PythonBridgeProvider {
                 };
                 provider.parse_python_response(py, result)
             })
-        })
     }
 
     fn supports_function_calling(&self) -> bool {
