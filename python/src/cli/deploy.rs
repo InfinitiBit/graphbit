@@ -181,33 +181,33 @@ def main():
     # Set API key
     os.environ['E2B_API_KEY'] = '{api_key}'
     
-    print("🚀 Starting E2B deployment...")
-    
+    print("Starting E2B deployment...")
+
     # Create sandbox
-    print("📦 Creating E2B sandbox...")
+    print("Creating E2B sandbox...")
     try:
         sandbox = Sandbox.create()  # Use default template
         print(f"✅ Sandbox created: {{sandbox.sandbox_id}}")
 
         # Upload project files
-        print("📤 Uploading project files...")
+        print("Uploading project files...")
         upload_project_files(sandbox)
 
         # Install dependencies
-        print("📦 Installing dependencies...")
+        print("Installing dependencies...")
         install_dependencies(sandbox)
 
         # Run initial setup
-        print("🔧 Running project setup...")
+        print("Running project setup...")
         setup_result = run_project_setup(sandbox)
 
         # Project deployed successfully
         print("\\n✅ Project deployed successfully!")
-        
+
 
 
         # Execute the GraphBit project
-        print("\\n🚀 Running your GraphBit project...")
+        print("\\nRunning your GraphBit project...")
         print("=" * 60)
 
         execution_result = sandbox.run_code('''
@@ -234,11 +234,11 @@ except Exception as e:
         print("=" * 60)
 
         # Output deployment information
-        print(f"\\n🎉 Deployment completed successfully!")
-        print(f"🌐 Sandbox ID: {{sandbox.sandbox_id}}")
-        print("\\n📋 Access your deployed project:")
-        print("   🌍 E2B Dashboard: https://e2b.dev/dashboard")
-        print(f"   🔍 Sandbox ID: {{sandbox.sandbox_id}}")
+        print(f"\\n✅ Deployment completed successfully!")
+        print(f"Sandbox ID: {{sandbox.sandbox_id}}")
+        print("\\nAccess your deployed project:")
+        print("   E2B Dashboard: https://e2b.dev/dashboard")
+        print(f"   Sandbox ID: {{sandbox.sandbox_id}}")
 
         # Output machine-readable info for CLI tools
         print(f"SANDBOX_ID:{{sandbox.sandbox_id}}")
@@ -279,7 +279,7 @@ def upload_project_files(sandbox):
                 continue
             files_to_upload.append(rel_path)
 
-    print(f"📦 Uploading {{len(files_to_upload)}} files...")
+    print(f"Uploading {{len(files_to_upload)}} files...")
 
     for file_name in files_to_upload:
         file_path = project_root / file_name
@@ -296,12 +296,12 @@ def upload_project_files(sandbox):
                     sandbox.run_code(f"import os; os.makedirs('{{remote_dir}}', exist_ok=True)")
 
                 sandbox.files.write(remote_path, content)
-                print(f"  📄 Uploaded {{file_name}}")
+                print(f"  ✅ Uploaded {{file_name}}")
             except UnicodeDecodeError:
                 # Skip binary files for now (could be enhanced to handle them)
-                print(f"  ⚠️  Skipped binary file: {{file_name}}")
+                print(f"  Skipped binary file: {{file_name}}")
             except Exception as e:
-                print(f"  ❌ Failed to upload {{file_name}}: {{e}}")
+                print(f"  Failed to upload {{file_name}}: {{e}}")
 
 def upload_directory(sandbox, local_dir, remote_dir):
     """Recursively upload a directory."""
@@ -344,10 +344,10 @@ try:
 
     # Try to run main function if it exists
     if hasattr(main, 'main'):
-        print("🚀 Running main function...")
+        print("Running main function...")
         main.main()
     else:
-        print("ℹ️  No main() function found in main.py")
+        print("No main() function found in main.py")
 
 except Exception as e:
     print(f"⚠️  Setup warning: {{e}}")

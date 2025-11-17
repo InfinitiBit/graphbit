@@ -126,6 +126,8 @@ fn create_comprehensive_template(
     write_file(&tools_file, &get_tools_content())?;
     created_files.push(tools_file.display().to_string());
 
+
+
     Ok(())
 }
 
@@ -145,6 +147,11 @@ E2B_API_KEY=your_e2b_api_key_here
 # LLM API Keys (choose the ones you need)
 OPENAI_API_KEY=your_openai_api_key_here
 ANTHROPIC_API_KEY=your_anthropic_api_key_here
+
+# GraphBit Tracer Configuration (optional)
+# Get your API key from GraphBit platform
+GRAPHBIT_TRACING_API_KEY=your_graphbit_tracing_api_key_here
+GRAPHBIT_TRACEABLE_PROJECT=your_project_name_here
 "#.to_string()
 }
 
@@ -194,6 +201,9 @@ outputs/
 fn get_requirements_content() -> String {
     r#"# GraphBit framework
 graphbit
+
+# GraphBit tracing and observability
+graphbit-tracer
 
 # E2B integration
 e2b-code-interpreter
@@ -263,44 +273,63 @@ graphbit deploy
 }
 
 fn get_simple_agent_content() -> String {
-    r#""""Simple GraphBit agent example."""
+    r#""""Simple GraphBit agent example with optional GraphBit Tracer integration."""
 
+import asyncio
 import os
-from graphbit import LlmConfig, LlmClient
+from graphbit import LlmConfig, Executor, Workflow, Node, tool
+from graphbit_tracer import AutoTracer
 
-def create_agent():
-    """Create a simple GraphBit agent."""
-    # Configure LLM using static methods
+
+# Define a simple tool
+@tool(_description="Add two numbers together")
+def add_numbers(a: float, b: float) -> float:
+    """Add two numbers and return the result."""
+    return a + b
+
+
+async def run_agent():
+    """Run a simple GraphBit agent with optional tracer integration."""
+    print("=" * 50)
+    print("GraphBit Agent Example")
+    print("=" * 50)
+
+    # Initialize tracer
+    tracer = await AutoTracer.create()
+
+    # Configure LLM
     api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        raise ValueError("OPENAI_API_KEY environment variable is required")
 
-    # Create OpenAI configuration
-    config = LlmConfig.openai(api_key, "gpt-4o-mini")
 
-    # Create client
-    client = LlmClient(config)
-    return client
+    llm_config = LlmConfig.openai(api_key, "gpt-4o-mini")
 
-def run_agent():
-    """Run the agent with a simple task."""
-    client = create_agent()
+    # Create workflow with tool
+    workflow = Workflow("SimpleAgent")
+    agent_node = Node.agent(
+        name="SimpleAgent",
+        prompt="Calculate 15 + 27 using the add_numbers tool and explain the result briefly.",
+        agent_id="simple_agent",
+        tools=[add_numbers],
+    )
+    workflow.add_node(agent_node)
+    workflow.validate()
 
-    # Simple conversation
-    response = client.complete("Hello! Can you help me with a simple task?")
-    print("Agent response:", response)
+    # Execute with tracing
+    executor = Executor(llm_config)
+    traced_executor = tracer.wrap_executor(executor, llm_config)
+    result = await traced_executor.execute(workflow)
 
-    return response
+    # Send traces to API and cleanup
+    results = await tracer.send_to_api()
+    await tracer.shutdown()
+
+    return result
+
 
 if __name__ == "__main__":
-    run_agent()
+    asyncio.run(run_agent())
 "#.to_string()
 }
-
-
-
-
-
 
 
 fn get_comprehensive_main_content() -> String {
@@ -312,6 +341,7 @@ All patterns are included - implement the one you need!
 
 import os
 from dotenv import load_dotenv
+import asyncio
 
 # Load environment variables from .env file
 load_dotenv()
@@ -332,20 +362,23 @@ def main():
     # Check environment
     if not os.getenv("OPENAI_API_KEY"):
         print("⚠️  OPENAI_API_KEY not found in environment")
-        print("💡 Copy .env.example to .env and add your API keys")
+        print("Copy .env.example to .env and add your API keys")
         return
 
-    print("🚀 GraphBit Project Ready!")
-    print("📝 Choose your pattern in main.py:")
-    print("   1. Agent: Uncomment 'from agent import run_agent' and 'run_agent()'")
-    print("   2. Workflow: Uncomment 'from workflow import run_workflow' and 'run_workflow()'")
-    print("   3. Tools: Uncomment 'from workflow_with_tools import run_workflow_with_tools' and 'run_workflow_with_tools()'")
+    print("✅ GraphBit Project Ready!")
+    print("Choose your pattern in main.py:")
+    print("   1. Agent: Uncomment 'from agent import run_agent' and 'asyncio.run(run_agent())'")
+    print("   2. Workflow: Uncomment 'from workflow import run_workflow' and 'asyncio.run(run_workflow())'")
+    print("   3. Tools: Uncomment 'from workflow_with_tools import run_workflow_with_tools' and 'asyncio.run(run_workflow_with_tools())'")
+    print("   Note: All patterns include optional GraphBit Tracer integration")
 
     # Uncomment ONE of these based on your chosen pattern:
+    # All patterns are now async and include optional GraphBit Tracer integration
 
-    # result = run_agent()
-    # result = run_workflow()
-    # result = run_workflow_with_tools()
+
+    # result = asyncio.run(run_agent())
+    # result = asyncio.run(run_workflow())
+    # result = asyncio.run(run_workflow_with_tools())
 
     # print(f"Result: {result}")
 
@@ -358,58 +391,131 @@ if __name__ == "__main__":
 
 /// Get workflow content
 fn get_workflow_content() -> String {
-    r#""""GraphBit workflow implementation."""
+    r#""""GraphBit workflow implementation with optional GraphBit Tracer integration."""
 
+import asyncio
 import os
 from graphbit import LlmConfig, Executor, Workflow, Node
+from graphbit_tracer import AutoTracer
 
-def run_workflow():
-    """Implement your workflow here."""
+
+async def run_workflow():
+    """Run a multi-node workflow with optional tracer integration."""
+    print("=" * 50)
+    print("GraphBit Workflow Example")
+    print("=" * 50)
+
+    # Initialize tracer
+    tracer = await AutoTracer.create()
+
+    # Configure LLM
     api_key = os.getenv("OPENAI_API_KEY")
-    config = LlmConfig.openai(api_key, "gpt-4o-mini")
-    executor = Executor(config)
 
-    workflow = Workflow("My Workflow")
+    llm_config = LlmConfig.openai(api_key, "gpt-4o-mini")
 
-    # TODO: Add your nodes here
-    # node = Node.agent(name="Agent", prompt="Your prompt", agent_id="agent")
-    # workflow.add_node(node)
+    # Create multi-node workflow
+    workflow = Workflow("ContentWorkflow")
+
+    # Node 1: Generate ideas
+    idea_node = Node.agent(
+        name="IdeaGenerator",
+        prompt="Generate 3 creative ideas for a blog post about technology trends.",
+        agent_id="idea_generator"
+    )
+    workflow.add_node(idea_node)
+
+    # Node 2: Select best idea
+    selector_node = Node.agent(
+        name="IdeaSelector",
+        prompt="From these ideas:\n{{IdeaGenerator}}\n\nChoose the most interesting one and explain why in 2 sentences.",
+        agent_id="idea_selector"
+    )
+    workflow.add_node(selector_node)
 
     workflow.validate()
-    result = executor.execute(workflow)
+
+    # Execute with tracing
+    executor = Executor(llm_config)
+    traced_executor = tracer.wrap_executor(executor, llm_config)
+    result = await traced_executor.execute(workflow)
+
+    # Send traces to API and cleanup
+    results = await tracer.send_to_api()
+    await tracer.shutdown()
+
     return result
 
+
 if __name__ == "__main__":
-    run_workflow()
+    asyncio.run(run_workflow())
 "#.to_string()
 }
 
 /// Get workflow with tools content
 fn get_workflow_with_tools_content() -> String {
-    r#""""GraphBit workflow with tools implementation."""
+    r#""""GraphBit workflow with tools implementation and optional GraphBit Tracer integration."""
 
+import asyncio
 import os
-from graphbit import LlmConfig, Executor, Workflow, Node
-from tools import *
+from graphbit import LlmConfig, Executor, Workflow, Node, tool
+from graphbit_tracer import AutoTracer
 
-def run_workflow_with_tools():
-    """Implement your workflow with tools here."""
+
+# Define tools
+@tool(_description="Calculate the sum of two numbers")
+def add_numbers(a: float, b: float) -> float:
+    """Add two numbers and return the result."""
+    return a + b
+
+
+@tool(_description="Calculate the product of two numbers")
+def multiply_numbers(a: float, b: float) -> float:
+    """Multiply two numbers and return the result."""
+    return a * b
+
+
+async def run_workflow_with_tools():
+    """Run a workflow with tools and optional tracer integration."""
+    print("=" * 50)
+    print("GraphBit Workflow with Tools Example")
+    print("=" * 50)
+
+    # Initialize tracer
+    tracer = await AutoTracer.create()
+
+    # Configure LLM
     api_key = os.getenv("OPENAI_API_KEY")
-    config = LlmConfig.openai(api_key, "gpt-4o-mini")
-    executor = Executor(config)
 
-    workflow = Workflow("My Workflow with Tools")
+    llm_config = LlmConfig.openai(api_key, "gpt-4o-mini")
 
-    # TODO: Add your nodes with tools here
-    # node = Node.agent(name="Agent", prompt="Your prompt", agent_id="agent", tools=[your_tool])
-    # workflow.add_node(node)
+    # Create workflow with tools
+    workflow = Workflow("MathWorkflow")
+
+    # Node with math tools
+    math_node = Node.agent(
+        name="MathAgent",
+        prompt="Calculate (15 + 27) * 2 using the available tools. Show your work step by step.",
+        agent_id="math_agent",
+        tools=[add_numbers, multiply_numbers],
+    )
+    workflow.add_node(math_node)
 
     workflow.validate()
-    result = executor.execute(workflow)
+
+    # Execute with tracing
+    executor = Executor(llm_config)
+    traced_executor = tracer.wrap_executor(executor, llm_config)
+    result = await traced_executor.execute(workflow)
+
+    # Send traces to API and cleanup
+    results = await tracer.send_to_api()
+    await tracer.shutdown()
+
     return result
 
+
 if __name__ == "__main__":
-    run_workflow_with_tools()
+    asyncio.run(run_workflow_with_tools())
 "#.to_string()
 }
 
@@ -426,5 +532,6 @@ from graphbit import tool
 #     return "result"
 "#.to_string()
 }
+
 
 

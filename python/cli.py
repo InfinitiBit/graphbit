@@ -20,7 +20,7 @@ console = Console()
 # Create the main Typer app
 app = typer.Typer(
     name="graphbit",
-    help="🚀 GraphBit CLI - Build, run, and deploy AI agents with ease",
+    help="GraphBit CLI - Build, run, and deploy AI agents with ease",
     rich_markup_mode="rich",
     no_args_is_help=True,
 )
@@ -46,7 +46,7 @@ def init(
         console.print("❌ CLI functionality not available. Please install GraphBit with CLI support.", style="red")
         raise typer.Exit(1)
     
-    console.print(f"🚀 Initializing GraphBit project: [bold blue]{project_name}[/bold blue]")
+    console.print(f"Initializing GraphBit project: [bold blue]{project_name}[/bold blue]")
     
     with Progress(
         SpinnerColumn(),
@@ -78,7 +78,7 @@ Next steps:
 4. [bold]pip install -r requirements.txt[/bold]
 5. [bold]python main.py[/bold]"""
             
-            console.print(Panel(panel_content, title="🎉 Project Created", border_style="green"))
+            console.print(Panel(panel_content, title="✅ Project Created", border_style="green"))
             
         except Exception as e:
             console.print(f"❌ Error creating project: {e}", style="red")
@@ -101,7 +101,7 @@ def run(
     if file_path is None:
         file_path = "main.py"
     
-    console.print(f"🚀 Running GraphBit file: [bold blue]{file_path}[/bold blue]")
+    console.print(f"Running GraphBit file: [bold blue]{file_path}[/bold blue]")
     
     with Progress(
         SpinnerColumn(),
@@ -133,7 +133,7 @@ Execution Time: [bold cyan]{execution_time:.2f}s[/bold cyan]
 Output:
 {result.get('output', 'No output captured')}"""
             
-            console.print(Panel(panel_content, title="📊 Execution Results", border_style="green"))
+            console.print(Panel(panel_content, title="✅ Execution Results", border_style="green"))
             
         except Exception as e:
             console.print(f"❌ Error running agent: {e}", style="red")
@@ -152,7 +152,7 @@ def deploy(
         console.print("❌ CLI functionality not available. Please install GraphBit with CLI support.", style="red")
         raise typer.Exit(1)
     
-    console.print("🚀 Deploying GraphBit project to E2B...")
+    console.print("Deploying GraphBit project to E2B...")
     
     with Progress(
         SpinnerColumn(),
@@ -179,7 +179,7 @@ Status: [bold green]{result.get('status', 'Deployed')}[/bold green]
 Access your deployed agent at:
 [bold cyan]{result.get('url', 'Check E2B dashboard')}[/bold cyan]"""
             
-            console.print(Panel(panel_content, title="🎉 Deployment Complete", border_style="green"))
+            console.print(Panel(panel_content, title="✅ Deployment Complete", border_style="green"))
             
         except Exception as e:
             console.print(f"❌ Error deploying to E2B: {e}", style="red")
@@ -192,7 +192,7 @@ def info(
     """Display information about the current GraphBit project."""
     
     project_path = Path(project_dir) if project_dir else Path.cwd()
-    console.print(f"📊 GraphBit Project Information: [bold blue]{project_path.absolute()}[/bold blue]")
+    console.print(f"GraphBit Project Information: [bold blue]{project_path.absolute()}[/bold blue]")
     
     # Create project structure table
     table = Table(title="Project Structure")
@@ -221,7 +221,7 @@ def info(
     # Check environment variables
     env_file = project_path / ".env"
     if env_file.exists():
-        console.print("\n🔑 Environment Configuration:")
+        console.print("\nEnvironment Configuration:")
         
         # Check for common API keys
         api_keys = ["OPENAI_API_KEY", "ANTHROPIC_API_KEY", "E2B_API_KEY"]
