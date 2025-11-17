@@ -26,7 +26,7 @@ init()
 from graphbit import LlmConfig, LlmClient
 import os
 
-config = LlmConfig.huggingface_python(
+config = LlmConfig.huggingface(
     api_key=os.getenv("HUGGINGFACE_API_KEY"),
     model="meta-llama/Llama-3.3-70B-Instruct"
 )
@@ -42,7 +42,7 @@ print(response)
 from graphbit import LlmConfig, Workflow, Node, Executor
 import os
 
-config = LlmConfig.huggingface_python(
+config = LlmConfig.huggingface(
     api_key=os.getenv("HUGGINGFACE_API_KEY"),
     model="mistralai/Mistral-7B-Instruct-v0.3"
 )
@@ -69,7 +69,7 @@ print(result.get_node_output("Agent"))
 from graphbit import LlmConfig, Workflow, Node, Executor
 import os
 
-hf_config = LlmConfig.huggingface_python(
+hf_config = LlmConfig.huggingface(
     api_key=os.getenv("HUGGINGFACE_API_KEY"),
     model="mistralai/Mistral-7B-Instruct-v0.3"
 )
@@ -161,5 +161,3 @@ similarities = hf.embeddings.similarity(
 
 print(similarities)
 ```
-
-

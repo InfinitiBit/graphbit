@@ -10,7 +10,9 @@ use std::collections::HashMap;
 fn default_python_instance() -> std::sync::Arc<pyo3::PyObject> {
     // This is a placeholder that should never be used
     // The python_instance should always be set when creating a PythonBridge config
-    panic!("PythonBridge config cannot be deserialized - python_instance must be set programmatically")
+    panic!(
+        "PythonBridge config cannot be deserialized - python_instance must be set programmatically"
+    )
 }
 
 /// Configuration for different LLM providers
