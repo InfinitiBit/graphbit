@@ -30,6 +30,8 @@ agent = Node.agent(
 - `output_name` (str, optional): Custom name for the node's output
 - `tools` (List, optional): List of tools available to the agent
 - `system_prompt` (str, optional): System prompt that defines agent behavior and constraints
+- `temperature` (float, optional): Controls randomness in LLM responses (0.0-2.0). Lower values = more focused, higher = more creative
+- `max_tokens` (int, optional): Maximum number of tokens to generate in the response
 
 ### Agent Node with Tool calling
 
@@ -75,6 +77,36 @@ json_agent = Node.agent(
         "confidence": 0.0-1.0,
         "reasoning": "brief explanation"
     }"""
+)
+```
+
+### Agent Node with Temperature and Max Tokens
+
+```python
+from graphbit import Node
+
+# Creative writing agent with high temperature
+creative_agent = Node.agent(
+    name="Creative Writer",
+    prompt="Write a creative story about: {topic}",
+    temperature=1.2,      # Higher temperature for more creativity
+    max_tokens=2000       # Limit response length
+)
+
+# Precise analysis agent with low temperature
+analytical_agent = Node.agent(
+    name="Data Analyst",
+    prompt="Analyze this dataset: {data}",
+    temperature=0.2,      # Lower temperature for focused, deterministic output
+    max_tokens=500        # Concise response
+)
+
+# Balanced agent
+balanced_agent = Node.agent(
+    name="General Assistant",
+    prompt="Help with: {task}",
+    temperature=0.7,      # Balanced creativity and focus
+    max_tokens=1000       # Moderate response length
 )
 ```
 

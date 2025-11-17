@@ -27,7 +27,7 @@ pub struct Node {
 #[pymethods]
 impl Node {
     #[staticmethod]
-    #[pyo3(signature = (name, prompt, agent_id=None, output_name=None, tools=None, system_prompt=None, llm_config=None, temperature=None))]
+    #[pyo3(signature = (name, prompt, agent_id=None, output_name=None, tools=None, system_prompt=None, llm_config=None, temperature=None, max_tokens=None))]
     fn agent(
         name: String,
         prompt: String,
@@ -37,6 +37,7 @@ impl Node {
         system_prompt: Option<String>,
         llm_config: Option<LlmConfig>,
         temperature: Option<f32>,
+        max_tokens: Option<u32>,
     ) -> PyResult<Self> {
         // Validate required parameters
         if name.trim().is_empty() {
@@ -116,6 +117,27 @@ impl Node {
                         .ok_or_else(|| {
                             PyErr::new::<pyo3::exceptions::PyValueError, _>(
                                 "Invalid temperature value",
+                            )
+                        })?,
+                ),
+            );
+        }
+
+        // Store max_tokens in metadata if provided
+        if let Some(tokens) = max_tokens {
+            // Validate max_tokens range (must be positive, typically between 1 and 128000)
+            if tokens == 0 {
+                return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                    "max_tokens must be greater than 0",
+                ));
+            }
+            node.config.insert(
+                "max_tokens".to_string(),
+                serde_json::Value::Number(
+                    serde_json::Number::from_f64(tokens as f64)
+                        .ok_or_else(|| {
+                            PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                                "Invalid max_tokens value",
                             )
                         })?,
                 ),
