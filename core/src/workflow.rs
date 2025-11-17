@@ -368,9 +368,10 @@ impl WorkflowExecutor {
 
                 // If agent doesn't exist, create and register a default agent
                 if !agent_exists {
-                    // Find the node configuration for this agent to extract system_prompt, temperature, and LLM config
+                    // Find the node configuration for this agent to extract system_prompt, temperature, max_tokens, and LLM config
                     let mut system_prompt = String::new();
                     let mut temperature: Option<f32> = None;
+                    let mut max_tokens: Option<u32> = None;
                     let mut resolved_llm_config = self.default_llm_config.clone()
                         .unwrap_or_else(|| crate::llm::LlmConfig::Unconfigured {
                             message: "No LLM configuration provided for agent creation. Please explicitly configure an LLM provider.".to_string()
@@ -394,6 +395,13 @@ impl WorkflowExecutor {
                                 if let Some(temp_value) = node.config.get("temperature") {
                                     if let Some(temp_num) = temp_value.as_f64() {
                                         temperature = Some(temp_num as f32);
+                                    }
+                                }
+
+                                // Extract max_tokens from node config if available
+                                if let Some(max_tokens_value) = node.config.get("max_tokens") {
+                                    if let Some(max_tokens_num) = max_tokens_value.as_u64() {
+                                        max_tokens = Some(max_tokens_num as u32);
                                     }
                                 }
 
@@ -422,6 +430,11 @@ impl WorkflowExecutor {
                     // Set temperature if found in node configuration
                     if let Some(temp) = temperature {
                         default_config = default_config.with_temperature(temp);
+                    }
+
+                    // Set max_tokens if found in node configuration
+                    if let Some(tokens) = max_tokens {
+                        default_config = default_config.with_max_tokens(tokens);
                     }
 
                     // Try to create agent - if it fails due to config issues, fail the workflow
@@ -1018,7 +1031,20 @@ impl WorkflowExecutor {
 
             // Call LLM provider directly to capture metadata
             use crate::llm::LlmRequest;
-            let request = LlmRequest::new(resolved_prompt.clone());
+            let mut request = LlmRequest::new(resolved_prompt.clone());
+
+            // Apply node-level configuration overrides (temperature, max_tokens, etc.)
+            if let Some(temp_value) = node_config.get("temperature") {
+                if let Some(temp_num) = temp_value.as_f64() {
+                    request = request.with_temperature(temp_num as f32);
+                }
+            }
+
+            if let Some(max_tokens_value) = node_config.get("max_tokens") {
+                if let Some(max_tokens_num) = max_tokens_value.as_u64() {
+                    request = request.with_max_tokens(max_tokens_num as u32);
+                }
+            }
 
             // Measure LLM call duration and capture execution timestamp
             let execution_timestamp = chrono::Utc::now();
