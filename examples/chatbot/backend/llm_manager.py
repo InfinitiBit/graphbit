@@ -74,11 +74,7 @@ class LLMManager:
     @property
     def llm_client(self):
         """Get the LLM client (traced if available, otherwise base client)."""
-        print(f"Tracing initialized: {self._tracing_initialized}")
-        print(f"Traced client: {self._traced_client is not None}")
-        print(f"Base client: {self._llm_client is not None}")
         if self._traced_client is not None:
-            print("Using traced client")
             return self._traced_client
         return self._llm_client
 
@@ -105,22 +101,12 @@ class LLMManager:
         """
         # Ensure traced client is initialized before making LLM calls
         await self._ensure_traced_client()
-        print(f"Tracing initialized: {self._tracing_initialized}")
-        print(f"API Key: {self._tracing_api_key}")
-        print(f"Project: {self._traceable_project}")
-        print(f"API URL: {self._tracing_api_url}")
 
         response = await self.llm_client.complete_full_async(prompt, max_tokens=ConfigConstants.MAX_TOKENS)
-        print("llm_client: ", self.llm_client)
-        for chunk in response:
-            yield chunk
 
-        # Send traces to API if tracing is enabled
-        if self._tracer:
-            try:
-                print("Tracer: ", self._tracer)
-                results = await self._tracer.send_to_api()
-                print("Results: ", results)
-                logging.info(f"Traces sent - Sent: {results['sent']}, Failed: {results['failed']}")
-            except Exception as e:
-                logging.warning(f"Failed to send traces: {e}")
+        if self._tracing_initialized:
+            results = await self._tracer.send_to_api()
+            logging.info(f"Traces sent - Sent: {results['sent']}, Failed: {results['failed']}")
+        
+        for chunk in response.content:
+            yield chunk
