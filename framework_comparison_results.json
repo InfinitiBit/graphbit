@@ -1,0 +1,298 @@
+[
+  {
+    "test_name": "Load+Chunk_100docs_20workers",
+    "num_documents": 100,
+    "graphbit": {
+      "framework": "graphbit",
+      "test_name": "Load+Chunk_100docs_20workers",
+      "num_documents": 100,
+      "num_workers": 20,
+      "document_size_words": 200,
+      "total_time": 0.05368479999015108,
+      "load_time": 0.04398149999906309,
+      "chunk_time": 0.0097014999773819,
+      "embed_time": 0.0,
+      "store_time": 0.0,
+      "documents_loaded": 100,
+      "chunks_created": 200,
+      "embeddings_generated": 0,
+      "throughput_docs_per_sec": 1862.7246449338702,
+      "throughput_chunks_per_sec": 3725.4492898677404,
+      "baseline_cpu_percent": 0.0,
+      "baseline_memory_mb": 91.1640625,
+      "peak_cpu_percent": 0.0,
+      "peak_memory_mb": 92.2265625,
+      "avg_cpu_percent": 0.0,
+      "avg_memory_mb": 92.2265625,
+      "memory_growth_mb": 1.0625,
+      "cpu_efficiency": 0,
+      "memory_efficiency": 20.1972684922944,
+      "hit_memory_threshold": false,
+      "hit_cpu_threshold": false,
+      "completed_successfully": true,
+      "resource_snapshots": [
+        {
+          "timestamp": 1763365845.5535946,
+          "cpu_percent": 0.0,
+          "memory_mb": 92.2265625,
+          "memory_percent": 0.2840204398479354,
+          "thread_count": 63
+        }
+      ]
+    },
+    "langchain": {
+      "framework": "langchain",
+      "test_name": "Load+Chunk_100docs_20workers",
+      "num_documents": 100,
+      "num_workers": 20,
+      "document_size_words": 200,
+      "total_time": 0.01694830000633374,
+      "load_time": 0.007469200005289167,
+      "chunk_time": 0.009477499988861382,
+      "embed_time": 0.0,
+      "store_time": 0.0,
+      "documents_loaded": 100,
+      "chunks_created": 200,
+      "embeddings_generated": 0,
+      "throughput_docs_per_sec": 5900.296782723286,
+      "throughput_chunks_per_sec": 11800.593565446572,
+      "baseline_cpu_percent": 0.0,
+      "baseline_memory_mb": 93.30078125,
+      "peak_cpu_percent": 96.3,
+      "peak_memory_mb": 102.96484375,
+      "avg_cpu_percent": 96.3,
+      "avg_memory_mb": 102.96484375,
+      "memory_growth_mb": 9.6640625,
+      "cpu_efficiency": 61.269956206887706,
+      "memory_efficiency": 57.303993944275625,
+      "hit_memory_threshold": false,
+      "hit_cpu_threshold": false,
+      "completed_successfully": true,
+      "resource_snapshots": [
+        {
+          "timestamp": 1763365848.060763,
+          "cpu_percent": 96.3,
+          "memory_mb": 102.96484375,
+          "memory_percent": 0.3170899946612338,
+          "thread_count": 63
+        }
+      ]
+    },
+    "speedups": {
+      "total_time": 0.31570016111530724,
+      "load_time": 0.16982594967084522,
+      "chunk_time": 0.9769107881211408,
+      "embed_time": null,
+      "throughput": 0.3157001611153072
+    }
+  },
+  {
+    "test_name": "Load+Chunk_500docs_20workers",
+    "num_documents": 500,
+    "graphbit": {
+      "framework": "graphbit",
+      "test_name": "Load+Chunk_500docs_20workers",
+      "num_documents": 500,
+      "num_workers": 20,
+      "document_size_words": 200,
+      "total_time": 0.14112899999599904,
+      "load_time": 0.12086139997700229,
+      "chunk_time": 0.020266400009859353,
+      "embed_time": 0.0,
+      "store_time": 0.0,
+      "documents_loaded": 500,
+      "chunks_created": 1000,
+      "embeddings_generated": 0,
+      "throughput_docs_per_sec": 3542.8579527536854,
+      "throughput_chunks_per_sec": 7085.715905507371,
+      "baseline_cpu_percent": 0.0,
+      "baseline_memory_mb": 104.046875,
+      "peak_cpu_percent": 220.2,
+      "peak_memory_mb": 106.4375,
+      "avg_cpu_percent": 110.1,
+      "avg_memory_mb": 105.5625,
+      "memory_growth_mb": 2.390625,
+      "cpu_efficiency": 32.178546346536656,
+      "memory_efficiency": 33.56170943994018,
+      "hit_memory_threshold": false,
+      "hit_cpu_threshold": false,
+      "completed_successfully": true,
+      "resource_snapshots": [
+        {
+          "timestamp": 1763365849.4252982,
+          "cpu_percent": 0.0,
+          "memory_mb": 104.6875,
+          "memory_percent": 0.3223950778451787,
+          "thread_count": 63
+        },
+        {
+          "timestamp": 1763365849.5317101,
+          "cpu_percent": 220.2,
+          "memory_mb": 106.4375,
+          "memory_percent": 0.32778436869870997,
+          "thread_count": 83
+        }
+      ]
+    },
+    "langchain": {
+      "framework": "langchain",
+      "test_name": "Load+Chunk_500docs_20workers",
+      "num_documents": 500,
+      "num_workers": 20,
+      "document_size_words": 200,
+      "total_time": 0.10873720000381581,
+      "load_time": 0.05171850000624545,
+      "chunk_time": 0.05701699998462573,
+      "embed_time": 0.0,
+      "store_time": 0.0,
+      "documents_loaded": 500,
+      "chunks_created": 1000,
+      "embeddings_generated": 0,
+      "throughput_docs_per_sec": 4598.242367675956,
+      "throughput_chunks_per_sec": 9196.484735351913,
+      "baseline_cpu_percent": 0.0,
+      "baseline_memory_mb": 107.13671875,
+      "peak_cpu_percent": 102.0,
+      "peak_memory_mb": 107.984375,
+      "avg_cpu_percent": 94.2,
+      "avg_memory_mb": 107.97265625,
+      "memory_growth_mb": 0.84765625,
+      "cpu_efficiency": 48.81361324496769,
+      "memory_efficiency": 42.587100543578195,
+      "hit_memory_threshold": false,
+      "hit_cpu_threshold": false,
+      "completed_successfully": true,
+      "resource_snapshots": [
+        {
+          "timestamp": 1763365851.2483795,
+          "cpu_percent": 102.0,
+          "memory_mb": 107.9609375,
+          "memory_percent": 0.3324759388613824,
+          "thread_count": 63
+        },
+        {
+          "timestamp": 1763365851.3568673,
+          "cpu_percent": 86.4,
+          "memory_mb": 107.984375,
+          "memory_percent": 0.332548116863885,
+          "thread_count": 63
+        }
+      ]
+    },
+    "speedups": {
+      "total_time": 0.7704809075873739,
+      "load_time": 0.4279157780406857,
+      "chunk_time": 2.8133758317652697,
+      "embed_time": null,
+      "throughput": 0.7704809075873738
+    }
+  },
+  {
+    "test_name": "Load+Chunk_1000docs_20workers",
+    "num_documents": 1000,
+    "graphbit": {
+      "framework": "graphbit",
+      "test_name": "Load+Chunk_1000docs_20workers",
+      "num_documents": 1000,
+      "num_workers": 20,
+      "document_size_words": 200,
+      "total_time": 0.24967910000123084,
+      "load_time": 0.21649109999998473,
+      "chunk_time": 0.03318680002121255,
+      "embed_time": 0.0,
+      "store_time": 0.0,
+      "documents_loaded": 1000,
+      "chunks_created": 2000,
+      "embeddings_generated": 0,
+      "throughput_docs_per_sec": 4005.140998966555,
+      "throughput_chunks_per_sec": 8010.28199793311,
+      "baseline_cpu_percent": 0.0,
+      "baseline_memory_mb": 107.98828125,
+      "peak_cpu_percent": 280.5,
+      "peak_memory_mb": 110.23046875,
+      "avg_cpu_percent": 222.66666666666666,
+      "avg_memory_mb": 109.15755208333333,
+      "memory_growth_mb": 2.2421875,
+      "cpu_efficiency": 17.9871601749995,
+      "memory_efficiency": 36.691377944321616,
+      "hit_memory_threshold": false,
+      "hit_cpu_threshold": false,
+      "completed_successfully": true,
+      "resource_snapshots": [
+        {
+          "timestamp": 1763365852.937909,
+          "cpu_percent": 243.4,
+          "memory_mb": 108.0078125,
+          "memory_percent": 0.33262029486638767,
+          "thread_count": 63
+        },
+        {
+          "timestamp": 1763365853.043744,
+          "cpu_percent": 280.5,
+          "memory_mb": 109.234375,
+          "memory_percent": 0.33639761033069315,
+          "thread_count": 83
+        },
+        {
+          "timestamp": 1763365853.152189,
+          "cpu_percent": 144.1,
+          "memory_mb": 110.23046875,
+          "memory_percent": 0.33947720510413965,
+          "thread_count": 83
+        }
+      ]
+    },
+    "langchain": {
+      "framework": "langchain",
+      "test_name": "Load+Chunk_1000docs_20workers",
+      "num_documents": 1000,
+      "num_workers": 20,
+      "document_size_words": 200,
+      "total_time": 0.1960630000103265,
+      "load_time": 0.10992139999871142,
+      "chunk_time": 0.08614020000095479,
+      "embed_time": 0.0,
+      "store_time": 0.0,
+      "documents_loaded": 1000,
+      "chunks_created": 2000,
+      "embeddings_generated": 0,
+      "throughput_docs_per_sec": 5100.40140132167,
+      "throughput_chunks_per_sec": 10200.80280264334,
+      "baseline_cpu_percent": 0.0,
+      "baseline_memory_mb": 108.64453125,
+      "peak_cpu_percent": 101.1,
+      "peak_memory_mb": 110.9140625,
+      "avg_cpu_percent": 99.0,
+      "avg_memory_mb": 110.552734375,
+      "memory_growth_mb": 2.26953125,
+      "cpu_efficiency": 51.51920607395626,
+      "memory_efficiency": 46.135461326726414,
+      "hit_memory_threshold": false,
+      "hit_cpu_threshold": false,
+      "completed_successfully": true,
+      "resource_snapshots": [
+        {
+          "timestamp": 1763365854.8161101,
+          "cpu_percent": 96.9,
+          "memory_mb": 110.19140625,
+          "memory_percent": 0.3393448787662181,
+          "thread_count": 63
+        },
+        {
+          "timestamp": 1763365854.9243248,
+          "cpu_percent": 101.1,
+          "memory_mb": 110.9140625,
+          "memory_percent": 0.3415703671767165,
+          "thread_count": 63
+        }
+      ]
+    },
+    "speedups": {
+      "total_time": 0.7852599597217388,
+      "load_time": 0.507740964865157,
+      "chunk_time": 2.59561632775366,
+      "embed_time": null,
+      "throughput": 0.7852599597217388
+    }
+  }
+]

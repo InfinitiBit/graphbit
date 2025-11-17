@@ -1,0 +1,81 @@
+{
+  "test_config": {
+    "num_documents": 5000,
+    "words_per_doc": 200,
+    "worker_counts_tested": [
+      1,
+      5,
+      10,
+      20,
+      30,
+      50
+    ]
+  },
+  "results": [
+    {
+      "num_workers": 1,
+      "num_documents": 5000,
+      "words_per_doc": 200,
+      "load_time": 3.463621139526367,
+      "chunk_time": 0.2455899715423584,
+      "total_time": 3.7092111110687256,
+      "throughput_docs_per_sec": 1347.995530661333,
+      "chunks_created": 15000
+    },
+    {
+      "num_workers": 5,
+      "num_documents": 5000,
+      "words_per_doc": 200,
+      "load_time": 1.0064294338226318,
+      "chunk_time": 0.24576687812805176,
+      "total_time": 1.2521963119506836,
+      "throughput_docs_per_sec": 3992.984128990886,
+      "chunks_created": 15000
+    },
+    {
+      "num_workers": 10,
+      "num_documents": 5000,
+      "words_per_doc": 200,
+      "load_time": 0.6630396842956543,
+      "chunk_time": 0.2349240779876709,
+      "total_time": 0.8979637622833252,
+      "throughput_docs_per_sec": 5568.1534266885055,
+      "chunks_created": 15000
+    },
+    {
+      "num_workers": 20,
+      "num_documents": 5000,
+      "words_per_doc": 200,
+      "load_time": 0.504173994064331,
+      "chunk_time": 0.2404956817626953,
+      "total_time": 0.7446696758270264,
+      "throughput_docs_per_sec": 6714.386475381887,
+      "chunks_created": 15000
+    },
+    {
+      "num_workers": 30,
+      "num_documents": 5000,
+      "words_per_doc": 200,
+      "load_time": 0.49346327781677246,
+      "chunk_time": 0.22882819175720215,
+      "total_time": 0.7222914695739746,
+      "throughput_docs_per_sec": 6922.413195533271,
+      "chunks_created": 15000
+    },
+    {
+      "num_workers": 50,
+      "num_documents": 5000,
+      "words_per_doc": 200,
+      "load_time": 0.48154616355895996,
+      "chunk_time": 0.23838376998901367,
+      "total_time": 0.7199299335479736,
+      "throughput_docs_per_sec": 6945.120305470417,
+      "chunks_created": 15000
+    }
+  ],
+  "optimal_config": {
+    "num_workers": 50,
+    "throughput_docs_per_sec": 6945.120305470417,
+    "total_time": 0.7199299335479736
+  }
+}
