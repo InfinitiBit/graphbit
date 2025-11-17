@@ -133,14 +133,7 @@ impl Node {
             }
             node.config.insert(
                 "max_tokens".to_string(),
-                serde_json::Value::Number(
-                    serde_json::Number::from_f64(tokens as f64)
-                        .ok_or_else(|| {
-                            PyErr::new::<pyo3::exceptions::PyValueError, _>(
-                                "Invalid max_tokens value",
-                            )
-                        })?,
-                ),
+                serde_json::Value::Number(serde_json::Number::from(tokens)),
             );
         }
 

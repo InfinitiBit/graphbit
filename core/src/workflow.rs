@@ -1031,7 +1031,20 @@ impl WorkflowExecutor {
 
             // Call LLM provider directly to capture metadata
             use crate::llm::LlmRequest;
-            let request = LlmRequest::new(resolved_prompt.clone());
+            let mut request = LlmRequest::new(resolved_prompt.clone());
+
+            // Apply node-level configuration overrides (temperature, max_tokens, etc.)
+            if let Some(temp_value) = node_config.get("temperature") {
+                if let Some(temp_num) = temp_value.as_f64() {
+                    request = request.with_temperature(temp_num as f32);
+                }
+            }
+
+            if let Some(max_tokens_value) = node_config.get("max_tokens") {
+                if let Some(max_tokens_num) = max_tokens_value.as_u64() {
+                    request = request.with_max_tokens(max_tokens_num as u32);
+                }
+            }
 
             // Measure LLM call duration and capture execution timestamp
             let execution_timestamp = chrono::Utc::now();
