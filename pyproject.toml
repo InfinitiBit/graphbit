@@ -37,8 +37,12 @@ dependencies = [
     "aiohttp>=3.12.15",
     "python-dotenv>=1.0.0",
     "rich>=13.0.0",
-    "typer>=0.9.0"
+    "typer>=0.9.0",
+    "e2b-code-interpreter>=0.0.10"
 ]
+
+[project.scripts]
+graphbit = "graphbit_cli:main"
 
 [project.optional-dependencies]
 ai = [

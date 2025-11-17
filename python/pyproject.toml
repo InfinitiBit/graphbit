@@ -27,6 +27,9 @@ repository = "https://github.com/InfinitiBit/graphbit"
 requires-python = ">=3.10"
 version = "0.5.1"
 
+[project.scripts]
+graphbit = "cli:main"
+
 [tool.maturin]
 # PyO3 bindings configuration
 bindings = "pyo3"
@@ -36,3 +39,7 @@ module-name = "graphbit"
 profile = "release"
 # Build optimizations
 strip = true
+# Include Python packages alongside Rust extension
+python-source = "."
+# Include standalone CLI script
+python-packages = ["graphbit_cli_standalone.py"]
