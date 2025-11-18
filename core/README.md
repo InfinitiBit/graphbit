@@ -66,9 +66,6 @@ use graphbit_core::*;
 
 #[tokio::main]
 async fn main() -> GraphBitResult<()> {
-    // Initialize the library
-    graphbit_core::init()?;
-
     // Create LLM configuration
     let llm_config = LlmConfig::OpenAI {
         api_key: std::env::var("OPENAI_API_KEY")?,
