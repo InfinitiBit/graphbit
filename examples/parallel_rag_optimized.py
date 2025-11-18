@@ -90,8 +90,12 @@ class ParallelRAG:
         
         duration = time.time() - start_time
         print(f" Loaded {len(documents)} documents in {duration:.2f}s")
-        print(f"   Average: {duration/len(documents):.3f}s per document")
-        
+
+        if len(documents) > 0:
+            print(f"   Average: {duration/len(documents):.3f}s per document")
+        else:
+            print(f"   WARNING: No documents were successfully loaded!")
+
         return documents
 
     def _load_single_document(self, path: str) -> Dict[str, Any]:
@@ -103,6 +107,7 @@ class ParallelRAG:
                 '.pdf': 'pdf',
                 '.docx': 'docx',
                 '.txt': 'txt',
+                '.md': 'txt',  # Treat markdown as text
                 '.json': 'json',
                 '.csv': 'csv',
             }
@@ -123,13 +128,17 @@ class ParallelRAG:
     def chunk_documents_parallel(self, documents: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
         Chunk documents in parallel using thread pool.
-        
+
         Note: Text splitting is synchronous, but we can still parallelize across documents.
         Expected speedup: 5-10x vs sequential
         """
+        if not documents:
+            print(" WARNING: No documents to chunk!")
+            return []
+
         print(f"Chunking {len(documents)} documents in parallel...")
         start_time = time.time()
-        
+
         all_chunks = []
         
         # Use ThreadPoolExecutor to parallelize chunking across documents
@@ -164,15 +173,19 @@ class ParallelRAG:
     def embed_chunks_parallel_optimized(self, chunks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
         Generate embeddings using lock-free parallel batch processing.
-        
+
         This uses the NEW embed_batch_parallel() method that exposes GraphBit's
         lock-free parallel embedding engine.
-        
+
         Expected speedup: 10-50x vs sequential embedding
         """
+        if not chunks:
+            print(" WARNING: No chunks to embed!")
+            return []
+
         print(f"Generating embeddings for {len(chunks)} chunks (OPTIMIZED)...")
         start_time = time.time()
-        
+
         # Extract texts
         texts = [chunk['text'] for chunk in chunks]
         
@@ -317,22 +330,56 @@ async def main():
     
     rag = ParallelRAG(api_key, max_workers=10)
     
-    # Example: Process 100 documents
+    # Example: Process documents from the repository
     print("=" * 80)
     print("ParallelRAG: Massively Concurrent Document Intelligence (OPTIMIZED)")
     print("=" * 80)
-    
-    # For demo, create sample documents
-    doc_paths = [f"sample_doc_{i}.txt" for i in range(10)]
-    
+
+    # Use existing markdown files from the repository for demo
+    # Look for markdown files in docs/connector directory
+    from pathlib import Path
+    docs_dir = Path("docs/connector")
+
+    if docs_dir.exists():
+        doc_paths = [str(p) for p in docs_dir.glob("*.md")][:10]  # Limit to 10 files
+        print(f"\nUsing {len(doc_paths)} markdown files from {docs_dir}")
+    else:
+        # Fallback: look for any markdown files in the repository
+        doc_paths = [str(p) for p in Path(".").rglob("*.md") if "node_modules" not in str(p) and ".git" not in str(p)][:10]
+        print(f"\nUsing {len(doc_paths)} markdown files from repository")
+
+    if not doc_paths:
+        print("\n ERROR: No markdown files found in repository!")
+        print("Please ensure you're running this script from the repository root directory.")
+        return
+
+    print(f"Documents to process: {[Path(p).name for p in doc_paths]}\n")
+
     # Step 1: Load documents in parallel (GIL released)
     documents = rag.load_documents_parallel(doc_paths)
+
+    # Validate that documents were loaded
+    if not documents:
+        print("\n ERROR: Failed to load any documents!")
+        print("Please check that the document paths are correct and files are readable.")
+        return
     
     # Step 2: Chunk documents in parallel
     chunks = rag.chunk_documents_parallel(documents)
-    
+
+    # Validate that chunks were created
+    if not chunks:
+        print("\n ERROR: Failed to create any chunks from documents!")
+        print("Please check that the documents contain valid text content.")
+        return
+
     # Step 3: Generate embeddings (OPTIMIZED with lock-free parallel processing)
     chunks_with_embeddings = rag.embed_chunks_parallel_optimized(chunks)
+
+    # Validate that embeddings were generated
+    if not chunks_with_embeddings:
+        print("\n ERROR: Failed to generate embeddings!")
+        return
     
     # Step 4: Store chunks
     rag.store_chunks(chunks_with_embeddings)
