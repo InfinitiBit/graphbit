@@ -82,14 +82,14 @@
 
 **Contents**:
 - ✅ Section 1: Example Implementations (2 files)
-  - `examples/parallel_rag_optimized.py` (354 lines)
+  - `parallelrag_core/examples/parallel_rag_optimized.py` (354 lines)
   - `parallel_rag_app.py` (334 lines)
 - ✅ Section 2: Benchmark Infrastructure (3 files)
   - `tests/benchmarks/benchmark_framework_comparison.py` (733 lines)
   - `tests/benchmarks/benchmark_stress_test.py` (~600 lines)
   - `tests/benchmarks/benchmark_utils.py` (~300 lines)
 - ✅ Section 3: Framework Comparison (3 files)
-  - `benchmarks/run_benchmark.py` (748 lines)
+  - `parallelrag_core/benchmarks/run_benchmark.py` (748 lines)
   - `benchmarks/frameworks/graphbit_benchmark.py` (~200 lines)
   - `benchmarks/frameworks/langchain_benchmark.py` (~200 lines)
 - ✅ Section 4: Visualization Scripts (3 files)

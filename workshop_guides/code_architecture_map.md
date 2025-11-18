@@ -18,7 +18,7 @@
 
 ## 1. Example Implementations
 
-### 1.1 `examples/parallel_rag_optimized.py` (354 lines)
+### 1.1 `parallelrag_core/examples/parallel_rag_optimized.py` (354 lines)
 
 **Purpose**: Optimized ParallelRAG implementation showcasing GraphBit's GIL-releasing architecture
 
@@ -327,7 +327,7 @@ def calculate_throughput(num_items: int, duration: float) -> float:
 
 ## 3. Framework Comparison
 
-### 3.1 `benchmarks/run_benchmark.py` (748 lines)
+### 3.1 `parallelrag_core/benchmarks/run_benchmark.py` (748 lines)
 
 **Purpose**: Multi-framework comparison runner (GraphBit, LangChain, LangGraph, CrewAI, LlamaIndex, PydanticAI)
 

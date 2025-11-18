@@ -10,7 +10,7 @@
 
 | File Path | File Type | LLM Provider(s) | Primary Purpose | Lines of Code | Category |
 |-----------|-----------|-----------------|-----------------|---------------|----------|
-| `examples/parallel_rag_optimized.py` | Example | OpenAI | Optimized ParallelRAG with GIL-releasing architecture | 354 | Example |
+| `parallelrag_core/examples/parallel_rag_optimized.py` | Example | OpenAI | Optimized ParallelRAG with GIL-releasing architecture | 354 | Example |
 | `parallel_rag_app.py` | Example | OpenAI | Production-ready RAG with optimal configurations | 334 | Example |
 | `langchain_rag_app.py` | Example | OpenAI | LangChain RAG for comparison benchmarks | ~300 | Example |
 | `tests/benchmarks/benchmark_framework_comparison.py` | Benchmark | OpenAI | GraphBit vs LangChain RAG comparison | 733 | Benchmark |
@@ -19,7 +19,7 @@
 | `tests/benchmarks/benchmark_embedding.py` | Benchmark | OpenAI | Embedding generation benchmarks | ~300 | Benchmark |
 | `tests/benchmarks/benchmark_llm.py` | Benchmark | OpenAI | LLM completion benchmarks | ~300 | Benchmark |
 | `tests/benchmarks/benchmark_utils.py` | Utility | N/A | Shared benchmark utilities | ~300 | Utility |
-| `benchmarks/run_benchmark.py` | Benchmark | OpenAI, Anthropic, Ollama | Multi-framework comparison runner | 748 | Benchmark |
+| `parallelrag_core/benchmarks/run_benchmark.py` | Benchmark | OpenAI, Anthropic, Ollama | Multi-framework comparison runner | 748 | Benchmark |
 | `benchmarks/frameworks/graphbit_benchmark.py` | Benchmark | OpenAI, Anthropic, Ollama | GraphBit framework implementation | ~200 | Benchmark |
 | `benchmarks/frameworks/langchain_benchmark.py` | Benchmark | OpenAI, Anthropic, Ollama | LangChain framework implementation | ~200 | Benchmark |
 | `benchmarks/frameworks/langgraph_benchmark.py` | Benchmark | OpenAI, Anthropic, Ollama | LangGraph framework implementation | ~200 | Benchmark |
@@ -66,12 +66,12 @@
 ## 🎯 Key Files for Workshop Demonstrations
 
 ### Quick Demo (5 minutes)
-1. **`examples/parallel_rag_optimized.py`** - Best for showing GraphBit's core capabilities
+1. **`parallelrag_core/examples/parallel_rag_optimized.py`** - Best for showing GraphBit's core capabilities
 2. **`parallel_rag_app.py`** - Production-ready example with optimal configurations
 
 ### Framework Comparison (10 minutes)
 1. **`tests/benchmarks/benchmark_framework_comparison.py`** - GraphBit vs LangChain
-2. **`benchmarks/run_benchmark.py`** - Multi-framework comparison (6 frameworks)
+2. **`parallelrag_core/benchmarks/run_benchmark.py`** - Multi-framework comparison (6 frameworks)
 
 ### Scalability Demo (15 minutes)
 1. **`tests/benchmarks/benchmark_stress_test.py`** - Progressive load testing

@@ -82,7 +82,7 @@ make test
 
 # Run specific test categories
 cargo test --workspace          # Rust tests
-python -m pytest tests/ -v     # Python tests
+python -m pytest parallelrag_core/tests/ -v     # Python tests
 make integration-test           # Integration tests
 ```
 

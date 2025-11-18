@@ -44,7 +44,7 @@ Executable shell scripts for each demonstration:
 
 1. **[demo_scripts/quick_demo.sh](demo_scripts/quick_demo.sh)**
    - 5-minute quick demo
-   - Runs `examples/parallel_rag_optimized.py`
+   - Runs `parallelrag_core/examples/parallel_rag_optimized.py`
    - Shows GIL-releasing architecture
 
 2. **[demo_scripts/comparison_demo.sh](demo_scripts/comparison_demo.sh)**
@@ -97,10 +97,10 @@ Pre-generated results for backup during live workshops:
 3. **Pre-generate sample outputs** (backup plan):
    ```bash
    # Run benchmarks to generate JSON results
-   python tests/benchmarks/benchmark_framework_comparison.py --framework both --max-docs 100
+   python parallelrag_core/tests/benchmarks/benchmark_framework_comparison.py --framework both --max-docs 100
    
    # Generate charts
-   python create_visualizations.py
+   python parallelrag_core/visualizations/create_visualizations.py
    python create_resource_charts.py
    python create_additional_visualizations.py
    

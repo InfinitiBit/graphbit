@@ -67,7 +67,7 @@ All sample outputs can be used for offline demonstrations without API keys:
 
 ```bash
 # Generate charts from sample JSON
-python create_visualizations.py  # Uses sample JSON files
+python parallelrag_core/visualizations/create_visualizations.py  # Uses sample JSON files
 
 # Show sample results
 cat workshop_guides/sample_outputs/framework_comparison_console_output.txt

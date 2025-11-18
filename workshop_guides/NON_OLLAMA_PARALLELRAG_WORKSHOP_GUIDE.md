@@ -164,7 +164,7 @@ See **[`workshop_guides/file_inventory.md`](file_inventory.md)** for complete fi
 
 ```bash
 # Run optimized ParallelRAG example
-python examples/parallel_rag_optimized.py
+python parallelrag_core/examples/parallel_rag_optimized.py
 ```
 
 **Expected Output**:
@@ -191,7 +191,7 @@ Response: Machine learning is a subset of artificial intelligence...
 
 ```bash
 # Run production-ready RAG with optimal configurations
-python parallel_rag_app.py
+python parallelrag_core/parallel_rag_app.py
 ```
 
 **Expected Output**:
@@ -224,11 +224,11 @@ Statistics:
 
 **Objective**: Demonstrate GraphBit's core ParallelRAG capabilities with minimal setup
 
-**File**: `examples/parallel_rag_optimized.py` (354 lines)
+**File**: `parallelrag_core/examples/parallel_rag_optimized.py` (354 lines)
 
 **Command**:
 ```bash
-python examples/parallel_rag_optimized.py
+python parallelrag_core/examples/parallel_rag_optimized.py
 ```
 
 **Runtime**: ~2-3 minutes
@@ -310,13 +310,13 @@ with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
 
 **Files**:
 - `tests/benchmarks/benchmark_framework_comparison.py` (733 lines) - GraphBit vs LangChain
-- `benchmarks/run_benchmark.py` (748 lines) - Multi-framework comparison
+- `parallelrag_core/benchmarks/run_benchmark.py` (748 lines) - Multi-framework comparison
 
 #### Option A: GraphBit vs LangChain (Recommended)
 
 **Command**:
 ```bash
-python tests/benchmarks/benchmark_framework_comparison.py \
+python parallelrag_core/tests/benchmarks/benchmark_framework_comparison.py \
   --framework both \
   --max-docs 100 \
   --max-workers 20 \
@@ -465,7 +465,7 @@ Optimal Configuration:
 **Commands**:
 ```bash
 # Generate main performance charts (5 charts)
-python create_visualizations.py
+python parallelrag_core/visualizations/create_visualizations.py
 
 # Generate resource utilization charts (3 charts)
 python create_resource_charts.py
@@ -532,12 +532,12 @@ pip install graphbit langchain langchain-openai matplotlib seaborn
 
 #### Quick Demo
 ```bash
-python examples/parallel_rag_optimized.py
+python parallelrag_core/examples/parallel_rag_optimized.py
 ```
 
 #### Framework Comparison
 ```bash
-python tests/benchmarks/benchmark_framework_comparison.py --framework both --max-docs 100
+python parallelrag_core/tests/benchmarks/benchmark_framework_comparison.py --framework both --max-docs 100
 ```
 
 #### Stress Test
@@ -547,7 +547,7 @@ python tests/benchmarks/benchmark_stress_test.py --max-docs 1000 --max-workers 5
 
 #### Visualizations
 ```bash
-python create_visualizations.py
+python parallelrag_core/visualizations/create_visualizations.py
 python create_resource_charts.py
 python create_additional_visualizations.py
 ```
@@ -560,7 +560,7 @@ See **[`workshop_guides/code_architecture_map.md`](code_architecture_map.md)** f
 
 ### Key Components
 
-1. **ParallelRAG Class** (`examples/parallel_rag_optimized.py`)
+1. **ParallelRAG Class** (`parallelrag_core/examples/parallel_rag_optimized.py`)
    - GIL-releasing document loading
    - Parallel chunking
    - Optimized embedding generation
@@ -631,7 +631,7 @@ FileNotFoundError: graphbit_stress_50k.json
 **Solution**:
 ```bash
 # Run benchmarks first to generate JSON results
-python tests/benchmarks/benchmark_framework_comparison.py --framework both --max-docs 100
+python parallelrag_core/tests/benchmarks/benchmark_framework_comparison.py --framework both --max-docs 100
 
 # Or use sample outputs
 cp workshop_guides/sample_outputs/*.json .

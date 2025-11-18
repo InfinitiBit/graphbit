@@ -40,7 +40,7 @@ python -c "import os; print('OpenAI API key:', 'SET' if os.getenv('OPENAI_API_KE
 # Run optimized ParallelRAG example
 # Runtime: ~2-3 minutes
 # API Cost: ~$0.01-0.02
-python examples/parallel_rag_optimized.py
+python parallelrag_core/examples/parallel_rag_optimized.py
 ```
 
 **What it demonstrates**:
@@ -53,7 +53,7 @@ python examples/parallel_rag_optimized.py
 # Run production RAG app with optimal configurations
 # Runtime: ~2-3 minutes
 # API Cost: ~$0.01-0.02
-python parallel_rag_app.py
+python parallelrag_core/parallel_rag_app.py
 ```
 
 **What it demonstrates**:
@@ -70,7 +70,7 @@ python parallel_rag_app.py
 # Compare GraphBit and LangChain with 100 documents
 # Runtime: ~5-10 minutes
 # API Cost: ~$0.05-0.10
-python tests/benchmarks/benchmark_framework_comparison.py \
+python parallelrag_core/tests/benchmarks/benchmark_framework_comparison.py \
   --framework both \
   --max-docs 100 \
   --max-workers 20 \
@@ -168,7 +168,7 @@ python test_worker_optimization.py
 # Create 5 performance charts from benchmark results
 # Runtime: ~30 seconds
 # Requires: graphbit_stress_50k.json, langchain_stress_50k.json
-python create_visualizations.py
+python parallelrag_core/visualizations/create_visualizations.py
 ```
 
 **Generated charts**:
