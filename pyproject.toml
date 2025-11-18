@@ -27,7 +27,9 @@ dependencies = [
   "aiohttp>=3.12.15",
   "python-dotenv>=1.0.0",
   "rich>=13.0.0",
-  "typer>=0.9.0"
+  "typer>=0.9.0",
+  "huggingface_hub>=0.33.4",
+  "numpy>=1.24.0"
 ]
 description = "GraphBit - Advanced workflow automation and AI agent orchestration library"
 keywords = ["ai", "agents", "workflow", "automation", "rust", "python", "llm", "orchestration"]
@@ -43,7 +45,9 @@ version = "0.5.1"
 [project.optional-dependencies]
 ai = [
   "anthropic>=0.24.0",
-  "openai>=1.30.0"
+  "openai>=1.30.0",
+  "huggingface_hub>=0.33.4",
+  "numpy>=1.24.0"
 ]
 benchmark = [
   "click>=8.2.1",
@@ -206,6 +210,8 @@ manifest-path = "python/Cargo.toml"
 module-name = "graphbit"
 # Build profile for optimized releases
 profile = "release"
+# Python interpreter finding
+python-source = "python-src"
 # Enable auditwheel for proper PyPI compatibility
 skip-auditwheel = false
 # Build optimizations
@@ -252,6 +258,7 @@ click = {version = "^8.2.1", optional = true}
 crewai = {version = ">=0.41.0", optional = true}
 elasticsearch = {version = ">=8.0.0", optional = true}
 faiss-cpu = {version = ">=1.7.0", optional = true}
+huggingface_hub = ">=0.33.4"
 ibm-db = {version = ">=3.1.0", optional = true}
 langchain = {version = ">=0.1.0", optional = true}
 langchain-anthropic = {version = "^0.3.19", optional = true}
@@ -265,7 +272,7 @@ llama-index-llms-ollama = {version = "^0.7.1", optional = true}
 mariadb = {version = ">=1.1.0", optional = true}
 matplotlib = {version = ">=3.7.0", optional = true}
 memory-profiler = {version = ">=0.61.0", optional = true}
-numpy = {version = ">=1.24.0", optional = true}
+numpy = ">=1.24.0"
 openai = {version = ">=1.30.0", optional = true}
 pandas = {version = ">=2.0.0", optional = true}
 pinecone = {version = ">=4.0.0", optional = true}
@@ -357,9 +364,11 @@ full = [
   "types-pyyaml",
   "aiohttp"
 ]
+huggingface = ["huggingface_hub", "numpy"]
 mariadb = ["mariadb", "numpy"]
 milvus = ["pymilvus"]
 mongodb = ["pymongo"]
+numpy = ["numpy"]
 pgvector = ["psycopg2"]
 pinecone = ["pinecone"]
 qdrant = ["qdrant-client"]

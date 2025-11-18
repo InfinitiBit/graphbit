@@ -136,11 +136,22 @@ impl Agent {
 
         // Validate the LLM configuration by attempting a simple test call
         // This ensures invalid API keys are caught during agent creation
-        let test_request = LlmRequest::new("test").with_max_tokens(1);
-        if let Err(e) = llm_provider.complete(test_request).await {
-            return Err(crate::errors::GraphBitError::config(format!(
-                "LLM configuration validation failed: {e}"
-            )));
+        // Skip validation for Python bridge providers to avoid GIL-related issues during initialization
+        #[cfg(feature = "python")]
+        let is_python_bridge = matches!(
+            config.llm_config,
+            crate::llm::LlmConfig::PythonBridge { .. }
+        );
+        #[cfg(not(feature = "python"))]
+        let is_python_bridge = false;
+
+        if !is_python_bridge {
+            let test_request = LlmRequest::new("test").with_max_tokens(1);
+            if let Err(e) = llm_provider.complete(test_request).await {
+                return Err(crate::errors::GraphBitError::config(format!(
+                    "LLM configuration validation failed: {e}"
+                )));
+            }
         }
 
         Ok(Self {

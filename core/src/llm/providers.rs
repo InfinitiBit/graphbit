@@ -6,6 +6,15 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+#[cfg(feature = "python")]
+fn default_python_instance() -> std::sync::Arc<pyo3::PyObject> {
+    // This is a placeholder that should never be used
+    // The python_instance should always be set when creating a PythonBridge config
+    panic!(
+        "PythonBridge config cannot be deserialized - python_instance must be set programmatically"
+    )
+}
+
 /// Configuration for different LLM providers
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "provider")]
@@ -154,6 +163,15 @@ pub enum LlmConfig {
         model: String,
         /// Optional custom base URL
         base_url: Option<String>,
+    },
+    /// Python bridge provider configuration for calling Python LLM implementations
+    #[cfg(feature = "python")]
+    PythonBridge {
+        /// Python object instance that implements the LLM interface
+        #[serde(skip, default = "default_python_instance")]
+        python_instance: std::sync::Arc<pyo3::PyObject>,
+        /// Model name to use
+        model: String,
     },
     /// Custom LLM provider configuration
     Custom {
@@ -412,6 +430,8 @@ impl LlmConfig {
             Self::Xai { .. } => "xai",
             Self::Ai21 { .. } => "ai21",
             Self::MistralAI { .. } => "mistralai",
+            #[cfg(feature = "python")]
+            Self::PythonBridge { .. } => "python_bridge",
             Self::Custom { provider_type, .. } => provider_type,
             Self::Unconfigured { .. } => "unconfigured",
         }
@@ -437,6 +457,8 @@ impl LlmConfig {
             Self::Xai { model, .. } => model,
             Self::Ai21 { model, .. } => model,
             Self::MistralAI { model, .. } => model,
+            #[cfg(feature = "python")]
+            Self::PythonBridge { model, .. } => model,
             Self::Custom { config, .. } => config
                 .get("model")
                 .and_then(|v| v.as_str())
