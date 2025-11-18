@@ -119,8 +119,9 @@ class ParallelRAGOllama:
         
         duration = time.time() - start_time
         print(f" Loaded {len(documents)} documents in {duration:.2f}s")
-        print(f"   Average: {duration/len(documents):.3f}s per document")
-        
+        if len(documents) > 0:
+            print(f"   Average: {duration/len(documents):.3f}s per document")
+
         return documents
 
     def _load_single_document(self, path: str) -> Optional[Dict[str, Any]]:
@@ -136,10 +137,17 @@ class ParallelRAGOllama:
                 ".csv": "csv",
             }
             doc_type = doc_type_map.get(ext, "txt")
-            
+
             # GIL is released during this call
-            doc = self.loader.load_document(path, doc_type=doc_type)
-            return doc
+            doc_content = self.loader.load_document(path, doc_type)
+
+            # Convert DocumentContent to dict
+            return {
+                "source": doc_content.source,
+                "content": doc_content.content,
+                "document_type": doc_content.document_type,
+                "file_size": doc_content.file_size,
+            }
         except Exception as e:
             print(f" Failed to load {path}: {e}")
             return None
@@ -311,8 +319,9 @@ async def main():
         return
 
     # Initialize ParallelRAG with Ollama
+    # Using gemma3:4b for testing (llama3:8b not available)
     rag = ParallelRAGOllama(
-        llm_model="llama3:8b",
+        llm_model="gemma3:4b",
         embedding_model="nomic-embed-text",
         max_workers=10
     )

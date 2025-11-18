@@ -1,0 +1,13 @@
+Natural Language Processing
+
+Natural Language Processing (NLP) is a branch of artificial intelligence that helps computers understand, interpret, and manipulate human language. It combines computational linguistics with statistical, machine learning, and deep learning models.
+
+Key NLP tasks include:
+- Text Classification: Categorizing text into predefined groups
+- Named Entity Recognition: Identifying and classifying named entities
+- Sentiment Analysis: Determining the emotional tone of text
+- Machine Translation: Translating text from one language to another
+- Question Answering: Providing answers to questions posed in natural language
+
+Modern NLP systems use transformer architectures like BERT and GPT, which have achieved remarkable performance on various language understanding tasks.
+

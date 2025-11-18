@@ -14,19 +14,19 @@ Features:
 
 Usage:
     # Test both frameworks with Ollama
-    python tests/benchmarks/benchmark_ollama_comparison.py --framework both
-    
+    python ollama_integration/benchmarks/benchmark_ollama_comparison.py --framework both
+
     # Test GraphBit only
-    python tests/benchmarks/benchmark_ollama_comparison.py --framework graphbit
-    
+    python ollama_integration/benchmarks/benchmark_ollama_comparison.py --framework graphbit
+
     # Test LangChain only
-    python tests/benchmarks/benchmark_ollama_comparison.py --framework langchain
-    
+    python ollama_integration/benchmarks/benchmark_ollama_comparison.py --framework langchain
+
     # Custom test parameters
-    python tests/benchmarks/benchmark_ollama_comparison.py --max-docs 100 --max-workers 20
-    
+    python ollama_integration/benchmarks/benchmark_ollama_comparison.py --max-docs 100 --max-workers 20
+
     # Custom Ollama models
-    python tests/benchmarks/benchmark_ollama_comparison.py --llm-model mistral:7b --embedding-model mxbai-embed-large
+    python ollama_integration/benchmarks/benchmark_ollama_comparison.py --llm-model mistral:7b --embedding-model mxbai-embed-large
 """
 
 import argparse
@@ -46,11 +46,12 @@ import psutil
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "tests" / "benchmarks"))
 
 from benchmark_utils import get_system_info
 
 # Import Ollama-enabled RAG implementations
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / "examples"))
+sys.path.insert(0, str(Path(__file__).parent.parent / "examples"))
 from parallel_rag_ollama import ParallelRAGOllama
 from langchain_rag_ollama import LangChainRAGOllama, LangChainRAGOllamaConfig
 
@@ -493,8 +494,8 @@ async def main():
     parser.add_argument(
         "--llm-model",
         type=str,
-        default="llama3:8b",
-        help="Ollama LLM model (default: llama3:8b)"
+        default="gemma3:4b",
+        help="Ollama LLM model (default: gemma3:4b)"
     )
 
     parser.add_argument(
@@ -514,8 +515,8 @@ async def main():
     parser.add_argument(
         "--output",
         type=str,
-        default="ollama_comparison_results.json",
-        help="Output JSON file (default: ollama_comparison_results.json)"
+        default="test_results/benchmark_results.json",
+        help="Output JSON file (default: test_results/benchmark_results.json)"
     )
 
     args = parser.parse_args()
@@ -632,6 +633,11 @@ async def main():
         "system_info": sys_info,
         "results": results,
     }
+
+    # Create output directory if it doesn't exist
+    output_dir = os.path.dirname(args.output)
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
 
     with open(args.output, 'w') as f:
         json.dump(output_data, f, indent=2)

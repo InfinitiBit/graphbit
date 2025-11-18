@@ -1,0 +1,13 @@
+Reinforcement Learning
+
+Reinforcement learning is a type of machine learning where an agent learns to make decisions by performing actions in an environment to maximize cumulative reward. Unlike supervised learning, the agent is not told which actions to take but must discover which actions yield the most reward through trial and error.
+
+Key concepts:
+- Agent: The learner or decision maker
+- Environment: The world the agent interacts with
+- State: The current situation of the agent
+- Action: What the agent can do
+- Reward: Feedback from the environment
+
+Reinforcement learning has achieved remarkable success in game playing (AlphaGo, chess), robotics, autonomous driving, and resource management. The agent learns optimal strategies through exploration and exploitation.
+

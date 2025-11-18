@@ -1,0 +1,90 @@
+{
+  "test_type": "progressive_load",
+  "config": {
+    "framework": "both",
+    "document_counts": [
+      10,
+      50,
+      100,
+      500
+    ],
+    "document_sizes": [
+      200
+    ],
+    "worker_counts": [
+      10
+    ],
+    "llm_model": "gemma3:4b",
+    "embedding_model": "nomic-embed-text",
+    "ollama_base_url": "http://localhost:11434",
+    "output_dir": "ollama_integration/test_results/stress_test_results",
+    "test_workers": false,
+    "test_doc_sizes": false
+  },
+  "system_info": {
+    "platform": "Windows-11-10.0.26100-SP0",
+    "processor": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+    "python_version": "3.13.3",
+    "cpu_count": 20,
+    "cpu_count_logical": 28,
+    "total_memory_gb": 31.71074676513672,
+    "available_memory_gb": 13.676006317138672
+  },
+  "results": [
+    {
+      "document_count": 10,
+      "tests": {
+        "graphbit": {
+          "framework": "graphbit",
+          "num_documents": 10,
+          "document_size_words": 200,
+          "num_workers": 10,
+          "total_time": 87.33063244819641,
+          "load_time": 0.007616996765136719,
+          "chunk_time": 0.0014379024505615234,
+          "embed_time": 85.25882744789124,
+          "query_time": 2.0609185695648193,
+          "throughput_docs_per_sec": 0.11450735806742145,
+          "throughput_chunks_per_sec": 0.4580294322696858,
+          "peak_memory_mb": 86.1796875,
+          "avg_memory_mb": 86.1796875,
+          "memory_growth_mb": 1.484375,
+          "peak_cpu_percent": 0,
+          "avg_cpu_percent": 0,
+          "documents_loaded": 10,
+          "chunks_created": 40,
+          "embeddings_generated": 40,
+          "memory_threshold_exceeded": false,
+          "cpu_threshold_exceeded": false,
+          "test_aborted": false,
+          "abort_reason": null
+        },
+        "langchain": {
+          "framework": "langchain",
+          "num_documents": 10,
+          "document_size_words": 200,
+          "num_workers": 1,
+          "total_time": 111.43319463729858,
+          "load_time": 0,
+          "chunk_time": 0,
+          "embed_time": 0,
+          "query_time": 0,
+          "throughput_docs_per_sec": 0,
+          "throughput_chunks_per_sec": 0,
+          "peak_memory_mb": 95.60546875,
+          "avg_memory_mb": 95.60546875,
+          "memory_growth_mb": 0,
+          "peak_cpu_percent": 0,
+          "avg_cpu_percent": 0,
+          "documents_loaded": 0,
+          "chunks_created": 0,
+          "embeddings_generated": 0,
+          "memory_threshold_exceeded": false,
+          "cpu_threshold_exceeded": false,
+          "test_aborted": true,
+          "abort_reason": "'LangChainRAGOllama' object has no attribute 'stats'"
+        }
+      }
+    }
+  ]
+}

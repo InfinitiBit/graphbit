@@ -42,7 +42,7 @@ class LangChainRAGOllamaConfig:
     # Ollama configuration
     ollama_base_url: str = "http://localhost:11434"
     embedding_model: str = "nomic-embed-text"
-    llm_model: str = "llama3:8b"
+    llm_model: str = "gemma3:4b"  # Using gemma3:4b for testing
     
     # LLM parameters
     max_tokens: int = 500
@@ -104,7 +104,16 @@ class LangChainRAGOllama:
         
         # Vector store (initialized when documents are processed)
         self.vector_store: Optional[FAISS] = None
-        
+
+        # Statistics tracking
+        self.stats = {
+            "documents_loaded": 0,
+            "chunks_created": 0,
+            "embeddings_generated": 0,
+            "queries_processed": 0,
+            "total_time": 0.0
+        }
+
         print(f"✅ Initialized LangChain RAG with Ollama:")
         print(f"   LLM: {self.config.llm_model}")
         print(f"   Embeddings: {self.config.embedding_model}")
@@ -169,10 +178,10 @@ class LangChainRAGOllama:
         
         # Update statistics
         duration = time.time() - start_time
-        self.config.stats["documents_loaded"] += len(documents)
-        self.config.stats["chunks_created"] += len(chunks)
-        self.config.stats["embeddings_generated"] += len(chunks)
-        self.config.stats["total_time"] += duration
+        self.stats["documents_loaded"] += len(documents)
+        self.stats["chunks_created"] += len(chunks)
+        self.stats["embeddings_generated"] += len(chunks)
+        self.stats["total_time"] += duration
         
         return {
             "duration": duration,
@@ -221,13 +230,13 @@ Answer:"""
 
         # Update statistics
         duration = time.time() - start_time
-        self.config.stats["queries_processed"] += 1
+        self.stats["queries_processed"] += 1
 
         return response.content
 
     def get_statistics(self) -> Dict[str, Any]:
         """Get cumulative statistics."""
-        return self.config.stats.copy()
+        return self.stats.copy()
 
 
 def main():

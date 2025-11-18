@@ -1,0 +1,62 @@
+{
+  "test_type": "progressive_load",
+  "config": {
+    "framework": "graphbit",
+    "document_counts": [
+      10
+    ],
+    "document_sizes": [
+      200
+    ],
+    "worker_counts": [
+      10
+    ],
+    "llm_model": "gemma3:4b",
+    "embedding_model": "nomic-embed-text",
+    "ollama_base_url": "http://localhost:11434",
+    "output_dir": "test_results/stress_test_results",
+    "test_workers": false,
+    "test_doc_sizes": false
+  },
+  "system_info": {
+    "platform": "Windows-11-10.0.26100-SP0",
+    "processor": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+    "python_version": "3.13.3",
+    "cpu_count": 20,
+    "cpu_count_logical": 28,
+    "total_memory_gb": 31.71074676513672,
+    "available_memory_gb": 10.108081817626953
+  },
+  "results": [
+    {
+      "document_count": 10,
+      "tests": {
+        "graphbit": {
+          "framework": "graphbit",
+          "num_documents": 10,
+          "document_size_words": 200,
+          "num_workers": 10,
+          "total_time": 85.78347682952881,
+          "load_time": 0.006837606430053711,
+          "chunk_time": 0.002260923385620117,
+          "embed_time": 83.67729902267456,
+          "query_time": 2.0957345962524414,
+          "throughput_docs_per_sec": 0.11657256583190564,
+          "throughput_chunks_per_sec": 0.4662902633276226,
+          "peak_memory_mb": 85.94140625,
+          "avg_memory_mb": 85.94140625,
+          "memory_growth_mb": 1.27734375,
+          "peak_cpu_percent": 0,
+          "avg_cpu_percent": 0,
+          "documents_loaded": 10,
+          "chunks_created": 40,
+          "embeddings_generated": 40,
+          "memory_threshold_exceeded": false,
+          "cpu_threshold_exceeded": false,
+          "test_aborted": false,
+          "abort_reason": null
+        }
+      }
+    }
+  ]
+}
