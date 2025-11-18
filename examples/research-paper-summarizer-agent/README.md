@@ -63,7 +63,7 @@ This application leverages GraphBit's advanced document processing capabilities:
 1. **Clone the repository**:
    ```bash
    git clone https://github.com/InfinitiBit/graphbit.git
-   cd graphbit
+   cd graphbit/examples/research-paper-summarizer-agent
    ```
 
 2. **Install dependencies**:
@@ -75,12 +75,7 @@ This application leverages GraphBit's advanced document processing capabilities:
 
 3. **Set up environment variables**:
    ```bash
-   cp examples/research-paper-summarizer-agent/.env.example examples/research-paper-summarizer-agent/.env
-   ```
-
-   Edit the `.env` file and add your OpenAI API key:
-   ```bash
-   OPENAI_API_KEY=your_api_key_here
+   export OPENAI_API_KEY=your_api_key_here
    ```
 
 ### Running the Application
