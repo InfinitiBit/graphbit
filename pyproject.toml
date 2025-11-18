@@ -4,7 +4,7 @@ requires = ["maturin>=1.0,<2.0"]
 
 [project]
 authors = [
-  {name = "GraphBit Team", email = "contact@graphbit.ai"}
+  {name = "InfinitiBit Team", email = "contact@infinitibit.ai"}
 ]
 classifiers = [
   "Development Status :: 4 - Beta",
@@ -35,7 +35,7 @@ description = "GraphBit - Advanced workflow automation and AI agent orchestratio
 keywords = ["ai", "agents", "workflow", "automation", "rust", "python", "llm", "orchestration"]
 license = {file = "LICENSE.md"}
 maintainers = [
-  {name = "GraphBit Team", email = "contact@graphbit.ai"}
+  {name = "InfinitiBit Team", email = "contact@infinitibit.ai"}
 ]
 name = "graphbit"
 readme = "README.md"
@@ -76,6 +76,49 @@ databases = [
   "mariadb>=1.1.0",
   "psycopg2>=2.9.0",
   "pymongo>=4.0.0"
+]
+full = [
+  # AI dependencies
+  "anthropic>=0.24.0",
+  "openai>=1.30.0",
+  # Vector DB dependencies
+  "astrapy>=1.0.0",
+  "chromadb>=0.4.0",
+  "elasticsearch>=8.0.0",
+  "faiss-cpu>=1.7.0",
+  "pinecone>=4.0.0",
+  "pymilvus>=2.3.0",
+  "qdrant-client>=1.7.0",
+  "weaviate-client>=4.4.0",
+  # Database dependencies
+  "boto3>=1.26.0",
+  "ibm-db>=3.1.0",
+  "mariadb>=1.1.0",
+  "psycopg2>=2.9.0",
+  "pymongo>=4.0.0",
+  # Benchmark dependencies
+  "click>=8.2.1",
+  "matplotlib>=3.7.0",
+  "numpy>=1.24.0",
+  "pandas>=2.0.0",
+  "psutil>=5.9.0",
+  "seaborn>=0.12.0",
+  "tabulate>=0.9.0",
+  "memory-profiler>=0.61.0",
+  "crewai>=0.41.0",
+  "langchain>=0.1.0",
+  "langchain-anthropic>=0.3.19",
+  "langchain-ollama>=0.3.7",
+  "langchain-openai>=0.1.0",
+  "langgraph>=0.1.0",
+  "llama-index>=0.9.0",
+  "llama-index-cli>=0.5.0",
+  "llama-index-llms-anthropic>=0.8.5",
+  "llama-index-llms-ollama>=0.7.1",
+  "pydantic-ai>=0.0.5",
+  # Additional dependencies
+  "requests>=2.25.0",
+  "types-pyyaml>=6.0.12.20250822"
 ]
 vector-db = [
   "astrapy>=1.0.0",
@@ -191,7 +234,7 @@ warn_unused_configs = true
 warn_unused_ignores = true
 
 [tool.poetry]
-authors = ["GraphBit Team"]
+authors = ["InfinitiBit Team"]
 description = "GraphBit - Advanced workflow automation and AI agent orchestration library"
 homepage = "https://github.com/InfinitiBit/graphbit"
 name = "graphbit"

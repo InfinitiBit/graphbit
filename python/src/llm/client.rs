@@ -307,13 +307,14 @@ impl LlmClient {
     }
 
     /// Synchronous completion with resilience (use sparingly)
-    #[instrument(skip(self), fields(prompt_len = prompt.len()))]
+    #[instrument(skip(self, py), fields(prompt_len = prompt.len()))]
     #[pyo3(signature = (prompt, max_tokens=None, temperature=None))]
     fn complete(
         &self,
         prompt: String,
         max_tokens: Option<i64>,
         temperature: Option<f64>,
+        py: Python<'_>,
     ) -> PyResult<String> {
         // Validate input
         if prompt.is_empty() {
@@ -364,17 +365,20 @@ impl LlmClient {
         let stats = Arc::clone(&self.stats);
         let config = self.config.clone();
 
-        get_runtime().block_on(async move {
-            Self::execute_with_resilience(
-                provider,
-                circuit_breaker,
-                stats,
-                config,
-                prompt,
-                validated_max_tokens,
-                validated_temperature,
-            )
-            .await
+        // CRITICAL FIX: Release GIL during async execution for true parallelism
+        py.allow_threads(|| {
+            get_runtime().block_on(async move {
+                Self::execute_with_resilience(
+                    provider,
+                    circuit_breaker,
+                    stats,
+                    config,
+                    prompt,
+                    validated_max_tokens,
+                    validated_temperature,
+                )
+                .await
+            })
         })
     }
 
@@ -725,13 +729,14 @@ impl LlmClient {
     }
 
     /// Complete with full response object (synchronous)
-    #[instrument(skip(self), fields(prompt_len = prompt.len()))]
+    #[instrument(skip(self, py), fields(prompt_len = prompt.len()))]
     #[pyo3(signature = (prompt, max_tokens=None, temperature=None))]
     fn complete_full(
         &self,
         prompt: String,
         max_tokens: Option<i64>,
         temperature: Option<f64>,
+        py: Python<'_>,
     ) -> PyResult<PyLlmResponse> {
         // Validate input
         if prompt.is_empty() {
@@ -776,15 +781,18 @@ impl LlmClient {
             })
             .transpose()?;
 
-        let response = get_runtime().block_on(Self::execute_with_resilience_full(
-            Arc::clone(&self.provider),
-            Arc::clone(&self.circuit_breaker),
-            Arc::clone(&self.stats),
-            self.config.clone(),
-            prompt,
-            validated_max_tokens,
-            validated_temperature,
-        ))?;
+        // CRITICAL FIX: Release GIL during async execution for true parallelism
+        let response = py.allow_threads(|| {
+            get_runtime().block_on(Self::execute_with_resilience_full(
+                Arc::clone(&self.provider),
+                Arc::clone(&self.circuit_breaker),
+                Arc::clone(&self.stats),
+                self.config.clone(),
+                prompt,
+                validated_max_tokens,
+                validated_temperature,
+            ))
+        })?;
 
         Ok(PyLlmResponse::from(response))
     }

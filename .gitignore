@@ -67,8 +67,11 @@ venv.bak/
 *.sqlite3
 vector_index*
 
+# Package managers
 # Poetry
 poetry.lock
+# uv
+uv.lock
 
 # Logs
 logs/
