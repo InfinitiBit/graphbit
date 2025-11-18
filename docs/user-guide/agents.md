@@ -21,7 +21,9 @@ from graphbit import Node
 analyzer = Node.agent(
     name="Data Analyzer",
     prompt=f"Analyze the following data and identify key patterns: {input}",
-    agent_id="analyzer"  # Optional - auto-generated if not provided
+    agent_id="analyzer",  # Optional - auto-generated if not provided
+    temperature=0.7,  # Optional - controls randomness (0.0 to 2.0)
+    max_tokens=1000  # Optional - maximum tokens in response
 )
 
 # Access agent properties
