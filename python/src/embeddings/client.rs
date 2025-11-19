@@ -176,7 +176,10 @@ impl EmbeddingClient {
 
         // Add statistics
         let stats_dict = PyDict::new(py);
-        stats_dict.set_item("successful_requests", batch_response.stats.successful_requests)?;
+        stats_dict.set_item(
+            "successful_requests",
+            batch_response.stats.successful_requests,
+        )?;
         stats_dict.set_item("failed_requests", batch_response.stats.failed_requests)?;
         stats_dict.set_item(
             "avg_response_time_ms",
