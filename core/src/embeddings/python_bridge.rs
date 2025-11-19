@@ -138,26 +138,20 @@ impl EmbeddingProviderTrait for PythonBridgeEmbeddingProvider {
             let texts = request.input.as_texts();
 
             // Call Python method: embed(model, text, **kwargs) for single text
-            // or handle multiple texts
+            // or embed_many(model, texts, **kwargs) for multiple texts
             let result = if texts.len() == 1 {
-                // Single text
+                // Single text - call embed(model, text)
                 python_instance
                     .call_method(py, "embed", (model.clone(), texts[0]), None)
                     .map_err(|e| GraphBitError::llm(format!("Python embed call failed: {e}")))?
             } else {
-                // Multiple texts - call embed for each and collect results
-                let embeddings_list = PyList::empty(py);
-                for text in texts {
-                    let embedding = python_instance
-                        .call_method(py, "embed", (model.clone(), text), None)
-                        .map_err(|e| {
-                            GraphBitError::llm(format!("Python embed call failed: {e}"))
-                        })?;
-                    embeddings_list.append(embedding).map_err(|e| {
-                        GraphBitError::llm(format!("Failed to append embedding: {e}"))
-                    })?;
-                }
-                embeddings_list.into()
+                // Multiple texts - call embed_many(model, texts)
+                let texts_vec: Vec<String> = texts.iter().map(|s| s.to_string()).collect();
+                python_instance
+                    .call_method(py, "embed_many", (model.clone(), texts_vec), None)
+                    .map_err(|e| {
+                        GraphBitError::llm(format!("Python embed_many call failed: {e}"))
+                    })?
             };
 
             // Parse the response
