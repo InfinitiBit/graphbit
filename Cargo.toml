@@ -90,7 +90,8 @@ jemallocator.workspace = true
 [workspace]
 members = [
   "core",
-  "python"
+  "python",
+  "javascript"
 ]
 resolver = "2"
 
