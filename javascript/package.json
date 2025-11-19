@@ -1,0 +1,91 @@
+{
+  "name": "@graphbit/core",
+  "version": "0.5.1",
+  "description": "JavaScript/Node.js bindings for GraphBit agentic workflow automation framework",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/InfinitiBit/graphbit.git",
+    "directory": "javascript"
+  },
+  "homepage": "https://graphbit.ai",
+  "bugs": {
+    "url": "https://github.com/InfinitiBit/graphbit/issues"
+  },
+  "keywords": [
+    "ai",
+    "automation",
+    "workflow",
+    "agent",
+    "llm",
+    "openai",
+    "anthropic",
+    "rust",
+    "napi",
+    "native"
+  ],
+  "author": "GraphBit Team",
+  "license": "SEE LICENSE IN ../LICENSE.md",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "napi": {
+    "name": "graphbit-js",
+    "triples": {
+      "defaults": true,
+      "additional": [
+        "aarch64-apple-darwin",
+        "aarch64-unknown-linux-gnu",
+        "aarch64-unknown-linux-musl",
+        "aarch64-pc-windows-msvc",
+        "x86_64-unknown-linux-musl"
+      ]
+    }
+  },
+  "scripts": {
+    "artifacts": "napi artifacts",
+    "build": "napi build --platform --release",
+    "build:debug": "napi build --platform",
+    "prepublishOnly": "napi prepublish -t npm",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
+    "test:types": "tsc --noEmit",
+    "bench": "vitest bench",
+    "universal": "napi universal",
+    "version": "napi version",
+    "lint": "eslint . --ext .ts,.js",
+    "lint:fix": "eslint . --ext .ts,.js --fix",
+    "format": "prettier --write \"**/*.{ts,js,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,js,json,md}\"",
+    "typecheck": "tsc --noEmit",
+    "clean": "rimraf build *.node index.js index.d.ts",
+    "docs": "typedoc --out docs/api src/index.ts"
+  },
+  "devDependencies": {
+    "@napi-rs/cli": "^2.18.0",
+    "@types/node": "^20.10.0",
+    "@typescript-eslint/eslint-plugin": "^6.15.0",
+    "@typescript-eslint/parser": "^6.15.0",
+    "@vitest/coverage-v8": "^1.0.4",
+    "eslint": "^8.56.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.0.1",
+    "prettier": "^3.1.1",
+    "rimraf": "^5.0.5",
+    "typedoc": "^0.25.4",
+    "typescript": "^5.3.3",
+    "vitest": "^1.0.4"
+  },
+  "packageManager": "npm@10.2.4",
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "*.node",
+    "README.md",
+    "LICENSE.md"
+  ]
+}
