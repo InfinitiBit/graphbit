@@ -353,12 +353,12 @@ class TestWorkflowToolIntegration:
         llm_config = list(AVAILABLE_LLM_CONFIGS.values())[0]
 
         # Create tools with @tool decorator
-        @tool(description="Add two numbers together")
+        @tool(_description="Add two numbers together")
         def add_numbers(a: int, b: int) -> int:
             """Add two numbers."""
             return a + b
 
-        @tool(description="Multiply two numbers together")
+        @tool(_description="Multiply two numbers together")
         def multiply_numbers(a: int, b: int) -> int:
             """Multiply two numbers."""
             return a * b
@@ -399,7 +399,7 @@ class TestWorkflowToolIntegration:
         llm_config = list(AVAILABLE_LLM_CONFIGS.values())[0]
 
         # Create diverse tools for comprehensive testing
-        @tool(description="Get information about a city")
+        @tool(_description="Get information about a city")
         def get_city_info(city: str) -> dict:
             """Get basic information about a city."""
             city_data = {
@@ -409,12 +409,12 @@ class TestWorkflowToolIntegration:
             }
             return city_data.get(city, {"error": f"No data available for {city}"})
 
-        @tool(description="Calculate percentage of a number")
+        @tool(_description="Calculate percentage of a number")
         def calculate_percentage(number: float, percentage: float) -> float:
             """Calculate what percentage of a number equals."""
             return (number * percentage) / 100
 
-        @tool(description="Format text with specific styling")
+        @tool(_description="Format text with specific styling")
         def format_text(text: str, style: str = "uppercase") -> str:
             """Format text with the specified style."""
             if style == "uppercase":

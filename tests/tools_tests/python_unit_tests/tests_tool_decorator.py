@@ -344,7 +344,7 @@ class TestToolDecorator:
 
         # Test that it works with current Python version
         current_version = sys.version_info
-        assert current_version >= (3, 10), "Requires Python 3.10+"
+        assert current_version >= (3, 9), "Requires Python 3.9+"
 
     def test_tool_decorator_memory_management_comprehensive(self):
         """Test ToolDecorator comprehensive memory management scenarios."""

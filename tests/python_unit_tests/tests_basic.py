@@ -13,5 +13,5 @@ def test_graphbit_import():
 
 def test_python_version_compatibility():
     """Test Python version compatibility."""
-    # Should work with Python 3.10+
-    assert sys.version_info >= (3, 10)
+    # Should work with Python 3.9+
+    assert sys.version_info >= (3, 9)
