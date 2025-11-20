@@ -63,12 +63,12 @@ try:
 except Exception as e:
     print(f"Initialization failed: {e}")
     
-# Get system info to diagnose
-try:
-    info = get_system_info()
-    print(f"System info: {info}")
-except:
-    print("Cannot get system info - core issue")
+    # Get system info to diagnose
+    try:
+        info = get_system_info()
+        print(f"System info: {info}")
+    except:
+        print("Cannot get system info - core issue")
 ```
 
 **Common Causes:**
@@ -128,9 +128,9 @@ except PermissionError as e:
 except Exception as e:
     print(f"Unexpected error: {e}")
     
-# Get client statistics for diagnosis
-stats = client.get_stats()
-print(f"Client stats: {stats}")
+    # Get client statistics for diagnosis
+    stats = client.get_stats()
+    print(f"Client stats: {stats}")
 ```
 
 #### Problem: Circuit Breaker Activation
@@ -188,9 +188,9 @@ try:
 except TimeoutError as e:
     print(f"Execution timed out: {e}")
     
-# Check execution statistics
-stats = executor.get_stats()
-print(f"Average duration: {stats['average_duration_ms']}ms")
+    # Check execution statistics
+    stats = executor.get_stats()
+    print(f"Average duration: {stats['average_duration_ms']}ms")
 ```
 
 ### 4. Runtime and Performance Issues
