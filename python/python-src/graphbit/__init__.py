@@ -1,29 +1,141 @@
-"""
-GraphBit - Advanced workflow automation and AI agent orchestration library.
+# Re-export all Rust bindings at the top level
+# This allows: from graphbit import LlmConfig, Executor, Workflow, Node, etc.
 
-This package provides both Rust-based high-performance components and pure Python
-extensions for maximum flexibility.
-"""
+# Core functions
+from .graphbit import (
+    init,
+    version,
+    get_system_info,
+    health_check,
+    configure_runtime,
+    shutdown,
+)
 
-# Try to import all Rust-based components from the compiled module
-try:
-    from graphbit.graphbit import *  # noqa: F401, F403
-except ImportError:
-    # If graphbit.graphbit doesn't exist (e.g., in development/testing),
-    # try importing from the installed graphbit module
-    try:
-        import graphbit as _graphbit_module
-        # Re-export everything from the main graphbit module
-        for attr in dir(_graphbit_module):
-            if not attr.startswith('_'):
-                globals()[attr] = getattr(_graphbit_module, attr)
-    except (ImportError, AttributeError):
-        # Neither import worked, we're probably in a test environment
-        # Just continue without the Rust components
-        pass
+# Document loader classes
+from .graphbit import (
+    DocumentLoaderConfig,
+    DocumentContent,
+    DocumentLoader,
+)
 
-# Make vllm submodule available
-from . import vllm  # noqa: F401
+# LLM classes
+from .graphbit import (
+    LlmConfig,
+    LlmClient,
+    LlmUsage,
+    FinishReason,
+    LlmToolCall,
+    LlmResponse,
+)
 
-__all__ = ['vllm']
+# Workflow classes
+from .graphbit import (
+    Node,
+    Workflow,
+    WorkflowContext,
+    WorkflowResult,
+    Executor,
+)
 
+# Embedding classes
+from .graphbit import (
+    EmbeddingConfig,
+    EmbeddingClient,
+)
+
+# Text splitter classes
+from .graphbit import (
+    TextSplitterConfig,
+    TextChunk,
+    CharacterSplitter,
+    TokenSplitter,
+    SentenceSplitter,
+    RecursiveSplitter,
+    TextSplitter,
+)
+
+# Tool system classes
+from .graphbit import (
+    ToolResult,
+    ToolRegistry,
+    ToolDecorator,
+    ToolExecutor,
+    ExecutorConfig,
+    ToolResultCollection,
+)
+
+# Tool functions
+from .graphbit import (
+    tool,
+    get_tool_registry,
+    clear_tools,
+    execute_tool,
+    get_registered_tools,
+    execute_workflow_tool_calls,
+    execute_production_tool_calls,
+    sync_global_tools_to_workflow,
+)
+
+# Module metadata
+from .graphbit import __version__, __author__, __description__
+
+# Define __all__ for explicit exports
+__all__ = [
+    # Core functions
+    "init",
+    "version",
+    "get_system_info",
+    "health_check",
+    "configure_runtime",
+    "shutdown",
+    # Document loader
+    "DocumentLoaderConfig",
+    "DocumentContent",
+    "DocumentLoader",
+    # LLM
+    "LlmConfig",
+    "LlmClient",
+    "LlmUsage",
+    "FinishReason",
+    "LlmToolCall",
+    "LlmResponse",
+    # Workflow
+    "Node",
+    "Workflow",
+    "WorkflowContext",
+    "WorkflowResult",
+    "Executor",
+    # Embeddings
+    "EmbeddingConfig",
+    "EmbeddingClient",
+    # Text splitter
+    "TextSplitterConfig",
+    "TextChunk",
+    "CharacterSplitter",
+    "TokenSplitter",
+    "SentenceSplitter",
+    "RecursiveSplitter",
+    "TextSplitter",
+    # Tools
+    "ToolResult",
+    "ToolRegistry",
+    "ToolDecorator",
+    "ToolExecutor",
+    "ExecutorConfig",
+    "ToolResultCollection",
+    "tool",
+    "get_tool_registry",
+    "clear_tools",
+    "execute_tool",
+    "get_registered_tools",
+    "execute_workflow_tool_calls",
+    "execute_production_tool_calls",
+    "sync_global_tools_to_workflow",
+    # Metadata
+    "__version__",
+    "__author__",
+    "__description__",
+]
+
+# The providers submodule is accessible as: from graphbit.providers import Huggingface
+# This is handled by the providers/__init__.py file

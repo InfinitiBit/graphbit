@@ -1,0 +1,150 @@
+<h1>GraphBit Chatbot</h1>
+
+<p>
+  An intelligent conversational AI chatbot built with the <strong>GraphBit framework</strong>.
+  This application provides real-time chat capabilities with context-aware responses powered by
+  vector database memory and advanced AI.
+</p>
+
+<h2>Features</h2>
+
+<ul>
+  <li><strong>Real-time Chat</strong>: WebSocket-based streaming responses for instant interaction</li>
+  <li><strong>Context-Aware Memory</strong>: ChromaDB vector database for intelligent conversation context retrieval</li>
+  <li><strong>Knowledge Base</strong>: Automatic indexing and retrieval of relevant information</li>
+  <li><strong>Session Management</strong>: Persistent conversation history across sessions</li>
+  <li><strong>Streaming Responses</strong>: Token-by-token response streaming for better user experience</li>
+  <li><strong>Modern UI</strong>: Clean, responsive Streamlit interface with emoji avatars</li>
+  <li><strong>GraphBit Integration</strong>: Built on GraphBit's powerful LLM and embedding clients</li>
+</ul>
+
+<h2>Architecture</h2>
+<pre>
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Frontend      │    │    Backend      │    │   GraphBit      │
+│   (Streamlit)   │◄──►│   (FastAPI)     │◄──►│   Framework     │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+                            │
+                            ▼
+                     ┌─────────────────┐
+                     │  Vector Store   │
+                     │   (ChromaDB)    │
+                     └─────────────────┘
+</pre>
+
+<h3>Components</h3>
+<ul>
+  <li><strong>Frontend:</strong> Streamlit web application with WebSocket connectivity for real-time chat</li>
+  <li><strong>Backend:</strong> FastAPI server handling chat logic, context retrieval, and conversation storage</li>
+  <li><strong>GraphBit Framework:</strong> Core AI orchestration with native LLM and embedding clients</li>
+  <li><strong>Vector Store:</strong> ChromaDB-based semantic search and conversation memory</li>
+  <li><strong>Session Management:</strong> In-memory session storage with persistent vector database backup</li>
+</ul>
+
+<h2>GraphBit AI Integration</h2>
+<ul>
+  <li><strong>Native LLM Client:</strong> Uses GraphBit’s <code>LlmClient</code> with OpenAI <code>gpt-3.5-turbo</code> for response generation</li>
+  <li><strong>Streaming Support:</strong> Employs GraphBit’s <code>complete_stream</code> for real-time token-by-token responses</li>
+  <li><strong>Embedding Generation:</strong> Utilizes GraphBit’s <code>EmbeddingClient</code> with OpenAI <code>text-embedding-3-small</code> model</li>
+  <li><strong>Batch Embeddings:</strong> Efficient <code>embed_many</code> for processing multiple text chunks simultaneously</li>
+  <li><strong>Context-Aware Responses:</strong> Combines vector similarity search with conversation history for intelligent replies</li>
+</ul>
+
+<h2>Usage Guide</h2>
+<h3>1. Initial Setup</h3>
+<ol>
+  <li>Open the application in your browser at <code>http://localhost:8501</code>.</li>
+  <li>Wait for the automatic knowledge base initialization (happens once on first launch).</li>
+  <li>See the welcome message from the AI assistant.</li>
+</ol>
+
+<h3>2. Start Chatting</h3>
+<ol>
+  <li>Type your message in the chat input at the bottom of the page.</li>
+  <li>Press Enter or click the send button.</li>
+  <li>Watch as the AI assistant streams its response in real time.</li>
+  <li>Continue the conversation naturally.</li>
+</ol>
+
+<h3>3. How It Works</h3>
+<ul>
+  <li><strong>Context Retrieval:</strong> Each message triggers a semantic search in the vector database to find relevant context.</li>
+  <li><strong>Response Generation:</strong> The AI combines retrieved context with your question to generate informed responses.</li>
+  <li><strong>Memory Storage:</strong> Every conversation exchange is automatically saved to the vector database for future reference.</li>
+  <li><strong>Session Tracking:</strong> Your conversation history is maintained throughout the session.</li>
+</ul>
+
+<h2>Project Structure</h2>
+<pre>
+chatbot/
+├── README.md                    # This file
+├── pyproject.toml               # Project dependencies
+├── backend/                     # FastAPI backend
+│   ├── main.py                 # API endpoints and WebSocket handler
+│   ├── chatbot_manager.py      # Core chatbot orchestration logic
+│   ├── vectordb_manager.py     # ChromaDB vector store management
+│   ├── llm_manager.py          # GraphBit LLM and embedding client wrapper
+│   ├── const.py                # Configuration constants
+│   └── data/
+│       └── vectordb.txt        # Initial knowledge base content
+├── frontend/                    # Streamlit frontend
+│   └── chatbot.py              # Main chat interface application
+├── logs/                        # Application logs
+│   └── chatbot.log             # Runtime logs
+└── vector_index_chatbot/        # ChromaDB persistent storage
+  └── chroma.sqlite3          # Vector database file
+</pre>
+
+<h2>API Reference</h2>
+<h3>Endpoints</h3>
+<ul>
+  <li><code>GET /</code> - Root endpoint returning welcome message</li>
+  <li><code>POST /index/</code> - Create or recreate the vector store index from the knowledge base file</li>
+  <li><code>POST /chat/</code> - Send a chat message and receive a response (non-streaming)</li>
+  <li><code>WebSocket /ws/chat/</code> - Real-time chat with streaming responses</li>
+</ul>
+
+<h3>WebSocket Protocol</h3>
+<p><em>Client Message Format</em></p>
+<pre>
+{
+"message": "Your question here",
+"session_id": "unique-session-id"
+}
+</pre>
+
+<p><em>Server Response Format</em></p>
+<pre>
+{
+"response": "token or full response",
+"session_id": "unique-session-id",
+"type": "chunk|end"
+}
+</pre>
+
+<h2>Configuration</h2>
+
+<p>Configuration constants are defined in <code>backend/const.py</code>:</p>
+<ul>
+  <li><code>OPENAI_LLM_MODEL</code>: GPT model for chat responses (default: <code>gpt-3.5-turbo</code>)</li>
+  <li><code>OPENAI_EMBEDDING_MODEL</code>: Embedding model for vector search (default: <code>text-embedding-3-small</code>)</li>
+  <li><code>CHUNK_SIZE</code>: Text chunk size for vector indexing (default: <code>1000</code>)</li>
+  <li><code>OVERLAP_SIZE</code>: Overlap between chunks (default: <code>100</code>)</li>
+  <li><code>RETRIEVE_CONTEXT_N_RESULTS</code>: Number of similar documents to retrieve (default: <code>5</code>)</li>
+  <li><code>MAX_TOKENS</code>: Maximum tokens in LLM response (default: <code>200</code>)</li>
+  <li><code>COLLECTION_NAME</code>: ChromaDB collection name (default: <code>chatbot_memory</code>)</li>
+</ul>
+
+<h2>Contributing</h2>
+<ol>
+  <li>Fork the repository</li>
+  <li>Create a feature branch: <code>git checkout -b feature-name</code></li>
+  <li>Make your changes and add tests</li>
+  <li>Commit your changes: <code>git commit -m 'Add feature'</code></li>
+  <li>Push to the branch: <code>git push origin feature-name</code></li>
+  <li>Submit a pull request</li>
+</ol>
+
+<h2>License</h2>
+<p>This project is part of the GraphBit framework and follows the same licensing terms.</p>
+<p>For more information about GraphBit, visit the main repository: <a href="https://github.com/InfinitiBit/graphbit">https://github.com/InfinitiBit/graphbit</a></p>

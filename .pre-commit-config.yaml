@@ -7,7 +7,7 @@ default_language_version:
 repos:
   # Pre-commit hooks for general file handling
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v5.0.0
+  rev: v6.0.0
   hooks:
   - id: trailing-whitespace
     exclude: ^(.*\.md|.*\.rst)$
@@ -30,7 +30,7 @@ repos:
 
   # Python Code Formatting
 - repo: https://github.com/psf/black
-  rev: 25.1.0
+  rev: 25.9.0
   hooks:
   - id: black
     language_version: python3.11
@@ -39,7 +39,7 @@ repos:
 
   # Python Import Sorting
 - repo: https://github.com/pycqa/isort
-  rev: 6.0.1
+  rev: 7.0.0
   hooks:
   - id: isort
     # args: [--profile=black, --line-length=200]
@@ -61,7 +61,7 @@ repos:
 
   # Python Type Checking
 - repo: https://github.com/pre-commit/mirrors-mypy
-  rev: v1.16.1
+  rev: v1.18.2
   hooks:
   - id: mypy
     # args: [--ignore-missing-imports, --no-strict-optional]
@@ -74,7 +74,7 @@ repos:
 
   # Python Security Checks
 - repo: https://github.com/pycqa/bandit
-  rev: 1.8.5
+  rev: 1.8.6
   hooks:
   - id: bandit
     args: [-r, '--skip=B101,B601']
@@ -138,21 +138,29 @@ repos:
 
   # Spell Checking
 - repo: https://github.com/crate-ci/typos
-  rev: v1.28.3
+  rev: v1
   hooks:
   - id: typos
     exclude: ^(site/|Cargo\.lock|poetry\.lock|CHANGELOG\.md)$
 
+#   # Markdown Linting
+# - repo: https://github.com/igorshubovych/markdownlint-cli
+#   rev: v0.45.0
+#   hooks:
+#   - id: markdownlint
+#     args: ["--fix", "--config", ".markdownlint.yaml"]  # Auto-fix issues when possible
+#     files: \.md$
+
   # Shell Script Linting
 - repo: https://github.com/shellcheck-py/shellcheck-py
-  rev: v0.10.0.1
+  rev: v0.11.0.1
   hooks:
   - id: shellcheck
     files: ^.*\.(sh|bash)$
 
   # Commit Message Linting
 - repo: https://github.com/commitizen-tools/commitizen
-  rev: v4.8.3
+  rev: v4.9.1
   hooks:
   - id: commitizen
     stages: [commit-msg]

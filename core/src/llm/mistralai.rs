@@ -217,22 +217,13 @@ impl LlmProviderTrait for MistralAiProvider {
     async fn complete(&self, request: LlmRequest) -> GraphBitResult<LlmResponse> {
         let url = format!("{}/chat/completions", self.base_url);
 
-        let messages: Vec<MistralAiMessage> = request
-            .messages
-            .iter()
-            .map(|m| Self::convert_message(m))
-            .collect();
+        let messages: Vec<MistralAiMessage> =
+            request.messages.iter().map(Self::convert_message).collect();
 
         let tools: Option<Vec<MistralAiTool>> = if request.tools.is_empty() {
             None
         } else {
-            Some(
-                request
-                    .tools
-                    .iter()
-                    .map(|t| Self::convert_tool(t))
-                    .collect(),
-            )
+            Some(request.tools.iter().map(Self::convert_tool).collect())
         };
 
         let body = MistralAiRequest {

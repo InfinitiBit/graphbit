@@ -34,6 +34,7 @@ bindings = "pyo3"
 module-name = "graphbit"
 # Build profile for optimized releases
 profile = "release"
+python-source = "python-src"
 # Build optimizations
 strip = true
 # Include Python source files

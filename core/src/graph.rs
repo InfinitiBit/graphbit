@@ -404,7 +404,7 @@ impl WorkflowGraph {
         if self
             .metadata
             .get("enforce_unique_node_names")
-            .and_then(|v| v.as_bool())
+            .and_then(serde_json::Value::as_bool)
             .unwrap_or(false)
         {
             use std::collections::HashMap;
