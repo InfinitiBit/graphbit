@@ -276,10 +276,10 @@ from graphbit import EmbeddingClient
 client = EmbeddingClient(config)
 
 # Single text embedding
-embedding =await client.embed("Hello, world!")
+embedding = await client.embed("Hello, world!")
 
 # Batch text embeddings
-embeddings =await client.embed_many([
+embeddings = await client.embed_many([
     "First text",
     "Second text",
     "Third text"
