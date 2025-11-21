@@ -137,5 +137,5 @@ __all__ = [
     "__description__",
 ]
 
-# The providers submodule is accessible as: from graphbit.providers import Huggingface
+# The providers submodule is accessible as: from graphbit.providers import Huggingface, vLLM
 # This is handled by the providers/__init__.py file

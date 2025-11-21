@@ -1,3 +1,4 @@
 from .huggingface.client import Huggingface
+from .vllm.client import vLLM
 
-__all__ = ["Huggingface"]
+__all__ = ["Huggingface", "vLLM"]
