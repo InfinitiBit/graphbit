@@ -1,5 +1,5 @@
 from .llm_config import VLLMConfig
-from .llm import VLLM
+from .llm import VLLMProvider
 from .embeddings import VLLMEmbeddings
 
 class vLLM:
@@ -19,5 +19,5 @@ class vLLM:
         )
 
         # Initialize LLM and embeddings with the config
-        self.llm = VLLM(config=self.config)
+        self.llm = VLLMProvider(config=self.config)
         self.embeddings = VLLMEmbeddings(config=self.config)
