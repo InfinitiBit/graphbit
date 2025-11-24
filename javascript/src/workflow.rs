@@ -10,6 +10,7 @@ use graphbit_core::workflow::{
 use graphbit_core::types::WorkflowContext as CoreWorkflowContext;
 use crate::llm::LlmConfig;
 use crate::types::{WorkflowState, WorkflowExecutionStats};
+use crate::graph::{WorkflowNode, WorkflowEdge};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
@@ -103,6 +104,123 @@ impl Workflow {
     pub(crate) async fn clone_inner(&self) -> CoreWorkflow {
         let workflow = self.inner.lock().await;
         workflow.clone()
+    }
+
+    /// Add a node to the workflow
+    ///
+    /// # Arguments
+    /// * `node` - The workflow node to add
+    ///
+    /// # Returns
+    /// The node ID as a string
+    ///
+    /// # Example
+    /// ```javascript
+    /// const workflow = new WorkflowBuilder('My Workflow').build();
+    /// const node = {
+    ///   id: "node1",
+    ///   name: "My Node",
+    ///   description: "A test node",
+    ///   nodeType: "Agent"
+    /// };
+    /// const nodeId = await workflow.addNode(node);
+    /// ```
+    #[napi]
+    pub async fn add_node(&self, node: WorkflowNode) -> Result<String> {
+        let mut workflow = self.inner.lock().await;
+
+        // Parse the node ID as a UUID
+        let node_id = graphbit_core::types::NodeId::from_string(&node.id)
+            .map_err(|e| Error::from_reason(format!("Invalid node ID: {}", e)))?;
+
+        // Determine the node type from the string
+        let node_type = match node.node_type.as_str() {
+            "Agent" => graphbit_core::graph::NodeType::Agent {
+                agent_id: graphbit_core::types::AgentId::new(),
+                prompt_template: String::new(),
+            },
+            "Condition" => graphbit_core::graph::NodeType::Condition {
+                expression: String::new(),
+            },
+            "Transform" => graphbit_core::graph::NodeType::Transform {
+                transformation: String::new(),
+            },
+            "Split" => graphbit_core::graph::NodeType::Split,
+            "Join" => graphbit_core::graph::NodeType::Join,
+            "Delay" => graphbit_core::graph::NodeType::Delay {
+                duration_seconds: 0,
+            },
+            _ => return Err(Error::from_reason(format!("Unknown node type: {}", node.node_type))),
+        };
+
+        // Create the core WorkflowNode
+        let mut core_node = graphbit_core::graph::WorkflowNode::new(
+            node.name,
+            node.description,
+            node_type
+        );
+        core_node.id = node_id.clone();
+
+        let result_id = workflow.add_node(core_node)
+            .map_err(crate::errors::to_napi_error)?;
+
+        Ok(result_id.to_string())
+    }
+
+    /// Connect two nodes with an edge
+    ///
+    /// # Arguments
+    /// * `from` - The source node ID
+    /// * `to` - The target node ID
+    /// * `edge` - The workflow edge to add
+    ///
+    /// # Example
+    /// ```javascript
+    /// const workflow = new WorkflowBuilder('My Workflow').build();
+    /// const edge = {
+    ///   fromNode: "node1",
+    ///   toNode: "node2",
+    ///   condition: null
+    /// };
+    /// await workflow.addEdge("node1", "node2", edge);
+    /// ```
+    #[napi]
+    pub async fn add_edge(&self, from: String, to: String, edge: WorkflowEdge) -> Result<()> {
+        let mut workflow = self.inner.lock().await;
+
+        // Parse the node IDs
+        let from_id = graphbit_core::types::NodeId::from_string(&from)
+            .map_err(|e| Error::from_reason(format!("Invalid from node ID: {}", e)))?;
+        let to_id = graphbit_core::types::NodeId::from_string(&to)
+            .map_err(|e| Error::from_reason(format!("Invalid to node ID: {}", e)))?;
+
+        // Create a data flow edge (default)
+        let mut core_edge = graphbit_core::graph::WorkflowEdge::data_flow();
+        core_edge.condition = edge.condition;
+
+        workflow.connect_nodes(from_id, to_id, core_edge)
+            .map_err(crate::errors::to_napi_error)?;
+
+        Ok(())
+    }
+
+    /// Validate the workflow structure
+    ///
+    /// # Returns
+    /// True if the workflow is valid, throws an error otherwise
+    ///
+    /// # Example
+    /// ```javascript
+    /// const workflow = new WorkflowBuilder('My Workflow').build();
+    /// const isValid = await workflow.validate();
+    /// console.log('Workflow is valid:', isValid);
+    /// ```
+    #[napi]
+    pub async fn validate(&self) -> Result<bool> {
+        let workflow = self.inner.lock().await;
+        workflow.validate()
+            .map_err(crate::errors::to_napi_error)?;
+        Ok(true)
     }
 }
 
