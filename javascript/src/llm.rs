@@ -87,6 +87,226 @@ impl LlmConfig {
         Ok(Self { inner: config })
     }
 
+    /// Create ByteDance ModelArk configuration
+    ///
+    /// # Example
+    ///
+    /// ```javascript
+    /// const config = LlmConfig.bytedance({
+    ///   apiKey: process.env.BYTEDANCE_API_KEY,
+    ///   model: 'skylark-lite'
+    /// });
+    /// ```
+    #[napi(factory)]
+    pub fn bytedance(options: ByteDanceOptions) -> Result<Self> {
+        let config = CoreLlmConfig::bytedance(
+            options.api_key,
+            options.model,
+        );
+
+        Ok(Self { inner: config })
+    }
+
+    /// Create DeepSeek configuration
+    ///
+    /// # Example
+    ///
+    /// ```javascript
+    /// const config = LlmConfig.deepseek({
+    ///   apiKey: process.env.DEEPSEEK_API_KEY,
+    ///   model: 'deepseek-chat'
+    /// });
+    /// ```
+    #[napi(factory)]
+    pub fn deepseek(options: DeepSeekOptions) -> Result<Self> {
+        let config = CoreLlmConfig::deepseek(
+            options.api_key,
+            options.model,
+        );
+
+        Ok(Self { inner: config })
+    }
+
+    /// Create HuggingFace configuration
+    ///
+    /// # Example
+    ///
+    /// ```javascript
+    /// const config = LlmConfig.huggingface({
+    ///   apiKey: process.env.HUGGINGFACE_API_KEY,
+    ///   model: 'meta-llama/Llama-2-7b-chat-hf'
+    /// });
+    /// ```
+    #[napi(factory)]
+    pub fn huggingface(options: HuggingFaceOptions) -> Result<Self> {
+        let config = CoreLlmConfig::huggingface(
+            options.api_key,
+            options.model,
+        );
+
+        Ok(Self { inner: config })
+    }
+
+    /// Create Perplexity configuration
+    ///
+    /// # Example
+    ///
+    /// ```javascript
+    /// const config = LlmConfig.perplexity({
+    ///   apiKey: process.env.PERPLEXITY_API_KEY,
+    ///   model: 'llama-3.1-sonar-small-128k-online'
+    /// });
+    /// ```
+    #[napi(factory)]
+    pub fn perplexity(options: PerplexityOptions) -> Result<Self> {
+        let config = CoreLlmConfig::perplexity(
+            options.api_key,
+            options.model,
+        );
+
+        Ok(Self { inner: config })
+    }
+
+    /// Create OpenRouter configuration
+    ///
+    /// # Example
+    ///
+    /// ```javascript
+    /// const config = LlmConfig.openrouter({
+    ///   apiKey: process.env.OPENROUTER_API_KEY,
+    ///   model: 'openai/gpt-4o'
+    /// });
+    /// ```
+    #[napi(factory)]
+    pub fn openrouter(options: OpenRouterOptions) -> Result<Self> {
+        let config = CoreLlmConfig::openrouter(
+            options.api_key,
+            options.model,
+        );
+
+        Ok(Self { inner: config })
+    }
+
+    /// Create Fireworks AI configuration
+    ///
+    /// # Example
+    ///
+    /// ```javascript
+    /// const config = LlmConfig.fireworks({
+    ///   apiKey: process.env.FIREWORKS_API_KEY,
+    ///   model: 'accounts/fireworks/models/llama-v3p1-70b-instruct'
+    /// });
+    /// ```
+    #[napi(factory)]
+    pub fn fireworks(options: FireworksOptions) -> Result<Self> {
+        let config = CoreLlmConfig::fireworks(
+            options.api_key,
+            options.model,
+        );
+
+        Ok(Self { inner: config })
+    }
+
+    /// Create Replicate configuration
+    ///
+    /// # Example
+    ///
+    /// ```javascript
+    /// const config = LlmConfig.replicate({
+    ///   apiKey: process.env.REPLICATE_API_KEY,
+    ///   model: 'meta/llama-2-70b-chat'
+    /// });
+    /// ```
+    #[napi(factory)]
+    pub fn replicate(options: ReplicateOptions) -> Result<Self> {
+        let config = CoreLlmConfig::replicate(
+            options.api_key,
+            options.model,
+        );
+
+        Ok(Self { inner: config })
+    }
+
+    /// Create TogetherAI configuration
+    ///
+    /// # Example
+    ///
+    /// ```javascript
+    /// const config = LlmConfig.togetherai({
+    ///   apiKey: process.env.TOGETHER_API_KEY,
+    ///   model: 'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo'
+    /// });
+    /// ```
+    #[napi(factory)]
+    pub fn togetherai(options: TogetherAiOptions) -> Result<Self> {
+        let config = CoreLlmConfig::togetherai(
+            options.api_key,
+            options.model,
+        );
+
+        Ok(Self { inner: config })
+    }
+
+    /// Create xAI configuration for Grok models
+    ///
+    /// # Example
+    ///
+    /// ```javascript
+    /// const config = LlmConfig.xai({
+    ///   apiKey: process.env.XAI_API_KEY,
+    ///   model: 'grok-beta'
+    /// });
+    /// ```
+    #[napi(factory)]
+    pub fn xai(options: XaiOptions) -> Result<Self> {
+        let config = CoreLlmConfig::xai(
+            options.api_key,
+            options.model,
+        );
+
+        Ok(Self { inner: config })
+    }
+
+    /// Create AI21 configuration
+    ///
+    /// # Example
+    ///
+    /// ```javascript
+    /// const config = LlmConfig.ai21({
+    ///   apiKey: process.env.AI21_API_KEY,
+    ///   model: 'jamba-1.5-large'
+    /// });
+    /// ```
+    #[napi(factory)]
+    pub fn ai21(options: Ai21Options) -> Result<Self> {
+        let config = CoreLlmConfig::ai21(
+            options.api_key,
+            options.model,
+        );
+
+        Ok(Self { inner: config })
+    }
+
+    /// Create MistralAI configuration
+    ///
+    /// # Example
+    ///
+    /// ```javascript
+    /// const config = LlmConfig.mistralai({
+    ///   apiKey: process.env.MISTRAL_API_KEY,
+    ///   model: 'mistral-large-latest'
+    /// });
+    /// ```
+    #[napi(factory)]
+    pub fn mistralai(options: MistralAiOptions) -> Result<Self> {
+        let config = CoreLlmConfig::mistralai(
+            options.api_key,
+            options.model,
+        );
+
+        Ok(Self { inner: config })
+    }
+
     /// Get the inner core config (internal use)
     pub(crate) fn inner(&self) -> &CoreLlmConfig {
         &self.inner
@@ -126,6 +346,83 @@ pub struct AzureOpenAiOptions {
     pub deployment_name: String,
     pub endpoint: String,
     pub api_version: Option<String>,
+}
+
+/// ByteDance ModelArk configuration options
+#[napi(object)]
+pub struct ByteDanceOptions {
+    pub api_key: String,
+    pub model: String,
+}
+
+/// DeepSeek configuration options
+#[napi(object)]
+pub struct DeepSeekOptions {
+    pub api_key: String,
+    pub model: String,
+}
+
+/// HuggingFace configuration options
+#[napi(object)]
+pub struct HuggingFaceOptions {
+    pub api_key: String,
+    pub model: String,
+}
+
+/// Perplexity configuration options
+#[napi(object)]
+pub struct PerplexityOptions {
+    pub api_key: String,
+    pub model: String,
+}
+
+/// OpenRouter configuration options
+#[napi(object)]
+pub struct OpenRouterOptions {
+    pub api_key: String,
+    pub model: String,
+}
+
+/// Fireworks AI configuration options
+#[napi(object)]
+pub struct FireworksOptions {
+    pub api_key: String,
+    pub model: String,
+}
+
+/// Replicate configuration options
+#[napi(object)]
+pub struct ReplicateOptions {
+    pub api_key: String,
+    pub model: String,
+}
+
+/// TogetherAI configuration options
+#[napi(object)]
+pub struct TogetherAiOptions {
+    pub api_key: String,
+    pub model: String,
+}
+
+/// xAI configuration options
+#[napi(object)]
+pub struct XaiOptions {
+    pub api_key: String,
+    pub model: String,
+}
+
+/// AI21 configuration options
+#[napi(object)]
+pub struct Ai21Options {
+    pub api_key: String,
+    pub model: String,
+}
+
+/// MistralAI configuration options
+#[napi(object)]
+pub struct MistralAiOptions {
+    pub api_key: String,
+    pub model: String,
 }
 
 /// LLM response finish reason
