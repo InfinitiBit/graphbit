@@ -1,18 +1,32 @@
 """Comprehensive integration tests for GraphBit components."""
 
-import pytest
-import uuid
-import tempfile
-import os
 import asyncio
 import functools
+import os
+import tempfile
+import uuid
 import time
-from typing import Dict, List, Optional, Tuple
+import threading
+import requests
+from typing import Dict, Optional
+
+import pytest
+
 from graphbit import (
-    LlmConfig, LlmClient, EmbeddingConfig, EmbeddingClient,
-    DocumentLoader, DocumentLoaderConfig, CharacterSplitter,
-    Workflow, Node, Executor, WorkflowResult,
-    ToolRegistry, ToolExecutor, tool
+    CharacterSplitter,
+    DocumentLoader,
+    EmbeddingClient,
+    EmbeddingConfig,
+    Executor,
+    ExecutorConfig,
+    LlmClient,
+    LlmConfig,
+    Node,
+    ToolExecutor,
+    ToolRegistry,
+    Workflow,
+    WorkflowResult,
+    tool,
 )
 
 
@@ -21,21 +35,20 @@ class APIKeyManager:
     """Manages real API keys from environment variables for genuine integration testing."""
 
     ENV_VARS = {
-        'openai': 'OPENAI_API_KEY',
-        'anthropic': 'ANTHROPIC_API_KEY',
-        'huggingface': 'HUGGINGFACE_API_KEY',
-        'deepseek': 'DEEPSEEK_API_KEY',
-        'fireworks': 'FIREWORKS_API_KEY',
-        'perplexity': 'PERPLEXITY_API_KEY',
-        'xai': 'XAI_API_KEY',
-        'ollama': None  # Ollama doesn't use API keys, uses local URL
+        "openai": "OPENAI_API_KEY",
+        "anthropic": "ANTHROPIC_API_KEY",
+        "huggingface": "HUGGINGFACE_API_KEY",
+        "deepseek": "DEEPSEEK_API_KEY",
+        "fireworks": "FIREWORKS_API_KEY",
+        "perplexity": "PERPLEXITY_API_KEY",
+        "xai": "XAI_API_KEY",
+        "ollama": None,  # Ollama doesn't use API keys, uses local URL
     }
 
     @classmethod
     def is_ollama_available(cls) -> bool:
         """Check if Ollama is running locally."""
         try:
-            import requests
             response = requests.get("http://localhost:11434/api/tags", timeout=2)
             return response.status_code == 200
         except Exception:
@@ -47,7 +60,7 @@ class APIKeyManager:
         env_var = cls.ENV_VARS.get(provider)
 
         # Ollama doesn't use API keys, check if service is running
-        if provider == 'ollama':
+        if provider == "ollama":
             return "ollama-local" if cls.is_ollama_available() else None
 
         if not env_var:
@@ -69,17 +82,17 @@ class APIKeyManager:
                 continue
 
             try:
-                if provider == 'openai':
+                if provider == "openai":
                     configs[provider] = LlmConfig.openai(api_key, "gpt-4o-mini")
-                elif provider == 'anthropic':
+                elif provider == "anthropic":
                     configs[provider] = LlmConfig.anthropic(api_key, "claude-3-haiku-20240307")
-                elif provider == 'huggingface':
+                elif provider == "huggingface":
                     configs[provider] = LlmConfig.huggingface(api_key, "microsoft/DialoGPT-medium")
-                elif provider == 'deepseek':
+                elif provider == "deepseek":
                     configs[provider] = LlmConfig.deepseek(api_key, "deepseek-chat")
-                elif provider == 'perplexity':
+                elif provider == "perplexity":
                     configs[provider] = LlmConfig.perplexity(api_key, "sonar-pro")
-                elif provider == 'ollama':
+                elif provider == "ollama":
                     # Ollama doesn't use API keys, just model name
                     configs[provider] = LlmConfig.ollama("llama3.2")
             except Exception:
@@ -93,15 +106,15 @@ class APIKeyManager:
         """Get embedding configurations for providers with real API keys."""
         configs = {}
 
-        for provider in ['openai', 'huggingface']:  # Only providers that support embeddings
+        for provider in ["openai", "huggingface"]:  # Only providers that support embeddings
             api_key = cls.get_real_api_key(provider)
             if not api_key:
                 continue
 
             try:
-                if provider == 'openai':
+                if provider == "openai":
                     configs[provider] = EmbeddingConfig.openai(api_key, "text-embedding-3-small")
-                elif provider == 'huggingface':
+                elif provider == "huggingface":
                     configs[provider] = EmbeddingConfig.huggingface(api_key, "sentence-transformers/all-MiniLM-L6-v2")
             except Exception:
                 # Skip providers that can't be configured
@@ -124,6 +137,7 @@ def temp_dir(tmp_path):
 
 def require_api_key(provider: str):
     """Decorator to skip test if specific provider API key is not available."""
+
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
@@ -131,32 +145,41 @@ def require_api_key(provider: str):
             if not api_key:
                 pytest.skip(f"{provider.upper()} API key not available in environment")
             return func(*args, **kwargs)
+
         return wrapper
+
     return decorator
 
 
 def require_llm_provider():
     """Decorator to skip test if no LLM providers are available."""
+
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             if not AVAILABLE_LLM_CONFIGS:
                 pytest.skip("No LLM API keys available in environment")
             return func(*args, **kwargs)
+
         return wrapper
+
     return decorator
 
 
 def require_embedding_provider():
     """Decorator to skip test if no embedding providers are available."""
+
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             if not AVAILABLE_EMBEDDING_CONFIGS:
                 pytest.skip("No embedding API keys available in environment")
             return func(*args, **kwargs)
+
         return wrapper
+
     return decorator
+
 
 class TestLLMEmbeddingIntegration:
     """Integration tests for LLM and Embedding components."""
@@ -220,7 +243,7 @@ class TestLLMEmbeddingIntegration:
             assert len(embedding) > 0
 
         # Process texts with LLM (if batch processing available)
-        if hasattr(llm_client, 'complete_batch'):
+        if hasattr(llm_client, "complete_batch"):
             prompts = [f"Process: {text}" for text in texts]
 
             async def test_batch():
@@ -236,10 +259,7 @@ class TestLLMEmbeddingIntegration:
             finally:
                 loop.close()
 
-    @pytest.mark.parametrize("llm_provider,embedding_provider", [
-        (llm_p, emb_p) for llm_p in AVAILABLE_LLM_CONFIGS.keys()
-        for emb_p in AVAILABLE_EMBEDDING_CONFIGS.keys()
-    ])
+    @pytest.mark.parametrize("llm_provider,embedding_provider", [(llm_p, emb_p) for llm_p in AVAILABLE_LLM_CONFIGS.keys() for emb_p in AVAILABLE_EMBEDDING_CONFIGS.keys()])
     def test_cross_provider_integration(self, llm_provider, embedding_provider):
         """Test integration between different LLM and embedding providers."""
         if llm_provider not in AVAILABLE_LLM_CONFIGS:
@@ -287,27 +307,27 @@ class TestDocumentProcessingIntegration:
         """Test integration of document loading and text splitting."""
         # Create document loader
         loader = DocumentLoader()
-        
+
         # Create text splitter
         splitter = CharacterSplitter(chunk_size=200, chunk_overlap=50)
-        
+
         try:
             # Load document
             document = loader.load_document(sample_document, "txt")
             assert document is not None
-            assert hasattr(document, 'content')
-            
+            assert hasattr(document, "content")
+
             # Split document content
             chunks = splitter.split_text(document.content)
             assert isinstance(chunks, list)
             assert len(chunks) > 0
-            
+
             # Verify chunks
             for chunk in chunks:
-                chunk_content = chunk.content if hasattr(chunk, 'content') else chunk
+                chunk_content = chunk.content if hasattr(chunk, "content") else chunk
                 assert isinstance(chunk_content, str)
                 assert len(chunk_content) <= 250  # chunk_size + tolerance
-                
+
         except Exception as e:
             pytest.skip(f"Document processing integration not available: {e}")
 
@@ -317,30 +337,28 @@ class TestDocumentProcessingIntegration:
         embedding_config = EmbeddingConfig.openai("sk-1234567890abcdef1234567890abcdef1234567890abcdef12")
         embedding_client = EmbeddingClient(embedding_config)
         splitter = CharacterSplitter(chunk_size=500, chunk_overlap=100)
-        
+
         try:
             # Load and split document
             document = loader.load_document(sample_document, "txt")
             chunks = splitter.split_text(document.content)
-            
+
             # Generate embeddings for chunks
-            chunk_texts = [chunk.content if hasattr(chunk, 'content') else chunk for chunk in chunks[:3]]  # Limit for testing
+            chunk_texts = [chunk.content if hasattr(chunk, "content") else chunk for chunk in chunks[:3]]  # Limit for testing
             embeddings = embedding_client.embed_many(chunk_texts)
-            
+
             assert isinstance(embeddings, list)
             assert len(embeddings) == len(chunk_texts)
-            
+
             # Calculate similarities between chunks
             if len(embeddings) >= 2:
                 similarity = EmbeddingClient.similarity(embeddings[0], embeddings[1])
                 assert isinstance(similarity, float)
-                
+
         except Exception as e:
             # Expected to fail with test API keys or missing dependencies
             error_msg = str(e).lower()
-            assert any(keyword in error_msg for keyword in 
-                      ['api', 'key', 'auth', 'token', 'invalid', 'unauthorized', 'forbidden',
-                       'not available', 'skip'])
+            assert any(keyword in error_msg for keyword in ["api", "key", "auth", "token", "invalid", "unauthorized", "forbidden", "not available", "skip"])
 
 
 class TestWorkflowToolIntegration:
@@ -370,7 +388,7 @@ class TestWorkflowToolIntegration:
             name="Calculator Agent",
             prompt="Calculate 15 + 27 and then multiply the result by 3. Show your work.",
             agent_id=agent_id,
-            tools=[add_numbers, multiply_numbers]  # Provide tools to the agent
+            tools=[add_numbers, multiply_numbers],  # Provide tools to the agent
         )
         workflow.add_node(node)
         workflow.validate()
@@ -405,7 +423,7 @@ class TestWorkflowToolIntegration:
             city_data = {
                 "Paris": {"country": "France", "population": 2161000, "famous_for": "Eiffel Tower"},
                 "Tokyo": {"country": "Japan", "population": 13960000, "famous_for": "Technology"},
-                "London": {"country": "UK", "population": 8982000, "famous_for": "Big Ben"}
+                "London": {"country": "UK", "population": 8982000, "famous_for": "Big Ben"},
             }
             return city_data.get(city, {"error": f"No data available for {city}"})
 
@@ -440,7 +458,7 @@ class TestWorkflowToolIntegration:
             Use the available tools to complete these tasks and provide a summary.
             """,
             agent_id=agent_id,
-            tools=[get_city_info, calculate_percentage, format_text]
+            tools=[get_city_info, calculate_percentage, format_text],
         )
         workflow.add_node(node)
         workflow.validate()
@@ -472,11 +490,11 @@ class TestWorkflowToolIntegration:
         # Create and register tools manually
         def celsius_to_fahrenheit(celsius: float) -> float:
             """Convert Celsius to Fahrenheit."""
-            return (celsius * 9/5) + 32
+            return (celsius * 9 / 5) + 32
 
         def fahrenheit_to_celsius(fahrenheit: float) -> float:
             """Convert Fahrenheit to Celsius."""
-            return (fahrenheit - 32) * 5/9
+            return (fahrenheit - 32) * 5 / 9
 
         # Register tools manually with proper parameters
         registry.register_tool(
@@ -484,7 +502,7 @@ class TestWorkflowToolIntegration:
             description="Convert temperature from Celsius to Fahrenheit",
             function=celsius_to_fahrenheit,
             parameters_schema={"type": "object", "properties": {"celsius": {"type": "number"}}},
-            return_type="float"
+            return_type="float",
         )
 
         registry.register_tool(
@@ -492,7 +510,7 @@ class TestWorkflowToolIntegration:
             description="Convert temperature from Fahrenheit to Celsius",
             function=fahrenheit_to_celsius,
             parameters_schema={"type": "object", "properties": {"fahrenheit": {"type": "number"}}},
-            return_type="float"
+            return_type="float",
         )
 
         # Test tool registry functionality
@@ -508,6 +526,7 @@ class TestWorkflowToolIntegration:
 
         # Parse and validate metadata
         import json
+
         metadata = json.loads(metadata_json)
         assert metadata["name"] == "celsius_to_fahrenheit"
         assert metadata["description"] == "Convert temperature from Celsius to Fahrenheit"
@@ -518,14 +537,8 @@ class TestWorkflowToolIntegration:
 
         # Test ToolExecutor creation (basic functionality test)
         try:
-            from graphbit import ToolExecutor, ExecutorConfig
-            config = ExecutorConfig(
-                max_execution_time_ms=30000,
-                max_tool_calls=5,
-                continue_on_error=False,
-                store_results=True,
-                enable_logging=True
-            )
+
+            config = ExecutorConfig(max_execution_time_ms=30000, max_tool_calls=5, continue_on_error=False, store_results=True, enable_logging=True)
             executor = ToolExecutor(registry, config)
             assert executor is not None
         except Exception as e:
@@ -544,27 +557,15 @@ class TestWorkflowToolIntegration:
 
         # Step 1: Data preparation
         prep_agent_id = str(uuid.uuid4())
-        prep_node = Node.agent(
-            name="Data Preparation",
-            prompt="Prepare data: {input}",
-            agent_id=prep_agent_id
-        )
+        prep_node = Node.agent(name="Data Preparation", prompt="Prepare data: {input}", agent_id=prep_agent_id)
 
         # Step 2: Analysis
         analysis_agent_id = str(uuid.uuid4())
-        analysis_node = Node.agent(
-            name="Data Analysis",
-            prompt="Analyze prepared data: {input}",
-            agent_id=analysis_agent_id
-        )
+        analysis_node = Node.agent(name="Data Analysis", prompt="Analyze prepared data: {input}", agent_id=analysis_agent_id)
 
         # Step 3: Summary
         summary_agent_id = str(uuid.uuid4())
-        summary_node = Node.agent(
-            name="Summary Generation",
-            prompt="Summarize analysis: {input}",
-            agent_id=summary_agent_id
-        )
+        summary_node = Node.agent(name="Summary Generation", prompt="Summarize analysis: {input}", agent_id=summary_agent_id)
 
         # Add nodes and connect them
         prep_id = workflow.add_node(prep_node)
@@ -591,11 +592,7 @@ class TestWorkflowToolIntegration:
         # Create simple workflow
         workflow = Workflow(f"Provider Test Workflow - {provider}")
         agent_id = str(uuid.uuid4())
-        node = Node.agent(
-            name=f"{provider.title()} Agent",
-            prompt="Process this input: {input}",
-            agent_id=agent_id
-        )
+        node = Node.agent(name=f"{provider.title()} Agent", prompt="Process this input: {input}", agent_id=agent_id)
         workflow.add_node(node)
         workflow.validate()
 
@@ -632,7 +629,7 @@ class TestEndToEndIntegration:
 
         # Step 3: Generate embeddings
         embedding_client = EmbeddingClient(embedding_config)
-        chunk_texts = [chunk.content if hasattr(chunk, 'content') else chunk for chunk in chunks[:5]]
+        chunk_texts = [chunk.content if hasattr(chunk, "content") else chunk for chunk in chunks[:5]]
         embeddings = embedding_client.embed_many(chunk_texts)
 
         # Step 4: Analyze with LLM
@@ -642,11 +639,7 @@ class TestEndToEndIntegration:
         # Step 5: Create workflow for processing
         workflow = Workflow("Document Analysis Workflow")
         agent_id = str(uuid.uuid4())
-        node = Node.agent(
-            name="Document Analyzer",
-            prompt="Provide insights on: {input}",
-            agent_id=agent_id
-        )
+        node = Node.agent(name="Document Analyzer", prompt="Provide insights on: {input}", agent_id=agent_id)
         workflow.add_node(node)
         workflow.validate()
 
@@ -692,7 +685,7 @@ class TestEndToEndIntegration:
         for doc_path in docs:
             document = loader.load_document(doc_path, "txt")
             chunks = splitter.split_text(document.content)
-            chunk_texts = [chunk.content if hasattr(chunk, 'content') else chunk for chunk in chunks[:2]]
+            chunk_texts = [chunk.content if hasattr(chunk, "content") else chunk for chunk in chunks[:2]]
             embeddings = embedding_client.embed_many(chunk_texts)
 
             knowledge_chunks.extend(chunk_texts)
@@ -715,11 +708,7 @@ class TestEndToEndIntegration:
         # Step 5: Create workflow for RAG processing
         workflow = Workflow("RAG Workflow")
         agent_id = str(uuid.uuid4())
-        node = Node.agent(
-            name="RAG Agent",
-            prompt="Context: {context}\nQuery: {query}\nProvide answer:",
-            agent_id=agent_id
-        )
+        node = Node.agent(name="RAG Agent", prompt="Context: {context}\nQuery: {query}\nProvide answer:", agent_id=agent_id)
         workflow.add_node(node)
         workflow.validate()
 
@@ -743,68 +732,61 @@ class TestErrorPropagationIntegration:
         # Test with invalid API key
         invalid_config = LlmConfig.openai("invalid-key-too-short")
         client = LlmClient(invalid_config)
-        
+
         # Error should propagate appropriately
         with pytest.raises(Exception) as exc_info:
             client.complete("Test prompt")
-        
+
         error_msg = str(exc_info.value).lower()
-        assert any(keyword in error_msg for keyword in 
-                  ['api', 'key', 'auth', 'invalid', 'unauthorized'])
+        assert any(keyword in error_msg for keyword in ["api", "key", "auth", "invalid", "unauthorized"])
 
     def test_workflow_error_propagation(self):
         """Test error propagation in workflow execution."""
         # Create workflow with invalid configuration
         invalid_config = LlmConfig.openai("invalid-key-too-short")
         executor = Executor(invalid_config)
-        
+
         workflow = Workflow("Error Test Workflow")
         agent_id = str(uuid.uuid4())
-        node = Node.agent(
-            name="Error Agent",
-            prompt="This will fail: {input}",
-            agent_id=agent_id
-        )
+        node = Node.agent(name="Error Agent", prompt="This will fail: {input}", agent_id=agent_id)
         workflow.add_node(node)
         workflow.validate()
-        
+
         # Error should propagate from executor
         with pytest.raises(Exception) as exc_info:
             executor.execute(workflow)
-        
+
         error_msg = str(exc_info.value).lower()
-        assert any(keyword in error_msg for keyword in 
-                  ['api', 'key', 'auth', 'invalid', 'unauthorized'])
+        assert any(keyword in error_msg for keyword in ["api", "key", "auth", "invalid", "unauthorized"])
 
     def test_component_chain_error_propagation(self):
         """Test error propagation through component chains."""
         # Create chain: Document -> Splitter -> Embedding -> LLM
         invalid_embedding_config = EmbeddingConfig.openai("invalid-key-too-short")
         embedding_client = EmbeddingClient(invalid_embedding_config)
-        
+
         # Create valid components up to the failing one
         loader = DocumentLoader()
         splitter = CharacterSplitter(chunk_size=100, chunk_overlap=20)
-        
+
         # Create temporary document
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
             f.write("Test document content for error propagation.")
             temp_path = f.name
-        
+
         try:
             # Process through chain until error
             document = loader.load_document(temp_path, "txt")
             chunks = splitter.split_text(document.content)
-            chunk_text = chunks[0].content if hasattr(chunks[0], 'content') else chunks[0]
-            
+            chunk_text = chunks[0].content if hasattr(chunks[0], "content") else chunks[0]
+
             # This should fail and propagate error
             with pytest.raises(Exception) as exc_info:
                 embedding_client.embed(chunk_text)
-            
+
             error_msg = str(exc_info.value).lower()
-            assert any(keyword in error_msg for keyword in 
-                      ['api', 'key', 'auth', 'invalid', 'unauthorized'])
-                      
+            assert any(keyword in error_msg for keyword in ["api", "key", "auth", "invalid", "unauthorized"])
+
         finally:
             os.unlink(temp_path)
 
@@ -814,15 +796,14 @@ class TestPerformanceIntegration:
 
     def test_component_performance_monitoring(self):
         """Test performance monitoring across integrated components."""
-        import time
-        
+
         # Configure components
         llm_config = LlmConfig.openai("sk-1234567890abcdef1234567890abcdef1234567890abcdef12")
         embedding_config = EmbeddingConfig.openai("sk-1234567890abcdef1234567890abcdef1234567890abcdef12")
-        
+
         # Test LLM performance monitoring
         llm_client = LlmClient(llm_config)
-        
+
         start_time = time.time()
         try:
             response = llm_client.complete("Quick test")
@@ -831,10 +812,10 @@ class TestPerformanceIntegration:
         except Exception:
             # Expected to fail with test API key
             pass
-        
+
         # Test embedding performance monitoring
         embedding_client = EmbeddingClient(embedding_config)
-        
+
         start_time = time.time()
         try:
             embedding = embedding_client.embed("Performance test")
@@ -843,19 +824,15 @@ class TestPerformanceIntegration:
         except Exception:
             # Expected to fail with test API key
             pass
-        
+
         # Test workflow performance monitoring
         executor = Executor(llm_config)
         workflow = Workflow("Performance Test")
         agent_id = str(uuid.uuid4())
-        node = Node.agent(
-            name="Performance Agent",
-            prompt="Test: {input}",
-            agent_id=agent_id
-        )
+        node = Node.agent(name="Performance Agent", prompt="Test: {input}", agent_id=agent_id)
         workflow.add_node(node)
         workflow.validate()
-        
+
         start_time = time.time()
         try:
             result = executor.execute(workflow)
@@ -867,19 +844,16 @@ class TestPerformanceIntegration:
 
     def test_concurrent_component_performance(self):
         """Test performance under concurrent component usage."""
-        import threading
-        import time
-        
         llm_config = LlmConfig.openai("sk-1234567890abcdef1234567890abcdef1234567890abcdef12")
         embedding_config = EmbeddingConfig.openai("sk-1234567890abcdef1234567890abcdef1234567890abcdef12")
-        
+
         results = []
         errors = []
-        
+
         def concurrent_operation(index):
             try:
                 start_time = time.time()
-                
+
                 # Mix of operations
                 if index % 2 == 0:
                     client = LlmClient(llm_config)
@@ -887,38 +861,40 @@ class TestPerformanceIntegration:
                 else:
                     client = EmbeddingClient(embedding_config)
                     client.embed(f"Concurrent embedding test {index}")
-                
+
                 duration = time.time() - start_time
                 results.append(duration)
             except Exception as e:
                 errors.append(e)
-        
+
         # Run concurrent operations
         threads = []
         for i in range(5):
             thread = threading.Thread(target=concurrent_operation, args=(i,))
             threads.append(thread)
             thread.start()
-        
+
         # Wait for completion
         for thread in threads:
             thread.join()
-        
+
         # All operations should complete (with errors due to test API keys)
         assert len(results) + len(errors) == 5
-        
+
         # Verify error types
         for error in errors:
-            assert any(keyword in str(error).lower() for keyword in 
-                      ['api', 'key', 'auth', 'invalid', 'unauthorized'])
+            assert any(keyword in str(error).lower() for keyword in ["api", "key", "auth", "invalid", "unauthorized"])
 
 
-@pytest.mark.parametrize("component_combo,expected_integration", [
-    (("LlmClient", "EmbeddingClient"), True),
-    (("DocumentLoader", "CharacterSplitter"), True),
-    (("Workflow", "Executor"), True),
-    (("ToolRegistry", "Workflow"), True),
-])
+@pytest.mark.parametrize(
+    "component_combo,expected_integration",
+    [
+        (("LlmClient", "EmbeddingClient"), True),
+        (("DocumentLoader", "CharacterSplitter"), True),
+        (("Workflow", "Executor"), True),
+        (("ToolRegistry", "Workflow"), True),
+    ],
+)
 def test_component_integration_matrix(component_combo, expected_integration):
     """Test integration compatibility across component combinations."""
     component1, component2 = component_combo
@@ -1001,4 +977,4 @@ class TestMultiProviderIntegration:
         # This test provides information about available providers
         print(f"Available LLM providers: {llm_count}")
         print(f"Available embedding providers: {embedding_count}")
-        assert True  
+        assert True

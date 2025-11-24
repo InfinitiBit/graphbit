@@ -90,7 +90,7 @@ check_rust_setup() {
 test_python_version() {
     local python_version=$1
     local log_file="$LOGS_DIR/${python_version}_support_test.log"
-    
+
     print_status $BLUE "Testing Python $python_version..."
     log_with_timestamp "Starting test for Python $python_version (target: $RUST_TARGET)" > "$log_file"
 

@@ -10,31 +10,27 @@ import pytest
 from graphbit import ToolDecorator, ToolExecutor, ToolRegistry
 
 
-
 def execute_single_tool(registry_or_executor, tool_name, parameters):
     """Helper function to execute a single tool using the registry's execute_tool method."""
     # Convert parameters to a Python dict if needed
     if not isinstance(parameters, dict):
         parameters = {}
 
-
-    if hasattr(registry_or_executor, 'execute_tool'):
+    if hasattr(registry_or_executor, "execute_tool"):
         # It's a ToolRegistry
         return registry_or_executor.execute_tool(tool_name, parameters)
     else:
         raise AttributeError(f"Cannot execute tool on {type(registry_or_executor)}. Pass ToolRegistry instead.")
 
+
 def skip_if_no_execute_tools(registry_or_executor):
     """Helper function to skip tests if execute_tool method is not available on registry."""
     # Check if it's a registry with execute_tool method
-    if hasattr(registry_or_executor, 'execute_tool'):
+    if hasattr(registry_or_executor, "execute_tool"):
         return  # Registry has execute_tool, don't skip
 
     # If it's an executor, we can't use it directly for tool execution
     pytest.skip("ToolRegistry.execute_tool method not available - pass registry instead of executor")
-
-
-
 
 
 class TestCompleteToolExecutionWorkflow:
@@ -78,7 +74,7 @@ class TestCompleteToolExecutionWorkflow:
             description="Add two numbers",
             function=add_numbers,
             parameters_schema={"type": "object", "properties": {"a": {"type": "integer"}, "b": {"type": "integer"}}},
-            return_type="int"
+            return_type="int",
         )
 
         registry.register_tool(
@@ -86,7 +82,7 @@ class TestCompleteToolExecutionWorkflow:
             description="Multiply two numbers",
             function=multiply_numbers,
             parameters_schema={"type": "object", "properties": {"a": {"type": "integer"}, "b": {"type": "integer"}}},
-            return_type="int"
+            return_type="int",
         )
 
         registry.register_tool(
@@ -94,7 +90,7 @@ class TestCompleteToolExecutionWorkflow:
             description="Format result as string",
             function=format_result,
             parameters_schema={"type": "object", "properties": {"value": {"type": "integer"}, "prefix": {"type": "string"}}},
-            return_type="str"
+            return_type="str",
         )
 
         # Verify tools are in the registry
@@ -119,7 +115,7 @@ class TestCompleteToolExecutionWorkflow:
         assert format_result_output.output == "Final: 16"
 
         # Step 4: Verify execution history (if available)
-        if hasattr(registry, 'get_execution_history'):
+        if hasattr(registry, "get_execution_history"):
             history = registry.get_execution_history()
             assert len(history) >= 0  # History might be empty initially
 
@@ -136,6 +132,7 @@ class TestCompleteToolExecutionWorkflow:
         # Use direct registry registration since ToolDecorator has issues with registry access
         def generate_random(min_val: int = 1, max_val: int = 100) -> int:
             import random
+
             return random.randint(min_val, max_val)  # nosec B311
 
         def double_number(value: int) -> int:
@@ -153,23 +150,15 @@ class TestCompleteToolExecutionWorkflow:
             description="Generate random number",
             function=generate_random,
             parameters_schema={"type": "object", "properties": {"min_val": {"type": "integer"}, "max_val": {"type": "integer"}}},
-            return_type="int"
+            return_type="int",
         )
 
         tool_registry.register_tool(
-            name="double_number",
-            description="Double a number",
-            function=double_number,
-            parameters_schema={"type": "object", "properties": {"value": {"type": "integer"}}},
-            return_type="int"
+            name="double_number", description="Double a number", function=double_number, parameters_schema={"type": "object", "properties": {"value": {"type": "integer"}}}, return_type="int"
         )
 
         tool_registry.register_tool(
-            name="is_even",
-            description="Check if even",
-            function=is_even,
-            parameters_schema={"type": "object", "properties": {"value": {"type": "integer"}}},
-            return_type="bool"
+            name="is_even", description="Check if even", function=is_even, parameters_schema={"type": "object", "properties": {"value": {"type": "integer"}}}, return_type="bool"
         )
 
         tool_registry.register_tool(
@@ -177,7 +166,7 @@ class TestCompleteToolExecutionWorkflow:
             description="Format boolean result",
             function=format_boolean,
             parameters_schema={"type": "object", "properties": {"value": {"type": "boolean"}, "true_msg": {"type": "string"}, "false_msg": {"type": "string"}}},
-            return_type="str"
+            return_type="str",
         )
 
         # Execute chained workflow
@@ -202,20 +191,10 @@ class TestCompleteToolExecutionWorkflow:
             return f"tool_2_result_{param}"
 
         # Register tools directly
-        tool_registry.register_tool(
-            name="direct_tool_1",
-            description="Directly registered tool 1",
-            function=test_tool_1,
-            parameters_schema={"type": "object"},
-            return_type="str"
-        )
+        tool_registry.register_tool(name="direct_tool_1", description="Directly registered tool 1", function=test_tool_1, parameters_schema={"type": "object"}, return_type="str")
 
         tool_registry.register_tool(
-            name="direct_tool_2",
-            description="Directly registered tool 2",
-            function=test_tool_2,
-            parameters_schema={"type": "object", "properties": {"param": {"type": "string"}}},
-            return_type="str"
+            name="direct_tool_2", description="Directly registered tool 2", function=test_tool_2, parameters_schema={"type": "object", "properties": {"param": {"type": "string"}}}, return_type="str"
         )
 
         result1 = execute_single_tool(tool_registry, "direct_tool_1", {})
@@ -278,7 +257,7 @@ class TestCompleteToolExecutionWorkflow:
             description="Tool for testing result collection",
             function=collection_test_tool,
             parameters_schema={"type": "object", "properties": {"value": {"type": "integer"}}},
-            return_type="int"
+            return_type="int",
         )
 
         results = []

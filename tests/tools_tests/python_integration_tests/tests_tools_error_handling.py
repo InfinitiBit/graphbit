@@ -16,14 +16,13 @@ def execute_single_tool(registry_or_executor, tool_name, parameters):
 
     # If it's a ToolExecutor, we need to use a different approach
     # If it's a ToolRegistry, use execute_tool directly
-    if hasattr(registry_or_executor, 'execute_tool'):
+    if hasattr(registry_or_executor, "execute_tool"):
         # It's a ToolRegistry
         return registry_or_executor.execute_tool(tool_name, parameters)
     else:
         # It's a ToolExecutor - we need to get the registry from the test fixture
         # This is a fallback that shouldn't normally be used
         raise AttributeError(f"Cannot execute tool on {type(registry_or_executor)}. Pass ToolRegistry instead.")
-
 
 
 class TestToolsErrorHandling:
@@ -38,7 +37,6 @@ class TestToolsErrorHandling:
     def tool_executor(self, tool_registry):
         """Create a tool executor for testing using the same registry."""
         return ToolExecutor(registry=tool_registry)
-      
 
     def test_tool_execution_with_network_failures(self, tool_registry, tool_executor):
         """Test tool execution with simulated network failures."""
@@ -62,7 +60,7 @@ class TestToolsErrorHandling:
             )
 
             # Test with invalid URL - skip if execute_tool not available
-            
+
             try:
                 import requests
 
@@ -89,7 +87,6 @@ class TestToolsErrorHandling:
 
         except Exception as e:
             pytest.skip(f"Network failure testing not available: {e}")
-
 
     def test_tool_execution_with_concurrent_failures(self, tool_registry, tool_executor):
         """Test tool execution with concurrent failure scenarios."""
@@ -337,7 +334,6 @@ class TestToolsValidation:
 
         except Exception as e:
             pytest.skip(f"Schema validation testing not available: {e}")
-
 
     def test_tool_execution_context_validation(self, tool_registry):
         """Test tool execution context validation."""

@@ -14,7 +14,6 @@ import pytest
 from graphbit import ToolRegistry
 
 
-
 class TestToolRegistry:
     """Test cases for ToolRegistry class with comprehensive coverage."""
 
@@ -272,7 +271,7 @@ class TestToolRegistry:
                     },
                     "required": ["param1", "param2", "param3"],
                 },
-                return_type="string"
+                return_type="string",
             )
 
             assert result_numeric is None
@@ -286,7 +285,7 @@ class TestToolRegistry:
                 description="Tool with maximum values",
                 function=max_value_tool,
                 parameters_schema={"type": "object", "properties": {"param1": {"type": "string"}}, "required": ["param1"]},
-                return_type="string"
+                return_type="string",
             )
 
             assert result_max is None
@@ -582,6 +581,7 @@ class TestToolRegistryEdgeCases:
                 if isinstance(stored_required, str):
                     # Parse the string representation
                     import ast
+
                     stored_required = ast.literal_eval(stored_required)
                 assert stored_required == expected_required
 
