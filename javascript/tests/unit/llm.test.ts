@@ -103,4 +103,114 @@ describe('LlmConfig', () => {
       expect(config).toBeDefined();
     });
   });
+
+  describe('ByteDance', () => {
+    it('should create ByteDance config', () => {
+      const config = LlmConfig.bytedance({
+        apiKey: 'test-key',
+        model: 'skylark-lite',
+      });
+      expect(config).toBeDefined();
+    });
+  });
+
+  describe('DeepSeek', () => {
+    it('should create DeepSeek config', () => {
+      const config = LlmConfig.deepseek({
+        apiKey: 'test-key',
+        model: 'deepseek-chat',
+      });
+      expect(config).toBeDefined();
+    });
+  });
+
+  describe('HuggingFace', () => {
+    it('should create HuggingFace config', () => {
+      const config = LlmConfig.huggingface({
+        apiKey: 'test-key',
+        model: 'meta-llama/Llama-2-7b-chat-hf',
+      });
+      expect(config).toBeDefined();
+    });
+  });
+
+  describe('Perplexity', () => {
+    it('should create Perplexity config', () => {
+      const config = LlmConfig.perplexity({
+        apiKey: 'test-key',
+        model: 'llama-3.1-sonar-small-128k-online',
+      });
+      expect(config).toBeDefined();
+    });
+  });
+
+  describe('OpenRouter', () => {
+    it('should create OpenRouter config', () => {
+      const config = LlmConfig.openrouter({
+        apiKey: 'test-key',
+        model: 'openai/gpt-4o',
+      });
+      expect(config).toBeDefined();
+    });
+  });
+
+  describe('Fireworks', () => {
+    it('should create Fireworks config', () => {
+      const config = LlmConfig.fireworks({
+        apiKey: 'test-key',
+        model: 'accounts/fireworks/models/llama-v3p1-70b-instruct',
+      });
+      expect(config).toBeDefined();
+    });
+  });
+
+  describe('Replicate', () => {
+    it('should create Replicate config', () => {
+      const config = LlmConfig.replicate({
+        apiKey: 'test-key',
+        model: 'meta/llama-2-70b-chat',
+      });
+      expect(config).toBeDefined();
+    });
+  });
+
+  describe('TogetherAI', () => {
+    it('should create TogetherAI config', () => {
+      const config = LlmConfig.togetherai({
+        apiKey: 'test-key',
+        model: 'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo',
+      });
+      expect(config).toBeDefined();
+    });
+  });
+
+  describe('xAI', () => {
+    it('should create xAI config', () => {
+      const config = LlmConfig.xai({
+        apiKey: 'test-key',
+        model: 'grok-beta',
+      });
+      expect(config).toBeDefined();
+    });
+  });
+
+  describe('AI21', () => {
+    it('should create AI21 config', () => {
+      const config = LlmConfig.ai21({
+        apiKey: 'test-key',
+        model: 'jamba-1.5-large',
+      });
+      expect(config).toBeDefined();
+    });
+  });
+
+  describe('MistralAI', () => {
+    it('should create MistralAI config', () => {
+      const config = LlmConfig.mistralai({
+        apiKey: 'test-key',
+        model: 'mistral-large-latest',
+      });
+      expect(config).toBeDefined();
+    });
+  });
 });
