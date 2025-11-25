@@ -10,13 +10,13 @@ This package provides native Node.js bindings to the GraphBit Rust core library,
 
 - 🚀 **High Performance**: Native Rust implementation with zero-copy data transfer
 - 🔄 **Async/Await Support**: Full async support with Tokio runtime integration
-- 🤖 **Multi-LLM Support**: OpenAI, Anthropic, Ollama, Azure, Mistral, and more
+- 🤖 **Multi-LLM Support**: 15 providers including OpenAI, Anthropic, Ollama, Azure OpenAI, ByteDance, DeepSeek, HuggingFace, Perplexity, OpenRouter, Fireworks, Replicate, TogetherAI, xAI (Grok), AI21, and MistralAI
 - 📊 **Workflow Engine**: Graph-based workflow execution with dependency management
-- 📄 **Document Processing**: Load and process PDF, DOCX, TXT, JSON, CSV, XML, HTML
-- ✂️ **Text Splitting**: Multiple chunking strategies for large documents
+- 📄 **Document Processing**: Load and process text documents with flexible configuration
+- ✂️ **Text Splitting**: Multiple chunking strategies (character, recursive, sentence, token-based)
 - 🔍 **Embeddings**: OpenAI and HuggingFace embedding support
-- ✅ **Type Safety**: Full TypeScript type definitions
-- 🧪 **Well Tested**: Comprehensive unit, integration, and benchmark tests
+- ✅ **Type Safety**: Full TypeScript type definitions auto-generated from Rust
+- 🧪 **Well Tested**: 148 unit tests with 75-80% code coverage
 
 ## Installation
 
@@ -65,12 +65,63 @@ const result = await executor.execute(workflow, {
 console.log(result.getOutput('summarizer'));
 ```
 
+## Supported LLM Providers
+
+GraphBit supports 15 LLM providers out of the box:
+
+| Provider | Factory Method | Models |
+|----------|----------------|--------|
+| OpenAI | `LlmConfig.openai()` | GPT-4, GPT-3.5, etc. |
+| Anthropic | `LlmConfig.anthropic()` | Claude 3.5, Claude 3, etc. |
+| Ollama | `LlmConfig.ollama()` | Local models |
+| Azure OpenAI | `LlmConfig.azureOpenai()` | Azure-hosted OpenAI models |
+| ByteDance | `LlmConfig.bytedance()` | ModelArk models |
+| DeepSeek | `LlmConfig.deepseek()` | DeepSeek Chat, etc. |
+| HuggingFace | `LlmConfig.huggingface()` | Any HuggingFace model |
+| Perplexity | `LlmConfig.perplexity()` | Sonar models |
+| OpenRouter | `LlmConfig.openrouter()` | Multi-provider routing |
+| Fireworks | `LlmConfig.fireworks()` | Fast inference models |
+| Replicate | `LlmConfig.replicate()` | Cloud ML models |
+| TogetherAI | `LlmConfig.togetherai()` | Open-source models |
+| xAI | `LlmConfig.xai()` | Grok models |
+| AI21 | `LlmConfig.ai21()` | Jamba models |
+| MistralAI | `LlmConfig.mistralai()` | Mistral models |
+
+Example usage:
+
+```typescript
+// OpenAI
+const openaiConfig = LlmConfig.openai({
+  apiKey: process.env.OPENAI_API_KEY,
+  model: 'gpt-4o-mini',
+});
+
+// Anthropic
+const anthropicConfig = LlmConfig.anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+  model: 'claude-3-5-sonnet-20241022',
+});
+
+// Ollama (local)
+const ollamaConfig = LlmConfig.ollama({
+  model: 'llama3.1',
+  baseUrl: 'http://localhost:11434',
+});
+
+// DeepSeek
+const deepseekConfig = LlmConfig.deepseek({
+  apiKey: process.env.DEEPSEEK_API_KEY,
+  model: 'deepseek-chat',
+});
+```
+
 ## Documentation
 
-- [API Reference](./docs/api/README.md)
-- [Examples](./docs/examples/README.md)
+- [API Reference](./docs/API.md)
+- [Examples](./examples/README.md)
 - [Migration Guide](./docs/MIGRATION.md)
 - [Maintenance Plan](./docs/MAINTENANCE.md)
+- [Production Readiness Plan](./PRODUCTION_READINESS_PLAN.md)
 
 ## Architecture
 
