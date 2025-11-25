@@ -1,0 +1,23 @@
+The GraphBit Framework: A Comprehensive Guide
+
+GraphBit is a powerful workflow orchestration framework designed for building complex AI-powered applications. It provides a flexible and extensible architecture for creating, managing, and executing workflows that combine multiple AI agents, language models, and data processing steps.
+
+Key Features:
+1. Multi-Agent Orchestration - Coordinate multiple AI agents working together
+2. Workflow Management - Define complex workflows with dependencies and branching
+3. LLM Integration - Support for 15+ language model providers
+4. Document Processing - Load and process documents from various sources
+5. Text Splitting - Intelligent text chunking with multiple strategies
+
+Architecture Overview:
+The framework is built on a modular architecture with clear separation of concerns. The core components include the workflow engine, agent system, LLM providers, document loaders, and text splitters. Each component is designed to be independently testable and replaceable.
+
+Getting Started:
+To begin using GraphBit, first install the package and initialize the framework. Then create your first workflow by defining nodes and edges. Each node represents a processing step, and edges define the flow of data between nodes.
+
+Advanced Topics:
+For advanced users, GraphBit supports custom agents, dynamic workflow modification, parallel execution, and integration with external tools. The framework also provides comprehensive error handling and validation to ensure robust execution.
+
+Conclusion:
+GraphBit simplifies the development of complex AI applications by providing a unified framework for workflow orchestration. Whether you're building a simple chatbot or a sophisticated multi-agent system, GraphBit has the tools you need.
+

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<graphbit>
+    <metadata>
+        <title>GraphBit Configuration</title>
+        <version>1.0.0</version>
+        <author>GraphBit Team</author>
+    </metadata>
+    <features>
+        <feature>
+            <name>Multi-Agent Orchestration</name>
+            <description>Coordinate multiple AI agents</description>
+        </feature>
+        <feature>
+            <name>Workflow Management</name>
+            <description>Build and execute complex workflows</description>
+        </feature>
+        <feature>
+            <name>LLM Integration</name>
+            <description>Support for 15+ LLM providers</description>
+        </feature>
+    </features>
+    <providers>
+        <provider name="OpenAI" supported="true"/>
+        <provider name="Anthropic" supported="true"/>
+        <provider name="Ollama" supported="true"/>
+    </providers>
+</graphbit>
+
