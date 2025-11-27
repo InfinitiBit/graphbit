@@ -8,6 +8,7 @@ GraphBit supports these LLM providers:
 - **OpenAI** - GPT models including GPT-4o, GPT-4o-mini
 - **Azure OpenAI** - GPT models hosted on Microsoft Azure with enterprise features
 - **Anthropic** - Claude models including Claude-4-Sonnet
+- **Cloudflare Worker AI** - Hosted and managed models including Llama-2, Mistral, and more
 - **MistralAI** - Mistral models including Mistral Large, Mistral Medium, and Mistral Small with function calling support
 - **ByteDance ModelArk** - ByteDance Seed and other models with OpenAI-compatible API
 - **OpenRouter** - Unified access to 400+ models from multiple providers (GPT, Claude, Mistral, etc.)
@@ -195,6 +196,120 @@ fast_config = LlmConfig.anthropic(
     model="claude-3-haiku-20240307"  # For speed and efficiency
 )
 ```
+
+### Cloudflare Worker AI Configuration
+
+#### Setup Requirements
+
+To use Cloudflare Worker AI, you need:
+
+1. **Cloudflare Account**: Create or use an existing Cloudflare account
+2. **Workers AI Access**: Enable Workers AI in your account dashboard
+3. **API Token**: Create a Cloudflare API token with Workers AI permissions
+4. **Account ID**: Get your Cloudflare Account ID from the dashboard
+
+#### Creating an API Token
+
+1. Go to the [Cloudflare dashboard](https://dash.cloudflare.com)
+2. Navigate to "User Profile" → "API Tokens"
+3. Click "Create Token"
+4. Select "Create Custom Token"
+5. Set the token name (e.g., "Workers AI Access")
+6. Under "Permissions", add:
+   - Workers AI - Read and Edit
+   - Account Settings - Read
+7. Under "Account Resources", select your account
+8. Set an optional expiration date
+9. Click "Continue to summary" then "Create Token"
+10. Copy and save the token - it won't be shown again
+
+#### Finding Your Account ID
+
+1. Log in to the [Cloudflare dashboard](https://dash.cloudflare.com)
+2. Your Account ID is in the URL when viewing the Workers AI section:
+   `https://dash.cloudflare.com/<Account-ID>/ai`
+3. It's also shown in the right sidebar under "API" when viewing Workers AI settings
+
+#### Basic Configuration and Usage
+
+Configure Cloudflare Worker AI provider for hosted models and make requests:
+
+```python
+import os
+import asyncio
+from graphbit import LlmConfig, LlmClient
+
+# Basic Cloudflare Worker AI configuration
+config = LlmConfig.cloudflare(
+    api_key=os.getenv("CLOUDFLARE_API_KEY"),
+    account_id=os.getenv("CLOUDFLARE_ACCOUNT_ID"),
+    model="@cf/meta/llama-2-7b-chat-int8"  # Optional - defaults to @cf/meta/llama-2-7b-chat-int8
+)
+
+# Create a client
+client = LlmClient(config)
+
+# Simple synchronous completion
+response = client.complete(
+    prompt="What's the capital of France?",
+    max_tokens=100,
+    temperature=0.7
+)
+print("Synchronous response:", response)
+
+# Async completion
+async def async_example():
+    response = await client.complete_async(
+        prompt="Tell me a short joke.",
+        max_tokens=100,
+        temperature=0.7
+    )
+    print("Async response:", response)
+
+# Run async example
+asyncio.run(async_example())
+```
+
+#### Available Cloudflare Worker AI Models
+
+| Model | Best For | Context Length | Speed | Description |
+|-------|----------|----------------|-------|-------------|
+| `@cf/meta/llama-2-7b-chat-int8` | General purpose chat | 4K | Fast | Quantized Llama-2 7B chat model |
+| `@cf/meta/llama-2-13b-chat-int8` | Enhanced chat | 4K | Medium | Larger Llama-2 with better quality |
+| `@cf/mistral/mistral-7b-instruct-v0.1` | Instructions | 8K | Fast | Mistral's 7B instruct model |
+
+```python
+# Model selection examples
+fast_config = LlmConfig.cloudflare(
+    api_key=os.getenv("CLOUDFLARE_API_KEY"),
+    account_id=os.getenv("CLOUDFLARE_ACCOUNT_ID"),
+    model="@cf/meta/llama-2-7b-chat-int8"  # Fast, general purpose
+)
+
+quality_config = LlmConfig.cloudflare(
+    api_key=os.getenv("CLOUDFLARE_API_KEY"),
+    account_id=os.getenv("CLOUDFLARE_ACCOUNT_ID"),
+    model="@cf/meta/llama-2-13b-chat-int8"  # Better quality
+)
+
+instruction_config = LlmConfig.cloudflare(
+    api_key=os.getenv("CLOUDFLARE_API_KEY"),
+    account_id=os.getenv("CLOUDFLARE_ACCOUNT_ID"),
+    model="@cf/mistral/mistral-7b-instruct-v0.1"  # Better at following instructions
+)
+```
+
+#### Environment Variables
+
+Set these environment variables for Cloudflare Worker AI:
+
+```bash
+export CLOUDFLARE_API_KEY="your-cloudflare-api-key"
+export CLOUDFLARE_ACCOUNT_ID="your-cloudflare-account-id"
+```
+
+You can find your API key and account ID in the Cloudflare dashboard under the AI section.
+
 
 ### MistralAI Configuration
 

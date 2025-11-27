@@ -1,12 +1,14 @@
 mod agent_comprehensive_tests;
 mod agent_tests;
 mod azure_openai_tests;
+mod cloudflare_test;
 mod concurrency_comprehensive_tests;
 mod document_loader_unit_tests;
 mod document_tests;
 mod embedding_tests;
 mod error_comprehensive_tests;
 mod error_tests;
+mod test_helpers;
 mod graph_advanced_tests;
 mod llm_provider_tests;
 mod llm_tests;
@@ -17,5 +19,3 @@ mod type_tests;
 mod types_comprehensive_tests;
 mod validation_tests;
 mod workflow_tests;
-
-mod test_helpers;
