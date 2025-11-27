@@ -1,0 +1,20 @@
+GraphBit UTF-8 Test Document
+
+This document contains various UTF-8 characters:
+
+English: Hello World
+Spanish: Hola Mundo
+French: Bonjour le Monde
+German: Hallo Welt
+Russian: Привет мир
+Chinese: 你好世界
+Japanese: こんにちは世界
+Arabic: مرحبا بالعالم
+Emoji: 🌍 🚀 💻 🤖 ✨
+
+Special characters: © ® ™ € £ ¥
+Math symbols: ∑ ∫ √ ∞ ≈ ≠
+Arrows: → ← ↑ ↓ ⇒ ⇐
+
+This tests proper UTF-8 encoding handling.
+
