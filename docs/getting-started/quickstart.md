@@ -49,12 +49,28 @@ workflow = Workflow("Content Analysis Pipeline")
 analyzer = Node.agent(
     name="Content Analyzer",
     prompt=f"Analyze the following content and provide key insights: {input}",
-    agent_id="analyzer"
+    agent_id="analyzer",
+    temperature=0.7,      # Optional: Control creativity (0.0-2.0)
+    max_tokens=1000       # Optional: Limit response length
 )
 
 # Add the node to the workflow
 analyzer_id = workflow.add_node(analyzer)
 ```
+
+#### "Understanding Temperature and Max Tokens"
+    
+    **Temperature** (0.0-2.0) controls response creativity:
+    
+    - `0.0-0.3`: Deterministic, focused (analysis, fact-checking, data extraction)
+    - `0.4-0.7`: Balanced creativity (general tasks, Q&A)
+    - `0.8-2.0`: Creative, varied (storytelling, brainstorming, ideation)
+    
+    **Max Tokens** limits response length and controls costs:
+    
+    - `100-500`: Brief responses
+    - `500-2000`: Moderate length (most use cases)
+    - `2000+`: Detailed, comprehensive responses
 
 ### Step 3: Build and Execute the Workflow
 
@@ -70,7 +86,7 @@ result = executor.execute(workflow)
 
 # Display results
 print(f"✅ Workflow completed in {result.execution_time_ms()}ms")
-print(f"📊 Result: {result.get_node_output('output')}")
+print(f"📊 Result: {result.get_node_output('Content Analyzer')}")
 ```
 
 ### Complete Example
@@ -97,7 +113,9 @@ def main():
     analyzer = Node.agent(
         name="Content Analyzer",
         prompt=f"Analyze this content and provide 3 key insights: {input}",
-        agent_id="analyzer"
+        agent_id="analyzer",
+        temperature=0.7,      # Optional: Control creativity (0.0-2.0)
+        max_tokens=1000       # Optional: Limit response length
     )
     
     analyzer_id = workflow.add_node(analyzer)
@@ -154,21 +172,27 @@ def create_content_pipeline():
     researcher = Node.agent(
         name="Researcher",
         prompt=f"Research key points about: {topic}. Provide 5 important facts.",
-        agent_id="researcher"
+        agent_id="researcher",
+        temperature=0.3,      # Lower temp for focused research
+        max_tokens=800
     )
     
     # Step 2: Writer Agent  
     writer = Node.agent(
         name="Content Writer", 
         prompt=f"Write a 200-word article about {topic} using this research data.",
-        agent_id="writer"
+        agent_id="writer",
+        temperature=0.8,      # Higher temp for creative writing
+        max_tokens=1500
     )
     
     # Step 3: Editor Agent
     editor = Node.agent(
         name="Editor",
         prompt=f"Edit and improve this article for clarity and engagement.",
-        agent_id="editor"
+        agent_id="editor",
+        temperature=0.5,      # Balanced for editing
+        max_tokens=1200
     )
     
     # Add nodes and create connections
@@ -216,7 +240,9 @@ def reliable_workflow():
     analyzer = Node.agent(
         name="Robust Analyzer",
         prompt=f"Provide detailed analysis of: {input}",
-        agent_id="robust_analyzer"
+        agent_id="robust_analyzer",
+        temperature=0.5,
+        max_tokens=1500
     )
     
     analyzer_id = workflow.add_node(analyzer)
@@ -274,7 +300,9 @@ def run_with_provider(config):
     agent = Node.agent(
         name="Test Agent",
         prompt=f"Say hello and identify yourself: {input}",
-        agent_id="test_agent"
+        agent_id="test_agent",
+        temperature=0.7,
+        max_tokens=200
     )
     
     workflow.add_node(agent)
@@ -284,7 +312,7 @@ def run_with_provider(config):
     
     print(f"Provider: {config.provider()}")
     print(f"Model: {config.model()}")
-    print(f"Response: {result.get_node_output('output')}")
+    print(f"Response: {result.get_node_output('Test Agent')}")
     print("---")
 
 # Test different providers
@@ -300,6 +328,47 @@ if __name__ == "__main__":
     # Ollama works without API key
     run_with_provider(ollama_config)
 ```
+
+### Using Multiple Providers in One Workflow
+
+You can use different LLM providers for different nodes within the same workflow. Node-level `llm_config` takes priority over executor-level config:
+
+```python
+# Different providers for different tasks
+anthropic_config = LlmConfig.anthropic(os.getenv("ANTHROPIC_API_KEY"))
+openai_config = LlmConfig.openai(os.getenv("OPENAI_API_KEY"))
+
+workflow = Workflow("Multi-Provider Pipeline")
+
+# Use Anthropic for analysis
+analyzer = Node.agent(
+    name="Analyzer",
+    prompt=f"Analyze this: {input}",
+    agent_id="analyzer",
+    llm_config=anthropic_config,  # Node-level config
+    temperature=0.3,               # Focused analysis
+    max_tokens=1000
+)
+
+# Use OpenAI for formatting
+formatter = Node.agent(
+    name="Formatter",
+    prompt=f"Format as JSON: {input}",
+    agent_id="formatter",
+    llm_config=openai_config,     # Different provider
+    temperature=0.1,               # Deterministic formatting
+    max_tokens=500
+)
+
+id1 = workflow.add_node(analyzer)
+id2 = workflow.add_node(formatter)
+workflow.connect(id1, id2)
+
+# Executor config is fallback for nodes without llm_config
+executor = Executor(openai_config)
+```
+
+For more details, see the [LLM Providers Guide](../user-guide/llm-providers.md#using-multiple-llm-providers-in-a-single-workflow).
 
 ---
 
@@ -328,7 +397,9 @@ def performance_examples():
     agent = Node.agent(
         name="Performance Agent",
         prompt=f"Process this efficiently: {input}",
-        agent_id="perf_agent"
+        agent_id="perf_agent",
+        temperature=0.5,
+        max_tokens=800
     )
     
     workflow.add_node(agent)

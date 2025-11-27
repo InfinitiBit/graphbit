@@ -59,8 +59,33 @@ lowercase_node = Node.agent(
         prompt="Transform the provided text to lowercase",
         agent_id="formatter"
     )
+
+# Agent with temperature and max_tokens control
+creative_writer = Node.agent(
+    name="Creative Writer",
+    prompt=f"Write a creative story about: {topic}",
+    temperature=1.2,      # Higher for creativity (0.0-2.0)
+    max_tokens=2000       # Limit response length
+)
+
+# Agent with precise output control
+data_analyst = Node.agent(
+    name="Data Analyst",
+    prompt=f"Analyze: {data}",
+    temperature=0.2,      # Lower for focused output
+    max_tokens=500        # Concise response
+)
 ```
 
+**Temperature Guide:**
+- `0.0-0.3`: Deterministic, focused responses (analysis, fact-checking)
+- `0.4-0.7`: Balanced creativity and accuracy (general tasks)
+- `0.8-2.0`: Creative, varied responses (storytelling, brainstorming)
+
+**Max Tokens Guide:**
+- Used to control response length and API costs
+- Typical ranges: 100-500 (brief), 500-2000 (moderate), 2000+ (detailed)
+- Set based on your task requirements and budget
 
 ### Building the Workflow
 

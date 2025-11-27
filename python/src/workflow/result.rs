@@ -140,7 +140,11 @@ impl WorkflowResult {
     ///
     /// # Returns
     /// Dictionary with LLM response metadata, or None if not found
-    fn get_node_response_metadata(&self, py: Python<'_>, node_id: &str) -> PyResult<Option<PyObject>> {
+    fn get_node_response_metadata(
+        &self,
+        py: Python<'_>,
+        node_id: &str,
+    ) -> PyResult<Option<PyObject>> {
         let key = format!("node_response_{}", node_id);
         match self.inner.metadata.get(&key) {
             Some(value) => {

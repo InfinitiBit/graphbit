@@ -678,21 +678,18 @@ impl DocumentLoader {
 
     /// Extract content from PDF files
     async fn extract_pdf_content(file_path: &str) -> GraphBitResult<String> {
-        use lopdf::Document;
-
-        let doc = Document::load(file_path).map_err(|e| {
-            GraphBitError::validation("document_loader", format!("Failed to open PDF file: {e}"))
+        // Read the PDF file into memory
+        let bytes = std::fs::read(file_path).map_err(|e| {
+            GraphBitError::validation("document_loader", format!("Failed to read PDF file: {e}"))
         })?;
 
-        let mut text_content = String::new();
-
-        // Extract text from each page
-        for page_id in doc.get_pages().keys() {
-            if let Ok(page_text) = doc.extract_text(&[*page_id]) {
-                text_content.push_str(&page_text);
-                text_content.push('\n');
-            }
-        }
+        // Use pdf-extract for better text extraction with proper Unicode support
+        let text_content = pdf_extract::extract_text_from_mem(&bytes).map_err(|e| {
+            GraphBitError::validation(
+                "document_loader",
+                format!("Failed to extract text from PDF: {e}"),
+            )
+        })?;
 
         if text_content.trim().is_empty() {
             return Err(GraphBitError::validation(
@@ -768,7 +765,7 @@ pub fn detect_document_type(file_path: &str) -> Option<String> {
     Path::new(file_path)
         .extension()
         .and_then(|ext| ext.to_str())
-        .map(|ext| ext.to_lowercase())
+        .map(str::to_lowercase)
         .filter(|ext| supported_types.contains(&ext.as_str()))
 }
 

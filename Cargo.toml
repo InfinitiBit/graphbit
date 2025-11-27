@@ -72,6 +72,18 @@ debug = true
 incremental = true
 opt-level = 1
 
+# Enable vendored OpenSSL for aarch64 cross-compilation
+# Cross-compilation containers lack aarch64-specific OpenSSL dev packages
+[target.aarch64-unknown-linux-gnu]
+
+[target.aarch64-unknown-linux-gnu.dependencies]
+openssl = {version = "0.10", features = ["vendored"]}
+
+# Enable vendored OpenSSL for musl targets (Alpine Linux)
+# musl containers don't have OpenSSL dev packages, so we compile from source
+[target.'cfg(target_env = "musl")'.dependencies]
+openssl = {version = "0.10", features = ["vendored"]}
+
 [target.'cfg(unix)'.dependencies]
 jemallocator.workspace = true
 
@@ -100,6 +112,7 @@ jemallocator = "0.5"
 lazy_static = "1.4"
 lopdf = "0.32"
 num_cpus = "1.16"
+pdf-extract = "0.10"
 # Graph and algorithms
 petgraph = "0.6"
 # Python bindings
@@ -165,7 +178,7 @@ documentation = "https://docs.graphbit.ai"
 edition = "2021"
 homepage = "https://graphbit.ai"
 keywords = ["ai", "automation", "workflow", "agent", "llm"]
-license-file = "LICENSE"
+license-file = "LICENSE.md"
 repository = "https://github.com/InfinitiBit/graphbit"
 rust-version = "1.70.0"
-version = "0.4.0"
+version = "0.5.1"

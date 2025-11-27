@@ -1,0 +1,5 @@
+.env
+*/logs
+*/vector_index_chatbot
+vectordb.txt
+*/__pycache__/

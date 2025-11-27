@@ -34,7 +34,7 @@ config = LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4o-mini")
 executor = Executor(config)
 
 # Create tools with the @tool decorator
-@tool(description="Get current weather information for any city")
+@tool(_description="Get current weather information for any city")
 def get_weather(location: str) -> dict:
     """Get weather information for a specific location."""
     return {
@@ -44,7 +44,7 @@ def get_weather(location: str) -> dict:
         "humidity": 65
     }
 
-@tool(description="Perform mathematical calculations and return results")
+@tool(_description="Perform mathematical calculations and return results")
 def calculate(expression: str) -> str:
     """Perform mathematical calculations safely."""
     try:
@@ -85,7 +85,7 @@ The `@tool` decorator is the primary way to register functions as tools:
 from graphbit import tool
 
 # Basic tool registration
-@tool(description="Add two numbers together")
+@tool(_description="Add two numbers together")
 def add_numbers(a: int, b: int) -> int:
     """Add two numbers and return the result."""
     return a + b
@@ -147,7 +147,7 @@ GraphBit automatically generates JSON schemas for your tools based on type hints
 ```python
 from typing import List, Optional, Dict, Any
 
-@tool(description="Search and filter data")
+@tool(_description="Search and filter data")
 def search_data(
     query: str,
     filters: Optional[Dict[str, Any]] = None,
@@ -263,10 +263,10 @@ custom_config = ExecutorConfig(
 Manage your tool registry:
 
 ```python
-from graphbit import get_tool_registry, clear_tools
+from graphbit import get_tool_registry, clear_tools, tool
 
 # Register a test tool first
-@tool(description="Test tool for registry")
+@tool(_description="Test tool for registry")
 def test_tool() -> str:
     return "test"
 
@@ -274,15 +274,15 @@ def test_tool() -> str:
 registry = get_tool_registry()
 
 # List all registered tools
-tools = registry.list_tools()
-print("Registered tools:", [tool.name for tool in tools])
+tool_names = registry.list_tools()
+print("Registered tools:", tool_names)
 
 # Get tool metadata
-for tool in tools:
-    print(f"Tool: {tool.name}")
-    print(f"Description: {tool.description}")
-    print(f"Parameters: {tool.parameters_schema}")
-    print(f"Call count: {tool.call_count}")
+for tool_name in tool_names:
+    metadata = registry.get_tool_metadata(tool_name)
+    if metadata:
+        print(f"Tool: {tool_name}")
+        print(f"Metadata: {metadata}")
 
 # Clear all tools (useful for testing)
 clear_tools()
@@ -297,7 +297,7 @@ While tools themselves are synchronous, you can handle async operations:
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 
-@tool(description="Perform async operation synchronously")
+@tool(_description="Perform async operation synchronously")
 def async_operation(url: str, timeout: int = 30) -> Dict[str, Any]:
     """Perform an async operation in a sync context."""
     import aiohttp

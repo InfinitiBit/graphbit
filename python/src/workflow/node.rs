@@ -27,7 +27,7 @@ pub struct Node {
 #[pymethods]
 impl Node {
     #[staticmethod]
-    #[pyo3(signature = (name, prompt, agent_id=None, output_name=None, tools=None, system_prompt=None, llm_config=None))]
+    #[pyo3(signature = (name, prompt, agent_id=None, output_name=None, tools=None, system_prompt=None, llm_config=None, temperature=None, max_tokens=None))]
     fn agent(
         name: String,
         prompt: String,
@@ -36,6 +36,8 @@ impl Node {
         tools: Option<&Bound<'_, PyList>>,
         system_prompt: Option<String>,
         llm_config: Option<LlmConfig>,
+        temperature: Option<f32>,
+        max_tokens: Option<u32>,
     ) -> PyResult<Self> {
         // Validate required parameters
         if name.trim().is_empty() {
@@ -98,6 +100,36 @@ impl Node {
                     )));
                 }
             }
+        }
+
+        // Store temperature in metadata if provided
+        if let Some(temp) = temperature {
+            // Validate temperature range (0.0 to 2.0 is typical for most LLMs)
+            if temp < 0.0 || temp > 2.0 {
+                return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                    "Temperature must be between 0.0 and 2.0",
+                ));
+            }
+            node.config.insert(
+                "temperature".to_string(),
+                serde_json::Value::Number(serde_json::Number::from_f64(temp as f64).ok_or_else(
+                    || PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid temperature value"),
+                )?),
+            );
+        }
+
+        // Store max_tokens in metadata if provided
+        if let Some(tokens) = max_tokens {
+            // Validate max_tokens range (must be positive, typically between 1 and 128000)
+            if tokens == 0 {
+                return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                    "max_tokens must be greater than 0",
+                ));
+            }
+            node.config.insert(
+                "max_tokens".to_string(),
+                serde_json::Value::Number(serde_json::Number::from(tokens)),
+            );
         }
 
         // Store tools in metadata if provided

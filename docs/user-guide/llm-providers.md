@@ -1629,6 +1629,93 @@ def execute_with_error_handling(workflow, executor):
         return None
 ```
 
+## Using Multiple LLM Providers in a Single Workflow
+
+GraphBit supports using different LLM providers for different nodes within the same workflow. This allows you to optimize each step by choosing the most suitable model for specific tasks.
+
+### Hierarchical LLM Configuration
+
+GraphBit uses a hierarchical configuration system with the following precedence:
+
+1. **Node-level LLM configuration** (highest priority) - specified in `Node.agent(llm_config=...)`
+2. **Executor-level LLM configuration** (fallback) - specified in `Executor(llm_config)`
+
+**Node-level configuration always takes priority over executor-level configuration**, ensuring backward compatibility while enabling fine-grained control.
+
+### Multi-Provider Workflow Example
+
+```python
+import os
+from graphbit import init, Workflow, Node, Executor, LlmConfig
+
+def build_multi_provider_workflow():
+    """Example workflow using different providers for different tasks"""
+
+    # Configure multiple LLM providers
+    anthropic_config = LlmConfig.anthropic(
+        api_key=os.getenv("ANTHROPIC_API_KEY"),
+        model="claude-sonnet-4-20250514"
+    )
+
+    openai_config = LlmConfig.openai(
+        api_key=os.getenv("OPENAI_API_KEY"),
+        model="gpt-4o-mini"
+    )
+
+    ollama_config = LlmConfig.ollama(
+        model="llama3.2"
+    )
+
+    # Create workflow
+    workflow = Workflow("Multi-Provider Pipeline")
+
+    # Use Anthropic for analysis (good at reasoning)
+    analyzer = Node.agent(
+        name="Content Analyzer",
+        prompt=f"Analyze this content for key themes and sentiment: {input}",
+        agent_id="analyzer",
+        llm_config=anthropic_config  # Node-level config
+    )
+
+    # Use OpenAI for structured output (good at JSON)
+    formatter = Node.agent(
+        name="JSON Formatter",
+        prompt=f"Convert the analysis to JSON format: {input}",
+        agent_id="formatter",
+        llm_config=openai_config  # Node-level config
+    )
+
+    # Use local Ollama for final summary (cost-effective)
+    summarizer = Node.agent(
+        name="Summarizer",
+        prompt=f"Create a brief summary: {input}",
+        agent_id="summarizer",
+        llm_config=ollama_config  # Node-level config
+    )
+
+    # Connect nodes
+    id1 = workflow.add_node(analyzer)
+    id2 = workflow.add_node(formatter)
+    id3 = workflow.add_node(summarizer)
+
+    workflow.connect(id1, id2)
+    workflow.connect(id2, id3)
+    workflow.validate()
+
+    # Executor config serves as fallback for any nodes without llm_config
+    default_config = LlmConfig.openai(
+        api_key=os.getenv("OPENAI_API_KEY"),
+        model="gpt-4o-mini"
+    )
+
+    executor = Executor(default_config, timeout_seconds=300)
+    return workflow, executor
+
+# Usage
+workflow, executor = build_multi_provider_workflow()
+result = executor.execute(workflow)
+```
+
 ## Best Practices
 
 ### 1. Provider Selection

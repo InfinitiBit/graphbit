@@ -137,7 +137,7 @@ impl ReplicateProvider {
         for line in content.lines() {
             if line.starts_with("TOOL_CALL:") {
                 // Parse tool call format: TOOL_CALL: tool_name(parameters)
-                if let Some(tool_part) = line.strip_prefix("TOOL_CALL:").map(|s| s.trim()) {
+                if let Some(tool_part) = line.strip_prefix("TOOL_CALL:").map(str::trim) {
                     if let Some(paren_pos) = tool_part.find('(') {
                         let tool_name = tool_part[..paren_pos].trim().to_string();
                         let params_str = &tool_part[paren_pos + 1..];
@@ -152,7 +152,7 @@ impl ReplicateProvider {
                             };
 
                             tool_calls.push(LlmToolCall {
-                                id: format!("call_{}", tool_call_id),
+                                id: format!("call_{tool_call_id}"),
                                 name: tool_name,
                                 parameters,
                             });
@@ -172,7 +172,7 @@ impl ReplicateProvider {
     /// Get the model identifier for API calls
     fn get_model_identifier(&self) -> String {
         if let Some(version) = &self.version {
-            format!("{}:{}", self.model, version)
+            format!("{}:{version}", self.model)
         } else {
             self.model.clone()
         }
