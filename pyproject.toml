@@ -28,7 +28,9 @@ dependencies = [
   "aiohttp>=3.12.15",
   "python-dotenv>=1.0.0",
   "rich>=13.0.0",
-  "typer>=0.9.0"
+  "typer>=0.9.0",
+  "huggingface_hub>=0.33.4",
+  "numpy>=1.24.0"
 ]
 description = "GraphBit - Advanced workflow automation and AI agent orchestration library"
 keywords = ["ai", "agents", "workflow", "automation", "rust", "python", "llm", "orchestration"]
@@ -40,93 +42,6 @@ name = "graphbit"
 readme = "README.md"
 requires-python = ">=3.9"
 version = "0.5.1"
-
-[project.optional-dependencies]
-ai = [
-  "anthropic>=0.24.0",
-  "openai>=1.30.0"
-]
-benchmark = [
-  "click>=8.2.1; python_version >= '3.10'",
-  "matplotlib>=3.7.0",
-  "numpy>=1.24.0",
-  "pandas>=2.0.0",
-  "psutil>=5.9.0",
-  "seaborn>=0.12.0",
-  "tabulate>=0.9.0",
-  "memory-profiler>=0.61.0",
-  "crewai>=0.41.0; python_version >= '3.10'",
-  "langchain>=0.1.0; python_version >= '3.10'",
-  "langchain-anthropic>=0.3.19; python_version >= '3.10'",
-  "langchain-ollama>=0.3.7; python_version >= '3.10'",
-  "langchain-openai>=0.1.0; python_version >= '3.10'",
-  "langgraph>=0.1.0",
-  "llama-index>=0.9.0",
-  "llama-index-cli>=0.5.0; python_version >= '3.10'",
-  "llama-index-llms-anthropic>=0.8.5",
-  "llama-index-llms-ollama>=0.7.1",
-  "pydantic-ai>=0.0.5; python_version >= '3.10'"
-]
-databases = [
-  "boto3>=1.26.0",
-  "ibm-db>=3.1.0",
-  "mariadb>=1.1.0",
-  "psycopg2>=2.9.0",
-  "pymongo>=4.0.0"
-]
-full = [
-  # AI dependencies
-  "anthropic>=0.24.0",
-  "openai>=1.30.0",
-  # Vector DB dependencies
-  "astrapy>=1.0.0",
-  "chromadb>=0.4.0; python_version >= '3.10'",
-  "elasticsearch>=8.0.0",
-  "faiss-cpu>=1.7.0",
-  "pinecone>=4.0.0",
-  "pymilvus>=2.3.0",
-  "qdrant-client>=1.7.0",
-  "weaviate-client>=4.4.0; python_version >= '3.9.2'",
-  # Database dependencies
-  "boto3>=1.26.0",
-  "ibm-db>=3.1.0",
-  "mariadb>=1.1.0",
-  "psycopg2>=2.9.0",
-  "pymongo>=4.0.0",
-  # Benchmark dependencies
-  "click>=8.2.1; python_version >= '3.10'",
-  "matplotlib>=3.7.0",
-  "numpy>=1.24.0",
-  "pandas>=2.0.0",
-  "psutil>=5.9.0",
-  "seaborn>=0.12.0",
-  "tabulate>=0.9.0",
-  "memory-profiler>=0.61.0",
-  "crewai>=0.41.0; python_version >= '3.10'",
-  "langchain>=0.1.0; python_version >= '3.10'",
-  "langchain-anthropic>=0.3.19; python_version >= '3.10'",
-  "langchain-ollama>=0.3.7; python_version >= '3.10'",
-  "langchain-openai>=0.1.0; python_version >= '3.10'",
-  "langgraph>=0.1.0",
-  "llama-index>=0.9.0",
-  "llama-index-cli>=0.5.0; python_version >= '3.10'",
-  "llama-index-llms-anthropic>=0.8.5",
-  "llama-index-llms-ollama>=0.7.1",
-  "pydantic-ai>=0.0.5; python_version >= '3.10'",
-  # Additional dependencies
-  "requests>=2.25.0",
-  "types-pyyaml>=6.0.12.20250822"
-]
-vector-db = [
-  "astrapy>=1.0.0",
-  "chromadb>=0.4.0; python_version >= '3.10'",
-  "elasticsearch>=8.0.0",
-  "faiss-cpu>=1.7.0",
-  "pinecone>=4.0.0",
-  "pymilvus>=2.3.0",
-  "qdrant-client>=1.7.0",
-  "weaviate-client>=4.4.0; python_version >= '3.9.2'"
-]
 
 [project.urls]
 "Bug Tracker" = "https://github.com/InfinitiBit/graphbit/issues"
@@ -207,6 +122,8 @@ manifest-path = "python/Cargo.toml"
 module-name = "graphbit"
 # Build profile for optimized releases
 profile = "release"
+# Python interpreter finding
+python-source = "python-src"
 # Enable auditwheel for proper PyPI compatibility
 skip-auditwheel = false
 # Build optimizations
@@ -242,130 +159,12 @@ version = "0.5.1"
 # Core dependencies - minimal for framework functionality
 aiofiles = ">=23.0.0"
 aiohttp = "^3.12.15"
-# Optional AI/ML dependencies
-anthropic = {version = ">=0.24.0", optional = true}
-# Vector database dependencies
-astrapy = {version = ">=1.0.0", optional = true}
-boto3 = {version = ">=1.26.0", optional = true}
-# Optional benchmarking dependencies
-chromadb = {version = ">=0.4.0", optional = true, markers = "python_version >= '3.10'"}
-click = {version = "^8.2.1", optional = true, markers = "python_version >= '3.10'"}
-crewai = {version = ">=0.41.0", optional = true, markers = "python_version >= '3.10'"}
-elasticsearch = {version = ">=8.0.0", optional = true}
-faiss-cpu = {version = ">=1.7.0", optional = true}
-ibm-db = {version = ">=3.1.0", optional = true}
-langchain = {version = ">=0.1.0", optional = true, markers = "python_version >= '3.10'"}
-langchain-anthropic = {version = "^0.3.19", optional = true, markers = "python_version >= '3.10'"}
-langchain-ollama = {version = "^0.3.7", optional = true, markers = "python_version >= '3.10'"}
-langchain-openai = {version = ">=0.1.0", optional = true, markers = "python_version >= '3.10'"}
-langgraph = {version = ">=0.1.0", optional = true}
-llama-index = {version = ">=0.9.0", optional = true}
-llama-index-cli = {version = "^0.5.0", optional = true, markers = "python_version >= '3.10'"}
-llama-index-llms-anthropic = {version = "^0.8.5", optional = true}
-llama-index-llms-ollama = {version = "^0.7.1", optional = true}
-mariadb = {version = ">=1.1.0", optional = true}
-matplotlib = {version = ">=3.7.0", optional = true}
-memory-profiler = {version = ">=0.61.0", optional = true}
-numpy = {version = ">=1.24.0", optional = true}
-openai = {version = ">=1.30.0", optional = true}
-pandas = {version = ">=2.0.0", optional = true}
-pinecone = {version = ">=4.0.0", optional = true}
-# Benchmarking specific dependencies
-psutil = {version = ">=5.9.0", optional = true}
-psycopg2 = {version = ">=2.9.0", optional = true}
-pydantic-ai = {version = ">=0.0.5", optional = true, markers = "python_version >= '3.10'"}
-pymilvus = {version = ">=2.3.0", optional = true}
-pymongo = {version = ">=4.0.0", optional = true}
+huggingface_hub = ">=0.33.4"
+numpy = ">=1.24.0"
 python = ">=3.9,<=3.13.7"
 python-dotenv = ">=1.0.0"
-qdrant-client = {version = ">=1.7.0", optional = true}
-requests = {version = ">=2.25.0", optional = true}
 rich = ">=13.0.0"
-seaborn = {version = ">=0.12.0", optional = true}
-tabulate = {version = ">=0.9.0", optional = true}
 typer = ">=0.9.0"
-types-pyyaml = {version = "^6.0.12.20250822", optional = true}
-weaviate-client = {version = ">=4.4.0", optional = true, markers = "python_version >= '3.9.2'"}
-
-# Optional dependency groups for pip install
-[tool.poetry.extras]
-aiohttp = ["aiohttp"]
-astradb = ["astrapy"]
-benchmark = [
-  "click",
-  "matplotlib",
-  "numpy",
-  "pandas",
-  "psutil",
-  "seaborn",
-  "tabulate",
-  "memory-profiler",
-  "anthropic",
-  "openai",
-  "langchain",
-  "langchain-openai",
-  "langchain-anthropic",
-  "langchain-ollama",
-  "langgraph",
-  "llama-index",
-  "llama-index-llms-anthropic",
-  "llama-index-llms-ollama",
-  "llama-index-cli",
-  "crewai",
-  "pydantic-ai"
-]
-boto3 = ["boto3"]
-chromadb = ["chromadb"]
-db2 = ["ibm-db", "numpy"]
-elasticsearch = ["elasticsearch"]
-faiss = ["faiss-cpu", "numpy"]
-full = [
-  "click",
-  "matplotlib",
-  "numpy",
-  "pandas",
-  "psutil",
-  "seaborn",
-  "tabulate",
-  "memory-profiler",
-  "anthropic",
-  "openai",
-  "langchain",
-  "langchain-openai",
-  "langchain-anthropic",
-  "langchain-ollama",
-  "langgraph",
-  "llama-index",
-  "llama-index-llms-anthropic",
-  "llama-index-llms-ollama",
-  "llama-index-cli",
-  "crewai",
-  "pydantic-ai",
-  "astrapy",
-  "boto3",
-  "chromadb",
-  "elasticsearch",
-  "faiss-cpu",
-  "ibm-db",
-  "mariadb",
-  "pinecone",
-  "psycopg2",
-  "pymilvus",
-  "pymongo",
-  "qdrant-client",
-  "requests",
-  "weaviate-client",
-  "types-pyyaml",
-  "aiohttp"
-]
-mariadb = ["mariadb", "numpy"]
-milvus = ["pymilvus"]
-mongodb = ["pymongo"]
-pgvector = ["psycopg2"]
-pinecone = ["pinecone"]
-qdrant = ["qdrant-client"]
-requests = ["requests"]
-weaviate = ["weaviate-client"]
 
 [tool.poetry.group.dev.dependencies]
 bandit = "^1.7.0"

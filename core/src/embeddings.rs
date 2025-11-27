@@ -3,16 +3,27 @@
 //! This module provides a unified interface for working with different
 //! embedding providers including `HuggingFace` and `OpenAI`.
 
+pub mod python_bridge;
+
 use crate::errors::{GraphBitError, GraphBitResult};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 
+pub use python_bridge::PythonBridgeEmbeddingProvider;
+
+#[cfg(feature = "python")]
+fn default_python_instance() -> Option<Arc<pyo3::PyObject>> {
+    // This is a placeholder that should never be used
+    // The python_instance should always be set when creating a PythonBridge config
+    None
+}
+
 /// Configuration for embedding providers
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EmbeddingConfig {
-    /// Provider type (e.g., "openai", "huggingface")
+    /// Provider type (e.g., "openai", "huggingface", "pythonbridge")
     pub provider: EmbeddingProvider,
     /// API key for the provider
     pub api_key: String,
@@ -26,6 +37,10 @@ pub struct EmbeddingConfig {
     pub max_batch_size: Option<usize>,
     /// Additional provider-specific parameters
     pub extra_params: HashMap<String, serde_json::Value>,
+    /// Python object instance for PythonBridge provider
+    #[cfg(feature = "python")]
+    #[serde(skip, default = "default_python_instance")]
+    pub python_instance: Option<Arc<pyo3::PyObject>>,
 }
 
 /// Supported embedding providers
@@ -36,6 +51,9 @@ pub enum EmbeddingProvider {
     OpenAI,
     /// `HuggingFace` embedding provider
     HuggingFace,
+    /// Python bridge provider for calling Python embedding implementations
+    #[cfg(feature = "python")]
+    PythonBridge,
 }
 
 /// Request for generating embeddings
@@ -522,6 +540,11 @@ impl EmbeddingProviderFactory {
             }
             EmbeddingProvider::HuggingFace => {
                 let provider = HuggingFaceEmbeddingProvider::new(config)?;
+                Ok(Box::new(provider))
+            }
+            #[cfg(feature = "python")]
+            EmbeddingProvider::PythonBridge => {
+                let provider = PythonBridgeEmbeddingProvider::new(config)?;
                 Ok(Box::new(provider))
             }
         }

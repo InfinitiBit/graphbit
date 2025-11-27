@@ -16,6 +16,7 @@ pub mod openai;
 pub mod openrouter;
 pub mod perplexity;
 pub mod providers;
+pub mod python_bridge;
 pub mod replicate;
 pub mod response;
 pub mod togetherai;
@@ -453,6 +454,14 @@ impl LlmProviderFactory {
                     Ok(Box::new(mistralai::MistralAiProvider::new(api_key, model)?))
                 }
             }
+            #[cfg(feature = "python")]
+            LlmConfig::PythonBridge {
+                python_instance,
+                model,
+            } => Ok(Box::new(python_bridge::PythonBridgeProvider::new(
+                python_instance,
+                model,
+            )?)),
             LlmConfig::Custom { provider_type, .. } => Err(GraphBitError::config(format!(
                 "Unsupported custom provider: {provider_type}",
             ))),
