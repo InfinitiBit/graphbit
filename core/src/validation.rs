@@ -51,7 +51,7 @@ impl ValidationResult {
     }
 
     /// Merge another validation result into this one
-    pub fn merge(&mut self, other: ValidationResult) {
+    pub fn merge(&mut self, other: Self) {
         if !other.is_valid {
             self.is_valid = false;
         }
@@ -281,7 +281,10 @@ impl TypeValidator {
 
         // Validate string constraints
         if let Some(data_str) = data.as_str() {
-            if let Some(min_length) = schema_obj.get("minLength").and_then(|l| l.as_u64()) {
+            if let Some(min_length) = schema_obj
+                .get("minLength")
+                .and_then(serde_json::Value::as_u64)
+            {
                 if (data_str.len() as u64) < min_length {
                     result.add_error(ValidationError::new(
                         path,
@@ -291,7 +294,10 @@ impl TypeValidator {
                 }
             }
 
-            if let Some(max_length) = schema_obj.get("maxLength").and_then(|l| l.as_u64()) {
+            if let Some(max_length) = schema_obj
+                .get("maxLength")
+                .and_then(serde_json::Value::as_u64)
+            {
                 if (data_str.len() as u64) > max_length {
                     result.add_error(ValidationError::new(
                         path,
@@ -326,7 +332,10 @@ impl TypeValidator {
 
         // Validate number constraints
         if let Some(data_num) = data.as_f64() {
-            if let Some(minimum) = schema_obj.get("minimum").and_then(|m| m.as_f64()) {
+            if let Some(minimum) = schema_obj
+                .get("minimum")
+                .and_then(serde_json::Value::as_f64)
+            {
                 if data_num < minimum {
                     result.add_error(ValidationError::new(
                         path,
@@ -336,7 +345,10 @@ impl TypeValidator {
                 }
             }
 
-            if let Some(maximum) = schema_obj.get("maximum").and_then(|m| m.as_f64()) {
+            if let Some(maximum) = schema_obj
+                .get("maximum")
+                .and_then(serde_json::Value::as_f64)
+            {
                 if data_num > maximum {
                     result.add_error(ValidationError::new(
                         path,

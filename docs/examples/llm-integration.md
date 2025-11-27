@@ -476,7 +476,13 @@ def monitor_llm_system_health():
     
     providers_to_test = [
         ('OpenAI', lambda: LlmConfig.openai(os.getenv("OPENAI_API_KEY", "test"), "gpt-4o-mini")),
+        ('Azure OpenAI', lambda: LlmConfig.azure_openai(
+            os.getenv("AZURE_OPENAI_API_KEY", "test"),
+            os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt-4o"),
+            os.getenv("AZURE_OPENAI_ENDPOINT", "https://test.openai.azure.com")
+        )),
         ('Anthropic', lambda: LlmConfig.anthropic(os.getenv("ANTHROPIC_API_KEY", "test"), "claude-sonnet-4-20250514")),
+        ('MistralAI', lambda: LlmConfig.mistralai(os.getenv("MISTRALAI_API_KEY", "test"), "mistral-large-latest")),
         ('Ollama', lambda: LlmConfig.ollama("llama3.2"))
     ]
     
@@ -638,6 +644,39 @@ def quick_anthropic_example():
 quick_anthropic_example()
 ```
 
+### MistralAI Integration
+
+```python
+from graphbit import init, LlmConfig, LlmClient
+import os
+
+def quick_mistralai_example():
+    """Simple MistralAI integration example."""
+
+    # Initialize
+    init()
+
+    # Configure MistralAI
+    config = LlmConfig.mistralai(
+        api_key=os.getenv("MISTRALAI_API_KEY"),
+        model="mistral-large-latest"
+    )
+    client = LlmClient(config)
+
+    # Multilingual task
+    response = client.complete(
+        """Explain the concept of artificial intelligence in both
+        English and French. Be concise but informative.""",
+        max_tokens=250,
+        temperature=0.7
+    )
+
+    print(f"MistralAI multilingual response: {response}")
+
+# Usage (requires MISTRALAI_API_KEY)
+quick_mistralai_example()
+```
+
 ## Best Practices
 
 ### Configuration Management
@@ -660,11 +699,25 @@ def setup_production_llm_config():
             os.getenv("OPENAI_API_KEY"),
             "gpt-4o-mini"
         )))
-    
+
+    if all([os.getenv("AZURE_OPENAI_API_KEY"), os.getenv("AZURE_OPENAI_ENDPOINT"), os.getenv("AZURE_OPENAI_DEPLOYMENT")]):
+        providers.append(('azure_openai', LlmConfig.azure_openai(
+            os.getenv("AZURE_OPENAI_API_KEY"),
+            os.getenv("AZURE_OPENAI_DEPLOYMENT"),
+            os.getenv("AZURE_OPENAI_ENDPOINT"),
+            os.getenv("AZURE_OPENAI_API_VERSION", "2024-10-21")
+        )))
+
     if os.getenv("ANTHROPIC_API_KEY"):
         providers.append(('anthropic', LlmConfig.anthropic(
             os.getenv("ANTHROPIC_API_KEY"),
             "claude-sonnet-4-20250514"
+        )))
+
+    if os.getenv("MISTRALAI_API_KEY"):
+        providers.append(('mistralai', LlmConfig.mistralai(
+            os.getenv("MISTRALAI_API_KEY"),
+            "mistral-large-latest"
         )))
     
     # Add local fallback
@@ -715,5 +768,126 @@ def robust_completion(prompt: str, max_retries: int = 3):
 - **Health Checks**: System health monitoring
 - **Error Handling**: Comprehensive error management
 - **Resilience Patterns**: Circuit breakers and retry logic
+
+## Multi-Provider Workflow Example
+
+Based on the `examples/multiple_llm_provider.py` implementation, here's how to use multiple LLM providers within a single workflow:
+
+```python
+import os
+from graphbit import init, Workflow, Node, Executor, LlmConfig
+
+def create_script_writer_workflow():
+    """
+    Multi-provider script writing workflow.
+    Each node uses a different LLM provider optimized for its specific task.
+    """
+    init(log_level="info")
+
+    # Configure different providers for different tasks
+    anthropic_config = LlmConfig.anthropic(
+        api_key=os.getenv("ANTHROPIC_API_KEY"),
+        model="claude-sonnet-4-20250514"
+    )
+
+    openai_config = LlmConfig.openai(
+        api_key=os.getenv("OPENAI_API_KEY"),
+        model="gpt-4o-mini"
+    )
+
+    xai_config = LlmConfig.xai(
+        api_key=os.getenv("XAI_API_KEY"),
+        model="grok-4-fast-reasoning"
+    )
+
+    ollama_config = LlmConfig.ollama(
+        model="llama3.2"
+    )
+
+    # Create workflow
+    workflow = Workflow("Script Writer (Multi-Provider)")
+
+    # Node 1: Use Anthropic for content analysis
+    briefing_node = Node.agent(
+        name="Briefing Distiller",
+        prompt=f"""You are a senior story producer. Extract a concise production brief.
+        Return JSON with keys: hook, key_messages, target_audience, must_include_facts.
+        INPUT: {input}""",
+        agent_id="briefing_distiller",
+        llm_config=anthropic_config  # Node-level config overrides executor config
+    )
+
+    # Node 2: Use OpenAI for structured outline
+    outline_node = Node.agent(
+        name="Outline Builder",
+        prompt=f"""Create a timed outline with beats and timecodes.
+        OUTPUT MARKDOWN with Title, CTA, and beat list.
+        INPUT: {input}""",
+        agent_id="outline_builder",
+        llm_config=openai_config  # Different provider for this node
+    )
+
+    # Node 3: Use xAI for creative script writing
+    script_node = Node.agent(
+        name="Script Drafter",
+        prompt=f"""Expand the outline into a full script.
+        Include: VO, ON-SCREEN TEXT, B-ROLL, SFX, CAPTIONS.
+        INPUT: {input}""",
+        agent_id="script_drafter",
+        llm_config=xai_config  # Yet another provider
+    )
+
+    # Node 4: Use local Ollama for final polish
+    polish_node = Node.agent(
+        name="Polish & Voice",
+        prompt=f"""Polish the script for clarity and rhythm.
+        Return: Final Script (markdown) and Shot List table.
+        INPUT: {input}""",
+        agent_id="polish_voice",
+        llm_config=ollama_config  # Local model for cost-effective polishing
+    )
+
+    # Connect the pipeline
+    id1 = workflow.add_node(briefing_node)
+    id2 = workflow.add_node(outline_node)
+    id3 = workflow.add_node(script_node)
+    id4 = workflow.add_node(polish_node)
+
+    workflow.connect(id1, id2)
+    workflow.connect(id2, id3)
+    workflow.connect(id3, id4)
+    workflow.validate()
+
+    # Executor config serves as fallback (used when nodes don't specify llm_config)
+    default_config = LlmConfig.openai(
+        api_key=os.getenv("OPENAI_API_KEY"),
+        model="gpt-4o-mini"
+    )
+
+    executor = Executor(default_config, timeout_seconds=300)
+    return workflow, executor
+
+# Usage
+workflow, executor = create_script_writer_workflow()
+result = executor.execute(workflow)
+
+if result.is_success():
+    final_script = result.get_node_output("Polish & Voice")
+    print("Final Script:", final_script)
+```
+
+### Key Benefits of Multi-Provider Workflows
+
+1. **Task Optimization**: Use the best model for each specific task
+2. **Cost Management**: Mix expensive and cost-effective models strategically
+3. **Redundancy**: Fallback options if one provider is unavailable
+4. **Performance**: Leverage each provider's strengths (speed, quality, capabilities)
+
+### Configuration Hierarchy
+
+GraphBit's hierarchical configuration ensures:
+- **Node-level `llm_config`** always takes priority over executor-level config
+- **Backward compatibility** is maintained for existing workflows
+- **Flexible deployment** with provider-specific optimizations per node
 
 This example demonstrates GraphBit's comprehensive LLM integration capabilities for building production-ready AI applications.

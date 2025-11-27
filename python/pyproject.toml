@@ -1,0 +1,39 @@
+[build-system]
+build-backend = "maturin"
+requires = ["maturin>=1.0,<2.0"]
+
+[project]
+authors = [{name = "GraphBit Team"}]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: Other/Proprietary License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Rust",
+  "Topic :: Software Development :: Libraries :: Python Modules"
+]
+description = "GraphBit is the world’s first enterprise-grade Agentic AI framework, built on a Rust core with a Python wrapper for unmatched speed, security, and scalability. It enables reliable multi-agent workflows with minimal CPU and memory usage, making it production-ready for real-world enterprise environments."
+documentation = "https://docs.graphbit.ai"
+homepage = "https://graphbit.ai"
+keywords = ["ai", "automation", "workflow", "agent", "llm"]
+license = {file = "LICENSE.md"}
+name = "graphbit"
+readme = "README.md"
+repository = "https://github.com/InfinitiBit/graphbit"
+requires-python = ">=3.10"
+version = "0.5.1"
+
+[tool.maturin]
+# PyO3 bindings configuration
+bindings = "pyo3"
+# Module configuration - this controls the wheel package name
+module-name = "graphbit"
+# Build profile for optimized releases
+profile = "release"
+python-source = "python-src"
+# Build optimizations
+strip = true

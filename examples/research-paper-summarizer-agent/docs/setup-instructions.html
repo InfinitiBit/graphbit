@@ -1,0 +1,49 @@
+<h1>Setup Instructions</h1>
+
+<h2>Prerequisites</h2>
+
+<ul>
+  <li>Python 3.11 or higher</li>
+  <li>OpenAI API key</li>
+  <li>Poetry installed (see: https://python-poetry.org/docs/#installation)</li>
+</ul>
+
+<h2>Installation</h2>
+
+<h3>1. Download and extract the template</h3>
+<p>Download the research paper summarizer template ZIP file and extract it to your desired location:</p>
+<pre><code>
+unzip research-paper-summarizer-agent.zip
+cd research-paper-summarizer-agent</code></pre>
+
+<h3>2. Install dependencies</h3>
+<pre><code>
+poetry install</code></pre>
+
+<p>This will automatically install GraphBit and all other required dependencies listed in <code>pyproject.toml</code>.</p>
+
+<h3>3. Set up environment variables</h3>
+<pre><code>
+export OPENAI_API_KEY="your_api_key_here"</code></pre>
+
+<h2>Running the Application</h2>
+
+<h3>Using Poetry</h3>
+
+<p><strong>Step 1: Start the backend server</strong></p>
+<p>In terminal 1:</p>
+<pre><code>poetry run uvicorn backend.main-server:app --reload --host 0.0.0.0 --port 8000</code></pre>
+
+<p><strong>Step 2: Start the frontend application</strong></p>
+<p>In terminal 2:</p>
+<pre><code>poetry run streamlit run frontend/app.py --server.port 8501 --server.address 0.0.0.0</code></pre>
+
+<p><strong>Note:</strong> The startup scripts require GraphBit to be properly installed and available in your Python environment.</p>
+
+<h2>Access the Application</h2>
+
+<ul>
+  <li><strong>Frontend:</strong> <a href="http://localhost:8501">http://localhost:8501</a></li>
+  <li><strong>Backend API:</strong> <a href="http://localhost:8000">http://localhost:8000</a></li>
+  <li><strong>API Documentation:</strong> <a href="http://localhost:8000/docs">http://localhost:8000/docs</a></li>
+</ul>

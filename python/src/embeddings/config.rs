@@ -28,24 +28,51 @@ impl EmbeddingConfig {
                 timeout_seconds: None,
                 max_batch_size: None,
                 extra_params: HashMap::new(),
+                python_instance: None,
             },
         })
     }
 
     #[staticmethod]
-    fn huggingface(api_key: String, model: String) -> PyResult<Self> {
+    #[pyo3(signature = (api_key, model=None))]
+    fn huggingface(api_key: String, model: Option<String>) -> PyResult<Self> {
         validate_api_key(&api_key, "HuggingFace")?;
 
-        Ok(Self {
-            inner: CoreEmbeddingConfig {
-                provider: EmbeddingProvider::HuggingFace,
-                api_key,
-                model,
-                base_url: None,
-                timeout_seconds: None,
-                max_batch_size: None,
-                extra_params: HashMap::new(),
-            },
+        Python::with_gil(|py| {
+            // Import the Python HuggingFace embeddings class
+            let hf_module = py
+                .import("graphbit.providers.huggingface.embeddings")
+                .map_err(|e| {
+                    pyo3::exceptions::PyImportError::new_err(format!(
+                        "Failed to import HuggingFace embeddings module: {e}"
+                    ))
+                })?;
+            let hf_class = hf_module.getattr("HuggingfaceEmbeddings").map_err(|e| {
+                pyo3::exceptions::PyAttributeError::new_err(format!(
+                    "Failed to get HuggingfaceEmbeddings class: {e}"
+                ))
+            })?;
+
+            // Create instance with API key (token parameter)
+            let hf_instance = hf_class.call1((api_key.clone(),)).map_err(|e| {
+                pyo3::exceptions::PyRuntimeError::new_err(format!(
+                    "Failed to create HuggingfaceEmbeddings instance: {e}"
+                ))
+            })?;
+
+            Ok(Self {
+                inner: CoreEmbeddingConfig {
+                    provider: EmbeddingProvider::PythonBridge,
+                    api_key,
+                    model: model
+                        .unwrap_or_else(|| "sentence-transformers/all-MiniLM-L6-v2".to_string()),
+                    base_url: None,
+                    timeout_seconds: None,
+                    max_batch_size: None,
+                    extra_params: HashMap::new(),
+                    python_instance: Some(std::sync::Arc::new(hf_instance.into())),
+                },
+            })
         })
     }
 }

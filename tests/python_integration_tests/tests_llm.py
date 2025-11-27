@@ -115,7 +115,7 @@ class TestAnthropicLLM:
     @pytest.fixture
     def anthropic_config(self, api_key: str) -> Any:
         """Create Anthropic configuration."""
-        return LlmConfig.anthropic(api_key, "claude-3-sonnet-20240229")
+        return LlmConfig.anthropic(api_key, "claude-3-5-sonnet-20241022")
 
     @pytest.fixture
     def anthropic_client(self, anthropic_config: Any) -> Any:
@@ -125,7 +125,7 @@ class TestAnthropicLLM:
     def test_anthropic_config_creation(self, anthropic_config: Any) -> None:
         """Test Anthropic config creation and properties."""
         assert anthropic_config.provider() == "anthropic"
-        assert anthropic_config.model() == "claude-3-sonnet-20240229"
+        assert anthropic_config.model() == "claude-3-5-sonnet-20241022"
 
     def test_anthropic_client_creation(self, anthropic_client: Any) -> None:
         """Test creating Anthropic client."""
@@ -341,7 +341,12 @@ class TestCrossProviderLLM:
             configs["openai"] = LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-3.5-turbo")
 
         if os.getenv("ANTHROPIC_API_KEY"):
-            configs["anthropic"] = LlmConfig.anthropic(os.getenv("ANTHROPIC_API_KEY"), "claude-3-sonnet-20240229")
+            configs["anthropic"] = LlmConfig.anthropic(os.getenv("ANTHROPIC_API_KEY"), "claude-3-5-sonnet-20241022")
+
+        if os.getenv("MISTRALAI_API_KEY"):
+            configs["mistralai"] = LlmConfig.mistralai(os.getenv("MISTRALAI_API_KEY"), "mistral-large-latest")
+        if os.getenv("TOGETHER_API_KEY"):
+            configs["togetherai"] = LlmConfig.togetherai(os.getenv("TOGETHER_API_KEY"), "openai/gpt-oss-20b")
 
         configs["ollama"] = LlmConfig.ollama("llama3.2")
 
@@ -808,12 +813,13 @@ class TestOpenRouterLLM:
             workflow.validate()
 
             executor = Executor(openrouter_gpt4_config, debug=True)
-            context = executor.execute(workflow)
+            result = executor.execute(workflow)
 
-            assert context.is_completed()
-            result = context.get_variable(f"node_result_{test_node.node_id}")
-            assert result is not None
-            assert len(result) > 0
+            assert result.is_success()
+            # Get output using the node name
+            output = result.get_node_output("OpenRouter Test Agent")
+            assert output is not None
+            assert len(output) > 0
 
         except Exception as e:
             pytest.fail(f"OpenRouter workflow execution failed: {e}")
@@ -833,20 +839,20 @@ class TestOpenRouterLLM:
                 name="Claude Summarizer", prompt="Summarize this analysis in 5 words: {input}", agent_id="claude_summarizer", llm_config=LlmConfig.openrouter(api_key, "anthropic/claude-3-5-haiku")
             )
 
-            workflow.add_node(gpt_node)
-            workflow.add_node(claude_node)
-            workflow.add_edge(gpt_node, claude_node)
+            gpt_id = workflow.add_node(gpt_node)
+            claude_id = workflow.add_node(claude_node)
+            workflow.connect(gpt_id, claude_id)  # Use connect instead of add_edge
             workflow.validate()
 
             # Use default config for executor
             default_config = LlmConfig.openrouter(api_key, "openai/gpt-4o-mini")
             executor = Executor(default_config, debug=True)
-            context = executor.execute(workflow)
+            result = executor.execute(workflow)
 
-            assert context.is_completed()
+            assert result.is_success()
 
-            gpt_result = context.get_variable(f"node_result_{gpt_node.node_id}")
-            claude_result = context.get_variable(f"node_result_{claude_node.node_id}")
+            gpt_result = result.get_node_output("GPT Analyzer")
+            claude_result = result.get_node_output("Claude Summarizer")
 
             assert gpt_result is not None
             assert claude_result is not None
@@ -905,20 +911,22 @@ class TestFireworksLLM:
         """Test Fireworks AI integration with workflow execution."""
         try:
             # Create a simple workflow with Fireworks AI
-            workflow = Workflow()
+            workflow = Workflow("Fireworks Test Workflow")
 
-            node = Node(name="fireworks_test", prompt="Explain quantum computing in one sentence.", llm_config=fireworks_config, max_tokens=100, temperature=0.3)
+            node = Node.agent(name="fireworks_test", prompt="Explain quantum computing in one sentence.", agent_id="fireworks_test_agent", llm_config=fireworks_config)
 
             workflow.add_node(node)
             workflow.validate()
 
             executor = Executor(fireworks_config)
-            context = await executor.execute_async(workflow)
+            # Use regular execute method since execute_async may not be available
+            result = executor.execute(workflow)
 
-            result = context.get_variable("fireworks_test_result")
-            assert result is not None
-            assert len(result) > 0
-            assert any(word in result.lower() for word in ["quantum", "computing", "computer"])
+            assert result.is_success()
+            output = result.get_node_output("fireworks_test")
+            assert output is not None
+            assert len(output) > 0
+            assert any(word in output.lower() for word in ["quantum", "computing", "computer"])
 
         except Exception as e:
             pytest.fail(f"Fireworks AI workflow failed: {e}")
@@ -972,23 +980,339 @@ class TestXaiLLM:
         """Test xAI integration with workflow execution."""
         try:
             # Create a simple workflow with xAI
-            workflow = Workflow()
 
-            node = Node(name="xai_test", prompt="Explain quantum computing in one sentence.", llm_config=xai_config, max_tokens=100, temperature=0.3)
+            workflow = Workflow("xAI Test Workflow")
+
+            node = Node.agent(name="xai_test", prompt="Explain quantum computing in one sentence.", agent_id="xai_test_agent", llm_config=xai_config)
 
             workflow.add_node(node)
             workflow.validate()
 
             executor = Executor(xai_config)
-            context = await executor.execute_async(workflow)
+            context = executor.execute(workflow)
 
-            result = context.get_variable("xai_test_result")
+            result = context.get_node_output("xai_test")
             assert result is not None
             assert len(result) > 0
             assert any(word in result.lower() for word in ["quantum", "computing", "computer"])
 
         except Exception as e:
             pytest.fail(f"xAI workflow failed: {e}")
+
+
+class TestAI21labsAILLM:
+    """Integrtion tests for AI21Labs LLM models."""
+
+    @pytest.fixture
+    def api_key(self) -> str:
+        """Get AI21 Labs API key from environment."""
+        api_key = os.getenv("AI21_API_KEY")
+        if not api_key:
+            pytest.skip("AI21_API_KEY not set")
+        return api_key or ""
+
+    @pytest.fixture
+    def ai21_config(self, api_key: str) -> Any:
+        """Create AI21 Labs configuration."""
+        return LlmConfig.ai21(api_key, "jamba-mini")
+
+    @pytest.fixture
+    def ai21_client(self, ai21_config: Any) -> Any:
+        """Create AI21 Labs client."""
+        return LlmClient(ai21_config)
+
+    def test_ai21_config_creation(self, ai21_config: Any) -> None:
+        """Test AI21 Labs config creation and properties."""
+        assert ai21_config.provider() == "ai21"
+        assert ai21_config.model() == "jamba-mini"
+
+    def test_ai21_client_creation(self, ai21_client: Any) -> None:
+        """Test AI21 Labs client creation."""
+        assert ai21_client is not None
+
+    @pytest.mark.asyncio
+    async def test_ai21_basic_completion(self, ai21_client: Any) -> None:
+        """Test basic completion with AI21 jamba-mini."""
+        try:
+            response = await ai21_client.complete_async(prompt="What is the capital of France?", max_tokens=50, temperature=0.1)
+
+            assert response is not None
+            assert len(response) > 0
+            assert "paris" in response.lower()
+
+        except Exception as e:
+            pytest.fail(f"AI21 Labs completion failed: {e}")
+
+    @pytest.mark.asyncio
+    async def test_ai21_workflow_integration(self, ai21_config: Any) -> None:
+        """Test AI21 Labs integration with workflow execution."""
+        try:
+            # Create a simple workflow with xAI
+            workflow = Workflow("AI21_test_workflow")
+
+            node = Node.agent(name="AI21_test", prompt="Explain quantum computing in one sentence.", llm_config=ai21_config)
+
+            workflow.add_node(node)
+            workflow.validate()
+
+            executor = Executor(ai21_config)
+            context = executor.execute(workflow)
+
+            result = context.get_node_output("AI21_test")
+            assert result is not None
+            assert len(result) > 0
+
+        except Exception as e:
+            pytest.fail(f"xAI workflow failed: {e}")
+
+
+class TestTogetherAILLM:
+    """Integration tests for TogetherAI LLM models."""
+
+    @pytest.fixture
+    def api_key(self) -> str:
+        """Get TogetherAI API key from environment."""
+        api_key = os.getenv("TOGETHERAI_API_KEY")
+        if not api_key:
+            pytest.skip("TOGETHERAI_API_KEY not set")
+        return api_key or ""
+
+    @pytest.fixture
+    def togetherai_gpt_oss_config(self, api_key: str) -> Any:
+        """Create TogetherAI GPT-OSS 20B configuration."""
+        return LlmConfig.togetherai(api_key, "openai/gpt-oss-20b")
+
+    @pytest.fixture
+    def togetherai_client(self, togetherai_gpt_oss_config: Any) -> Any:
+        """Create TogetherAI client."""
+        return LlmClient(togetherai_gpt_oss_config)
+
+    def test_togetherai_gpt_oss_config_creation(self, togetherai_gpt_oss_config: Any) -> None:
+        """Test TogetherAI GPT-OSS 20B config creation and properties."""
+        assert togetherai_gpt_oss_config.provider() == "togetherai"
+        assert togetherai_gpt_oss_config.model() == "openai/gpt-oss-20b"
+
+    def test_togetherai_client_creation(self, togetherai_client: Any) -> None:
+        """Test creating TogetherAI client."""
+        assert togetherai_client is not None
+
+    def test_togetherai_executor_creation(self, togetherai_gpt_oss_config: Any) -> None:
+        """Test creating workflow executor with TogetherAI config."""
+        executor = Executor(togetherai_gpt_oss_config)
+        assert executor is not None
+
+    def test_togetherai_executor_configurations(self, togetherai_gpt_oss_config: Any) -> None:
+        """Test different executor configurations with TogetherAI."""
+        # Test high throughput configuration
+        executor_ht = Executor.new_high_throughput(togetherai_gpt_oss_config)
+        assert executor_ht is not None
+
+        # Test low latency configuration
+        executor_ll = Executor.new_low_latency(togetherai_gpt_oss_config)
+        assert executor_ll is not None
+
+        # Test memory optimized configuration
+        executor_mo = Executor.new_memory_optimized(togetherai_gpt_oss_config)
+        assert executor_mo is not None
+
+    def test_togetherai_simple_completion(self, togetherai_client: Any) -> None:
+        """Test simple text completion with TogetherAI."""
+        try:
+            response = togetherai_client.complete("What is the capital of France?", max_tokens=200)
+            assert isinstance(response, str)
+            assert len(response) > 0
+        except Exception as e:
+            pytest.fail(f"TogetherAI completion failed: {e}")
+
+    def test_togetherai_simple_workflow_execution(self, togetherai_gpt_oss_config: Any) -> None:
+        """Test executing a simple workflow with TogetherAI."""
+        # Create a simple workflow
+        workflow = Workflow("test_togetherai_workflow")
+
+        # Create a simple agent node
+        try:
+            agent_node = Node.agent("test_agent", "Respond with 'Hello from TogetherAI'", "agent_togetherai")
+            node_id = workflow.add_node(agent_node)
+            assert node_id is not None
+
+            # Validate workflow
+            workflow.validate()
+
+            # Create executor and test basic execution capability
+            executor = Executor(togetherai_gpt_oss_config)
+            assert executor is not None
+
+        except Exception as e:
+            pytest.fail(f"TogetherAI workflow creation/validation failed: {e}")
+
+    @pytest.mark.asyncio
+    async def test_togetherai_basic_completion(self, togetherai_client: Any) -> None:
+        """Test basic completion with TogetherAI."""
+        try:
+            response = await togetherai_client.complete_async(prompt="What is the capital of France?", max_tokens=50, temperature=0.1)
+
+            assert response is not None
+            assert len(response) > 0
+            assert "paris" in response.lower()
+
+        except Exception as e:
+            pytest.fail(f"TogetherAI completion failed: {e}")
+
+    @pytest.mark.asyncio
+    async def test_togetherai_workflow_integration(self, togetherai_gpt_oss_config: Any) -> None:
+        """Test TogetherAI integration with workflow execution."""
+        try:
+            # Create a simple workflow with TogetherAI
+            workflow = Workflow("togetherai workflow test")
+
+            node = Node.agent(name="togetherai_test", prompt="Explain quantum computing in one sentence.", llm_config=togetherai_gpt_oss_config)
+
+            workflow.add_node(node)
+            workflow.validate()
+
+            executor = Executor(togetherai_gpt_oss_config)
+            context = executor.execute(workflow)
+
+            result = context.get_node_output("togetherai_test")
+            assert result is not None
+            assert len(result) > 0
+            assert any(word in result.lower() for word in ["quantum", "computing", "computer"])
+
+        except Exception as e:
+            pytest.fail(f"TogetherAI workflow failed: {e}")
+
+    def test_togetherai_multi_model_support(self, api_key: str) -> None:
+        """Test TogetherAI with multiple model configurations."""
+        models = ["openai/gpt-oss-20b", "moonshotai/Kimi-K2-Instruct-0905", "Qwen/Qwen3-Next-80B-A3B-Instruct"]
+
+        for model in models:
+            try:
+                config = LlmConfig.togetherai(api_key, model)
+                assert config.provider() == "togetherai"
+                assert config.model() == model
+
+                client = LlmClient(config)
+                assert client is not None
+
+                executor = Executor(config)
+                assert executor is not None
+
+            except Exception as e:
+                pytest.fail(f"TogetherAI multi-model test failed for {model}: {e}")
+
+    def test_togetherai_error_handling(self) -> None:
+        """Test TogetherAI error handling with invalid API key."""
+        try:
+            # Create config with invalid API key
+            invalid_config = LlmConfig.togetherai("invalid-key", "openai/gpt-oss-20b")
+            client = LlmClient(invalid_config)
+
+            # This should raise an authentication error
+            with pytest.raises((ValueError, RuntimeError)):
+                client.complete("Test prompt", max_tokens=10)
+
+        except Exception as e:
+            # Expected to fail with invalid API key
+            assert any(word in str(e).lower() for word in ["auth", "key", "invalid", "unauthorized"])
+
+
+class TestByteDanceLLM:
+    """Integration tests for ByteDance ModelArk LLM models."""
+
+    @pytest.fixture
+    def api_key(self) -> str:
+        """Get ByteDance API key from environment."""
+        api_key = os.getenv("BYTEDANCE_API_KEY")
+        if not api_key:
+            pytest.skip("BYTEDANCE_API_KEY not set")
+        return api_key or ""
+
+    @pytest.fixture
+    def bytedance_flash_config(self, api_key: str) -> Any:
+        """Create ByteDance configuration."""
+        return LlmConfig.bytedance(api_key, "seed-1-6-flash-250715")
+
+    @pytest.fixture
+    def bytedance_config(self, api_key: str) -> Any:
+        """Create ByteDance Pro configuration."""
+        return LlmConfig.bytedance(api_key, "seed-1-6-250915")
+
+    @pytest.fixture
+    def bytedance_client(self, bytedance_config: Any) -> Any:
+        """Create ByteDance client."""
+        return LlmClient(bytedance_config)
+
+    def test_bytedance_flash_config_creation(self, bytedance_flash_config: Any) -> None:
+        """Test ByteDance config creation and properties."""
+        assert bytedance_flash_config.provider() == "bytedance"
+        assert bytedance_flash_config.model() == "seed-1-6-flash-250715"
+
+    def test_bytedance_config_creation(self, bytedance_config: Any) -> None:
+        """Test ByteDance Pro config creation and properties."""
+        assert bytedance_config.provider() == "bytedance"
+        assert bytedance_config.model() == "seed-1-6-250915"
+
+    def test_bytedance_client_creation(self, bytedance_client: Any) -> None:
+        """Test creating ByteDance client."""
+        assert bytedance_client is not None
+
+    def test_bytedance_executor_creation(self, bytedance_config: Any) -> None:
+        """Test creating workflow executor with ByteDance config."""
+        executor = Executor(bytedance_config)
+        assert executor is not None
+
+    def test_bytedance_executor_configurations(self, bytedance_config: Any) -> None:
+        """Test different executor configurations with ByteDance."""
+        # Test high throughput configuration
+        executor_ht = Executor.new_high_throughput(bytedance_config)
+        assert executor_ht is not None
+
+        # Test low latency configuration
+        executor_ll = Executor.new_low_latency(bytedance_config)
+        assert executor_ll is not None
+
+        # Test memory optimized configuration
+        executor_mo = Executor.new_memory_optimized(bytedance_config)
+        assert executor_mo is not None
+
+    def test_bytedance_simple_completion(self, bytedance_client: Any) -> None:
+        """Test simple text completion with ByteDance."""
+        try:
+            response = bytedance_client.complete("Hello, world!", max_tokens=10)
+            assert isinstance(response, str)
+            assert len(response) > 0
+        except Exception as e:
+            pytest.fail(f"ByteDance completion failed: {e}")
+
+    def test_bytedance_simple_workflow_execution(self, bytedance_config: Any) -> None:
+        """Test executing a simple workflow with ByteDance."""
+        # Create a simple workflow
+        workflow = Workflow("test_bytedance_workflow")
+
+        # Create a simple agent node
+        try:
+            agent_node = Node.agent(name="test_agent", prompt="Explain quantum computing in one sentence.")
+            node_id = workflow.add_node(agent_node)
+            assert node_id is not None
+
+            # Validate workflow
+            workflow.validate()
+
+            # Create executor and test basic execution capability
+            executor = Executor(bytedance_config)
+            assert executor is not None
+
+            # Use regular execute method since execute_async may not be available
+            result = executor.execute(workflow)
+
+            assert result.is_success()
+            output = result.get_node_output("test_agent")
+            assert output is not None
+            assert len(output) > 0
+            assert any(word in output.lower() for word in ["quantum", "computing", "computer"])
+
+        except Exception as e:
+            pytest.fail(f"ByteDance workflow creation/validation failed: {e}")
 
 
 if __name__ == "__main__":

@@ -173,6 +173,30 @@ config = LlmConfig.deepseek("your-deepseek-api-key")  # Uses default model "deep
 
 **Returns**: `LlmConfig` instance
 
+##### `LlmConfig.mistralai(api_key, model=None)`
+Create MistralAI provider configuration.
+
+```python
+config = LlmConfig.mistralai("your-mistralai-api-key", "mistral-large-latest")
+
+# With default model
+config = LlmConfig.mistralai("your-mistralai-api-key")  # Uses default model "mistral-large-latest"
+```
+
+**Parameters**:
+- `api_key` (str): MistralAI API key
+- `model` (str, optional): Model name. Default: "mistral-large-latest"
+
+**Available Models**:
+- `mistral-large-latest`: Complex reasoning, multilingual tasks (128K context, function calling)
+- `mistral-medium-latest`: Balanced performance and cost (32K context, function calling)
+- `mistral-small-latest`: Fast responses, simple tasks (32K context, function calling)
+- `open-mistral-7b`: Open source, lightweight (32K context)
+- `open-mixtral-8x7b`: Open source, high performance (32K context)
+- `open-mixtral-8x22b`: Open source, largest model (64K context)
+
+**Returns**: `LlmConfig` instance
+
 ##### `LlmConfig.ollama(model=None)`
 Create Ollama provider configuration.
 
@@ -1019,7 +1043,7 @@ Factory class for creating different types of workflow nodes.
 
 #### Static Methods
 
-##### `Node.agent(name, prompt, agent_id=None, output_name=None, tools=None, system_prompt=None)`
+##### `Node.agent(name, prompt, agent_id=None, output_name=None, tools=None, system_prompt=None, llm_config=None, temperature=None, max_tokens=None)`
 Create an AI agent node.
 
 ```python
@@ -1031,7 +1055,10 @@ agent = Node.agent(
     agent_id="analyzer",  # Optional, auto-generated if not provided
     output_name="weather_report",  # Optional, custom output name
     tools=[get_weather],  # Optional, list of tools available to the agent
-    system_prompt="You are a helpful assistant."  # Optional, system prompt that defines agent behavior and constraints
+    system_prompt="You are a helpful assistant.",  # Optional, system prompt that defines agent behavior and constraints
+    llm_config=my_llm_config,  # Optional, custom LLM configuration for this specific agent
+    temperature=0.7,  # Optional, sampling temperature (0.0-2.0)
+    max_tokens=500  # Optional, maximum tokens to generate
 )
 ```
 
@@ -1042,6 +1069,9 @@ agent = Node.agent(
 - `output_name` (str, optional): Custom name for the node's output
 - `tools` (List, optional): List of tools available to the agent
 - `system_prompt` (str, optional): System prompt that defines agent behavior and constraints
+- `llm_config` (LlmConfig, optional): Custom LLM configuration for this specific agent
+- `temperature` (float, optional): Sampling temperature (0.0-2.0)
+- `max_tokens` (int, optional): Maximum tokens to generate
 
 **Returns**: `Node` instance
 

@@ -6,6 +6,7 @@ futures.workspace = true
 num_cpus.workspace = true
 pyo3.workspace = true
 pyo3-async-runtimes.workspace = true
+pythonize.workspace = true
 reqwest.workspace = true
 serde.workspace = true
 serde_json.workspace = true
@@ -33,7 +34,7 @@ workspace = true
 
 [package]
 description = "Production-grade Python bindings for GraphBit agentic workflow automation"
-name = "graphbit-python"
+name = "graphbit"
 publish = false
 authors.workspace = true
 categories.workspace = true
@@ -44,6 +45,18 @@ keywords.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 version.workspace = true
+
+# Enable vendored OpenSSL for aarch64 cross-compilation
+# Cross-compilation containers lack aarch64-specific OpenSSL dev packages
+[target.aarch64-unknown-linux-gnu]
+
+[target.aarch64-unknown-linux-gnu.dependencies]
+openssl = {version = "0.10", features = ["vendored"]}
+
+# Enable vendored OpenSSL for musl targets (Alpine Linux)
+# musl containers don't have OpenSSL dev packages, so we compile from source
+[target.'cfg(target_env = "musl")'.dependencies]
+openssl = {version = "0.10", features = ["vendored"]}
 
 [target.'cfg(unix)'.dependencies]
 jemallocator.workspace = true

@@ -3,16 +3,27 @@
 //! This module provides a unified interface for working with different
 //! embedding providers including `HuggingFace` and `OpenAI`.
 
+pub mod python_bridge;
+
 use crate::errors::{GraphBitError, GraphBitResult};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 
+pub use python_bridge::PythonBridgeEmbeddingProvider;
+
+#[cfg(feature = "python")]
+fn default_python_instance() -> Option<Arc<pyo3::PyObject>> {
+    // This is a placeholder that should never be used
+    // The python_instance should always be set when creating a PythonBridge config
+    None
+}
+
 /// Configuration for embedding providers
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EmbeddingConfig {
-    /// Provider type (e.g., "openai", "huggingface")
+    /// Provider type (e.g., "openai", "huggingface", "pythonbridge")
     pub provider: EmbeddingProvider,
     /// API key for the provider
     pub api_key: String,
@@ -26,6 +37,10 @@ pub struct EmbeddingConfig {
     pub max_batch_size: Option<usize>,
     /// Additional provider-specific parameters
     pub extra_params: HashMap<String, serde_json::Value>,
+    /// Python object instance for PythonBridge provider
+    #[cfg(feature = "python")]
+    #[serde(skip, default = "default_python_instance")]
+    pub python_instance: Option<Arc<pyo3::PyObject>>,
 }
 
 /// Supported embedding providers
@@ -36,6 +51,9 @@ pub enum EmbeddingProvider {
     OpenAI,
     /// `HuggingFace` embedding provider
     HuggingFace,
+    /// Python bridge provider for calling Python embedding implementations
+    #[cfg(feature = "python")]
+    PythonBridge,
 }
 
 /// Request for generating embeddings
@@ -63,24 +81,24 @@ impl EmbeddingInput {
     /// Get the texts as a vector
     pub fn as_texts(&self) -> Vec<&str> {
         match self {
-            EmbeddingInput::Single(text) => vec![text.as_str()],
-            EmbeddingInput::Multiple(texts) => texts.iter().map(|s| s.as_str()).collect(),
+            Self::Single(text) => vec![text.as_str()],
+            Self::Multiple(texts) => texts.iter().map(String::as_str).collect(),
         }
     }
 
     /// Get the number of texts
     pub fn len(&self) -> usize {
         match self {
-            EmbeddingInput::Single(_) => 1,
-            EmbeddingInput::Multiple(texts) => texts.len(),
+            Self::Single(_) => 1,
+            Self::Multiple(texts) => texts.len(),
         }
     }
 
     /// Check if empty
     pub fn is_empty(&self) -> bool {
         match self {
-            EmbeddingInput::Single(text) => text.is_empty(),
-            EmbeddingInput::Multiple(texts) => texts.is_empty(),
+            Self::Single(text) => text.is_empty(),
+            Self::Multiple(texts) => texts.is_empty(),
         }
     }
 }
@@ -330,7 +348,11 @@ impl EmbeddingProviderTrait for OpenAIEmbeddingProvider {
                     params: HashMap::new(),
                 };
                 let response = self.generate_embeddings(test_request).await?;
-                Ok(response.embeddings.first().map(|e| e.len()).unwrap_or(1536))
+                Ok(response
+                    .embeddings
+                    .first()
+                    .map(Vec::<f32>::len)
+                    .unwrap_or(1536))
             }
         }
     }
@@ -371,7 +393,7 @@ impl HuggingFaceEmbeddingProvider {
         self.config
             .base_url
             .as_deref()
-            .map(|url| url.to_string())
+            .map(str::to_string)
             .unwrap_or_else(|| {
                 format!(
                     "https://api-inference.huggingface.co/models/{}",
@@ -491,7 +513,11 @@ impl EmbeddingProviderTrait for HuggingFaceEmbeddingProvider {
             params: HashMap::new(),
         };
         let response = self.generate_embeddings(test_request).await?;
-        Ok(response.embeddings.first().map(|e| e.len()).unwrap_or(768))
+        Ok(response
+            .embeddings
+            .first()
+            .map(Vec::<f32>::len)
+            .unwrap_or(768))
     }
 
     fn max_batch_size(&self) -> usize {
@@ -514,6 +540,11 @@ impl EmbeddingProviderFactory {
             }
             EmbeddingProvider::HuggingFace => {
                 let provider = HuggingFaceEmbeddingProvider::new(config)?;
+                Ok(Box::new(provider))
+            }
+            #[cfg(feature = "python")]
+            EmbeddingProvider::PythonBridge => {
+                let provider = PythonBridgeEmbeddingProvider::new(config)?;
                 Ok(Box::new(provider))
             }
         }

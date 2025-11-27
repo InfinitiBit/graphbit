@@ -3,16 +3,23 @@
 //! This module provides a unified interface for working with different
 //! LLM providers while maintaining strong type safety and validation.
 
+pub mod ai21;
 pub mod anthropic;
+pub mod azure_openai;
+pub mod bytedance;
 pub mod deepseek;
 pub mod fireworks;
 pub mod huggingface;
+pub mod mistralai;
 pub mod ollama;
 pub mod openai;
 pub mod openrouter;
 pub mod perplexity;
 pub mod providers;
+pub mod python_bridge;
+pub mod replicate;
 pub mod response;
+pub mod togetherai;
 pub mod xai;
 
 pub use providers::{LlmConfig, LlmProvider, LlmProviderTrait};
@@ -188,7 +195,7 @@ impl LlmMessage {
 }
 
 /// Role of a message sender
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum LlmRole {
     /// User message role
@@ -250,6 +257,32 @@ impl LlmProviderFactory {
             }
             LlmConfig::Anthropic { api_key, model, .. } => {
                 Ok(Box::new(anthropic::AnthropicProvider::new(api_key, model)?))
+            }
+            LlmConfig::AzureOpenAI {
+                api_key,
+                deployment_name,
+                endpoint,
+                api_version,
+                ..
+            } => Ok(Box::new(azure_openai::AzureOpenAiProvider::new(
+                api_key,
+                deployment_name,
+                endpoint,
+                api_version,
+            )?)),
+            LlmConfig::ByteDance {
+                api_key,
+                model,
+                base_url,
+                ..
+            } => {
+                if let Some(base_url) = base_url {
+                    Ok(Box::new(bytedance::ByteDanceProvider::with_base_url(
+                        api_key, model, base_url,
+                    )?))
+                } else {
+                    Ok(Box::new(bytedance::ByteDanceProvider::new(api_key, model)?))
+                }
             }
             LlmConfig::DeepSeek {
                 api_key,
@@ -344,6 +377,41 @@ impl LlmProviderFactory {
                     Ok(Box::new(fireworks::FireworksProvider::new(api_key, model)?))
                 }
             }
+            LlmConfig::Replicate {
+                api_key,
+                model,
+                base_url,
+                version,
+                ..
+            } => {
+                let mut provider = if let Some(base_url) = base_url {
+                    replicate::ReplicateProvider::with_base_url(api_key, model, base_url)?
+                } else {
+                    replicate::ReplicateProvider::new(api_key, model)?
+                };
+
+                if let Some(version) = version {
+                    provider = provider.with_version(version);
+                }
+
+                Ok(Box::new(provider))
+            }
+            LlmConfig::TogetherAi {
+                api_key,
+                model,
+                base_url,
+                ..
+            } => {
+                if let Some(base_url) = base_url {
+                    Ok(Box::new(togetherai::TogetherAiProvider::with_base_url(
+                        api_key, model, base_url,
+                    )?))
+                } else {
+                    Ok(Box::new(togetherai::TogetherAiProvider::new(
+                        api_key, model,
+                    )?))
+                }
+            }
             LlmConfig::Xai {
                 api_key,
                 model,
@@ -358,12 +426,47 @@ impl LlmProviderFactory {
                     Ok(Box::new(xai::XaiProvider::new(api_key, model)?))
                 }
             }
+            LlmConfig::Ai21 {
+                api_key,
+                model,
+                base_url,
+                ..
+            } => {
+                if let Some(base_url) = base_url {
+                    Ok(Box::new(ai21::Ai21Provider::with_base_url(
+                        api_key, model, base_url,
+                    )?))
+                } else {
+                    Ok(Box::new(ai21::Ai21Provider::new(api_key, model)?))
+                }
+            }
+            LlmConfig::MistralAI {
+                api_key,
+                model,
+                base_url,
+                ..
+            } => {
+                if let Some(base_url) = base_url {
+                    Ok(Box::new(mistralai::MistralAiProvider::with_base_url(
+                        api_key, model, base_url,
+                    )?))
+                } else {
+                    Ok(Box::new(mistralai::MistralAiProvider::new(api_key, model)?))
+                }
+            }
+            #[cfg(feature = "python")]
+            LlmConfig::PythonBridge {
+                python_instance,
+                model,
+            } => Ok(Box::new(python_bridge::PythonBridgeProvider::new(
+                python_instance,
+                model,
+            )?)),
             LlmConfig::Custom { provider_type, .. } => Err(GraphBitError::config(format!(
                 "Unsupported custom provider: {provider_type}",
             ))),
             LlmConfig::Unconfigured { message } => Err(GraphBitError::config(format!(
-                "LLM provider not configured: {}",
-                message
+                "LLM provider not configured: {message}",
             ))),
         }
     }

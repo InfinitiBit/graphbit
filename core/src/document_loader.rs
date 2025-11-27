@@ -142,13 +142,13 @@ impl DocumentLoader {
 
         // Extract content based on document type
         let content = match document_type.to_lowercase().as_str() {
-            "txt" => self.extract_text_content(file_path).await?,
-            "pdf" => self.extract_pdf_content(file_path).await?,
-            "docx" => self.extract_docx_content(file_path).await?,
-            "json" => self.extract_json_content(file_path).await?,
-            "csv" => self.extract_csv_content(file_path).await?,
-            "xml" => self.extract_xml_content(file_path).await?,
-            "html" => self.extract_html_content(file_path).await?,
+            "txt" => Self::extract_text_content(file_path).await?,
+            "pdf" => Self::extract_pdf_content(file_path).await?,
+            "docx" => Self::extract_docx_content(file_path).await?,
+            "json" => Self::extract_json_content(file_path).await?,
+            "csv" => Self::extract_csv_content(file_path).await?,
+            "xml" => Self::extract_xml_content(file_path).await?,
+            "html" => Self::extract_html_content(file_path).await?,
             _ => {
                 return Err(GraphBitError::validation(
                     "document_loader",
@@ -330,7 +330,7 @@ impl DocumentLoader {
     }
 
     /// Extract content from plain text files
-    async fn extract_text_content(&self, file_path: &str) -> GraphBitResult<String> {
+    async fn extract_text_content(file_path: &str) -> GraphBitResult<String> {
         let content = std::fs::read_to_string(file_path).map_err(|e| {
             GraphBitError::validation("document_loader", format!("Failed to read text file: {e}"))
         })?;
@@ -338,7 +338,7 @@ impl DocumentLoader {
     }
 
     /// Extract content from JSON files
-    async fn extract_json_content(&self, file_path: &str) -> GraphBitResult<String> {
+    async fn extract_json_content(file_path: &str) -> GraphBitResult<String> {
         let content = std::fs::read_to_string(file_path).map_err(|e| {
             GraphBitError::validation("document_loader", format!("Failed to read JSON file: {e}"))
         })?;
@@ -355,13 +355,13 @@ impl DocumentLoader {
     }
 
     /// Extract content from CSV files
-    async fn extract_csv_content(&self, file_path: &str) -> GraphBitResult<String> {
+    async fn extract_csv_content(file_path: &str) -> GraphBitResult<String> {
         let content = std::fs::read_to_string(file_path).map_err(|e| {
             GraphBitError::validation("document_loader", format!("Failed to read CSV file: {e}"))
         })?;
 
         // Enhanced CSV parsing: convert to structured, readable format
-        match self.parse_csv_to_structured_text(&content) {
+        match Self::parse_csv_to_structured_text(&content) {
             Ok(structured_content) => Ok(structured_content),
             Err(_) => {
                 // Fallback to raw content if parsing fails
@@ -372,7 +372,6 @@ impl DocumentLoader {
 
     /// Parse CSV content into structured, readable text format
     fn parse_csv_to_structured_text(
-        &self,
         csv_content: &str,
     ) -> Result<String, Box<dyn std::error::Error>> {
         let mut reader = ReaderBuilder::new()
@@ -387,11 +386,13 @@ impl DocumentLoader {
         let header_count = headers.len();
 
         result.push_str("CSV Document Content:\n");
-        result.push_str(&format!(
+        write!(
+            result,
             "Columns ({}): {}\n\n",
             header_count,
             headers.iter().collect::<Vec<_>>().join(", ")
-        ));
+        )
+        .unwrap();
 
         // Process records
         let mut row_count = 0;
@@ -399,38 +400,40 @@ impl DocumentLoader {
             let record = record?;
             row_count += 1;
 
-            result.push_str(&format!("Row {}:\n", index + 1));
+            writeln!(result, "Row {}:", index + 1).unwrap();
 
             for (i, field) in record.iter().enumerate() {
                 if i < header_count {
                     let header = headers.get(i).unwrap_or("Unknown");
-                    result.push_str(&format!("  {}: {}\n", header, field.trim()));
+                    writeln!(result, "  {header}: {}", field.trim()).unwrap();
                 }
             }
             result.push('\n');
 
             // Limit output for very large CSV files
             if row_count >= 100 {
-                result.push_str(&format!(
-                    "... and {} more rows (truncated for readability)\n",
+                writeln!(
+                    result,
+                    "... and {} more rows (truncated for readability)",
                     reader.records().count()
-                ));
+                )
+                .unwrap();
                 break;
             }
         }
 
-        result.push_str(&format!("Total rows processed: {}\n", row_count));
+        writeln!(result, "Total rows processed: {row_count}").unwrap();
         Ok(result)
     }
 
     /// Extract content from XML files
-    async fn extract_xml_content(&self, file_path: &str) -> GraphBitResult<String> {
+    async fn extract_xml_content(file_path: &str) -> GraphBitResult<String> {
         let content = std::fs::read_to_string(file_path).map_err(|e| {
             GraphBitError::validation("document_loader", format!("Failed to read XML file: {e}"))
         })?;
 
         // Enhanced XML parsing: extract structured text content
-        match self.parse_xml_to_structured_text(&content) {
+        match Self::parse_xml_to_structured_text(&content) {
             Ok(structured_content) => Ok(structured_content),
             Err(_) => {
                 // Fallback to raw content if parsing fails
@@ -441,7 +444,6 @@ impl DocumentLoader {
 
     /// Parse XML content into structured, readable text format
     fn parse_xml_to_structured_text(
-        &self,
         xml_content: &str,
     ) -> Result<String, Box<dyn std::error::Error>> {
         let mut reader = Reader::from_str(xml_content);
@@ -462,14 +464,14 @@ impl DocumentLoader {
 
                     // Add element structure info
                     let indent = "  ".repeat(current_path.len() - 1);
-                    result.push_str(&format!("{}Element: {}\n", indent, name));
+                    writeln!(result, "{indent}Element: {name}").unwrap();
 
                     // Handle attributes
                     for attr in e.attributes() {
                         let attr = attr?;
                         let key = std::str::from_utf8(attr.key.as_ref())?;
                         let value = std::str::from_utf8(&attr.value)?;
-                        result.push_str(&format!("{}  @{}: {}\n", indent, key, value));
+                        writeln!(result, "{indent}  @{key}: {value}").unwrap();
                     }
                 }
                 Ok(Event::End(_)) => {
@@ -477,7 +479,7 @@ impl DocumentLoader {
                         let content = text_content.join(" ").trim().to_string();
                         if !content.is_empty() {
                             let indent = "  ".repeat(current_path.len());
-                            result.push_str(&format!("{}Text: {}\n", indent, content));
+                            writeln!(result, "{indent}Text: {content}").unwrap();
                         }
                         text_content.clear();
                     }
@@ -496,7 +498,7 @@ impl DocumentLoader {
                     }
                 }
                 Ok(Event::Eof) => break,
-                Err(e) => return Err(format!("Error parsing XML: {}", e).into()),
+                Err(e) => return Err(format!("Error parsing XML: {e}").into()),
                 _ => {} // Ignore other events
             }
             buf.clear();
@@ -507,13 +509,13 @@ impl DocumentLoader {
     }
 
     /// Extract content from HTML files
-    async fn extract_html_content(&self, file_path: &str) -> GraphBitResult<String> {
+    async fn extract_html_content(file_path: &str) -> GraphBitResult<String> {
         let content = std::fs::read_to_string(file_path).map_err(|e| {
             GraphBitError::validation("document_loader", format!("Failed to read HTML file: {e}"))
         })?;
 
         // Enhanced HTML parsing: extract structured text content
-        match self.parse_html_to_structured_text(&content) {
+        match Self::parse_html_to_structured_text(&content) {
             Ok(structured_content) => Ok(structured_content),
             Err(_) => {
                 // Fallback to raw content if parsing fails
@@ -524,7 +526,6 @@ impl DocumentLoader {
 
     /// Parse HTML content into structured, readable text format
     fn parse_html_to_structured_text(
-        &self,
         html_content: &str,
     ) -> Result<String, Box<dyn std::error::Error>> {
         let document = Html::parse_document(html_content);
@@ -535,10 +536,12 @@ impl DocumentLoader {
         // Extract title
         if let Ok(title_selector) = Selector::parse("title") {
             if let Some(title) = document.select(&title_selector).next() {
-                result.push_str(&format!(
-                    "Title: {}\n\n",
+                writeln!(
+                    result,
+                    "Title: {}\n",
                     title.text().collect::<String>().trim()
-                ));
+                )
+                .unwrap();
             }
         }
 
@@ -546,20 +549,20 @@ impl DocumentLoader {
         if let Ok(meta_selector) = Selector::parse("meta[name='description']") {
             if let Some(meta) = document.select(&meta_selector).next() {
                 if let Some(content) = meta.value().attr("content") {
-                    result.push_str(&format!("Description: {}\n\n", content.trim()));
+                    writeln!(result, "Description: {}\n", content.trim()).unwrap();
                 }
             }
         }
 
         // Extract headings with hierarchy
         for level in 1..=6 {
-            let selector_str = format!("h{}", level);
+            let selector_str = format!("h{level}");
             if let Ok(heading_selector) = Selector::parse(&selector_str) {
                 for heading in document.select(&heading_selector) {
                     let text = heading.text().collect::<String>().trim().to_string();
                     if !text.is_empty() {
                         let indent = "  ".repeat(level - 1);
-                        result.push_str(&format!("{}H{}: {}\n", indent, level, text));
+                        writeln!(result, "{indent}H{level}: {text}").unwrap();
                     }
                 }
             };
@@ -571,7 +574,7 @@ impl DocumentLoader {
             for paragraph in document.select(&p_selector) {
                 let text = paragraph.text().collect::<String>().trim().to_string();
                 if !text.is_empty() {
-                    result.push_str(&format!("  {}\n\n", text));
+                    writeln!(result, "  {text}\n").unwrap();
                 }
             }
         }
@@ -581,25 +584,27 @@ impl DocumentLoader {
             result.push_str("Lists:\n");
             for list in document.select(&ul_selector) {
                 let list_type = list.value().name();
-                result.push_str(&format!(
-                    "  {} List:\n",
+                writeln!(
+                    result,
+                    "  {} List:",
                     if list_type == "ul" {
                         "Unordered"
                     } else {
                         "Ordered"
                     }
-                ));
+                )
+                .unwrap();
 
                 if let Ok(li_selector) = Selector::parse("li") {
                     for (index, item) in list.select(&li_selector).enumerate() {
                         let text = item.text().collect::<String>().trim().to_string();
                         if !text.is_empty() {
                             let prefix = if list_type == "ul" {
-                                "•"
+                                "•".to_string()
                             } else {
-                                &format!("{}.", index + 1)
+                                format!("{}.", index + 1)
                             };
-                            result.push_str(&format!("    {} {}\n", prefix, text));
+                            writeln!(result, "    {prefix} {text}").unwrap();
                         }
                     }
                 }
@@ -614,7 +619,7 @@ impl DocumentLoader {
                 let text = link.text().collect::<String>().trim().to_string();
                 if let Some(href) = link.value().attr("href") {
                     if !text.is_empty() && !href.is_empty() {
-                        result.push_str(&format!("  {} -> {}\n", text, href));
+                        writeln!(result, "  {text} -> {href}").unwrap();
                     }
                 }
             }
@@ -625,7 +630,7 @@ impl DocumentLoader {
         if let Ok(table_selector) = Selector::parse("table") {
             result.push_str("Tables:\n");
             for (table_index, table) in document.select(&table_selector).enumerate() {
-                result.push_str(&format!("  Table {}:\n", table_index + 1));
+                writeln!(result, "  Table {}:", table_index + 1).unwrap();
 
                 // Extract headers
                 if let Ok(th_selector) = Selector::parse("th") {
@@ -636,7 +641,7 @@ impl DocumentLoader {
                         .collect();
 
                     if !headers.is_empty() {
-                        result.push_str(&format!("    Headers: {}\n", headers.join(" | ")));
+                        writeln!(result, "    Headers: {}", headers.join(" | ")).unwrap();
                     }
                 }
 
@@ -651,11 +656,13 @@ impl DocumentLoader {
                                 .collect();
 
                             if !cells.is_empty() {
-                                result.push_str(&format!(
-                                    "    Row {}: {}\n",
+                                writeln!(
+                                    result,
+                                    "    Row {}: {}",
                                     row_index + 1,
                                     cells.join(" | ")
-                                ));
+                                )
+                                .unwrap();
                             }
                         }
                     }
@@ -669,22 +676,19 @@ impl DocumentLoader {
     }
 
     /// Extract content from PDF files
-    async fn extract_pdf_content(&self, file_path: &str) -> GraphBitResult<String> {
-        use lopdf::Document;
-
-        let doc = Document::load(file_path).map_err(|e| {
-            GraphBitError::validation("document_loader", format!("Failed to open PDF file: {e}"))
+    async fn extract_pdf_content(file_path: &str) -> GraphBitResult<String> {
+        // Read the PDF file into memory
+        let bytes = std::fs::read(file_path).map_err(|e| {
+            GraphBitError::validation("document_loader", format!("Failed to read PDF file: {e}"))
         })?;
 
-        let mut text_content = String::new();
-
-        // Extract text from each page
-        for page_id in doc.get_pages().keys() {
-            if let Ok(page_text) = doc.extract_text(&[*page_id]) {
-                text_content.push_str(&page_text);
-                text_content.push('\n');
-            }
-        }
+        // Use pdf-extract for better text extraction with proper Unicode support
+        let text_content = pdf_extract::extract_text_from_mem(&bytes).map_err(|e| {
+            GraphBitError::validation(
+                "document_loader",
+                format!("Failed to extract text from PDF: {e}"),
+            )
+        })?;
 
         if text_content.trim().is_empty() {
             return Err(GraphBitError::validation(
@@ -697,7 +701,7 @@ impl DocumentLoader {
     }
 
     /// Extract content from DOCX files
-    async fn extract_docx_content(&self, file_path: &str) -> GraphBitResult<String> {
+    async fn extract_docx_content(file_path: &str) -> GraphBitResult<String> {
         use std::fs::File;
         use std::io::Read;
 
@@ -760,7 +764,7 @@ pub fn detect_document_type(file_path: &str) -> Option<String> {
     Path::new(file_path)
         .extension()
         .and_then(|ext| ext.to_str())
-        .map(|ext| ext.to_lowercase())
+        .map(str::to_lowercase)
         .filter(|ext| supported_types.contains(&ext.as_str()))
 }
 

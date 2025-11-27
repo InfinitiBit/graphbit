@@ -283,7 +283,7 @@ chunks = splitter.split_text(text)
 # Generate embeddings for each chunk
 embeddings = []
 for chunk in chunks:
-    embedding = embedder.embed_text(chunk.content)
+    embedding = embedder.embed(chunk.content)
     embeddings.append({
         'content': chunk.content,
         'embedding': embedding,

@@ -417,20 +417,20 @@ impl WorkflowState {
     pub fn is_terminal(&self) -> bool {
         matches!(
             self,
-            WorkflowState::Completed | WorkflowState::Failed { .. } | WorkflowState::Cancelled
+            Self::Completed | Self::Failed { .. } | Self::Cancelled
         )
     }
 
     /// Check if the workflow is currently running
     #[inline]
     pub fn is_running(&self) -> bool {
-        matches!(self, WorkflowState::Running { .. })
+        matches!(self, Self::Running { .. })
     }
 
     /// Check if the workflow is paused
     #[inline]
     pub fn is_paused(&self) -> bool {
-        matches!(self, WorkflowState::Paused { .. })
+        matches!(self, Self::Paused { .. })
     }
 }
 
