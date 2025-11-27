@@ -69,11 +69,25 @@ This application leverages GraphBit's advanced AI capabilities:
 
    This will automatically install GraphBit and all other required dependencies listed in `pyproject.toml`.
 
-3. **Set up environment variables**:
+3. **Install GraphBit Tracer** (for tracing and observability):
+   ```bash
+   pip install graphbit-tracer
+   ```
+
+4. **Set up environment variables**:
    ```bash
    # Set your OpenAI API key
    export OPENAI_API_KEY="your_api_key_here"
+
+   # Set GraphBit Tracer environment variables (required for tracing)
+   export GRAPHBIT_TRACING_API_KEY="your_graphbit_api_key_here"
+   export GRAPHBIT_TRACEABLE_PROJECT="Chatbot"
+
+   # Optional: Custom API endpoint (defaults to production endpoint)
+   export GRAPHBIT_TRACING_API_URL="https://platform-api.graphbit.ai/api/v1/tracing/single-run"
    ```
+
+   > **Note**: The `GRAPHBIT_TRACING_API_KEY` and `GRAPHBIT_TRACEABLE_PROJECT` environment variables are required for the tracer to function properly. If you don't have a GraphBit API key yet, you can obtain one from the GraphBit platform.
 
 ### Running the Application
 
