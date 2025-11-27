@@ -10,7 +10,6 @@ use quick_xml::Reader;
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::fmt::Write;
 use std::io::Cursor;
 use std::path::Path;
 
