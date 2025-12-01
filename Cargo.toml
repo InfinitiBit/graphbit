@@ -94,6 +94,11 @@ members = [
 ]
 resolver = "2"
 
+# Note: versions only in workspace.dependencies; set features per-crate.
+# Avoid enabling PyO3 features globally to prevent feature unification
+# from affecting non-Python crates. See `python/Cargo.toml` for
+# `pyo3` (extension-module, abi3-py39) and `pyo3-async-runtimes`
+# (tokio-runtime) feature configuration.
 [workspace.dependencies]
 # Core dependencies with consistent versions
 anyhow = "1.0"
@@ -115,9 +120,9 @@ num_cpus = "1.16"
 pdf-extract = "0.10"
 # Graph and algorithms
 petgraph = "0.6"
-# Python bindings
-pyo3 = {version = "0.24.1", features = ["extension-module"]}
-pyo3-async-runtimes = {version = "0.24", features = ["tokio-runtime"]}
+# Python bindings (features set per-crate; no global features here)
+pyo3 = "0.24.1"
+pyo3-async-runtimes = "0.24"
 pythonize = "0.24"
 quick-xml = {version = "0.36", features = ["serialize"]}
 rand = "0.8"
@@ -134,7 +139,7 @@ thiserror = "1.0"
 tokio = {version = "1.38", features = ["full"]}
 # Tracing and logging
 tracing = "0.1"
-tracing-subscriber = {version = "0.3.20", features = ["env-filter", "json"]}
+tracing-subscriber = "0.3.20"
 uuid = {version = "1.8", features = ["v4", "v5", "serde"]}
 
 [workspace.lints.clippy]
@@ -181,4 +186,4 @@ keywords = ["ai", "automation", "workflow", "agent", "llm"]
 license-file = "LICENSE.md"
 repository = "https://github.com/InfinitiBit/graphbit"
 rust-version = "1.70.0"
-version = "0.5.1"
+version = "0.6.0"
