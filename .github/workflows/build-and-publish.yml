@@ -112,15 +112,11 @@ jobs:
           target: x64
           manylinux: default
 
-          # macOS (Intel)
-        - runner: macos-13
-          target: x86_64
-          manylinux: default
-
-          # macOS (Apple Silicon)
+          # macOS (Universal2)
         - runner: macos-14
-          target: aarch64
+          target: universal2-apple-darwin
           manylinux: default
+        # abi3 builds don't require multiple Windows/macOS interpreters
 
     steps:
     - name: Checkout code
@@ -369,17 +365,8 @@ jobs:
         echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
         echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
 
-        if [ "${{ steps.count.outputs.wheel_count }}" -eq 28 ]; then
-          echo "| Wheel Count (28) | ✅ Pass |" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "| Wheel Count (28) | ❌ Fail (${{ steps.count.outputs.wheel_count }}) |" >> $GITHUB_STEP_SUMMARY
-        fi
-
-        if [ "${{ steps.count.outputs.sdist_count }}" -eq 1 ]; then
-          echo "| Sdist Count (1) | ✅ Pass |" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "| Sdist Count (1) | ❌ Fail (${{ steps.count.outputs.sdist_count }}) |" >> $GITHUB_STEP_SUMMARY
-        fi
+        echo "| Wheels Found | ${{ steps.count.outputs.wheel_count }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Sdist Found | ${{ steps.count.outputs.sdist_count }} |" >> $GITHUB_STEP_SUMMARY
 
         if [ "${{ steps.verify.outputs.passed }}" = "true" ]; then
           echo "| Version Check | ✅ Pass |" >> $GITHUB_STEP_SUMMARY
@@ -480,7 +467,7 @@ jobs:
         echo ""
         echo "TestPyPI publication succeeded!"
         echo "All safety checks passed:"
-        echo "  ✅ All 28 wheels built successfully"
+        echo "  ✅ All wheels built successfully"
         echo "  ✅ Source distribution built successfully"
         echo "  ✅ Artifact verification passed"
         echo "  ✅ TestPyPI publication succeeded"
@@ -682,7 +669,7 @@ jobs:
             echo "🎉 **Package published to Production PyPI!**" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "**Publication Sequence:**" >> $GITHUB_STEP_SUMMARY
-            echo "1. ✅ Built all 28 wheels + sdist" >> $GITHUB_STEP_SUMMARY
+            echo "1. ✅ Built all wheels + sdist" >> $GITHUB_STEP_SUMMARY
             echo "2. ✅ Verified all artifacts" >> $GITHUB_STEP_SUMMARY
             echo "3. ✅ Published to TestPyPI (safety step)" >> $GITHUB_STEP_SUMMARY
             echo "4. ✅ Published to Production PyPI" >> $GITHUB_STEP_SUMMARY
