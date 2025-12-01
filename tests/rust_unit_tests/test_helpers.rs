@@ -151,6 +151,7 @@ pub struct TestData {
 }
 
 impl TestData {
+    #[allow(dead_code)]
     pub fn new() -> Self {
         let text = "This is test content".to_string();
         let json = serde_json::json!({
