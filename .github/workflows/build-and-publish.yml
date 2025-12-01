@@ -114,7 +114,7 @@ jobs:
 
           # macOS (Universal2)
         - runner: macos-14
-          target: aarch64
+          target: universal2-apple-darwin
           manylinux: default
         # abi3 builds don't require multiple Windows/macOS interpreters
 
@@ -147,7 +147,7 @@ jobs:
       uses: PyO3/maturin-action@v1
       with:
         target: ${{ matrix.platform.target }}
-        args: ${{ startsWith(matrix.platform.runner, 'macos') && '--release --out dist --find-interpreter --universal2' || '--release --out dist --find-interpreter' }}
+        args: --release --out dist --find-interpreter
         sccache: 'true'
         manylinux: ${{ matrix.platform.manylinux }}
         working-directory: python
