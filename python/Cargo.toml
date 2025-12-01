@@ -4,8 +4,6 @@ uuid = {workspace = true, features = ["v4"]}
 chrono.workspace = true
 futures.workspace = true
 num_cpus.workspace = true
-pyo3.workspace = true
-pyo3-async-runtimes.workspace = true
 pythonize.workspace = true
 reqwest.workspace = true
 serde.workspace = true
@@ -16,6 +14,14 @@ tokio.workspace = true
 # Production-grade logging and tracing
 tracing.workspace = true
 tracing-subscriber.workspace = true
+
+[dependencies.pyo3]
+workspace = true
+features = ["extension-module", "abi3-py39"]
+
+[dependencies.pyo3-async-runtimes]
+workspace = true
+features = ["tokio-runtime"]
 
 [features]
 cli = []
