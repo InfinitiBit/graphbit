@@ -1,16 +1,19 @@
 import os
 import sys
+import json
+import tempfile
+from pathlib import Path
 
 from dotenv import load_dotenv
-
 load_dotenv()
+
+import graphbit
+from graphbit import get_system_info, health_check, init, version, LlmClient, EmbeddingClient, EmbeddingConfig, DocumentLoader, CharacterSplitter, RecursiveSplitter, SentenceSplitter, TokenSplitter, Executor, LlmConfig, Node, Workflow, tool
 
 
 def check_system_health():
     """Check GraphBit system health and capabilities."""
     try:
-        from graphbit import get_system_info, health_check, init, version
-
         print("\n\n\nSystem Health Check")
         print("=" * 50)
 
@@ -53,10 +56,6 @@ def check_system_health():
         print("=" * 50)
         return True
 
-    except ImportError as e:
-        print(f"Failed to import GraphBit modules: {e}")
-        print("   Make sure GraphBit is properly installed and built")
-        return False
     except Exception as e:
         print(f"Unexpected error in system health check: {e}")
         return False
@@ -71,8 +70,6 @@ if not check_system_health():
 def check_configuration():
     """Test GraphBit runtime configuration."""
     try:
-        import graphbit
-
         print("\n\n\nRuntime Configuration Check")
         print("=" * 50)
 
@@ -115,9 +112,6 @@ def check_configuration():
         print("=" * 50)
         return True
 
-    except ImportError as e:
-        print(f"Failed to import GraphBit for configuration: {e}")
-        return False
     except Exception as e:
         print(f"Unexpected error in configuration check: {e}")
         return False
@@ -132,7 +126,6 @@ if not check_configuration():
 def check_llm_client():
     """Demonstrate LLM client functionality."""
     try:
-        from graphbit import LlmClient, LlmConfig
 
         print("\n\n\nLLM Client Integration")
         print("=" * 50)
@@ -172,9 +165,6 @@ def check_llm_client():
         print("=" * 50)
         return True
 
-    except ImportError as e:
-        print(f"Failed to import LLM modules: {e}")
-        return False
     except Exception as e:
         print(f"Unexpected error in LLM client check: {e}")
         return False
@@ -189,7 +179,6 @@ if not check_llm_client():
 def check_embeddings():
     """Demonstrate embeddings functionality."""
     try:
-        from graphbit import EmbeddingClient, EmbeddingConfig
 
         print("\n\n\nEmbeddings Functionality")
         print("=" * 50)
@@ -248,9 +237,6 @@ def check_embeddings():
         print("=" * 50)
         return True
 
-    except ImportError as e:
-        print(f"Failed to import embedding modules: {e}")
-        return False
     except Exception as e:
         print(f"Unexpected error in embeddings check: {e}")
         return False
@@ -265,12 +251,6 @@ if not check_embeddings():
 def check_document_loading():
     """Demonstrate document loading functionality."""
     try:
-        import json
-        import tempfile
-        from pathlib import Path
-
-        from graphbit import DocumentLoader
-
         print("\n\n\nDocument Loading")
         print("=" * 50)
 
@@ -348,9 +328,6 @@ def check_document_loading():
             print(f"Failed to create temporary directory: {e}")
             return False
 
-    except ImportError as e:
-        print(f"Failed to import document loading modules: {e}")
-        return False
     except Exception as e:
         print(f"Unexpected error in document loading check: {e}")
         return False
@@ -365,8 +342,6 @@ if not check_document_loading():
 def check_text_splitter():
     """Demonstrate text splitter functionality."""
     try:
-        from graphbit import CharacterSplitter, RecursiveSplitter, SentenceSplitter, TokenSplitter
-
         print("\n\n\nText Splitting")
         print("=" * 50)
 
@@ -409,9 +384,6 @@ def check_text_splitter():
         print(f"Successfully tested {success_count}/{len(splitter_tests)} text splitters")
         return success_count == len(splitter_tests)
 
-    except ImportError as e:
-        print(f"Failed to import text splitter modules: {e}")
-        return False
     except Exception as e:
         print(f"Unexpected error in text splitter check: {e}")
         return False
@@ -426,7 +398,6 @@ if not check_text_splitter():
 def check_simple_workflow():
     """Demonstrate simple workflow functionality."""
     try:
-        from graphbit import Executor, LlmConfig, Node, Workflow
 
         print("\n\n\nSimple Workflow")
         print("=" * 50)
@@ -471,7 +442,7 @@ def check_simple_workflow():
 
             result = executor.execute(workflow)
             output = result.get_node_output("Greet User")
-            print(f"Workflow executed successfully")
+            print("Workflow executed successfully")
             print(f"   Result: {output}")
         except Exception as e:
             print(f"Workflow execution failed: {e}")
@@ -481,9 +452,6 @@ def check_simple_workflow():
         print("=" * 50)
         return True
 
-    except ImportError as e:
-        print(f"Failed to import workflow modules: {e}")
-        return False
     except Exception as e:
         print(f"Unexpected error in simple workflow check: {e}")
         return False
@@ -498,8 +466,6 @@ if not check_simple_workflow():
 def check_complex_workflow():
     """Demonstrate complex workflow functionality."""
     try:
-        from graphbit import Executor, LlmConfig, Node, Workflow
-
         print("\n\n\nComplex Workflow")
         print("=" * 50)
 
@@ -565,7 +531,7 @@ def check_complex_workflow():
             end_output = result.get_node_output("End")
             all_outputs = result.get_all_node_outputs()
 
-            print(f"Complex workflow executed successfully")
+            print("Complex workflow executed successfully")
             print(f"   End result: {end_output}")
             print(f"   All outputs: {len(all_outputs)} nodes completed")
         except Exception as e:
@@ -576,9 +542,6 @@ def check_complex_workflow():
         print("=" * 50)
         return True
 
-    except ImportError as e:
-        print(f"Failed to import complex workflow modules: {e}")
-        return False
     except Exception as e:
         print(f"Unexpected error in complex workflow check: {e}")
         return False
@@ -593,8 +556,6 @@ if not check_complex_workflow():
 def check_tool_calling_workflow():
     """Demonstrate tool calling workflow functionality."""
     try:
-        from graphbit import Executor, LlmConfig, Node, Workflow, tool
-
         print("\n\n\nTool Calling Workflow")
         print("=" * 50)
 
@@ -623,7 +584,7 @@ def check_tool_calling_workflow():
                         return f"Result: {result}"
                     else:
                         return "Error: Invalid expression"
-                except:
+                except Exception:
                     return "Error: Could not evaluate expression"
 
             print("Tools created successfully")
@@ -668,7 +629,7 @@ def check_tool_calling_workflow():
 
             result = executor.execute(workflow)
             output = result.get_node_output("Greet User")
-            print(f"Tool calling workflow executed successfully")
+            print("Tool calling workflow executed successfully")
             print(f"   Result: {output}")
         except Exception as e:
             print(f"Tool calling workflow execution failed: {e}")
@@ -678,9 +639,6 @@ def check_tool_calling_workflow():
         print("=" * 50)
         return True
 
-    except ImportError as e:
-        print(f"Failed to import tool calling workflow modules: {e}")
-        return False
     except Exception as e:
         print(f"Unexpected error in tool calling workflow check: {e}")
         return False
