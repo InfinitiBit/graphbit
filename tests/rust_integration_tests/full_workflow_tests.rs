@@ -872,6 +872,7 @@ async fn test_real_embeddings_workflow() {
         timeout_seconds: Some(30),
         max_batch_size: Some(16),
         extra_params: HashMap::new(),
+        python_instance: None,
     };
 
     let service_result = EmbeddingService::new(embedding_config);

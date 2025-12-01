@@ -79,6 +79,7 @@ pub fn create_test_embedding_provider() -> Box<dyn EmbeddingProviderTrait> {
         timeout_seconds: Some(5),
         max_batch_size: Some(1),
         extra_params: Default::default(),
+        python_instance: None,
     };
     EmbeddingProviderFactory::create_provider(config).unwrap()
 }
