@@ -1,40 +1,33 @@
 name: Build and Publish to PyPI
 
 # ============================================================================
-# Purpose: Build wheels and source distribution, then publish to PyPI
+# Purpose
+# - Build wheels for supported platforms and a source distribution (sdist)
+# - Verify artifacts, then publish to TestPyPI first and PyPI second
 #
-# This workflow:
-# - Builds wheels for all platforms (7 platforms x 4 Python versions = 28 wheels)
-# - Builds source distribution (sdist)
-# - Verifies all artifacts are present and correct
-# - Publishes to TestPyPI FIRST (mandatory safety step)
-# - Publishes to Production PyPI ONLY after TestPyPI succeeds
+# Publication Sequence
+# 1) Build wheels
+# 2) Build sdist
+# 3) Verify artifacts
+# 4) Publish to TestPyPI (safety gate)
+# 5) Publish to PyPI (only after TestPyPI succeeds)
 #
-# PUBLICATION SEQUENCE (MANDATORY):
-# 1. Build all 28 wheels (ALL must succeed)
-# 2. Build sdist (must succeed)
-# 3. Verify artifacts (must pass all checks)
-# 4. Publish to TestPyPI (mandatory for tag triggers)
-# 5. Publish to Production PyPI (only after TestPyPI succeeds)
+# Triggers
+# - Tag pushes (e.g., v0.5.0, v1.0.0): publish to TestPyPI then PyPI
+# - Manual dispatch: optional publication with safety controls
 #
-# TRIGGERS:
-# - Version tags (v0.5.0, v1.0.0, etc.) - Auto-publish to TestPyPI then PyPI
-# - Manual workflow_dispatch - Optional publish with safety controls
+# Safety Controls
+# - TestPyPI -> PyPI sequence (no direct-to-PyPI publishes)
+# - All builds must succeed before any publish
+# - Version validation (tag must match pyproject.toml when applicable)
+# - Artifact sanity checks (counts and basic structure)
+# - Skip publish when version already exists on PyPI (configurable)
 #
-# SAFETY FEATURES:
-# - Sequential publication (TestPyPI -> Production PyPI)
-# - All builds must succeed before any publication
-# - Version validation (tag must match pyproject.toml)
-# - Artifact count verification (28 wheels + 1 sdist)
-# - PyPI version existence check (skip if already published)
-# - TestPyPI validation before production
+# Secrets
+# - PYPI_API_TOKEN: PyPI API token
+# - TESTPYPI_API_TOKEN: TestPyPI API token
 #
-# SECRETS REQUIRED:
-# - PYPI_API_TOKEN: PyPI API token for production uploads
-# - TESTPYPI_API_TOKEN: TestPyPI API token (REQUIRED for tag triggers)
-#
-# NOTE: This workflow does NOT create GitHub releases automatically.
-#       GitHub releases should be created manually if desired.
+# Note: This workflow does not create GitHub releases automatically.
 # ============================================================================
 
 on:
@@ -83,6 +76,10 @@ jobs:
   # ============================================================================
   # Job 1: Build Wheels for All Platforms
   # ============================================================================
+    # ============================================================================
+    # Job 1: Build Wheels (multi-platform)
+    # Builds Python wheels across the configured platform matrix.
+    # ============================================================================
   build-wheels:
     name: Build Wheel - ${{ matrix.platform.runner }} - ${{ matrix.platform.target }}
     runs-on: ${{ matrix.platform.runner }}
@@ -91,7 +88,7 @@ jobs:
       fail-fast: false
       matrix:
         platform:
-          # Linux (glibc) - Standard Linux distributions
+          # Linux (glibc) - common Linux distributions
         - runner: ubuntu-22.04
           target: x86_64
           manylinux: auto
@@ -99,7 +96,7 @@ jobs:
           target: aarch64
           manylinux: auto
 
-          # Linux (musl) - Alpine Linux and minimal containers
+          # Linux (musl) - Alpine / minimal containers
         - runner: ubuntu-22.04
           target: x86_64
           manylinux: musllinux_1_2
@@ -112,11 +109,11 @@ jobs:
           target: x64
           manylinux: default
 
-          # macOS (Universal2)
+          # macOS (universal2)
         - runner: macos-14
           target: universal2-apple-darwin
           manylinux: default
-        # abi3 builds don't require multiple Windows/macOS interpreters
+        # Note: abi3 builds typically do not require multiple Win/macOS interpreters
 
     steps:
     - name: Checkout code
@@ -199,6 +196,10 @@ jobs:
   # ============================================================================
   # Job 2: Build Source Distribution
   # ============================================================================
+    # ============================================================================
+    # Job 2: Build Source Distribution (sdist)
+    # Builds the sdist needed for publication.
+    # ============================================================================
   build-sdist:
     name: Build Source Distribution
     runs-on: ubuntu-latest
@@ -262,6 +263,10 @@ jobs:
   # ============================================================================
   # Job 3: Verify Artifacts (Safety Checks)
   # ============================================================================
+    # ============================================================================
+    # Job 3: Verify Artifacts (safety checks)
+    # Performs count and structure checks on built artifacts.
+    # ============================================================================
   verify-artifacts:
     name: Verify Build Artifacts
     needs: [build-wheels, build-sdist]
@@ -383,12 +388,17 @@ jobs:
   # For tag triggers: Always runs (TestPyPI-first approach)
   # For manual triggers: Runs if use_test_pypi_only=true OR publish_to_pypi=true
   # ============================================================================
+    # ============================================================================
+    # Job 4: Publish to TestPyPI
+    # Test gate before PyPI. Required for tag-triggered publishes; configurable
+    # for manual runs. Production publish occurs only if this succeeds.
+    # ============================================================================
   publish-testpypi:
     name: Publish to TestPyPI
     needs: [build-wheels, build-sdist, verify-artifacts]
     if: always()
     runs-on: ubuntu-latest
-    # Uncomment to require manual approval:
+    # Optional: require manual approval via environments
     # environment: testpypi
 
     steps:
@@ -452,12 +462,17 @@ jobs:
   # For manual triggers: Runs if publish_to_pypi=true AND TestPyPI succeeded
   # Skipped if: use_test_pypi_only=true (TestPyPI-only mode)
   # ============================================================================
+    # ============================================================================
+    # Job 5: Publish to PyPI
+    # Runs only after TestPyPI has succeeded. For manual runs, requires
+    # publish_to_pypi=true and is skipped when use_test_pypi_only=true.
+    # ============================================================================
   publish-pypi:
     name: Publish to PyPI
     needs: [build-wheels, build-sdist, verify-artifacts, publish-testpypi]
     if: always()
     runs-on: ubuntu-latest
-    # Uncomment to require manual approval for production releases:
+    # Optional: require manual approval for production releases
     # environment: pypi-production
 
     steps:
@@ -595,6 +610,10 @@ jobs:
   # ============================================================================
   # Job 6: Workflow Summary (Always runs)
   # ============================================================================
+    # ============================================================================
+    # Job 6: Workflow Summary (always)
+    # Writes a concise status summary to the job summary.
+    # ============================================================================
   workflow-summary:
     name: Workflow Summary
     needs: [build-wheels, build-sdist, verify-artifacts, publish-testpypi, publish-pypi]
