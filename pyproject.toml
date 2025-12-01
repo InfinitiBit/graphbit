@@ -11,11 +11,13 @@ classifiers = [
   "Intended Audience :: Developers",
   "License :: InfinitiBit Approved :: Custom License",
   "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Programming Language :: Rust",
   "Topic :: Software Development :: Libraries :: Python Modules",
   "Topic :: Scientific/Engineering :: Artificial Intelligence",
@@ -39,8 +41,8 @@ maintainers = [
 ]
 name = "graphbit"
 readme = "README.md"
-requires-python = ">=3.10"
-version = "0.5.1"
+requires-python = ">=3.9,<3.15"
+version = "0.6.0"
 
 [project.urls]
 "Bug Tracker" = "https://github.com/InfinitiBit/graphbit/issues"
@@ -152,7 +154,7 @@ name = "graphbit"
 package-mode = true
 readme = "README.md"
 repository = "https://github.com/InfinitiBit/graphbit"
-version = "0.5.1"
+version = "0.6.0"
 
 [tool.poetry.dependencies]
 # Core dependencies - minimal for framework functionality
@@ -160,7 +162,7 @@ aiofiles = ">=23.0.0"
 aiohttp = "^3.12.15"
 huggingface_hub = ">=0.33.4"
 numpy = ">=1.24.0"
-python = ">=3.10,<=3.13.7"
+python = ">=3.9,<3.15"
 python-dotenv = ">=1.0.0"
 rich = ">=13.0.0"
 typer = ">=0.9.0"
