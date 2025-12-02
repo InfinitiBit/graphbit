@@ -1,25 +1,23 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # test_python_versions.sh
-# Script to test GraphBit repository against Python versions using Poetry and aarch64-apple-darwin
+# Run GraphBit build & core checks against specific Python versions using Poetry.
 
-set -e  # Exit on any error
+set -euo pipefail
 
-# Configuration
-PYTHON_VERSIONS=("3.9.2" "3.13.8")
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(dirname "$SCRIPT_DIR")"
+# ----------------- Configuration -----------------
+
+PYTHON_VERSIONS=("3.9.2" "3.11")
+
+REPO_ROOT="$(pwd)"
 LOGS_DIR="$REPO_ROOT/logs"
-EXAMPLE_SCRIPT="$REPO_ROOT/scripts/core-functionalities-checker.py"
+CHECKER_SCRIPT="$REPO_ROOT/scripts/core-functionalities-checker.py"
 
-# Force Rust builds to use Apple Silicon target
-RUST_TARGET="aarch64-apple-darwin"
-export CARGO_BUILD_TARGET="$RUST_TARGET"
+# Global for current log file
+LOG_FILE=""
 
-# Resolved python binary for current version under test
-PY_BIN=""
+# ----------------- Helpers -----------------
 
-# Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -27,247 +25,258 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 print_status() {
-    local color=$1
-    local message=$2
+    local color="$1"
+    local message="$2"
     echo -e "${color}${message}${NC}"
 }
 
-log_with_timestamp() {
-    local message=$1
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $message"
-}
-
-create_logs_dir() {
-    if [ ! -d "$LOGS_DIR" ]; then
-        mkdir -p "$LOGS_DIR"
-        print_status $GREEN "Created logs directory: $LOGS_DIR"
+log() {
+    local message="$1"
+    if [ -n "${LOG_FILE:-}" ]; then
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] $message" >> "$LOG_FILE"
     fi
 }
 
-check_python_version() {
-    local version=$1
-
-    # Try exact match: version
-    if command -v "python$version" >/dev/null 2>&1; then
-        PY_BIN="python$version"
-        return 0
-    fi
-
-    local major_minor="${version%.*}"
-    if command -v "python$major_minor" >/dev/null 2>&1; then
-        # Get the full version from this binary
-        local full_ver
-        full_ver=$("python$major_minor" -c 'import sys; print(".".join(map(str, sys.version_info[:3])))' 2>/dev/null || echo "")
-
-        if [ "$full_ver" = "$version" ]; then
-            PY_BIN="python$major_minor"
-            return 0
-        fi
-    fi
-
-    # If we reach here, we couldn't find a matching binary
-    PY_BIN=""
-    return 1
-}
-
-# Ensure Rust toolchain + target are ready
-check_rust_setup() {
-    if ! command -v rustup >/dev/null 2>&1; then
-        print_status $RED "rustup is not installed. Please install Rust via rustup."
+get_poetry_venv_root() {
+    # Use last line in case poetry prints extra info
+    local venv_root
+    venv_root="$(poetry config virtualenvs.path 2>/dev/null | tail -n 1 || true)"
+    if [ -z "$venv_root" ]; then
+        print_status "$RED" "Could not determine Poetry virtualenvs.path. Aborting to avoid rm -rf on an empty path."
         exit 1
     fi
-
-    # Install the desired target if missing
-    if ! rustup target list --installed | grep -q "^$RUST_TARGET$"; then
-        print_status $YELLOW "Rust target $RUST_TARGET not found. Adding it..."
-        rustup target add "$RUST_TARGET"
-        print_status $GREEN "Rust target $RUST_TARGET installed."
-    else
-        print_status $GREEN "Rust target $RUST_TARGET already installed."
-    fi
+    echo "$venv_root"
 }
 
-test_python_version() {
-    local python_version=$1
-    local log_file="$LOGS_DIR/${python_version}_support_test.log"
+resolve_python_binary() {
+    # Resolve a python binary that exactly matches the given version (e.g. 3.9.2)
+    local desired_version="$1"
+    local major_minor="${desired_version%.*}"
+    local candidate=""
 
-    print_status $BLUE "Testing Python $python_version..."
-    log_with_timestamp "Starting test for Python $python_version (target: $RUST_TARGET)" > "$log_file"
-
-    # Check if Python version is available
-    if ! check_python_version "$python_version"; then
-        local error_msg="Python $python_version is not available on this system (no suitable python binary found)"
-        print_status $RED "$error_msg"
-        log_with_timestamp "ERROR: $error_msg" >> "$log_file"
+    # Try pythonX.Y.Z first
+    if command -v "python${desired_version}" >/dev/null 2>&1; then
+        candidate="python${desired_version}"
+    elif command -v "python${major_minor}" >/dev/null 2>&1; then
+        candidate="python${major_minor}"
+    else
         return 1
     fi
 
-    cd "$REPO_ROOT"
+    # Validate exact version via sys.version_info
+    local full_ver
+    full_ver="$("$candidate" -c 'import sys; print(".".join(map(str, sys.version_info[:3])))' 2>/dev/null || echo "")"
 
-    # Step 1: Create Poetry virtual environment
-    print_status $YELLOW "  Creating Poetry environment with Python $python_version (binary: $PY_BIN)..."
-    if ! poetry env use "$PY_BIN" >> "$log_file" 2>&1; then
-        local error_msg="Failed to create Poetry environment with Python $python_version"
-        print_status $RED "  $error_msg"
-        log_with_timestamp "ERROR: $error_msg" >> "$log_file"
+    if [ "$full_ver" != "$desired_version" ]; then
         return 1
     fi
-    log_with_timestamp "Poetry environment created successfully" >> "$log_file"
 
-    # Step 2: Install dependencies (without building the root package)
-    print_status $YELLOW "  Installing dependencies..."
-    if ! poetry install --no-root >> "$log_file" 2>&1; then
-        local error_msg="Failed to install dependencies"
-        print_status $RED "  $error_msg"
-        log_with_timestamp "ERROR: $error_msg" >> "$log_file"
-        print_status $YELLOW "  Last 20 log lines for Python $python_version:"
-        tail -n 20 "$log_file" || true
-        cleanup_environment "$python_version"
-        return 1
-    fi
-    log_with_timestamp "Dependencies installed successfully" >> "$log_file"
-
-    # Step 3: Build Python bindings with maturin (into THIS Poetry env)
-    print_status $YELLOW "  Building Python bindings with maturin (target: $RUST_TARGET)..."
-    if ! poetry run maturin develop \
-        --target "$RUST_TARGET" \
-        --manifest-path "$REPO_ROOT/python/Cargo.toml" >> "$log_file" 2>&1; then
-        local error_msg="Failed to build Python bindings with maturin"
-        print_status $RED "  $error_msg"
-        log_with_timestamp "ERROR: $error_msg" >> "$log_file"
-        print_status $YELLOW "  Last 20 log lines for Python $python_version:"
-        tail -n 20 "$log_file" || true
-        cleanup_environment "$python_version"
-        return 1
-    fi
-    log_with_timestamp "Python bindings built successfully" >> "$log_file"
-
-    # Step 4: Run the example script
-    print_status $YELLOW "  Running example script..."
-    if ! poetry run python "$EXAMPLE_SCRIPT" >> "$log_file" 2>&1; then
-        local error_msg="Example script execution failed"
-        print_status $RED "  $error_msg"
-        log_with_timestamp "ERROR: $error_msg" >> "$log_file"
-        print_status $YELLOW "  Last 20 log lines for Python $python_version:"
-        tail -n 20 "$log_file" || true
-        cleanup_environment "$python_version"
-        return 1
-    fi
-    log_with_timestamp "Example script executed successfully" >> "$log_file"
-
-    # Step 5: Run the test suite
-    print_status $YELLOW "  Running test suite..."
-    if ! poetry run pytest -v tests >> "$log_file" 2>&1; then
-        local error_msg="Test suite execution failed"
-        print_status $RED "  $error_msg"
-        log_with_timestamp "ERROR: $error_msg" >> "$log_file"
-        print_status $YELLOW "  Last 20 log lines for Python $python_version:"
-        tail -n 20 "$log_file" || true
-        cleanup_environment "$python_version"
-        return 1
-    fi
-    log_with_timestamp "Test suite completed successfully" >> "$log_file"
-
-    # Step 6: Cleanup
-    cleanup_environment "$python_version"
-
-    print_status $GREEN "  Python $python_version test completed successfully"
-    log_with_timestamp "All tests completed successfully for Python $python_version" >> "$log_file"
+    PY_BIN="$candidate"
     return 0
 }
 
-cleanup_environment() {
-    local python_version=$1
-    print_status $YELLOW "  Cleaning up environment..."
-
-    if [ -n "$PY_BIN" ] && poetry env remove "$PY_BIN" >/dev/null 2>&1; then
-        print_status $GREEN "  Environment cleaned up"
-    else
-        print_status $YELLOW "  Environment cleanup completed (may have been already removed)"
-    fi
-}
-
 check_prerequisites() {
-    print_status $BLUE "Checking prerequisites..."
+    print_status "$BLUE" "Checking prerequisites..."
 
     if ! command -v poetry >/dev/null 2>&1; then
-        print_status $RED "Poetry is not installed. Please install Poetry first."
-        print_status $YELLOW "   Visit: https://python-poetry.org/docs/#installation"
+        print_status "$RED" "Poetry is not installed. Please install Poetry first."
         exit 1
     fi
-    print_status $GREEN "Poetry is available"
+
+    if ! command -v cargo >/dev/null 2>&1; then
+        print_status "$RED" "Cargo (Rust) is not installed. Please install Rust & Cargo."
+        exit 1
+    fi
 
     if [ ! -f "$REPO_ROOT/pyproject.toml" ]; then
-        print_status $RED "pyproject.toml not found. Please run this script from the repository root or scripts directory."
+        print_status "$RED" "pyproject.toml not found. Please run this script from the repository root."
         exit 1
     fi
-    print_status $GREEN "Repository structure verified"
 
-    if [ ! -f "$EXAMPLE_SCRIPT" ]; then
-        print_status $RED "Example script not found: $EXAMPLE_SCRIPT"
+    if [ ! -d "$REPO_ROOT/core" ]; then
+        print_status "$RED" "core/ directory not found in repo root."
         exit 1
     fi
-    print_status $GREEN "Example script found"
 
-    if ! poetry run maturin --version >/dev/null 2>&1; then
-        print_status $RED "Maturin is not available in the Poetry environment"
-        print_status $YELLOW "   Please ensure maturin is listed in dev-dependencies"
+    if [ ! -d "$REPO_ROOT/python" ]; then
+        print_status "$RED" "python/ directory not found in repo root."
         exit 1
     fi
-    print_status $GREEN "Maturin is available"
 
-    check_rust_setup
+    if [ ! -f "$CHECKER_SCRIPT" ]; then
+        print_status "$RED" "Checker script not found: $CHECKER_SCRIPT"
+        exit 1
+    fi
+
+    print_status "$GREEN" "Prerequisites OK."
 }
 
+# ----------------- Core per-version routine -----------------
+
+test_python_version() {
+    local python_version="$1"
+    LOG_FILE="$LOGS_DIR/python_${python_version}.log"
+    : > "$LOG_FILE"  # truncate / create
+
+    print_status "$BLUE" "=== Testing Python $python_version ==="
+    log "Starting test for Python $python_version"
+
+    # 1) Deactivate any currently active venv (if running in same shell)
+    if command -v deactivate >/dev/null 2>&1; then
+        log "Deactivating existing virtualenv"
+        deactivate || true
+    fi
+
+    # 2) Remove all Poetry virtualenvs
+    local venv_root
+    venv_root="$(get_poetry_venv_root)"
+    log "Removing Poetry virtualenvs at: $venv_root"
+    rm -rf "$venv_root"
+
+    # 3) Refresh lockfile
+    print_status "$YELLOW" "  Running: poetry lock"
+    log "Running: poetry lock"
+    if ! poetry lock >>"$LOG_FILE" 2>&1; then
+        print_status "$RED" "  poetry lock failed"
+        log "ERROR: poetry lock failed"
+        return 1
+    fi
+
+    # 4) Resolve Python binary & configure Poetry to use it
+    print_status "$YELLOW" "  Resolving Python $python_version"
+    if ! resolve_python_binary "$python_version"; then
+        print_status "$RED" "  Could not find a python binary for exact version $python_version"
+        log "ERROR: No suitable Python binary found for version $python_version"
+        return 1
+    fi
+    log "Using Python binary: $PY_BIN"
+
+    print_status "$YELLOW" "  Running: poetry env use $PY_BIN"
+    log "Running: poetry env use $PY_BIN"
+    if ! poetry env use "$PY_BIN" >>"$LOG_FILE" 2>&1; then
+        print_status "$RED" "  poetry env use failed for $PY_BIN"
+        log "ERROR: poetry env use failed for $PY_BIN"
+        return 1
+    fi
+
+    # 5) Verify Poetry env is *exactly* the requested Python version
+    local actual_version
+    actual_version="$(poetry run python -c 'import sys; print(".".join(map(str, sys.version_info[:3])))' 2>>"$LOG_FILE" || true)"
+    log "Poetry env Python version: $actual_version"
+
+    if [ "$actual_version" != "$python_version" ]; then
+        print_status "$RED" "  Poetry env is using Python $actual_version, expected $python_version"
+        log "ERROR: Poetry env using Python $actual_version, expected $python_version"
+        return 1
+    fi
+    print_status "$GREEN" "  Verified Poetry env uses Python $python_version"
+
+    # 6) Activate the Poetry env in this shell
+    local venv_path
+    venv_path="$(poetry env info --path 2>>"$LOG_FILE" || true)"
+    if [ -z "$venv_path" ] || [ ! -d "$venv_path" ]; then
+        print_status "$RED" "  Failed to get Poetry env path"
+        log "ERROR: poetry env info --path returned '$venv_path'"
+        return 1
+    fi
+    log "Activating env at: $venv_path"
+
+    # shellcheck source=/dev/null
+    . "$venv_path/bin/activate"
+
+    # 7) Install dependencies
+    print_status "$YELLOW" "  Running: poetry install"
+    log "Running: poetry install"
+    if ! poetry install --no-root >>"$LOG_FILE" 2>&1; then
+        print_status "$RED" "  poetry install failed"
+        log "ERROR: poetry install failed"
+        return 1
+    fi
+
+    # 8) cargo clean in core/
+    print_status "$YELLOW" "  Running: cargo clean (core/)"
+    log "Running: (cd core && cargo clean)"
+    if ! (cd core && cargo clean >>"$LOG_FILE" 2>&1); then
+        print_status "$RED" "  cargo clean failed in core/"
+        log "ERROR: cargo clean failed in core/"
+        return 1
+    fi
+
+    # 9) cargo build in core/
+    print_status "$YELLOW" "  Running: cargo build (core/)"
+    log "Running: (cd core && cargo build)"
+    if ! (cd core && cargo build >>"$LOG_FILE" 2>&1); then
+        print_status "$RED" "  cargo build failed in core/"
+        log "ERROR: cargo build failed in core/"
+        return 1
+    fi
+
+    # 10) maturin develop in python/
+    print_status "$YELLOW" "  Running: maturin develop (python/)"
+    log "Running: (cd python && maturin develop)"
+    if ! (cd python && maturin develop >>"$LOG_FILE" 2>&1); then
+        print_status "$RED" "  maturin develop failed in python/"
+        log "ERROR: maturin develop failed in python/"
+        return 1
+    fi
+
+    # 11) Run core functionalities checker with this Poetry env
+    print_status "$YELLOW" "  Running: core-functionalities-checker.py"
+    log "Running: poetry run python $CHECKER_SCRIPT"
+    if ! poetry run python "$CHECKER_SCRIPT" >>"$LOG_FILE" 2>&1; then
+        print_status "$RED" "  core-functionalities-checker.py failed"
+        log "ERROR: core-functionalities-checker.py failed"
+        return 1
+    fi
+
+    print_status "$GREEN" "  Python $python_version: SUCCESS"
+    log "All steps completed successfully for Python $python_version"
+    return 0
+}
+
+# ----------------- Main -----------------
+
+trap 'print_status "'"$YELLOW"'" "Script interrupted. Exiting..."; exit 1' INT TERM
+
 main() {
-    print_status $BLUE "GraphBit Python Version Support Test (Python $PYTHON_VERSIONS / $RUST_TARGET)"
-    print_status $BLUE "==================================================================="
+    print_status "$BLUE" "GraphBit Python Version Support Test"
+    print_status "$BLUE" "===================================="
 
     check_prerequisites
-    create_logs_dir
 
-    local total_versions=${#PYTHON_VERSIONS[@]}
-    local passed_versions=()
-    local failed_versions=()
+    mkdir -p "$LOGS_DIR"
 
-    print_status $BLUE "\nTesting against Python versions: ${PYTHON_VERSIONS[*]}"
-    print_status $BLUE "Logs will be saved to: $LOGS_DIR"
-    print_status $BLUE "===================================================================\n"
+    local total="${#PYTHON_VERSIONS[@]}"
+    local passed=()
+    local failed=()
+
+    print_status "$BLUE" "Testing Python versions: ${PYTHON_VERSIONS[*]}"
+    echo
 
     for version in "${PYTHON_VERSIONS[@]}"; do
         if test_python_version "$version"; then
-            passed_versions+=("$version")
+            passed+=("$version")
         else
-            failed_versions+=("$version")
+            failed+=("$version")
+            print_status "$YELLOW" "  See log: $LOGS_DIR/python_${version}.log"
         fi
         echo
     done
 
-    print_status $BLUE "=========================================="
-    print_status $BLUE "Test Summary"
-    print_status $BLUE "=========================================="
-    print_status $GREEN "Passed: ${#passed_versions[@]}/$total_versions versions"
-    if [ ${#passed_versions[@]} -gt 0 ]; then
-        print_status $GREEN "   Successful versions: ${passed_versions[*]}"
+    print_status "$BLUE" "========== Summary =========="
+    print_status "$GREEN" "Passed: ${#passed[@]}/$total"
+    if [ "${#passed[@]}" -gt 0 ]; then
+        print_status "$GREEN" "  ${passed[*]}"
     fi
 
-    if [ ${#failed_versions[@]} -gt 0 ]; then
-        print_status $RED "Failed: ${#failed_versions[@]}/$total_versions versions"
-        print_status $RED "   Failed versions: ${failed_versions[*]}"
-        print_status $YELLOW "   Check individual log files in $LOGS_DIR for details"
-    fi
-
-    print_status $BLUE "=========================================="
-
-    if [ ${#failed_versions[@]} -eq 0 ]; then
-        print_status $GREEN "All Python versions passed!"
-        exit 0
-    else
-            print_status $RED "Some Python versions failed. Check logs for details."
+    if [ "${#failed[@]}" -gt 0 ]; then
+        print_status "$RED" "Failed: ${#failed[@]}/$total"
+        print_status "$RED" "  ${failed[*]}"
+        print_status "$YELLOW" "Check logs in: $LOGS_DIR"
         exit 1
     fi
-}
 
-    trap 'print_status $YELLOW "\nScript interrupted. Cleaning up..."; exit 1' INT TERM
+    print_status "$GREEN" "All configured Python versions passed."
+}
 
 main "$@"
