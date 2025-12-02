@@ -5,19 +5,56 @@ import tempfile
 from pathlib import Path
 
 from dotenv import load_dotenv
+
 load_dotenv()
 
 import graphbit
-from graphbit import get_system_info, health_check, init, version, LlmClient, EmbeddingClient, EmbeddingConfig, DocumentLoader, CharacterSplitter, RecursiveSplitter, SentenceSplitter, TokenSplitter, Executor, LlmConfig, Node, Workflow, tool
+from graphbit import (
+    get_system_info,
+    health_check,
+    init,
+    version,
+    LlmClient,
+    EmbeddingClient,
+    EmbeddingConfig,
+    DocumentLoader,
+    CharacterSplitter,
+    RecursiveSplitter,
+    SentenceSplitter,
+    TokenSplitter,
+    Executor,
+    LlmConfig,
+    Node,
+    Workflow,
+    tool,
+)
 
 
-def check_system_health():
-    """Check GraphBit system health and capabilities."""
-    try:
-        print("\n\n\nSystem Health Check")
+class GraphBitFunctionalityChecker:
+    def __init__(self) -> None:
+        self.api_key = os.getenv("OPENAI_API_KEY")
+
+    # ---------- Helpers ----------
+
+    @staticmethod
+    def _print_header(title: str) -> None:
+        print("\n\n\n" + title)
         print("=" * 50)
 
-        # Initialize GraphBit with error handling
+    def _require_api_key(self, feature_name: str) -> bool:
+        if not self.api_key:
+            print("OPENAI_API_KEY not found in environment variables")
+            print(f"   Skipping {feature_name} test")
+            return False
+        return True
+
+    # ---------- Checks ----------
+
+    def check_system_health(self) -> bool:
+        """Check GraphBit system health and capabilities."""
+        self._print_header("System Health Check")
+
+        # Initialize GraphBit
         try:
             init(debug=True, log_level="info")
             print("GraphBit initialization successful")
@@ -25,7 +62,7 @@ def check_system_health():
             print(f"GraphBit initialization failed: {e}")
             return False
 
-        # Get version information
+        # Version information
         try:
             version_info = version()
             print(f"GraphBit version: {version_info}")
@@ -35,7 +72,7 @@ def check_system_health():
 
         print("=" * 50)
 
-        # Get system information
+        # System information
         try:
             system_info = get_system_info()
             print(f"System info: {system_info}")
@@ -45,7 +82,7 @@ def check_system_health():
 
         print("=" * 50)
 
-        # Perform health check
+        # Health check
         try:
             health_result = health_check()
             print(f"Health check: {health_result}")
@@ -56,24 +93,11 @@ def check_system_health():
         print("=" * 50)
         return True
 
-    except Exception as e:
-        print(f"Unexpected error in system health check: {e}")
-        return False
+    def check_configuration(self) -> bool:
+        """Test GraphBit runtime configuration."""
+        self._print_header("Runtime Configuration Check")
 
-
-# Execute system health check
-if not check_system_health():
-    print("\nSystem health check failed")
-    sys.exit(1)
-
-
-def check_configuration():
-    """Test GraphBit runtime configuration."""
-    try:
-        print("\n\n\nRuntime Configuration Check")
-        print("=" * 50)
-
-        # Shutdown existing runtime
+        # Shutdown existing runtime (warning only on failure)
         try:
             graphbit.shutdown()
             print("Runtime shutdown successful")
@@ -112,34 +136,16 @@ def check_configuration():
         print("=" * 50)
         return True
 
-    except Exception as e:
-        print(f"Unexpected error in configuration check: {e}")
-        return False
+    def check_llm_client(self) -> bool:
+        """Demonstrate LLM client functionality."""
+        self._print_header("LLM Client Integration")
 
-
-# Execute configuration check
-if not check_configuration():
-    print("\nConfiguration check failed")
-    sys.exit(1)
-
-
-def check_llm_client():
-    """Demonstrate LLM client functionality."""
-    try:
-
-        print("\n\n\nLLM Client Integration")
-        print("=" * 50)
-
-        # Check for API key
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            print("OPENAI_API_KEY not found in environment variables")
-            print("   Skipping LLM client test")
-            return True  # Not a failure, just skipped
+        if not self._require_api_key("LLM client"):
+            return True  # Skipped, not a failure
 
         # Create LLM configuration
         try:
-            llm_config = LlmConfig.openai(api_key=api_key, model="gpt-4o-mini")
+            llm_config = LlmConfig.openai(api_key=self.api_key, model="gpt-4o-mini")
             print("LLM configuration created successfully")
         except Exception as e:
             print(f"Failed to create LLM configuration: {e}")
@@ -165,34 +171,19 @@ def check_llm_client():
         print("=" * 50)
         return True
 
-    except Exception as e:
-        print(f"Unexpected error in LLM client check: {e}")
-        return False
+    def check_embeddings(self) -> bool:
+        """Demonstrate embeddings functionality."""
+        self._print_header("Embeddings Functionality")
 
-
-# Execute LLM client check
-if not check_llm_client():
-    print("\nLLM client check failed")
-    sys.exit(1)
-
-
-def check_embeddings():
-    """Demonstrate embeddings functionality."""
-    try:
-
-        print("\n\n\nEmbeddings Functionality")
-        print("=" * 50)
-
-        # Check for API key
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            print("OPENAI_API_KEY not found in environment variables")
-            print("   Skipping embeddings test")
-            return True  # Not a failure, just skipped
+        if not self._require_api_key("embeddings"):
+            return True  # Skipped, not a failure
 
         # Create embedding configuration
         try:
-            embedding_config = EmbeddingConfig.openai(api_key=api_key, model="text-embedding-3-small")
+            embedding_config = EmbeddingConfig.openai(
+                api_key=self.api_key,
+                model="text-embedding-3-small",
+            )
             print("Embedding configuration created successfully")
         except Exception as e:
             print(f"Failed to create embedding configuration: {e}")
@@ -237,22 +228,9 @@ def check_embeddings():
         print("=" * 50)
         return True
 
-    except Exception as e:
-        print(f"Unexpected error in embeddings check: {e}")
-        return False
-
-
-# Execute embeddings check
-if not check_embeddings():
-    print("\nEmbeddings check failed")
-    sys.exit(1)
-
-
-def check_document_loading():
-    """Demonstrate document loading functionality."""
-    try:
-        print("\n\n\nDocument Loading")
-        print("=" * 50)
+    def check_document_loading(self) -> bool:
+        """Demonstrate document loading functionality."""
+        self._print_header("Document Loading")
 
         # Create document loader
         try:
@@ -278,29 +256,39 @@ def check_document_loading():
                 temp_path = Path(temp_dir)
 
                 # Create sample documents
-                try:
-                    txt_file = temp_path / "sample.txt"
-                    txt_file.write_text(
-                        "This is a sample text document for GraphBit demonstration.\n"
-                        "It contains multiple lines of text that will be processed.\n"
-                        "GraphBit can handle various document formats efficiently."
+                txt_file = temp_path / "sample.txt"
+                txt_file.write_text(
+                    "This is a sample text document for GraphBit demonstration.\n"
+                    "It contains multiple lines of text that will be processed.\n"
+                    "GraphBit can handle various document formats efficiently."
+                )
+
+                json_file = temp_path / "sample.json"
+                json_file.write_text(
+                    json.dumps(
+                        {
+                            "title": "GraphBit Demo",
+                            "description": "Comprehensive feature demonstration",
+                            "features": [
+                                "LLM Integration",
+                                "Embeddings",
+                                "Workflows",
+                                "Document Processing",
+                            ],
+                        },
+                        indent=2,
                     )
+                )
 
-                    json_file = temp_path / "sample.json"
-                    json_file.write_text(
-                        json.dumps(
-                            {"title": "GraphBit Demo", "description": "Comprehensive feature demonstration", "features": ["LLM Integration", "Embeddings", "Workflows", "Document Processing"]},
-                            indent=2,
-                        )
-                    )
+                csv_file = temp_path / "sample.csv"
+                csv_file.write_text(
+                    "name,role,experience\n"
+                    "Alice,Developer,5\n"
+                    "Bob,Designer,3\n"
+                    "Charlie,Manager,8\n"
+                )
 
-                    csv_file = temp_path / "sample.csv"
-                    csv_file.write_text("name,role,experience\n" "Alice,Developer,5\n" "Bob,Designer,3\n" "Charlie,Manager,8\n")
-
-                    print("Sample documents created successfully")
-                except Exception as e:
-                    print(f"Failed to create sample documents: {e}")
-                    return False
+                print("Sample documents created successfully")
 
                 # Load different document types
                 success_count = 0
@@ -311,7 +299,10 @@ def check_document_loading():
                         doc_type = DocumentLoader.detect_document_type(str(file_path))
                         if doc_type:
                             content = loader.load_document(str(file_path), doc_type)
-                            print(f"Loaded {file_path.name} ({doc_type}): {content.content_length()} characters")
+                            print(
+                                f"Loaded {file_path.name} ({doc_type}): "
+                                f"{content.content_length()} characters"
+                            )
                             print(f"   Preview: {content.content[:100]}...")
                             success_count += 1
                         else:
@@ -325,25 +316,12 @@ def check_document_loading():
                 return success_count == total_files
 
         except Exception as e:
-            print(f"Failed to create temporary directory: {e}")
+            print(f"Failed to create temporary directory or sample docs: {e}")
             return False
 
-    except Exception as e:
-        print(f"Unexpected error in document loading check: {e}")
-        return False
-
-
-# Execute document loading check
-if not check_document_loading():
-    print("\nDocument loading check failed")
-    sys.exit(1)
-
-
-def check_text_splitter():
-    """Demonstrate text splitter functionality."""
-    try:
-        print("\n\n\nText Splitting")
-        print("=" * 50)
+    def check_text_splitter(self) -> bool:
+        """Demonstrate text splitter functionality."""
+        self._print_header("Text Splitting")
 
         sample_text = "This is a sample text document for GraphBit demonstration. " * 10
         print(f"Sample text: {sample_text[:100]}...")
@@ -360,22 +338,23 @@ def check_text_splitter():
 
         for splitter_name, splitter_class, kwargs in splitter_tests:
             try:
-                # Create splitter
                 splitter = splitter_class(**kwargs)
                 print(f"{splitter_name} splitter created successfully")
 
-                # Split text
                 chunks = splitter.split_text(sample_text)
                 print(f"{splitter_name} splitter: {len(chunks)} chunks")
 
                 if chunks:
-                    preview = chunks[0].content[:100] if hasattr(chunks[0], "content") else str(chunks[0])[:100]
+                    preview = (
+                        chunks[0].content[:100]
+                        if hasattr(chunks[0], "content")
+                        else str(chunks[0])[:100]
+                    )
                     print(f"   Preview: {preview}...")
                 else:
                     print("   No chunks generated")
 
                 success_count += 1
-
             except Exception as e:
                 print(f"{splitter_name} splitter failed: {e}")
 
@@ -384,30 +363,12 @@ def check_text_splitter():
         print(f"Successfully tested {success_count}/{len(splitter_tests)} text splitters")
         return success_count == len(splitter_tests)
 
-    except Exception as e:
-        print(f"Unexpected error in text splitter check: {e}")
-        return False
+    def check_simple_workflow(self) -> bool:
+        """Demonstrate simple workflow functionality."""
+        self._print_header("Simple Workflow")
 
-
-# Execute text splitter check
-if not check_text_splitter():
-    print("\nText splitter check failed")
-    sys.exit(1)
-
-
-def check_simple_workflow():
-    """Demonstrate simple workflow functionality."""
-    try:
-
-        print("\n\n\nSimple Workflow")
-        print("=" * 50)
-
-        # Check for API key
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            print("OPENAI_API_KEY not found in environment variables")
-            print("   Skipping simple workflow test")
-            return True  # Not a failure, just skipped
+        if not self._require_api_key("simple workflow"):
+            return True  # Skipped, not a failure
 
         # Create workflow
         try:
@@ -436,7 +397,7 @@ def check_simple_workflow():
 
         # Create executor and execute workflow
         try:
-            llm_config = LlmConfig.openai(api_key=api_key, model="gpt-4o-mini")
+            llm_config = LlmConfig.openai(api_key=self.api_key, model="gpt-4o-mini")
             executor = Executor(llm_config)
             print("Executor created successfully")
 
@@ -452,29 +413,12 @@ def check_simple_workflow():
         print("=" * 50)
         return True
 
-    except Exception as e:
-        print(f"Unexpected error in simple workflow check: {e}")
-        return False
+    def check_complex_workflow(self) -> bool:
+        """Demonstrate complex workflow functionality."""
+        self._print_header("Complex Workflow")
 
-
-# Execute simple workflow check
-if not check_simple_workflow():
-    print("\nSimple workflow check failed")
-    sys.exit(1)
-
-
-def check_complex_workflow():
-    """Demonstrate complex workflow functionality."""
-    try:
-        print("\n\n\nComplex Workflow")
-        print("=" * 50)
-
-        # Check for API key
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            print("OPENAI_API_KEY not found in environment variables")
-            print("   Skipping complex workflow test")
-            return True  # Not a failure, just skipped
+        if not self._require_api_key("complex workflow"):
+            return True  # Skipped, not a failure
 
         # Create workflow
         try:
@@ -486,9 +430,21 @@ def check_complex_workflow():
 
         # Create nodes
         try:
-            node1 = Node.agent(name="Start", prompt="Generate a Beautiful topic from nature to write a poem on", agent_id="start_001")
-            node2 = Node.agent(name="Middle", prompt="Gather information about the topic", agent_id="middle_001")
-            node3 = Node.agent(name="End", prompt="write the poem", agent_id="end_001")
+            node1 = Node.agent(
+                name="Start",
+                prompt="Generate a Beautiful topic from nature to write a poem on",
+                agent_id="start_001",
+            )
+            node2 = Node.agent(
+                name="Middle",
+                prompt="Gather information about the topic",
+                agent_id="middle_001",
+            )
+            node3 = Node.agent(
+                name="End",
+                prompt="write the poem",
+                agent_id="end_001",
+            )
             print("Workflow nodes created successfully")
         except Exception as e:
             print(f"Failed to create workflow nodes: {e}")
@@ -523,7 +479,7 @@ def check_complex_workflow():
 
         # Execute workflow
         try:
-            llm_config = LlmConfig.openai(api_key=api_key, model="gpt-4o-mini")
+            llm_config = LlmConfig.openai(api_key=self.api_key, model="gpt-4o-mini")
             executor = Executor(llm_config)
             print("Executor created for complex workflow")
 
@@ -542,29 +498,12 @@ def check_complex_workflow():
         print("=" * 50)
         return True
 
-    except Exception as e:
-        print(f"Unexpected error in complex workflow check: {e}")
-        return False
+    def check_tool_calling_workflow(self) -> bool:
+        """Demonstrate tool calling workflow functionality."""
+        self._print_header("Tool Calling Workflow")
 
-
-# Execute complex workflow check
-if not check_complex_workflow():
-    print("\nComplex workflow check failed")
-    sys.exit(1)
-
-
-def check_tool_calling_workflow():
-    """Demonstrate tool calling workflow functionality."""
-    try:
-        print("\n\n\nTool Calling Workflow")
-        print("=" * 50)
-
-        # Check for API key
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            print("OPENAI_API_KEY not found in environment variables")
-            print("   Skipping tool calling workflow test")
-            return True  # Not a failure, just skipped
+        if not self._require_api_key("tool calling workflow"):
+            return True  # Skipped, not a failure
 
         # Create tools
         try:
@@ -575,9 +514,8 @@ def check_tool_calling_workflow():
 
             @tool(_description="Perform mathematical calculations and return results")
             def calculate(expression: str) -> str:
-                # Safe evaluation for demo purposes
+                # Safe-ish evaluation for demo purposes
                 try:
-                    # Only allow basic arithmetic for safety
                     allowed_chars = set("0123456789+-*/(). ")
                     if all(c in allowed_chars for c in expression):
                         result = eval(expression)
@@ -604,7 +542,10 @@ def check_tool_calling_workflow():
         try:
             node = Node.agent(
                 name="Greet User",
-                prompt="Say hello to the user and provide the output of the tool calling. What is the weather in San Francisco? and calculate 15 + 27?",
+                prompt=(
+                    "Say hello to the user and provide the output of the tool calling. "
+                    "What is the weather in San Francisco? and calculate 15 + 27?"
+                ),
                 tools=[get_weather, calculate],
             )
             workflow.add_node(node)
@@ -623,7 +564,7 @@ def check_tool_calling_workflow():
 
         # Execute workflow
         try:
-            llm_config = LlmConfig.openai(api_key=api_key, model="gpt-4o-mini")
+            llm_config = LlmConfig.openai(api_key=self.api_key, model="gpt-4o-mini")
             executor = Executor(llm_config)
             print("Executor created for tool calling workflow")
 
@@ -639,18 +580,52 @@ def check_tool_calling_workflow():
         print("=" * 50)
         return True
 
-    except Exception as e:
-        print(f"Unexpected error in tool calling workflow check: {e}")
-        return False
+
+def main() -> None:
+    diagnostics = GraphBitFunctionalityChecker()
+
+    if not diagnostics.check_system_health():
+        print("\nSystem health check failed")
+        sys.exit(1)
+
+    if not diagnostics.check_configuration():
+        print("\nConfiguration check failed")
+        sys.exit(1)
+
+    if not diagnostics.check_llm_client():
+        print("\nLLM client check failed")
+        sys.exit(1)
+
+    if not diagnostics.check_embeddings():
+        print("\nEmbeddings check failed")
+        sys.exit(1)
+
+    if not diagnostics.check_document_loading():
+        print("\nDocument loading check failed")
+        sys.exit(1)
+
+    if not diagnostics.check_text_splitter():
+        print("\nText splitter check failed")
+        sys.exit(1)
+
+    if not diagnostics.check_simple_workflow():
+        print("\nSimple workflow check failed")
+        sys.exit(1)
+
+    if not diagnostics.check_complex_workflow():
+        print("\nComplex workflow check failed")
+        sys.exit(1)
+
+    if not diagnostics.check_tool_calling_workflow():
+        print("\nTool calling workflow check failed")
+        sys.exit(1)
+
+    # Final success message
+    print("\n\nAll GraphBit core version support checks completed successfully!")
+    print("=" * 60)
+    print("System is ready for GraphBit operations")
+    print("=" * 60)
 
 
-# Execute tool calling workflow check
-if not check_tool_calling_workflow():
-    print("\nTool calling workflow check failed")
-    sys.exit(1)
-
-# Final success message
-print("\n\nAll GraphBit core version support checks completed successfully!")
-print("=" * 60)
-print("System is ready for GraphBit operations")
-print("=" * 60)
+if __name__ == "__main__":
+    main()

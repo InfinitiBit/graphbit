@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, List
 
 import pytest
+import random
 
 from graphbit import ToolDecorator, ToolExecutor, ToolRegistry
 
@@ -131,8 +132,6 @@ class TestCompleteToolExecutionWorkflow:
 
         # Use direct registry registration since ToolDecorator has issues with registry access
         def generate_random(min_val: int = 1, max_val: int = 100) -> int:
-            import random
-
             return random.randint(min_val, max_val)  # nosec B311
 
         def double_number(value: int) -> int:

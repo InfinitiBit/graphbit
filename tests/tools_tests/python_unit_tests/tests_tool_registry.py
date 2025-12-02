@@ -1,13 +1,15 @@
 """Unit tests for ToolRegistry functionality with comprehensive coverage."""
 
 import contextlib
-import gc
 import json
-import os
-import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Optional
+import threading  # noqa: F401
+import ast
+import pickle  # nosec B403
+
+
 
 import pytest
 
@@ -357,9 +359,6 @@ class TestToolRegistry:
     def test_tool_registry_thread_safety(self):
         """Test ToolRegistry thread safety."""
         try:
-            import threading  # noqa: F401
-            import time  # noqa: F401
-
             registry = ToolRegistry()
 
             # Register a tool
@@ -580,8 +579,6 @@ class TestToolRegistryEdgeCases:
                 expected_required = complex_schema["required"]
                 if isinstance(stored_required, str):
                     # Parse the string representation
-                    import ast
-
                     stored_required = ast.literal_eval(stored_required)
                 assert stored_required == expected_required
 
@@ -954,9 +951,6 @@ class TestToolRegistrySerialization:
     def test_registry_serialization(self):
         """Test ToolRegistry serialization capabilities."""
         try:
-            import json
-            import pickle  # nosec B403
-
             registry = ToolRegistry()
 
             # Register some tools

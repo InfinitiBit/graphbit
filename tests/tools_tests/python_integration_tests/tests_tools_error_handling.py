@@ -1,9 +1,14 @@
 """Test tools error handling and edge cases in integration."""
 
 import time
-from concurrent.futures import ThreadPoolExecutor, TimeoutError, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import pytest
+import requests
+import random
+import os
+import tempfile
+import contextlib
 
 from graphbit import ExecutorConfig, ToolDecorator, ToolExecutor, ToolRegistry
 
@@ -44,8 +49,6 @@ class TestToolsErrorHandling:
             # Register a network-dependent tool
             def network_tool(url):
                 try:
-                    import requests
-
                     response = requests.get(url, timeout=5)
                     return response.text
                 except ImportError:
@@ -62,8 +65,6 @@ class TestToolsErrorHandling:
             # Test with invalid URL - skip if execute_tool not available
 
             try:
-                import requests
-
                 # Test with invalid URL - GraphBit may return failed result instead of raising exception
                 try:
                     result = execute_single_tool(tool_registry, "network_tool", {"url": "invalid://url"})
@@ -387,8 +388,6 @@ class TestConcurrentFailureScenarios:
             # Tool that fails randomly
             @decorator(description="Tool that fails randomly", name="random_failure_tool")
             def random_failure_tool(failure_rate: float = 0.5) -> str:
-                import random
-
                 if random.random() < failure_rate:  # nosec B311
                     raise RuntimeError(f"Random failure occurred (rate: {failure_rate})")
                 return "success"
@@ -573,8 +572,6 @@ class TestResourceExhaustionScenarios:
             # File system intensive tool
             @decorator(description="File system intensive operation", name="fs_intensive")
             def fs_intensive(file_count: int = 100) -> str:
-                import os
-                import tempfile
 
                 temp_files = []
                 try:
@@ -586,8 +583,6 @@ class TestResourceExhaustionScenarios:
                     return f"created_{len(temp_files)}_files"
                 finally:
                     # Cleanup
-                    import contextlib
-
                     for temp_file_path in temp_files:
                         with contextlib.suppress(OSError):
                             os.unlink(temp_file_path)
