@@ -79,6 +79,7 @@ pub fn create_test_embedding_provider() -> Box<dyn EmbeddingProviderTrait> {
         timeout_seconds: Some(5),
         max_batch_size: Some(1),
         extra_params: Default::default(),
+        python_instance: None,
     };
     EmbeddingProviderFactory::create_provider(config).unwrap()
 }
@@ -150,6 +151,7 @@ pub struct TestData {
 }
 
 impl TestData {
+    #[allow(dead_code)]
     pub fn new() -> Self {
         let text = "This is test content".to_string();
         let json = serde_json::json!({

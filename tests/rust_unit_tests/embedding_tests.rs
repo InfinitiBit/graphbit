@@ -16,6 +16,7 @@ async fn test_embedding_service_creation() {
         timeout_seconds: None,
         max_batch_size: Some(1),
         extra_params: HashMap::new(),
+        python_instance: None,
     };
 
     let service = EmbeddingService::new(config);
@@ -74,6 +75,7 @@ async fn test_openai_embeddings() {
         timeout_seconds: None,
         max_batch_size: Some(1),
         extra_params: HashMap::new(),
+        python_instance: None,
     };
 
     let service = EmbeddingService::new(config).unwrap();
@@ -97,6 +99,7 @@ async fn test_huggingface_embeddings() {
         timeout_seconds: None,
         max_batch_size: Some(1),
         extra_params: HashMap::new(),
+        python_instance: None,
     };
 
     let service = EmbeddingService::new(config).unwrap();
@@ -144,6 +147,7 @@ async fn test_embedding_error_handling() {
         timeout_seconds: None,
         max_batch_size: Some(1),
         extra_params: HashMap::new(),
+        python_instance: None,
     };
 
     let service = EmbeddingService::new(config);
@@ -197,6 +201,7 @@ async fn test_embedding_provider_factory_edge_cases() {
         timeout_seconds: Some(60),
         max_batch_size: Some(50),
         extra_params: HashMap::new(),
+        python_instance: None,
     };
 
     let provider = EmbeddingProviderFactory::create_provider(openai_config);
@@ -214,6 +219,7 @@ async fn test_embedding_provider_factory_edge_cases() {
         timeout_seconds: Some(120),
         max_batch_size: Some(25),
         extra_params: HashMap::new(),
+        python_instance: None,
     };
 
     let provider = EmbeddingProviderFactory::create_provider(hf_config);
@@ -237,6 +243,7 @@ async fn test_openai_provider_config_validation() {
         timeout_seconds: None,
         max_batch_size: None,
         extra_params: HashMap::new(),
+        python_instance: None,
     };
 
     let result = OpenAIEmbeddingProvider::new(invalid_config);
@@ -258,6 +265,7 @@ async fn test_huggingface_provider_config_validation() {
         timeout_seconds: None,
         max_batch_size: None,
         extra_params: HashMap::new(),
+        python_instance: None,
     };
 
     let result = HuggingFaceEmbeddingProvider::new(invalid_config);
@@ -278,6 +286,7 @@ async fn test_embedding_batch_processing_edge_cases() {
         timeout_seconds: Some(30),
         max_batch_size: Some(2),
         extra_params: HashMap::new(),
+        python_instance: None,
     };
 
     let service = EmbeddingService::new(config).unwrap();
@@ -351,6 +360,7 @@ async fn test_embedding_service_concurrency_limits() {
         timeout_seconds: Some(30),
         max_batch_size: Some(10),
         extra_params: HashMap::new(),
+        python_instance: None,
     };
 
     // Test service creation (no custom concurrency method available, use regular constructor)
@@ -371,6 +381,7 @@ async fn test_embedding_service_error_handling() {
         timeout_seconds: Some(5),
         max_batch_size: Some(1),
         extra_params: HashMap::new(),
+        python_instance: None,
     };
 
     let service = EmbeddingService::new(config).unwrap();
@@ -429,6 +440,7 @@ async fn test_embedding_dimensions_for_different_models() {
         timeout_seconds: None,
         max_batch_size: None,
         extra_params: HashMap::new(),
+        python_instance: None,
     };
 
     let provider = EmbeddingProviderFactory::create_provider(ada_config).unwrap();
@@ -446,6 +458,7 @@ async fn test_embedding_dimensions_for_different_models() {
         timeout_seconds: None,
         max_batch_size: None,
         extra_params: HashMap::new(),
+        python_instance: None,
     };
 
     let provider = EmbeddingProviderFactory::create_provider(small_config).unwrap();
@@ -462,6 +475,7 @@ async fn test_embedding_dimensions_for_different_models() {
         timeout_seconds: None,
         max_batch_size: None,
         extra_params: HashMap::new(),
+        python_instance: None,
     };
 
     let provider = EmbeddingProviderFactory::create_provider(large_config).unwrap();

@@ -16,6 +16,7 @@ fn create_test_embedding_config() -> EmbeddingConfig {
         timeout_seconds: Some(30),
         max_batch_size: Some(32),
         extra_params: HashMap::new(),
+        python_instance: None,
     }
 }
 
@@ -69,6 +70,7 @@ async fn test_openai_embedding_provider_creation() {
         timeout_seconds: Some(30),
         max_batch_size: Some(16),
         extra_params: HashMap::new(),
+        python_instance: None,
     };
 
     let provider_result = EmbeddingProviderFactory::create_provider(config);
@@ -230,6 +232,7 @@ async fn test_openai_real_embeddings() {
         timeout_seconds: Some(30),
         max_batch_size: Some(16),
         extra_params: HashMap::new(),
+        python_instance: None,
     };
 
     let service = EmbeddingService::new(config).expect("Failed to create service");
@@ -277,6 +280,7 @@ async fn test_openai_real_batch_embeddings() {
         timeout_seconds: Some(30),
         max_batch_size: Some(16),
         extra_params: HashMap::new(),
+        python_instance: None,
     };
 
     let service = EmbeddingService::new(config).expect("Failed to create service");
@@ -351,6 +355,7 @@ async fn test_huggingface_real_embeddings() {
         timeout_seconds: Some(60), // `HuggingFace` can be slower
         max_batch_size: Some(32),
         extra_params: HashMap::new(),
+        python_instance: None,
     };
 
     let service = EmbeddingService::new(config).expect("Failed to create service");
@@ -400,6 +405,7 @@ async fn test_semantic_search_with_real_embeddings() {
         timeout_seconds: Some(30),
         max_batch_size: Some(16),
         extra_params: HashMap::new(),
+        python_instance: None,
     };
 
     let service = EmbeddingService::new(config).expect("Failed to create service");
@@ -493,6 +499,7 @@ async fn test_embedding_provider_comparison() {
             timeout_seconds: Some(30),
             max_batch_size: Some(16),
             extra_params: HashMap::new(),
+            python_instance: None,
         };
 
         let service = EmbeddingService::new(config).expect("Failed to create OpenAI service");
@@ -512,6 +519,7 @@ async fn test_embedding_provider_comparison() {
             timeout_seconds: Some(60),
             max_batch_size: Some(32),
             extra_params: HashMap::new(),
+            python_instance: None,
         };
 
         let service = EmbeddingService::new(config).expect("Failed to create HuggingFace service");
@@ -551,6 +559,7 @@ async fn test_embedding_provider_capabilities() {
             timeout_seconds: None,
             max_batch_size: None,
             extra_params: HashMap::new(),
+            python_instance: None,
         },
         EmbeddingConfig {
             provider: EmbeddingProvider::HuggingFace,
@@ -560,6 +569,7 @@ async fn test_embedding_provider_capabilities() {
             timeout_seconds: None,
             max_batch_size: None,
             extra_params: HashMap::new(),
+            python_instance: None,
         },
     ];
 
