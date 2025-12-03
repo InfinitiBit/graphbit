@@ -27,8 +27,48 @@ pub enum ErrorKind {
     DocumentProcessing,
     /// Serialization error
     Serialization,
+    /// Authentication error
+    Authentication,
+    /// Rate limit error
+    RateLimit,
+    /// Internal error
+    Internal,
+    /// IO error
+    Io,
+    /// Concurrency error
+    Concurrency,
     /// Unknown error
     Unknown,
+}
+
+impl std::fmt::Display for ErrorKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            ErrorKind::Configuration => "Configuration",
+            ErrorKind::Validation => "Validation",
+            ErrorKind::Execution => "Execution",
+            ErrorKind::Network => "Network",
+            ErrorKind::LlmProvider => "LlmProvider",
+            ErrorKind::Agent => "Agent",
+            ErrorKind::Workflow => "Workflow",
+            ErrorKind::Graph => "Graph",
+            ErrorKind::DocumentProcessing => "DocumentProcessing",
+            ErrorKind::Serialization => "Serialization",
+            ErrorKind::Authentication => "Authentication",
+            ErrorKind::RateLimit => "RateLimit",
+            ErrorKind::Internal => "Internal",
+            ErrorKind::Io => "Io",
+            ErrorKind::Concurrency => "Concurrency",
+            ErrorKind::Unknown => "Unknown",
+        };
+        write!(f, "{}", s)
+    }
+}
+
+impl std::fmt::Debug for ErrorKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self)
+    }
 }
 
 /// GraphBit error object exposed to JavaScript
@@ -42,6 +82,35 @@ pub struct GraphBitError {
     pub details: Option<String>,
     /// Optional error code
     pub code: Option<String>,
+}
+
+impl From<CoreGraphBitError> for GraphBitError {
+    fn from(err: CoreGraphBitError) -> Self {
+        let (kind, message, details, code) = match &err {
+            CoreGraphBitError::Configuration { message } => (ErrorKind::Configuration, message.clone(), None, None),
+            CoreGraphBitError::Validation { field, message } => (ErrorKind::Validation, message.clone(), Some(format!("Field: {}", field)), None),
+            CoreGraphBitError::WorkflowExecution { message } => (ErrorKind::Execution, message.clone(), None, None),
+            CoreGraphBitError::Network { message } => (ErrorKind::Network, message.clone(), None, None),
+            CoreGraphBitError::LlmProvider { provider, message } => (ErrorKind::LlmProvider, message.clone(), Some(format!("Provider: {}", provider)), None),
+            CoreGraphBitError::Llm { message } => (ErrorKind::LlmProvider, message.clone(), None, None),
+            CoreGraphBitError::Agent { agent_id, message } => (ErrorKind::Agent, message.clone(), Some(format!("Agent ID: {}", agent_id)), None),
+            CoreGraphBitError::AgentNotFound { agent_id } => (ErrorKind::Agent, format!("Agent not found: {}", agent_id), Some(format!("Agent ID: {}", agent_id)), Some("AGENT_NOT_FOUND".to_string())),
+            CoreGraphBitError::Graph { message } => (ErrorKind::Graph, message.clone(), None, None),
+            CoreGraphBitError::Serialization { message } => (ErrorKind::Serialization, message.clone(), None, None),
+            CoreGraphBitError::Authentication { provider, message } => (ErrorKind::Authentication, message.clone(), Some(format!("Provider: {}", provider)), None),
+            CoreGraphBitError::RateLimit { provider, retry_after_seconds } => (ErrorKind::RateLimit, format!("Rate limit exceeded for {}", provider), Some(format!("Retry after: {}s", retry_after_seconds)), Some("RATE_LIMIT".to_string())),
+            CoreGraphBitError::Internal { message } => (ErrorKind::Internal, message.clone(), None, None),
+            CoreGraphBitError::Io { message } => (ErrorKind::Io, message.clone(), None, None),
+            CoreGraphBitError::Concurrency { message } => (ErrorKind::Concurrency, message.clone(), None, None),
+        };
+
+        Self {
+            kind,
+            message,
+            details,
+            code,
+        }
+    }
 }
 
 impl GraphBitError {
@@ -71,25 +140,12 @@ impl GraphBitError {
 /// Convert core GraphBitError to JavaScript error
 pub fn to_napi_error(err: CoreGraphBitError) -> Error {
     let message = err.to_string();
-
-    // Determine error kind based on the error type
-    let kind = match &err {
-        CoreGraphBitError::Configuration { .. } => "Configuration",
-        CoreGraphBitError::Validation { .. } => "Validation",
-        CoreGraphBitError::WorkflowExecution { .. } => "Execution",
-        CoreGraphBitError::Network { .. } => "Network",
-        CoreGraphBitError::LlmProvider { .. } => "LlmProvider",
-        CoreGraphBitError::Llm { .. } => "LlmProvider",
-        CoreGraphBitError::Agent { .. } => "Agent",
-        CoreGraphBitError::AgentNotFound { .. } => "Agent",
-        CoreGraphBitError::Graph { .. } => "Graph",
-        CoreGraphBitError::Serialization { .. } => "Serialization",
-        _ => "Unknown",
-    };
-
+    let graphbit_error: GraphBitError = err.into();
+    
+    // Create a generic error but prepend the kind for clarity
     Error::new(
         Status::GenericFailure,
-        format!("[{}] {}", kind, message),
+        format!("[{}] {}", graphbit_error.kind, message),
     )
 }
 
