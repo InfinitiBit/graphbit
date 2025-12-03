@@ -302,7 +302,14 @@ impl EmbeddingProviderTrait for OpenAIEmbeddingProvider {
 
             let embedding: Vec<f32> = embedding_array
                 .iter()
-                .map(|v| v.as_f64().unwrap_or(0.0) as f32)
+                .map(|v| {
+                    let val = v.as_f64().unwrap_or(0.0);
+                    if val.is_finite() && val >= f32::MIN as f64 && val <= f32::MAX as f64 {
+                        val as f32
+                    } else {
+                        0.0f32
+                    }
+                })
                 .collect();
 
             embeddings.push(embedding);
@@ -311,8 +318,10 @@ impl EmbeddingProviderTrait for OpenAIEmbeddingProvider {
         // Parse usage
         let usage_data = &response_json["usage"];
         let usage = EmbeddingUsage {
-            prompt_tokens: usage_data["prompt_tokens"].as_u64().unwrap_or(0) as u32,
-            total_tokens: usage_data["total_tokens"].as_u64().unwrap_or(0) as u32,
+            prompt_tokens: u32::try_from(usage_data["prompt_tokens"].as_u64().unwrap_or(0))
+                .unwrap_or(0),
+            total_tokens: u32::try_from(usage_data["total_tokens"].as_u64().unwrap_or(0))
+                .unwrap_or(0),
         };
 
         Ok(EmbeddingResponse {
@@ -465,7 +474,17 @@ impl EmbeddingProviderTrait for HuggingFaceEmbeddingProvider {
                         item.as_array()
                             .unwrap()
                             .iter()
-                            .map(|v| v.as_f64().unwrap_or(0.0) as f32)
+                            .map(|v| {
+                                let val = v.as_f64().unwrap_or(0.0);
+                                if val.is_finite()
+                                    && val >= f32::MIN as f64
+                                    && val <= f32::MAX as f64
+                                {
+                                    val as f32
+                                } else {
+                                    0.0f32
+                                }
+                            })
                             .collect()
                     } else {
                         // Multiple embeddings (3D array) - take first dimension
@@ -482,7 +501,7 @@ impl EmbeddingProviderTrait for HuggingFaceEmbeddingProvider {
 
         // Estimate token usage (`HuggingFace` doesn't provide this)
         let total_chars: usize = inputs.iter().map(|s| s.len()).sum();
-        let estimated_tokens = (total_chars / 4) as u32; // Rough estimate
+        let estimated_tokens = u32::try_from(total_chars / 4).unwrap_or(0); // Rough estimate
 
         let usage = EmbeddingUsage {
             prompt_tokens: estimated_tokens,
@@ -690,9 +709,9 @@ impl EmbeddingService {
             })
             .collect();
 
-        let total_duration_ms = start_time.elapsed().as_millis() as u64;
+        let total_duration_ms = u64::try_from(start_time.elapsed().as_millis()).unwrap_or(0);
         let avg_response_time_ms = if total_duration_ms > 0 && successful > 0 {
-            total_duration_ms as f64 / successful as f64
+            total_duration_ms as f64 / (successful as f64)
         } else {
             0.0
         };
