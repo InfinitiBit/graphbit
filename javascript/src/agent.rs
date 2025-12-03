@@ -101,6 +101,13 @@ impl Agent {
         Ok(agent.config().description.clone())
     }
 
+    /// Get agent ID
+    #[napi]
+    pub async fn id(&self) -> Result<crate::types::AgentId> {
+        let agent = self.inner.lock().await;
+        Ok(agent.config().id.clone().into())
+    }
+
     /// Execute the agent with a message and return the response
     ///
     /// # Arguments
@@ -133,5 +140,45 @@ impl Agent {
         // Convert the result to a string
         Ok(result.to_string())
     }
+
+    /// Get agent configuration
+    #[napi]
+    pub async fn config(&self) -> Result<AgentConfig> {
+        let agent = self.inner.lock().await;
+        let config = agent.config();
+        
+        Ok(AgentConfig {
+            id: config.id.clone().into(),
+            name: config.name.clone(),
+            description: config.description.clone(),
+            capabilities: config.capabilities.iter().map(|c| c.clone().into()).collect(),
+            system_prompt: config.system_prompt.clone(),
+            llm_config: serde_json::to_value(&config.llm_config).map_err(|e| Error::from_reason(e.to_string()))?,
+            max_tokens: config.max_tokens,
+            temperature: config.temperature.map(|t| t as f64),
+        })
+    }
+}
+
+/// Agent configuration
+#[napi(object)]
+pub struct AgentConfig {
+    /// Agent ID
+    pub id: crate::types::AgentId,
+    /// Agent name
+    pub name: String,
+    /// Agent description
+    pub description: String,
+    /// Agent capabilities
+    pub capabilities: Vec<crate::types::AgentCapability>,
+    /// System prompt
+    pub system_prompt: String,
+    /// LLM configuration
+    #[napi(ts_type = "any")]
+    pub llm_config: serde_json::Value,
+    /// Max tokens
+    pub max_tokens: Option<u32>,
+    /// Temperature
+    pub temperature: Option<f64>,
 }
 
