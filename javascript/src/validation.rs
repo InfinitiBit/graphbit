@@ -2,20 +2,51 @@
 
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
+use graphbit_core::validation::ValidationError as CoreValidationError;
 use graphbit_core::validation::ValidationResult as CoreValidationResult;
+
+/// Validation error details
+#[napi(object)]
+pub struct ValidationError {
+    /// Field path that failed validation
+    pub field_path: String,
+    /// Error message
+    pub message: String,
+    /// Expected value or type
+    pub expected: Option<String>,
+    /// Actual value that failed validation
+    pub actual: Option<String>,
+    /// Error code for programmatic handling
+    pub error_code: String,
+}
+
+impl From<CoreValidationError> for ValidationError {
+    fn from(error: CoreValidationError) -> Self {
+        Self {
+            field_path: error.field_path,
+            message: error.message,
+            expected: error.expected,
+            actual: error.actual,
+            error_code: error.error_code,
+        }
+    }
+}
 
 /// Validation result
 #[napi(object)]
 pub struct ValidationResult {
-    pub valid: bool,
-    pub errors: Vec<String>,
+    pub is_valid: bool,
+    pub errors: Vec<ValidationError>,
+    #[napi(ts_type = "Record<string, any>")]
+    pub metadata: serde_json::Value,
 }
 
 impl From<CoreValidationResult> for ValidationResult {
     fn from(result: CoreValidationResult) -> Self {
         Self {
-            valid: result.is_valid,
-            errors: result.errors.iter().map(|e| e.message.clone()).collect(),
+            is_valid: result.is_valid,
+            errors: result.errors.into_iter().map(ValidationError::from).collect(),
+            metadata: serde_json::to_value(&result.metadata).unwrap_or(serde_json::Value::Null),
         }
     }
 }
