@@ -19,6 +19,15 @@ fn default_python_instance() -> std::sync::Arc<pyo3::PyObject> {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "provider")]
 pub enum LlmConfig {
+    /// `Cloudflare Worker AI` LLM provider configuration
+    Cloudflare {
+        /// API key for authentication
+        api_key: String,
+        /// Model name to use (e.g., "@cf/meta/llama-2-7b-chat-int8", "@cf/mistral/mistral-7b-instruct-v0.1")
+        model: String,
+        /// Cloudflare account ID
+        account_id: String,
+    },
     /// `OpenAI` LLM provider configuration
     OpenAI {
         /// API key for authentication
@@ -331,6 +340,19 @@ impl LlmConfig {
         }
     }
 
+    /// Create `Cloudflare Worker AI` configuration
+    pub fn cloudflare(
+        api_key: impl Into<String>,
+        model: impl Into<String>,
+        account_id: impl Into<String>,
+    ) -> Self {
+        Self::Cloudflare {
+            api_key: api_key.into(),
+            model: model.into(),
+            account_id: account_id.into(),
+        }
+    }
+
     /// Create `Replicate` configuration with version
     pub fn replicate_with_version(
         api_key: impl Into<String>,
@@ -419,6 +441,7 @@ impl LlmConfig {
             Self::Anthropic { .. } => "anthropic",
             Self::AzureOpenAI { .. } => "azure_openai",
             Self::ByteDance { .. } => "bytedance",
+            Self::Cloudflare { .. } => "cloudflare",
             Self::DeepSeek { .. } => "deepseek",
             Self::HuggingFace { .. } => "huggingface",
             Self::Ollama { .. } => "ollama",
@@ -446,6 +469,7 @@ impl LlmConfig {
                 deployment_name, ..
             } => deployment_name,
             Self::ByteDance { model, .. } => model,
+            Self::Cloudflare { model, .. } => model,
             Self::DeepSeek { model, .. } => model,
             Self::HuggingFace { model, .. } => model,
             Self::Ollama { model, .. } => model,
