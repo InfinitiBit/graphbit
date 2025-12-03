@@ -4,6 +4,80 @@ use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use serde::{Deserialize, Serialize};
 
+// =================================================================
+// ID Types
+// =================================================================
+
+/// Unique identifier for agents
+#[napi(object)]
+pub struct AgentId {
+    /// The UUID as a string
+    pub uuid: String,
+}
+
+impl From<graphbit_core::types::AgentId> for AgentId {
+    fn from(id: graphbit_core::types::AgentId) -> Self {
+        Self {
+            uuid: id.to_string(),
+        }
+    }
+}
+
+impl From<AgentId> for graphbit_core::types::AgentId {
+    fn from(id: AgentId) -> Self {
+        graphbit_core::types::AgentId::from_string(&id.uuid)
+            .unwrap_or_else(|_| graphbit_core::types::AgentId::new())
+    }
+}
+
+/// Unique identifier for workflows
+#[napi(object)]
+pub struct WorkflowId {
+    /// The UUID as a string
+    pub uuid: String,
+}
+
+impl From<graphbit_core::types::WorkflowId> for WorkflowId {
+    fn from(id: graphbit_core::types::WorkflowId) -> Self {
+        Self {
+            uuid: id.to_string(),
+        }
+    }
+}
+
+impl From<WorkflowId> for graphbit_core::types::WorkflowId {
+    fn from(id: WorkflowId) -> Self {
+        graphbit_core::types::WorkflowId::from_string(&id.uuid)
+            .unwrap_or_else(|_| graphbit_core::types::WorkflowId::new())
+    }
+}
+
+/// Unique identifier for workflow nodes
+#[napi(object)]
+pub struct NodeId {
+    /// The UUID as a string
+    pub uuid: String,
+}
+
+impl From<graphbit_core::types::NodeId> for NodeId {
+    fn from(id: graphbit_core::types::NodeId) -> Self {
+        Self {
+            uuid: id.to_string(),
+        }
+    }
+}
+
+impl From<NodeId> for graphbit_core::types::NodeId {
+    fn from(id: NodeId) -> Self {
+        graphbit_core::types::NodeId::from_string(&id.uuid)
+            .unwrap_or_else(|_| graphbit_core::types::NodeId::new())
+    }
+}
+
+// =================================================================
+// Enums
+// =================================================================
+
 /// Workflow execution state
 #[napi]
 pub enum WorkflowState {
@@ -114,33 +188,7 @@ pub enum MessageContentType {
     ToolResult,
 }
 
-/// Agent message
-#[napi(object)]
-pub struct AgentMessage {
-    /// Message role (user, assistant, system)
-    pub role: String,
-    /// Message content
-    pub content: String,
-    /// Optional message metadata
-    pub metadata: Option<String>,
-}
 
-/// Node execution result
-#[napi(object)]
-pub struct NodeExecutionResult {
-    /// Node ID
-    pub node_id: String,
-    /// Execution success status
-    pub success: bool,
-    /// Output data (JSON string)
-    pub output: Option<String>,
-    /// Error message if failed
-    pub error: Option<String>,
-    /// Execution duration in milliseconds
-    pub duration_ms: i64,
-    /// Retry count
-    pub retry_count: u32,
-}
 
 #[cfg(test)]
 mod tests {
@@ -150,6 +198,234 @@ mod tests {
     fn test_workflow_state_conversion() {
         let state = WorkflowState::from(graphbit_core::types::WorkflowState::Pending);
         matches!(state, WorkflowState::Pending);
+    }
+}
+
+// =================================================================
+// Reliability Configuration
+// =================================================================
+
+/// Types of errors that can potentially be retried
+#[napi]
+pub enum RetryableErrorType {
+    /// Network connectivity issues
+    NetworkError,
+    /// Request timeout errors
+    TimeoutError,
+    /// Rate limiting from external services
+    RateLimitError,
+    /// Temporary service unavailability
+    TemporaryUnavailable,
+    /// Internal server errors (5xx)
+    InternalServerError,
+    /// Authentication/authorization that might be temporary
+    AuthenticationError,
+    /// Resource conflicts that might resolve
+    ResourceConflict,
+    /// All other errors (use with caution)
+    Other,
+}
+
+impl From<RetryableErrorType> for graphbit_core::types::RetryableErrorType {
+    fn from(err: RetryableErrorType) -> Self {
+        match err {
+            RetryableErrorType::NetworkError => graphbit_core::types::RetryableErrorType::NetworkError,
+            RetryableErrorType::TimeoutError => graphbit_core::types::RetryableErrorType::TimeoutError,
+            RetryableErrorType::RateLimitError => graphbit_core::types::RetryableErrorType::RateLimitError,
+            RetryableErrorType::TemporaryUnavailable => graphbit_core::types::RetryableErrorType::TemporaryUnavailable,
+            RetryableErrorType::InternalServerError => graphbit_core::types::RetryableErrorType::InternalServerError,
+            RetryableErrorType::AuthenticationError => graphbit_core::types::RetryableErrorType::AuthenticationError,
+            RetryableErrorType::ResourceConflict => graphbit_core::types::RetryableErrorType::ResourceConflict,
+            RetryableErrorType::Other => graphbit_core::types::RetryableErrorType::Other,
+        }
+    }
+}
+
+impl From<graphbit_core::types::RetryableErrorType> for RetryableErrorType {
+    fn from(err: graphbit_core::types::RetryableErrorType) -> Self {
+        match err {
+            graphbit_core::types::RetryableErrorType::NetworkError => RetryableErrorType::NetworkError,
+            graphbit_core::types::RetryableErrorType::TimeoutError => RetryableErrorType::TimeoutError,
+            graphbit_core::types::RetryableErrorType::RateLimitError => RetryableErrorType::RateLimitError,
+            graphbit_core::types::RetryableErrorType::TemporaryUnavailable => RetryableErrorType::TemporaryUnavailable,
+            graphbit_core::types::RetryableErrorType::InternalServerError => RetryableErrorType::InternalServerError,
+            graphbit_core::types::RetryableErrorType::AuthenticationError => RetryableErrorType::AuthenticationError,
+            graphbit_core::types::RetryableErrorType::ResourceConflict => RetryableErrorType::ResourceConflict,
+            graphbit_core::types::RetryableErrorType::Other => RetryableErrorType::Other,
+        }
+    }
+}
+
+/// Retry configuration for node execution
+#[napi(object)]
+#[derive(Clone)]
+pub struct RetryConfig {
+    /// Maximum number of retry attempts (0 means no retries)
+    pub max_attempts: u32,
+    /// Initial delay between retries in milliseconds
+    pub initial_delay_ms: f64,
+    /// Backoff multiplier for exponential backoff (e.g., 2.0 for doubling)
+    pub backoff_multiplier: f64,
+    /// Maximum delay between retries in milliseconds
+    pub max_delay_ms: f64,
+    /// Jitter factor to add randomness (0.0 to 1.0)
+    pub jitter_factor: f64,
+    /// Types of errors that should trigger retries
+    pub retryable_errors: Vec<RetryableErrorType>,
+}
+
+impl From<RetryConfig> for graphbit_core::types::RetryConfig {
+    fn from(config: RetryConfig) -> Self {
+        Self {
+            max_attempts: config.max_attempts,
+            initial_delay_ms: config.initial_delay_ms as u64,
+            backoff_multiplier: config.backoff_multiplier,
+            max_delay_ms: config.max_delay_ms as u64,
+            jitter_factor: config.jitter_factor,
+            retryable_errors: config.retryable_errors.into_iter().map(Into::into).collect(),
+        }
+    }
+}
+
+impl From<graphbit_core::types::RetryConfig> for RetryConfig {
+    fn from(config: graphbit_core::types::RetryConfig) -> Self {
+        Self {
+            max_attempts: config.max_attempts,
+            initial_delay_ms: config.initial_delay_ms as f64,
+            backoff_multiplier: config.backoff_multiplier,
+            max_delay_ms: config.max_delay_ms as f64,
+            jitter_factor: config.jitter_factor,
+            retryable_errors: config.retryable_errors.into_iter().map(Into::into).collect(),
+        }
+    }
+}
+
+/// Circuit breaker configuration
+#[napi(object)]
+pub struct CircuitBreakerConfig {
+    /// Number of failures before opening the circuit
+    pub failure_threshold: u32,
+    /// Time in milliseconds to wait before trying again when circuit is open
+    pub recovery_timeout_ms: f64,
+    /// Number of successful calls needed to close the circuit
+    pub success_threshold: u32,
+    /// Time window for counting failures in milliseconds
+    pub failure_window_ms: f64,
+}
+
+impl From<CircuitBreakerConfig> for graphbit_core::types::CircuitBreakerConfig {
+    fn from(config: CircuitBreakerConfig) -> Self {
+        Self {
+            failure_threshold: config.failure_threshold,
+            recovery_timeout_ms: config.recovery_timeout_ms as u64,
+            success_threshold: config.success_threshold,
+            failure_window_ms: config.failure_window_ms as u64,
+        }
+    }
+}
+
+impl From<graphbit_core::types::CircuitBreakerConfig> for CircuitBreakerConfig {
+    fn from(config: graphbit_core::types::CircuitBreakerConfig) -> Self {
+        Self {
+            failure_threshold: config.failure_threshold,
+            recovery_timeout_ms: config.recovery_timeout_ms as f64,
+            success_threshold: config.success_threshold,
+            failure_window_ms: config.failure_window_ms as f64,
+        }
+    }
+}
+
+/// Circuit breaker state
+#[napi]
+pub enum CircuitBreakerState {
+    /// Circuit is closed, requests flow normally
+    Closed,
+    /// Circuit is open, requests are rejected
+    Open,
+    /// Circuit is half-open, testing if service has recovered
+    HalfOpen,
+}
+
+impl From<graphbit_core::types::CircuitBreakerState> for CircuitBreakerState {
+    fn from(state: graphbit_core::types::CircuitBreakerState) -> Self {
+        match state {
+            graphbit_core::types::CircuitBreakerState::Closed => CircuitBreakerState::Closed,
+            graphbit_core::types::CircuitBreakerState::Open { .. } => CircuitBreakerState::Open,
+            graphbit_core::types::CircuitBreakerState::HalfOpen => CircuitBreakerState::HalfOpen,
+        }
+    }
+}
+
+/// Message structure for agent communication
+#[napi(object)]
+pub struct AgentMessage {
+    /// Unique message ID
+    pub id: String,
+    /// ID of the sending agent
+    pub sender: AgentId,
+    /// ID of the receiving agent (None for broadcast)
+    pub recipient: Option<AgentId>,
+    /// Message content
+    #[napi(ts_type = "any")]
+    pub content: serde_json::Value,
+    /// Message metadata
+    #[napi(ts_type = "Record<string, any>")]
+    pub metadata: serde_json::Value,
+    /// Timestamp when message was created
+    pub timestamp: String,
+}
+
+impl From<graphbit_core::types::AgentMessage> for AgentMessage {
+    fn from(msg: graphbit_core::types::AgentMessage) -> Self {
+        Self {
+            id: msg.id.to_string(),
+            sender: msg.sender.into(),
+            recipient: msg.recipient.map(|id| id.into()),
+            content: serde_json::to_value(&msg.content).unwrap_or(serde_json::Value::Null),
+            metadata: serde_json::to_value(&msg.metadata).unwrap_or(serde_json::Value::Null),
+            timestamp: msg.timestamp.to_rfc3339(),
+        }
+    }
+}
+
+/// Node execution result
+#[napi(object)]
+pub struct NodeExecutionResult {
+    /// Whether the execution was successful
+    pub success: bool,
+    /// Output data from the node
+    #[napi(ts_type = "any")]
+    pub output: serde_json::Value,
+    /// Error message if execution failed
+    pub error: Option<String>,
+    /// Execution metadata
+    #[napi(ts_type = "Record<string, any>")]
+    pub metadata: serde_json::Value,
+    /// Execution duration in milliseconds
+    pub duration_ms: f64,
+    /// Timestamp when execution started
+    pub started_at: String,
+    /// Timestamp when execution completed
+    pub completed_at: Option<String>,
+    /// Number of retries attempted
+    pub retry_count: u32,
+    /// ID of the node that was executed
+    pub node_id: NodeId,
+}
+
+impl From<graphbit_core::types::NodeExecutionResult> for NodeExecutionResult {
+    fn from(result: graphbit_core::types::NodeExecutionResult) -> Self {
+        Self {
+            success: result.success,
+            output: result.output,
+            error: result.error,
+            metadata: serde_json::to_value(&result.metadata).unwrap_or(serde_json::Value::Null),
+            duration_ms: result.duration_ms as f64,
+            started_at: result.started_at.to_rfc3339(),
+            completed_at: result.completed_at.map(|t| t.to_rfc3339()),
+            retry_count: result.retry_count,
+            node_id: result.node_id.into(),
+        }
     }
 }
 
