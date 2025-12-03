@@ -22,7 +22,7 @@ name = "graphbit_js"
 graphbit-core = { path = "../core" }
 
 # napi-rs for Node.js bindings
-napi = { version = "2.16", features = ["async", "tokio_rt", "napi8"] }
+napi = { version = "2.16", features = ["async", "tokio_rt", "napi8", "serde-json"] }
 napi-derive = "2.16"
 
 # Async runtime
