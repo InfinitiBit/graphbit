@@ -51,6 +51,7 @@ pub struct WorkflowNode {
     pub name: String,
     pub description: String,
     pub node_type: String,
+    pub retry_config: Option<crate::types::RetryConfig>,
 }
 
 /// Workflow edge
@@ -123,7 +124,15 @@ impl WorkflowGraph {
     ///   id: "node1",
     ///   name: "My Node",
     ///   description: "A test node",
-    ///   nodeType: "Agent"
+    ///   nodeType: "Agent",
+    ///   retryConfig: {
+    ///     maxAttempts: 3,
+    ///     initialDelayMs: 1000,
+    ///     backoffMultiplier: 2.0,
+    ///     maxDelayMs: 5000,
+    ///     jitterFactor: 0.1,
+    ///     retryableErrors: ["NetworkError", "TimeoutError"]
+    ///   }
     /// };
     /// const nodeId = await graph.addNode(node);
     /// ```
@@ -158,6 +167,10 @@ impl WorkflowGraph {
         // Create the core WorkflowNode
         let mut core_node = CoreWorkflowNode::new(node.name, node.description, node_type);
         core_node.id = node_id.clone();
+        
+        if let Some(retry_config) = node.retry_config {
+            core_node = core_node.with_retry_config(retry_config.into());
+        }
 
         graph.add_node(core_node)
             .map_err(crate::errors::to_napi_error)?;
