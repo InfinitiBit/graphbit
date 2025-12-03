@@ -161,6 +161,10 @@ impl Workflow {
         );
         core_node.id = node_id.clone();
 
+        if let Some(retry_config) = node.retry_config {
+            core_node = core_node.with_retry_config(retry_config.into());
+        }
+
         let result_id = workflow.add_node(core_node)
             .map_err(crate::errors::to_napi_error)?;
 
@@ -295,6 +299,8 @@ pub struct ExecutorConfig {
     pub debug: Option<bool>,
     /// Maximum parallel executions
     pub max_parallel: Option<i32>,
+    /// Default retry configuration
+    pub default_retry_config: Option<crate::types::RetryConfig>,
 }
 
 /// Workflow executor
@@ -327,6 +333,7 @@ impl Executor {
                 timeout_seconds: Some(300),
                 debug: Some(false),
                 max_parallel: Some(4),
+                default_retry_config: None,
             }),
         }
     }
@@ -345,8 +352,12 @@ impl Executor {
     pub async fn execute(&self, workflow: &Workflow) -> Result<WorkflowContext> {
         let core_workflow = workflow.clone_inner().await;
 
-        let executor = CoreWorkflowExecutor::new()
+        let mut executor = CoreWorkflowExecutor::new()
             .with_default_llm_config(self.llm_config.clone_inner());
+
+        if let Some(retry_config) = &self.config.default_retry_config {
+            executor = executor.with_retry_config(retry_config.clone().into());
+        }
 
         let timeout = std::time::Duration::from_secs(
             self.config.timeout_seconds.unwrap_or(300) as u64
