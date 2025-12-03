@@ -7,6 +7,7 @@ use std::collections::HashMap;
 
 /// LLM configuration for JavaScript
 #[napi]
+#[derive(Clone)]
 pub struct LlmConfig {
     pub(crate) inner: CoreLlmConfig,
 }
