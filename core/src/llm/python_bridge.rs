@@ -395,6 +395,7 @@ impl LlmProviderTrait for PythonBridgeProvider {
 }
 
 // Stub implementation when python feature is not enabled
+/// Stub implementation of PythonBridgeProvider when python feature is disabled
 #[cfg(not(feature = "python"))]
 pub struct PythonBridgeProvider;
 
