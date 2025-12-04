@@ -1,5 +1,10 @@
 .env
 */logs
+logs/
 */vector_index_chatbot
+vector_index_*/
 vectordb.txt
+traces/
 */__pycache__/
+
+.venv
