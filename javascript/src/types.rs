@@ -206,8 +206,8 @@ mod tests {
 // =================================================================
 
 /// Types of errors that can potentially be retried
-#[napi]
-pub enum RetryableErrorType {
+#[napi(js_name = "RetryableErrorType")]
+pub enum JsRetryableErrorType {
     /// Network connectivity issues
     NetworkError,
     /// Request timeout errors
@@ -226,40 +226,9 @@ pub enum RetryableErrorType {
     Other,
 }
 
-impl From<RetryableErrorType> for graphbit_core::types::RetryableErrorType {
-    fn from(err: RetryableErrorType) -> Self {
-        match err {
-            RetryableErrorType::NetworkError => graphbit_core::types::RetryableErrorType::NetworkError,
-            RetryableErrorType::TimeoutError => graphbit_core::types::RetryableErrorType::TimeoutError,
-            RetryableErrorType::RateLimitError => graphbit_core::types::RetryableErrorType::RateLimitError,
-            RetryableErrorType::TemporaryUnavailable => graphbit_core::types::RetryableErrorType::TemporaryUnavailable,
-            RetryableErrorType::InternalServerError => graphbit_core::types::RetryableErrorType::InternalServerError,
-            RetryableErrorType::AuthenticationError => graphbit_core::types::RetryableErrorType::AuthenticationError,
-            RetryableErrorType::ResourceConflict => graphbit_core::types::RetryableErrorType::ResourceConflict,
-            RetryableErrorType::Other => graphbit_core::types::RetryableErrorType::Other,
-        }
-    }
-}
-
-impl From<graphbit_core::types::RetryableErrorType> for RetryableErrorType {
-    fn from(err: graphbit_core::types::RetryableErrorType) -> Self {
-        match err {
-            graphbit_core::types::RetryableErrorType::NetworkError => RetryableErrorType::NetworkError,
-            graphbit_core::types::RetryableErrorType::TimeoutError => RetryableErrorType::TimeoutError,
-            graphbit_core::types::RetryableErrorType::RateLimitError => RetryableErrorType::RateLimitError,
-            graphbit_core::types::RetryableErrorType::TemporaryUnavailable => RetryableErrorType::TemporaryUnavailable,
-            graphbit_core::types::RetryableErrorType::InternalServerError => RetryableErrorType::InternalServerError,
-            graphbit_core::types::RetryableErrorType::AuthenticationError => RetryableErrorType::AuthenticationError,
-            graphbit_core::types::RetryableErrorType::ResourceConflict => RetryableErrorType::ResourceConflict,
-            graphbit_core::types::RetryableErrorType::Other => RetryableErrorType::Other,
-        }
-    }
-}
-
 /// Retry configuration for node execution
-#[napi(object)]
-#[derive(Clone)]
-pub struct RetryConfig {
+#[napi(object, js_name = "RetryConfig")]
+pub struct JsRetryConfig {
     /// Maximum number of retry attempts (0 means no retries)
     pub max_attempts: u32,
     /// Initial delay between retries in milliseconds
@@ -271,33 +240,7 @@ pub struct RetryConfig {
     /// Jitter factor to add randomness (0.0 to 1.0)
     pub jitter_factor: f64,
     /// Types of errors that should trigger retries
-    pub retryable_errors: Vec<RetryableErrorType>,
-}
-
-impl From<RetryConfig> for graphbit_core::types::RetryConfig {
-    fn from(config: RetryConfig) -> Self {
-        Self {
-            max_attempts: config.max_attempts,
-            initial_delay_ms: config.initial_delay_ms as u64,
-            backoff_multiplier: config.backoff_multiplier,
-            max_delay_ms: config.max_delay_ms as u64,
-            jitter_factor: config.jitter_factor,
-            retryable_errors: config.retryable_errors.into_iter().map(Into::into).collect(),
-        }
-    }
-}
-
-impl From<graphbit_core::types::RetryConfig> for RetryConfig {
-    fn from(config: graphbit_core::types::RetryConfig) -> Self {
-        Self {
-            max_attempts: config.max_attempts,
-            initial_delay_ms: config.initial_delay_ms as f64,
-            backoff_multiplier: config.backoff_multiplier,
-            max_delay_ms: config.max_delay_ms as f64,
-            jitter_factor: config.jitter_factor,
-            retryable_errors: config.retryable_errors.into_iter().map(Into::into).collect(),
-        }
-    }
+    pub retryable_errors: Vec<JsRetryableErrorType>,
 }
 
 /// Circuit breaker configuration
@@ -428,4 +371,3 @@ impl From<graphbit_core::types::NodeExecutionResult> for NodeExecutionResult {
         }
     }
 }
-
