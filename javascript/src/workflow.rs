@@ -162,7 +162,24 @@ impl Workflow {
         core_node.id = node_id.clone();
 
         if let Some(retry_config) = node.retry_config {
-            core_node = core_node.with_retry_config(retry_config.into());
+            let core_retry_config = graphbit_core::types::RetryConfig {
+                max_attempts: retry_config.max_attempts,
+                initial_delay_ms: retry_config.initial_delay_ms as u64,
+                backoff_multiplier: retry_config.backoff_multiplier,
+                max_delay_ms: retry_config.max_delay_ms as u64,
+                jitter_factor: retry_config.jitter_factor,
+                retryable_errors: retry_config.retryable_errors.into_iter().map(|e| match e {
+                    crate::types::JsRetryableErrorType::NetworkError => graphbit_core::types::RetryableErrorType::NetworkError,
+                    crate::types::JsRetryableErrorType::TimeoutError => graphbit_core::types::RetryableErrorType::TimeoutError,
+                    crate::types::JsRetryableErrorType::RateLimitError => graphbit_core::types::RetryableErrorType::RateLimitError,
+                    crate::types::JsRetryableErrorType::TemporaryUnavailable => graphbit_core::types::RetryableErrorType::TemporaryUnavailable,
+                    crate::types::JsRetryableErrorType::InternalServerError => graphbit_core::types::RetryableErrorType::InternalServerError,
+                    crate::types::JsRetryableErrorType::AuthenticationError => graphbit_core::types::RetryableErrorType::AuthenticationError,
+                    crate::types::JsRetryableErrorType::ResourceConflict => graphbit_core::types::RetryableErrorType::ResourceConflict,
+                    crate::types::JsRetryableErrorType::Other => graphbit_core::types::RetryableErrorType::Other,
+                }).collect(),
+            };
+            core_node = core_node.with_retry_config(core_retry_config);
         }
 
         let result_id = workflow.add_node(core_node)
@@ -300,7 +317,7 @@ pub struct ExecutorConfig {
     /// Maximum parallel executions
     pub max_parallel: Option<i32>,
     /// Default retry configuration
-    pub default_retry_config: Option<crate::types::RetryConfig>,
+    pub default_retry_config: Option<crate::types::JsRetryConfig>,
 }
 
 /// Workflow executor
@@ -356,7 +373,24 @@ impl Executor {
             .with_default_llm_config(self.llm_config.clone_inner());
 
         if let Some(retry_config) = &self.config.default_retry_config {
-            executor = executor.with_retry_config(retry_config.clone().into());
+            let core_retry_config = graphbit_core::types::RetryConfig {
+                max_attempts: retry_config.max_attempts,
+                initial_delay_ms: retry_config.initial_delay_ms as u64,
+                backoff_multiplier: retry_config.backoff_multiplier,
+                max_delay_ms: retry_config.max_delay_ms as u64,
+                jitter_factor: retry_config.jitter_factor,
+                retryable_errors: retry_config.retryable_errors.iter().map(|e| match e {
+                    crate::types::JsRetryableErrorType::NetworkError => graphbit_core::types::RetryableErrorType::NetworkError,
+                    crate::types::JsRetryableErrorType::TimeoutError => graphbit_core::types::RetryableErrorType::TimeoutError,
+                    crate::types::JsRetryableErrorType::RateLimitError => graphbit_core::types::RetryableErrorType::RateLimitError,
+                    crate::types::JsRetryableErrorType::TemporaryUnavailable => graphbit_core::types::RetryableErrorType::TemporaryUnavailable,
+                    crate::types::JsRetryableErrorType::InternalServerError => graphbit_core::types::RetryableErrorType::InternalServerError,
+                    crate::types::JsRetryableErrorType::AuthenticationError => graphbit_core::types::RetryableErrorType::AuthenticationError,
+                    crate::types::JsRetryableErrorType::ResourceConflict => graphbit_core::types::RetryableErrorType::ResourceConflict,
+                    crate::types::JsRetryableErrorType::Other => graphbit_core::types::RetryableErrorType::Other,
+                }).collect(),
+            };
+            executor = executor.with_retry_config(core_retry_config);
         }
 
         let timeout = std::time::Duration::from_secs(
@@ -371,4 +405,3 @@ impl Executor {
         Ok(WorkflowContext::from_core(context))
     }
 }
-
