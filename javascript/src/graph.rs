@@ -51,7 +51,7 @@ pub struct WorkflowNode {
     pub name: String,
     pub description: String,
     pub node_type: String,
-    pub retry_config: Option<crate::types::RetryConfig>,
+    pub retry_config: Option<crate::types::JsRetryConfig>,
 }
 
 /// Workflow edge
@@ -169,7 +169,24 @@ impl WorkflowGraph {
         core_node.id = node_id.clone();
         
         if let Some(retry_config) = node.retry_config {
-            core_node = core_node.with_retry_config(retry_config.into());
+            let core_retry_config = graphbit_core::types::RetryConfig {
+                max_attempts: retry_config.max_attempts,
+                initial_delay_ms: retry_config.initial_delay_ms as u64,
+                backoff_multiplier: retry_config.backoff_multiplier,
+                max_delay_ms: retry_config.max_delay_ms as u64,
+                jitter_factor: retry_config.jitter_factor,
+                retryable_errors: retry_config.retryable_errors.into_iter().map(|e| match e {
+                    crate::types::JsRetryableErrorType::NetworkError => graphbit_core::types::RetryableErrorType::NetworkError,
+                    crate::types::JsRetryableErrorType::TimeoutError => graphbit_core::types::RetryableErrorType::TimeoutError,
+                    crate::types::JsRetryableErrorType::RateLimitError => graphbit_core::types::RetryableErrorType::RateLimitError,
+                    crate::types::JsRetryableErrorType::TemporaryUnavailable => graphbit_core::types::RetryableErrorType::TemporaryUnavailable,
+                    crate::types::JsRetryableErrorType::InternalServerError => graphbit_core::types::RetryableErrorType::InternalServerError,
+                    crate::types::JsRetryableErrorType::AuthenticationError => graphbit_core::types::RetryableErrorType::AuthenticationError,
+                    crate::types::JsRetryableErrorType::ResourceConflict => graphbit_core::types::RetryableErrorType::ResourceConflict,
+                    crate::types::JsRetryableErrorType::Other => graphbit_core::types::RetryableErrorType::Other,
+                }).collect(),
+            };
+            core_node = core_node.with_retry_config(core_retry_config);
         }
 
         graph.add_node(core_node)
@@ -212,5 +229,118 @@ impl WorkflowGraph {
 
         Ok(())
     }
+
+    /// Get a node by ID
+    #[napi]
+    pub async fn get_node(&self, id: String) -> Result<Option<WorkflowNode>> {
+        let graph = self.inner.lock().await;
+        let node_id = graphbit_core::types::NodeId::from_string(&id)
+            .map_err(|e| Error::from_reason(format!("Invalid node ID: {}", e)))?;
+        
+        if let Some(node) = graph.get_node(&node_id) {
+            Ok(Some(node_to_napi(node)))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Get all nodes in the graph
+    #[napi]
+    pub async fn get_nodes(&self) -> Result<Vec<WorkflowNode>> {
+        let graph = self.inner.lock().await;
+        let nodes = graph.get_nodes();
+        Ok(nodes.iter().map(|(_, node)| node_to_napi(node)).collect())
+    }
+
+    /// Get the topological sort of the graph
+    #[napi]
+    pub async fn topological_sort(&self) -> Result<Vec<String>> {
+        let graph = self.inner.lock().await;
+        let sorted = graph.topological_sort()
+            .map_err(crate::errors::to_napi_error)?;
+        Ok(sorted.iter().map(|id| id.to_string()).collect())
+    }
+
+    /// Check if the graph has cycles
+    #[napi]
+    pub async fn has_cycles(&self) -> Result<bool> {
+        let graph = self.inner.lock().await;
+        Ok(graph.has_cycles())
+    }
+
+    /// Get direct dependencies of a node
+    #[napi]
+    pub async fn get_dependencies(&self, node_id: String) -> Result<Vec<String>> {
+        let mut graph = self.inner.lock().await;
+        let id = graphbit_core::types::NodeId::from_string(&node_id)
+            .map_err(|e| Error::from_reason(format!("Invalid node ID: {}", e)))?;
+        
+        let deps = graph.get_dependencies(&id);
+        Ok(deps.iter().map(|id| id.to_string()).collect())
+    }
+
+    /// Get nodes that directly depend on a node
+    #[napi]
+    pub async fn get_dependents(&self, node_id: String) -> Result<Vec<String>> {
+        let mut graph = self.inner.lock().await;
+        let id = graphbit_core::types::NodeId::from_string(&node_id)
+            .map_err(|e| Error::from_reason(format!("Invalid node ID: {}", e)))?;
+        
+        let deps = graph.get_dependents(&id);
+        Ok(deps.iter().map(|id| id.to_string()).collect())
+    }
+
+    /// Get nodes with no incoming edges
+    #[napi]
+    pub async fn get_root_nodes(&self) -> Result<Vec<String>> {
+        let mut graph = self.inner.lock().await;
+        let roots = graph.get_root_nodes();
+        Ok(roots.iter().map(|id| id.to_string()).collect())
+    }
+
+    /// Get nodes with no outgoing edges
+    #[napi]
+    pub async fn get_leaf_nodes(&self) -> Result<Vec<String>> {
+        let mut graph = self.inner.lock().await;
+        let leaves = graph.get_leaf_nodes();
+        Ok(leaves.iter().map(|id| id.to_string()).collect())
+    }
 }
 
+fn node_to_napi(node: &CoreWorkflowNode) -> WorkflowNode {
+    let node_type = match &node.node_type {
+        CoreNodeType::Agent { .. } => "Agent",
+        CoreNodeType::Condition { .. } => "Condition",
+        CoreNodeType::Transform { .. } => "Transform",
+        CoreNodeType::Split => "Split",
+        CoreNodeType::Join => "Join",
+        CoreNodeType::Delay { .. } => "Delay",
+        CoreNodeType::HttpRequest { .. } => "HttpRequest",
+        CoreNodeType::Custom { .. } => "Custom",
+        CoreNodeType::DocumentLoader { .. } => "DocumentLoader",
+    };
+
+    WorkflowNode {
+        id: node.id.to_string(),
+        name: node.name.clone(),
+        description: node.description.clone(),
+        node_type: node_type.to_string(),
+        retry_config: Some(crate::types::JsRetryConfig {
+            max_attempts: node.retry_config.max_attempts,
+            initial_delay_ms: node.retry_config.initial_delay_ms as f64,
+            backoff_multiplier: node.retry_config.backoff_multiplier,
+            max_delay_ms: node.retry_config.max_delay_ms as f64,
+            jitter_factor: node.retry_config.jitter_factor,
+            retryable_errors: node.retry_config.retryable_errors.iter().map(|e| match e {
+                graphbit_core::types::RetryableErrorType::NetworkError => crate::types::JsRetryableErrorType::NetworkError,
+                graphbit_core::types::RetryableErrorType::TimeoutError => crate::types::JsRetryableErrorType::TimeoutError,
+                graphbit_core::types::RetryableErrorType::RateLimitError => crate::types::JsRetryableErrorType::RateLimitError,
+                graphbit_core::types::RetryableErrorType::TemporaryUnavailable => crate::types::JsRetryableErrorType::TemporaryUnavailable,
+                graphbit_core::types::RetryableErrorType::InternalServerError => crate::types::JsRetryableErrorType::InternalServerError,
+                graphbit_core::types::RetryableErrorType::AuthenticationError => crate::types::JsRetryableErrorType::AuthenticationError,
+                graphbit_core::types::RetryableErrorType::ResourceConflict => crate::types::JsRetryableErrorType::ResourceConflict,
+                graphbit_core::types::RetryableErrorType::Other => crate::types::JsRetryableErrorType::Other,
+            }).collect(),
+        }),
+    }
+}
