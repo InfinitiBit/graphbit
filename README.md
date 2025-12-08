@@ -1,6 +1,6 @@
 <div align="center">
 
-# GraphBit - High Performance Agentic Framework
+# GraphBit - High Performance Agentic Framework grwegwerg
 
 <p align="center">
     <img src="assets/GraphBit_Final_GB_Github_GIF.gif" style="max-width: 100%; height: auto;" alt="Logo" />
