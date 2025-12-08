@@ -56,19 +56,6 @@ class TestOpenAILLM:
         executor = Executor(openai_gpt4_config)
         assert executor is not None
 
-    def test_openai_executor_configurations(self, openai_gpt4_config: Any) -> None:
-        """Test different executor configurations with OpenAI."""
-        # Test high throughput configuration
-        executor_ht = Executor.new_high_throughput(openai_gpt4_config)
-        assert executor_ht is not None
-
-        # Test low latency configuration
-        executor_ll = Executor.new_low_latency(openai_gpt4_config)
-        assert executor_ll is not None
-
-        # Test memory optimized configuration
-        executor_mo = Executor.new_memory_optimized(openai_gpt4_config)
-        assert executor_mo is not None
 
     def test_openai_simple_completion(self, openai_client: Any) -> None:
         """Test simple text completion with OpenAI."""
@@ -136,19 +123,6 @@ class TestAnthropicLLM:
         executor = Executor(anthropic_config)
         assert executor is not None
 
-    def test_anthropic_executor_configurations(self, anthropic_config: Any) -> None:
-        """Test different executor configurations with Anthropic."""
-        # Test high throughput configuration
-        executor_ht = Executor.new_high_throughput(anthropic_config)
-        assert executor_ht is not None
-
-        # Test low latency configuration
-        executor_ll = Executor.new_low_latency(anthropic_config)
-        assert executor_ll is not None
-
-        # Test memory optimized configuration
-        executor_mo = Executor.new_memory_optimized(anthropic_config)
-        assert executor_mo is not None
 
     def test_anthropic_simple_completion(self, anthropic_client: Any) -> None:
         """Test simple text completion with Anthropic."""
@@ -217,19 +191,6 @@ class TestHuggingFaceLLM:
         executor = Executor(hf_config)
         assert executor is not None
 
-    def test_hf_executor_configurations(self, hf_config: Any) -> None:
-        """Test different executor configurations with HuggingFace."""
-        # Test high throughput configuration
-        executor_ht = Executor.new_high_throughput(hf_config)
-        assert executor_ht is not None
-
-        # Test low latency configuration
-        executor_ll = Executor.new_low_latency(hf_config)
-        assert executor_ll is not None
-
-        # Test memory optimized configuration
-        executor_mo = Executor.new_memory_optimized(hf_config)
-        assert executor_mo is not None
 
     def test_hf_simple_completion(self, hf_client: Any) -> None:
         """Test simple text completion with HuggingFace."""
@@ -1101,19 +1062,6 @@ class TestTogetherAILLM:
         executor = Executor(togetherai_gpt_oss_config)
         assert executor is not None
 
-    def test_togetherai_executor_configurations(self, togetherai_gpt_oss_config: Any) -> None:
-        """Test different executor configurations with TogetherAI."""
-        # Test high throughput configuration
-        executor_ht = Executor.new_high_throughput(togetherai_gpt_oss_config)
-        assert executor_ht is not None
-
-        # Test low latency configuration
-        executor_ll = Executor.new_low_latency(togetherai_gpt_oss_config)
-        assert executor_ll is not None
-
-        # Test memory optimized configuration
-        executor_mo = Executor.new_memory_optimized(togetherai_gpt_oss_config)
-        assert executor_mo is not None
 
     def test_togetherai_simple_completion(self, togetherai_client: Any) -> None:
         """Test simple text completion with TogetherAI."""
@@ -1261,19 +1209,6 @@ class TestByteDanceLLM:
         executor = Executor(bytedance_config)
         assert executor is not None
 
-    def test_bytedance_executor_configurations(self, bytedance_config: Any) -> None:
-        """Test different executor configurations with ByteDance."""
-        # Test high throughput configuration
-        executor_ht = Executor.new_high_throughput(bytedance_config)
-        assert executor_ht is not None
-
-        # Test low latency configuration
-        executor_ll = Executor.new_low_latency(bytedance_config)
-        assert executor_ll is not None
-
-        # Test memory optimized configuration
-        executor_mo = Executor.new_memory_optimized(bytedance_config)
-        assert executor_mo is not None
 
     def test_bytedance_simple_completion(self, bytedance_client: Any) -> None:
         """Test simple text completion with ByteDance."""

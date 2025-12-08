@@ -182,8 +182,9 @@ let result = executor.execute(workflow).await?;
 
 **Parallel Execution:**
 ```rust
-// Use pre-built high-throughput configuration
-let executor = WorkflowExecutor::new_high_throughput()
+// Use standard executor with concurrent execution configuration
+// The executor automatically executes independent nodes in parallel
+let executor = WorkflowExecutor::new()
     .with_fail_fast(false);
 
 let result = executor.execute(workflow).await?;
@@ -510,23 +511,37 @@ impl OpenAiProvider {
 // Different execution modes for different use cases
 impl Executor {
     async fn execute_workflow_internal(
-        llm_config: LlmConfig,
-        workflow: Workflow,
+        llm_config: graphbit_core::llm::LlmConfig,
+        workflow: graphbit_core::workflow::Workflow,
         config: ExecutionConfig,
-    ) -> Result<WorkflowContext, GraphBitError> {
+    ) -> Result<graphbit_core::types::WorkflowContext, graphbit_core::errors::GraphBitError> {
         let executor = match config.mode {
-            ExecutionMode::HighThroughput => {
-                CoreWorkflowExecutor::new_high_throughput()
-            }
-            ExecutionMode::LowLatency => {
-                CoreWorkflowExecutor::new_low_latency().without_retries()
-            }
-            ExecutionMode::MemoryOptimized => {
-                CoreWorkflowExecutor::new_high_throughput()
-            }
+            ExecutionMode::HighThroughput => CoreWorkflowExecutor::new()
+                .with_default_llm_config(llm_config.clone()),
+            ExecutionMode::LowLatency => CoreWorkflowExecutor::new()
+                .with_default_llm_config(llm_config.clone())
+                .without_retries()
+                .with_fail_fast(true),
+            ExecutionMode::MemoryOptimized => CoreWorkflowExecutor::new()
+                .with_default_llm_config(llm_config.clone()),
+            ExecutionMode::Balanced => CoreWorkflowExecutor::new()
+                .with_default_llm_config(llm_config.clone()),
         };
 
-        executor.execute(workflow).await
+        // Execute the workflow
+        let mut context = executor.execute(workflow.clone()).await?;
+
+        // Store LLM config in context metadata for tool call handling
+        if let Ok(llm_config_json) = serde_json::to_value(&llm_config) {
+            context
+                .metadata
+                .insert("llm_config".to_string(), llm_config_json);
+        }
+
+        // Check if any node outputs contain tool_calls_required responses and handle them
+        context = Self::handle_tool_calls_in_context(context, &workflow).await?;
+
+        Ok(context)
     }
 }
 ```

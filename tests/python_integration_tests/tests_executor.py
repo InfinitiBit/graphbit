@@ -43,23 +43,6 @@ class TestExecutorConfiguration:
         except Exception as e:
             pytest.fail(f"Executor configuration test failed: {e}")
 
-    def test_executor_specialized_configurations(self, llm_config: Any) -> None:
-        """Test specialized executor configurations."""
-        try:
-            # Test high throughput executor
-            ht_executor = Executor.new_high_throughput(llm_config)
-            assert ht_executor is not None
-
-            # Test low latency executor
-            ll_executor = Executor.new_low_latency(llm_config)
-            assert ll_executor is not None
-
-            # Test memory optimized executor
-            mo_executor = Executor.new_memory_optimized(llm_config)
-            assert mo_executor is not None
-
-        except Exception as e:
-            pytest.fail(f"Specialized executor configuration test failed: {e}")
 
     def test_executor_configuration_validation(self, llm_config: Any) -> None:
         """Test executor configuration parameter validation."""
@@ -70,13 +53,6 @@ class TestExecutorConfiguration:
 
             with pytest.raises((ValueError, RuntimeError)):
                 Executor(llm_config, timeout_seconds=4000)  # Too high
-
-            # Test invalid specialized executor timeouts
-            with pytest.raises((ValueError, RuntimeError)):
-                Executor.new_low_latency(llm_config, timeout_seconds=0)
-
-            with pytest.raises((ValueError, RuntimeError)):
-                Executor.new_low_latency(llm_config, timeout_seconds=400)  # Too high for low latency
 
         except Exception as e:
             pytest.fail(f"Executor validation test failed: {e}")
@@ -307,9 +283,6 @@ class TestExecutorPerformance:
             # Test different executor modes
             executor_types = [
                 ("standard", Executor(llm_config)),
-                ("high_throughput", Executor.new_high_throughput(llm_config)),
-                ("low_latency", Executor.new_low_latency(llm_config)),
-                ("memory_optimized", Executor.new_memory_optimized(llm_config)),
             ]
 
             for executor_name, executor in executor_types:
@@ -332,8 +305,8 @@ class TestExecutorPerformance:
     async def test_executor_memory_efficiency(self, llm_config: Any) -> None:
         """Test executor memory efficiency."""
         try:
-            # Test memory optimized executor
-            executor = Executor.new_memory_optimized(llm_config)
+            # Test standard executor for memory efficiency
+            executor = Executor(llm_config)
 
             # Execute multiple workflows to test memory usage
             workflows = []
@@ -401,16 +374,14 @@ class TestExecutorIntegration:
 
             workflow.validate()
 
-            # Test with different executor types
-            executor_types = [Executor(llm_config), Executor.new_high_throughput(llm_config), Executor.new_low_latency(llm_config)]
+            # Test with standard executor
+            executor = Executor(llm_config)
+            result = executor.execute(workflow)
+            assert isinstance(result, WorkflowResult)
 
-            for executor in executor_types:
-                result = executor.execute(workflow)
-                assert isinstance(result, WorkflowResult)
-
-                # Check execution metrics
-                stats = executor.get_stats()
-                assert stats["total_executions"] > 0
+            # Check execution metrics
+            stats = executor.get_stats()
+            assert stats["total_executions"] > 0
 
         except Exception as e:
             pytest.skip(f"Complex workflow executor test skipped: {e}")

@@ -732,7 +732,7 @@ async fn test_retry_logic_with_different_error_types() {
 async fn test_workflow_executor_concurrent_execution() {
     graphbit_core::init().expect("Failed to initialize GraphBit");
 
-    let executor = workflow::WorkflowExecutor::new_high_throughput();
+    let executor = workflow::WorkflowExecutor::new();
 
     // Test concurrent task execution capability
     let tasks = vec![
