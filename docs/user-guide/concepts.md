@@ -216,19 +216,24 @@ from graphbit import Executor
 # Standard executor
 executor = Executor(
     config=llm_config,
-    lightweight_mode=False,  # For backward compatibility
     timeout_seconds=300,     # 5 minutes
     debug=False
 )
 
-# Low-latency executor (for real-time applications)
+# Low-latency executor
 executor = Executor(
     config=llm_config,
-    lightweight_mode=True,  
-    timeout_seconds=300,     # 5 minutes
+    lightweight_mode=True,   # Enable low-latency mode
+    timeout_seconds=30,      # Shorter timeout for low latency
     debug=False
 )
+
+# Check if lightweight mode is enabled
+is_lightweight = executor.is_lightweight_mode()
+print(f"Lightweight mode enabled: {is_lightweight}")
 ```
+
+**Note**: The `lightweight_mode` setting is configured during executor initialization and determines the execution mode for the lifetime of the executor instance.
 
 ### Execution Modes
 
@@ -269,8 +274,7 @@ executor.reset_stats()
 # Check execution mode
 print(f"Current mode: {executor.get_execution_mode()}")
 
-# Legacy mode support
-executor.set_lightweight_mode(True)  # Enable lightweight mode
+# Check if lightweight mode is enabled
 print(f"Lightweight mode: {executor.is_lightweight_mode()}")
 ```
 

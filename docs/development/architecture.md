@@ -522,8 +522,6 @@ impl Executor {
                 .with_default_llm_config(llm_config.clone())
                 .without_retries()
                 .with_fail_fast(true),
-            ExecutionMode::MemoryOptimized => CoreWorkflowExecutor::new()
-                .with_default_llm_config(llm_config.clone()),
             ExecutionMode::Balanced => CoreWorkflowExecutor::new()
                 .with_default_llm_config(llm_config.clone()),
         };

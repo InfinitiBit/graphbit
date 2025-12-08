@@ -25,8 +25,6 @@ pub(crate) enum ExecutionMode {
     HighThroughput,
     /// Low-latency mode for real-time applications
     LowLatency,
-    /// Memory-optimized mode for resource-constrained environments
-    MemoryOptimized,
     /// Balanced mode for general use
     Balanced,
 }
@@ -395,18 +393,6 @@ impl Executor {
     }
 
     /// Legacy method for backward compatibility
-    fn set_lightweight_mode(&mut self, enabled: bool) {
-        self.config.mode = if enabled {
-            ExecutionMode::LowLatency
-        } else {
-            ExecutionMode::HighThroughput
-        };
-        if self.config.enable_tracing {
-            info!("Execution mode changed to: {:?}", self.config.mode);
-        }
-    }
-
-    /// Legacy method for backward compatibility
     fn is_lightweight_mode(&self) -> bool {
         matches!(self.config.mode, ExecutionMode::LowLatency)
     }
@@ -427,9 +413,6 @@ impl Executor {
                 .with_default_llm_config(llm_config.clone())
                 .without_retries()
                 .with_fail_fast(true),
-            ExecutionMode::MemoryOptimized => {
-                CoreWorkflowExecutor::new().with_default_llm_config(llm_config.clone())
-            }
             ExecutionMode::Balanced => {
                 CoreWorkflowExecutor::new().with_default_llm_config(llm_config.clone())
             }
