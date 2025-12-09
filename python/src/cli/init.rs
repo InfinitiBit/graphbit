@@ -148,10 +148,10 @@ E2B_API_KEY=your_e2b_api_key_here
 OPENAI_API_KEY=your_openai_api_key_here
 ANTHROPIC_API_KEY=your_anthropic_api_key_here
 
-# GraphBit Tracer Configuration (optional)
+# BitPulse Configuration (optional)
 # Get your API key from GraphBit platform
-GRAPHBIT_TRACING_API_KEY=your_graphbit_tracing_api_key_here
-GRAPHBIT_TRACEABLE_PROJECT=your_project_name_here
+BITPULSE_TRACING_API_KEY=your_bitpulse_tracing_api_key_here
+BITPULSE_TRACEABLE_PROJECT=your_project_name_here
 "#.to_string()
 }
 
@@ -202,8 +202,8 @@ fn get_requirements_content() -> String {
     r#"# GraphBit framework
 graphbit
 
-# GraphBit tracing and observability
-graphbit-tracer
+# BitPulse - tracing and observability
+bitpulse
 
 # E2B integration
 e2b-code-interpreter
@@ -241,6 +241,10 @@ A GraphBit project for agentic workflow automation with E2B deployment support.
    - Sign up at [E2B Dashboard](https://e2b.dev/dashboard)
    - Copy your API key to `.env`
 
+4. **Configure BitPulse (Optional):**
+   - Get your API key from GraphBit platform
+   - Set `BITPULSE_TRACING_API_KEY` and `BITPULSE_TRACEABLE_PROJECT` in `.env`
+
 ## Usage
 
 ### Local Development
@@ -273,12 +277,12 @@ graphbit deploy
 }
 
 fn get_simple_agent_content() -> String {
-    r#""""Simple GraphBit agent example with optional GraphBit Tracer integration."""
+    r#""""Simple GraphBit agent example with optional BitPulse integration."""
 
 import asyncio
 import os
 from graphbit import LlmConfig, Executor, Workflow, Node, tool
-from graphbit_tracer import AutoTracer
+from bitpulse import AutoTracer
 
 
 # Define a simple tool
@@ -319,9 +323,8 @@ async def run_agent():
     traced_executor = tracer.wrap_executor(executor, llm_config)
     result = await traced_executor.execute(workflow)
 
-    # Send traces to API and cleanup
-    results = await tracer.send_to_api()
-    await tracer.shutdown()
+    # Send traces to API
+    results = await tracer.send()
 
     return result
 
@@ -370,10 +373,10 @@ def main():
     print("   1. Agent: Uncomment 'from agent import run_agent' and 'asyncio.run(run_agent())'")
     print("   2. Workflow: Uncomment 'from workflow import run_workflow' and 'asyncio.run(run_workflow())'")
     print("   3. Tools: Uncomment 'from workflow_with_tools import run_workflow_with_tools' and 'asyncio.run(run_workflow_with_tools())'")
-    print("   Note: All patterns include optional GraphBit Tracer integration")
+    print("   Note: All patterns include optional BitPulse integration")
 
     # Uncomment ONE of these based on your chosen pattern:
-    # All patterns are now async and include optional GraphBit Tracer integration
+    # All patterns are now async and include optional BitPulse integration
 
 
     # result = asyncio.run(run_agent())
@@ -391,12 +394,12 @@ if __name__ == "__main__":
 
 /// Get workflow content
 fn get_workflow_content() -> String {
-    r#""""GraphBit workflow implementation with optional GraphBit Tracer integration."""
+    r#""""GraphBit workflow implementation with optional BitPulse integration."""
 
 import asyncio
 import os
 from graphbit import LlmConfig, Executor, Workflow, Node
-from graphbit_tracer import AutoTracer
+from bitpulse import AutoTracer
 
 
 async def run_workflow():
@@ -439,9 +442,8 @@ async def run_workflow():
     traced_executor = tracer.wrap_executor(executor, llm_config)
     result = await traced_executor.execute(workflow)
 
-    # Send traces to API and cleanup
-    results = await tracer.send_to_api()
-    await tracer.shutdown()
+    # Send traces to API
+    results = await tracer.send()
 
     return result
 
@@ -453,12 +455,12 @@ if __name__ == "__main__":
 
 /// Get workflow with tools content
 fn get_workflow_with_tools_content() -> String {
-    r#""""GraphBit workflow with tools implementation and optional GraphBit Tracer integration."""
+    r#""""GraphBit workflow with tools implementation and optional BitPulse integration."""
 
 import asyncio
 import os
 from graphbit import LlmConfig, Executor, Workflow, Node, tool
-from graphbit_tracer import AutoTracer
+from bitpulse import AutoTracer
 
 
 # Define tools
@@ -507,9 +509,8 @@ async def run_workflow_with_tools():
     traced_executor = tracer.wrap_executor(executor, llm_config)
     result = await traced_executor.execute(workflow)
 
-    # Send traces to API and cleanup
-    results = await tracer.send_to_api()
-    await tracer.shutdown()
+    # Send traces to API
+    results = await tracer.send()
 
     return result
 

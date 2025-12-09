@@ -101,12 +101,12 @@ fn execute_python_file(
     
     // Add config file as environment variable if provided
     if let Some(config_path) = config_file {
-        cmd.env("GRAPHBIT_CONFIG_FILE", config_path);
+        cmd.env("BITPULSE_CONFIG_FILE", config_path);
     }
     
     // Set verbose mode
     if verbose {
-        cmd.env("GRAPHBIT_VERBOSE", "true");
+        cmd.env("BITPULSE_VERBOSE", "true");
     }
     
     // Execute command
