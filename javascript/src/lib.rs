@@ -9,17 +9,17 @@ use napi::bindgen_prelude::*;
 use napi_derive::napi;
 
 // Module declarations
-mod errors;
-mod types;
-mod llm;
-mod workflow;
 mod agent;
-mod graph;
 mod document_loader;
-mod text_splitter;
 mod embeddings;
-mod validation;
+mod errors;
+mod graph;
+mod llm;
+mod text_splitter;
 mod tools;
+mod types;
+mod validation;
+mod workflow;
 pub use tools::*;
 
 /// Initialize the GraphBit library
@@ -37,9 +37,12 @@ pub use tools::*;
 pub fn init() -> Result<()> {
     // Initialize tracing subscriber for logging
     let _ = tracing_subscriber::fmt::try_init();
-    
-    tracing::info!("GraphBit JavaScript bindings v{} initialized", env!("CARGO_PKG_VERSION"));
-    
+
+    tracing::info!(
+        "GraphBit JavaScript bindings v{} initialized",
+        env!("CARGO_PKG_VERSION")
+    );
+
     Ok(())
 }
 
@@ -86,9 +89,8 @@ pub fn version_info() -> VersionInfo {
     }
 }
 
-#[cfg(all(unix, not(target_env = "musl")))]
-#[global_allocator]
-static GLOBAL: jemallocator::Jemalloc = jemallocator::Jemalloc;
+// Note: Global allocator is defined in graphbit-core, not here
+// to avoid conflicts when building on Unix systems (macOS/Linux)
 
 #[cfg(test)]
 mod tests {
@@ -109,4 +111,3 @@ mod tests {
         assert!(!info.napi_version.is_empty());
     }
 }
-
