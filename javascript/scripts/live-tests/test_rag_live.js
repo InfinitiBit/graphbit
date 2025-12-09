@@ -162,6 +162,13 @@ async function main() {
     console.log('='.repeat(70) + '\n');
 
     try {
+        // Validate API key
+        if (!OPENAI_API_KEY) {
+            console.error('❌ Error: OPENAI_API_KEY environment variable is not set');
+            console.error('Please set it using: export OPENAI_API_KEY=your-api-key (or set OPENAI_API_KEY=your-api-key on Windows)');
+            process.exit(1);
+        }
+
         init();
         console.log('✅ GraphBit initialized');
 
