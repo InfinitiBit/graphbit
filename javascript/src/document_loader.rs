@@ -118,5 +118,65 @@ impl DocumentLoader {
     pub fn config(&self) -> DocumentLoaderConfig {
         self.config.clone().into()
     }
+
+    /// Get list of supported document types
+    ///
+    /// Returns an array of file extensions that can be loaded.
+    ///
+    /// # Returns
+    /// Array of supported document types: ['txt', 'pdf', 'docx', 'json', 'csv', 'xml', 'html']
+    ///
+    /// # Example
+    ///
+    /// ```javascript
+    /// const types = DocumentLoader.supportedTypes();
+    /// console.log('Supported types:', types);
+    /// // ['txt', 'pdf', 'docx', 'json', 'csv', 'xml', 'html']
+    ///
+    /// if (types.includes('pdf')) {
+    ///   console.log('PDF loading is supported');
+    /// }
+    /// ```
+    #[napi]
+    pub fn supported_types() -> Vec<String> {
+        graphbit_core::document_loader::DocumentLoader::supported_types()
+            .into_iter()
+            .map(|s| s.to_string())
+            .collect()
+    }
+
+    /// Detect document type from file path
+    ///
+    /// Automatically determines the document type based on file extension.
+    ///
+    /// # Arguments
+    /// * `path` - File path to analyze
+    ///
+    /// # Returns
+    /// The detected document type, or None if not recognized
+    ///
+    /// # Example
+    ///
+    /// ```javascript
+    /// const type = DocumentLoader.detectDocumentType('document.pdf');
+    /// console.log(type); // 'pdf'
+    ///
+    /// const type2 = DocumentLoader.detectDocumentType('data.json');
+    /// console.log(type2); // 'json'
+    ///
+    /// const type3 = DocumentLoader.detectDocumentType('unknown.xyz');
+    /// console.log(type3); // null
+    ///
+    /// // Use for automatic loading
+    /// const loader = new DocumentLoader();
+    /// const detectedType = DocumentLoader.detectDocumentType(filePath);
+    /// if (detectedType) {
+    ///   const doc = await loader.loadFile(filePath, detectedType);
+    /// }
+    /// ```
+    #[napi]
+    pub fn detect_document_type(path: String) -> Option<String> {
+        graphbit_core::document_loader::detect_document_type(&path)
+    }
 }
 
