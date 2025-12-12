@@ -108,7 +108,7 @@ from graphbit import LlmConfig, Executor, Workflow, Node
 import uuid
 
 llm_config = LlmConfig.ollama("llama3.2")
-executor = Executor.new_low_latency(llm_config)
+executor = Executor(llm_config)
 workflow = Workflow("Simple Task")
 agent_id1 = str(uuid.uuid4())
 node1 = Node.agent(
