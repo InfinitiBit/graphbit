@@ -32,23 +32,31 @@ Welcome to the comprehensive documentation for **GraphBit** - a high-performance
 ## Quick Navigation
 
 ### 🚀 Getting Started
-- [Installation Guide](getting-started/installation.md) - Install GraphBit on your system
+- [Installation Guide (Python)](getting-started/installation.md) - Install GraphBit for Python
+- [Installation Guide (JS/TS)](getting-started/installation-js.md) - Install GraphBit for Node.js
 - [Dependency Installation](getting-started/dependency-installation.md) - Install dependencies for different scenarios
-- [Quick Start Tutorial](getting-started/quickstart.md) - Build your first workflow in 5 minutes
+- [Quick Start (Python)](getting-started/quickstart.md) - Build your first workflow in 5 minutes
+- [Quick Start (JS/TS)](getting-started/quickstart-js.md) - Build your first agent in 5 minutes
 - [Basic Examples](getting-started/examples.md) - Simple examples to get you started
 
 ### 📚 User Guide
 - [Core Concepts](user-guide/concepts.md) - Understand workflows, agents, and nodes
 - [Workflow Builder](user-guide/workflow-builder.md) - Creating and connecting workflow nodes
-- [Agent Configuration](user-guide/agents.md) - Setting up AI agents with different capabilities
-- [Document Loader](user-guide/document-loader.md) - Loading and processing documents (PDF, DOCX, TXT, etc.)
-- [Text Splitters](user-guide/text-splitters.md) - Processing large documents with various splitting strategies
-- [LLM Providers](user-guide/llm-providers.md) - Working with OpenAI, Anthropic, Ollama, and more
+- [Agent Configuration (Python)](user-guide/agents.md) - Setting up AI agents with different capabilities
+- [Agent Configuration (JS/TS)](user-guide/agents-js.md) - Agent configuration for JavaScript/TypeScript
+- [Document Loader (Python)](user-guide/document-loader.md) - Loading and processing documents (PDF, DOCX, TXT, etc.)
+- [Document Loader (JS/TS)](user-guide/document-loader-js.md) - Document loading for JavaScript/TypeScript
+- [Text Splitters (Python)](user-guide/text-splitters.md) - Processing large documents with various splitting strategies
+- [Text Splitters (JS/TS)](user-guide/text-splitters-js.md) - Text splitting for JavaScript/TypeScript
+- [LLM Providers (Python)](user-guide/llm-providers.md) - Working with OpenAI, Anthropic, Ollama, and more
+- [LLM Providers (JS/TS)](user-guide/llm-providers-js.md) - LLM configuration for JavaScript/TypeScript
+- [Embeddings (Python)](user-guide/embeddings.md) - Text embeddings and similarity search
+- [Embeddings (JS/TS)](user-guide/embeddings-js.md) - Embeddings for JavaScript/TypeScript
+- [Data Validation (Python)](user-guide/validation.md) - Input validation and data quality checks
+- [Data Validation (JS/TS)](user-guide/validation-js.md) - JSON validation for JavaScript/TypeScript
 - [Dynamic Graph Generation](user-guide/dynamics-graph.md) - Auto-generating workflow structures
-- [Data Validation](user-guide/validation.md) - Input validation and data quality checks
 - [Performance Optimization](user-guide/performance.md) - Tuning for speed and efficiency
 - [Monitoring & Observability](user-guide/monitoring.md) - Metrics collection and debugging
-- [Embeddings & Vector Search](user-guide/embeddings.md) - Text embeddings and similarity search
 - [Reliability & Fault Tolerance](user-guide/reliability.md) - Circuit breakers, retries, and error handling
 
 ### 🔧 API Reference
