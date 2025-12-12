@@ -32,6 +32,9 @@
   },
   "napi": {
     "name": "graphbit-js",
+    "package": {
+      "name": "@infinitibit_gmbh/graphbit"
+    },
     "triples": {
       "defaults": true,
       "additional": [
@@ -84,18 +87,17 @@
   "files": [
     "index.js",
     "index.d.ts",
-    "*.node",
     "README.md",
     "LICENSE.md"
   ],
   "optionalDependencies": {
-    "graphbit-win32-x64-msvc": "0.5.1",
-    "graphbit-darwin-x64": "0.5.1",
-    "graphbit-linux-x64-gnu": "0.5.1",
-    "graphbit-darwin-arm64": "0.5.1",
-    "graphbit-linux-arm64-gnu": "0.5.1",
-    "graphbit-linux-arm64-musl": "0.5.1",
-    "graphbit-win32-arm64-msvc": "0.5.1",
-    "graphbit-linux-x64-musl": "0.5.1"
+    "@infinitibit_gmbh/graphbit-win32-x64-msvc": "0.5.1",
+    "@infinitibit_gmbh/graphbit-darwin-x64": "0.5.1",
+    "@infinitibit_gmbh/graphbit-linux-x64-gnu": "0.5.1",
+    "@infinitibit_gmbh/graphbit-darwin-arm64": "0.5.1",
+    "@infinitibit_gmbh/graphbit-linux-arm64-gnu": "0.5.1",
+    "@infinitibit_gmbh/graphbit-linux-arm64-musl": "0.5.1",
+    "@infinitibit_gmbh/graphbit-win32-arm64-msvc": "0.5.1",
+    "@infinitibit_gmbh/graphbit-linux-x64-musl": "0.5.1"
   }
 }
