@@ -5,13 +5,13 @@ JavaScript/TypeScript bindings for the GraphBit agentic workflow automation fram
 ## Installation
 
 ```bash
-npm install graphbit
+npm install @infinitibit_gmbh/graphbit
 ```
 
 ## Quick Start
 
 ```javascript
-import { init, LlmClient, LlmConfig } from 'graphbit';
+import { init, LlmClient, LlmConfig } from '@infinitibit_gmbh/graphbit';
 
 // Initialize GraphBit
 init();
