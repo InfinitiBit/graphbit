@@ -163,34 +163,15 @@ jobs:
           node-version: 20
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Download all platform binaries
-        uses: actions/download-artifact@v4
-        with:
-          path: javascript/artifacts
-
-      - name: Organize artifacts for NAPI-RS
+      - name: Install npm dependencies
         working-directory: javascript
-        run: |
-          echo "📦 Moving artifacts to root directory..."
-          # NAPI-RS expects .node files in root after artifacts command
-          # Since we downloaded manually, move them directly to root
-          find artifacts -name "*.node" -exec mv {} . \;
-          
-          echo "✅ Artifacts moved. Contents:"
-          ls -lh *.node
+        run: npm ci
 
-      - name: Verify platform binaries exist
+      - name: Download and organize artifacts with NAPI-RS
         working-directory: javascript
-        shell: pwsh
-        run: |
-          Write-Host "Checking for platform binaries after artifact preparation..."
-          $binaries = Get-ChildItem -Filter "*.node" | Select-Object -ExpandProperty Name
-          if ($binaries.Count -eq 0) {
-            Write-Error "❌ No .node binaries found after artifact preparation"
-            exit 1
-          }
-          Write-Host "✅ Found $($binaries.Count) platform binary(ies):"
-          $binaries | ForEach-Object { Write-Host "  - $_" }
+        run: npm run artifacts
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Verify package name matches organization
         working-directory: javascript
@@ -223,15 +204,49 @@ jobs:
           echo "::warning::Publishing without full validation - use with caution"
           echo "Force publish enabled by: ${{ github.actor }}"
 
-      - name: Publish package to npm
+      - name: Publish main package to npm
         working-directory: javascript
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+      - name: Publish platform-specific packages
+        working-directory: javascript
+        run: |
+          echo "📦 Publishing platform-specific packages..."
+          PUBLISHED_COUNT=0
+          FAILED_COUNT=0
+          
+          # NAPI-RS creates: npm/@scope/package-platform/ structure
+          for pkg_dir in npm/*/*/; do
+            if [ -d "$pkg_dir" ] && [ -f "${pkg_dir}package.json" ]; then
+              pkg_name=$(node -p "require('./${pkg_dir}package.json').name")
+              echo "Publishing $pkg_name from $pkg_dir..."
+              cd "$pkg_dir"
+              if npm publish --access public 2>&1; then
+                echo "✅ Published $pkg_name"
+                PUBLISHED_COUNT=$((PUBLISHED_COUNT + 1))
+              else
+                echo "❌ Failed to publish $pkg_name"
+                FAILED_COUNT=$((FAILED_COUNT + 1))
+              fi
+              cd ../../..
+            fi
+          done
+          
+          echo "📊 Summary: $PUBLISHED_COUNT published, $FAILED_COUNT failed"
+          
+          if [ $FAILED_COUNT -gt 0 ]; then
+            echo "::error::Failed to publish $FAILED_COUNT platform package(s)"
+            exit 1
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       - name: ✅ Published successfully
         run: |
-          echo "::notice::Package published to npm: @infinitibit_gmbh/graphbit@${{ github.event.inputs.version }}"
+          echo "::notice::Main package published: @infinitibit_gmbh/graphbit@${{ github.event.inputs.version }}"
+          echo "::notice::Platform packages: 6 published (Linux x64/ARM64/musl, macOS x64/ARM64, Windows x64)"
           echo "Install with: npm install @infinitibit_gmbh/graphbit@${{ github.event.inputs.version }}"
 
   # ============================================================================
