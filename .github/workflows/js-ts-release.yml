@@ -163,23 +163,15 @@ jobs:
           node-version: 20
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Download all platform binaries
-        uses: actions/download-artifact@v4
-        with:
-          path: javascript/artifacts
-          merge-multiple: true  # Flatten all artifacts into single directory
-
-      - name: Organize artifacts for NAPI-RS
-        working-directory: javascript
-        run: |
-          echo "📦 Moving artifacts to root directory..."
-          find artifacts -name "*.node" -exec mv {} . \;
-          echo "✅ Found $(ls -1 *.node 2>/dev/null | wc -l) platform binary(ies)"
-          ls -lh *.node
-
       - name: Install npm dependencies
         working-directory: javascript
         run: npm ci
+
+      - name: Download and organize artifacts with NAPI-RS
+        working-directory: javascript
+        run: npm run artifacts
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Verify package name matches organization
         working-directory: javascript
@@ -212,15 +204,31 @@ jobs:
           echo "::warning::Publishing without full validation - use with caution"
           echo "Force publish enabled by: ${{ github.actor }}"
 
-      - name: Publish package to npm
+      - name: Publish main package to npm
         working-directory: javascript
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+      - name: Publish platform-specific packages
+        working-directory: javascript
+        run: |
+          echo "📦 Publishing platform-specific packages..."
+          for pkg in npm/@infinitibit_gmbh/*; do
+            if [ -d "$pkg" ]; then
+              echo "Publishing $(basename $pkg)..."
+              cd "$pkg"
+              npm publish --access public
+              cd ../..
+            fi
+          done
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       - name: ✅ Published successfully
         run: |
-          echo "::notice::Package published to npm: @infinitibit_gmbh/graphbit@${{ github.event.inputs.version }}"
+          echo "::notice::Main package published: @infinitibit_gmbh/graphbit@${{ github.event.inputs.version }}"
+          echo "::notice::Platform packages published: 6-8 optional dependencies"
           echo "Install with: npm install @infinitibit_gmbh/graphbit@${{ github.event.inputs.version }}"
 
   # ============================================================================
