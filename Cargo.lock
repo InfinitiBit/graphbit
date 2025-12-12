@@ -796,6 +796,7 @@ dependencies = [
  "napi",
  "napi-build",
  "napi-derive",
+ "num_cpus",
  "openssl",
  "serde",
  "serde_json",
