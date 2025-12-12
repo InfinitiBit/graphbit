@@ -12,7 +12,7 @@ Get started with GraphBit JavaScript bindings in 5 minutes.
 ### Install from npm (when published)
 
 ```bash
-npm install graphbit
+npm install @infinitibit_gmbh/graphbit
 ```
 
 ### Build from Source
@@ -37,7 +37,7 @@ npm test
 ### 1. Initialize the Library
 
 ```typescript
-import { init } from 'graphbit';
+import { init } from '@infinitibit_gmbh/graphbit';
 
 // Initialize GraphBit
 init();
@@ -46,7 +46,7 @@ init();
 ### 2. Configure an LLM Provider
 
 ```typescript
-import { LlmConfig } from 'graphbit';
+import { LlmConfig } from '@infinitibit_gmbh/graphbit';
 
 // OpenAI
 const llmConfig = LlmConfig.openai({
@@ -71,7 +71,7 @@ const ollamaConfig = LlmConfig.ollama({
 ### 3. Create a Workflow
 
 ```typescript
-import { WorkflowBuilder } from 'graphbit';
+import { WorkflowBuilder } from '@infinitibit_gmbh/graphbit';
 
 const workflow = new WorkflowBuilder('My First Workflow')
   .description('A simple workflow to get started')
@@ -84,7 +84,7 @@ console.log('Workflow created:', await workflow.name());
 ### 4. Execute the Workflow
 
 ```typescript
-import { Executor } from 'graphbit';
+import { Executor } from '@infinitibit_gmbh/graphbit';
 
 const executor = new Executor(llmConfig, {
   timeoutSeconds: 60,
@@ -109,7 +109,7 @@ if (await result.isCompleted()) {
 ### Text Processing
 
 ```typescript
-import { DocumentLoader, TextSplitter } from 'graphbit';
+import { DocumentLoader, TextSplitter } from '@infinitibit_gmbh/graphbit';
 
 // Load a document
 const loader = new DocumentLoader();
@@ -125,7 +125,7 @@ console.log(`Split into ${chunks.length} chunks`);
 ### Generate Embeddings
 
 ```typescript
-import { EmbeddingConfig, EmbeddingClient } from 'graphbit';
+import { EmbeddingConfig, EmbeddingClient } from '@infinitibit_gmbh/graphbit';
 
 const config = EmbeddingConfig.openai(process.env.OPENAI_API_KEY, 'text-embedding-3-small');
 
@@ -139,7 +139,7 @@ console.log(`Dimensions: ${response.embeddings[0].length}`);
 ### Create an Agent
 
 ```typescript
-import { AgentBuilder } from 'graphbit';
+import { AgentBuilder } from '@infinitibit_gmbh/graphbit';
 
 const agent = new AgentBuilder('Code Assistant')
   .description('An agent that helps with coding tasks')
@@ -164,7 +164,7 @@ import {
   Executor,
   TextSplitter,
   DocumentLoader,
-} from 'graphbit';
+} from '@infinitibit_gmbh/graphbit';
 
 async function main() {
   // Initialize
