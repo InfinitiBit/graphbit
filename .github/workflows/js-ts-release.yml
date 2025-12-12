@@ -38,6 +38,11 @@ on:
         type: boolean
         default: false
 
+# Prevent simultaneous publishes of the same package
+concurrency:
+  group: npm-publish-graphbit-js
+  cancel-in-progress: false  # Queue instead of canceling - don't interrupt active publishes
+
 env:
   CARGO_TERM_COLOR: always
 
@@ -170,6 +175,28 @@ jobs:
       - name: Prepare artifacts for publishing
         working-directory: javascript
         run: npm run artifacts
+
+      - name: Verify platform binaries exist
+        working-directory: javascript
+        shell: pwsh
+        run: |
+          Write-Host "Checking for platform binaries after artifact preparation..."
+          $binaries = Get-ChildItem -Filter "*.node" | Select-Object -ExpandProperty Name
+          if ($binaries.Count -eq 0) {
+            Write-Error "❌ No .node binaries found after artifact preparation"
+            exit 1
+          }
+          Write-Host "✅ Found $($binaries.Count) platform binary(ies):"
+          $binaries | ForEach-Object { Write-Host "  - $_" }
+
+      - name: Preflight validation (dry-run)
+        working-directory: javascript
+        run: |
+          echo "Running preflight validation..."
+          npm publish --dry-run --access public
+          echo "✅ Preflight validation passed - package is ready for publish"
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: ⚠️ Warning - Forced publish (tests skipped/failed)
         if: ${{ github.event.inputs.force_publish == 'true' }}
