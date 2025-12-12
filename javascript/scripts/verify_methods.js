@@ -6,7 +6,7 @@ const {
     Executor,
     WorkflowBuilder,
     AgentBuilder
-} = require('../javascript/index');
+} = require('../../index');
 
 const EXPECTED_METHODS = {
     WorkflowGraph: [
@@ -48,7 +48,7 @@ function checkMethods() {
         totalClasses++;
 
         // Get the class from the module
-        const Class = require('../javascript/index')[className];
+        const Class = require('../../index')[className];
 
         if (!Class) {
             console.error(`❌ Class ${className} not found in exports!`);

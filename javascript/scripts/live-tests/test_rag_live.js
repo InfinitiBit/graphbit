@@ -6,7 +6,7 @@ const {
     EmbeddingClient,
     AgentBuilder,
     LlmConfig
-} = require('../javascript/index');
+} = require('../../index');
 const fs = require('fs');
 const path = require('path');
 

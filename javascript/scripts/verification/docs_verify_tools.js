@@ -1,4 +1,4 @@
-const { createToolRegistry, tool } = require('../javascript/index');
+const { createToolRegistry, tool } = require('../../index');
 
 async function verifyToolsUsage() {
     console.log('Verifying Tool System for Documentation...');

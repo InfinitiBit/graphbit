@@ -1,4 +1,4 @@
-const { LlmConfig } = require('../javascript/index');
+const { LlmConfig } = require('../../index');
 
 async function verifyLlmConfigUsage() {
     console.log('Verifying LlmConfig for Documentation...');

@@ -1,4 +1,4 @@
-const { WorkflowBuilder, RetryableErrorType } = require('../javascript/index');
+const { WorkflowBuilder, RetryableErrorType } = require('../../index');
 
 async function verifyWorkflowUsage() {
     console.log('Verifying Workflow Usage for Documentation...');

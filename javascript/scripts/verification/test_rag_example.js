@@ -4,7 +4,7 @@ const {
     TextSplitter,
     EmbeddingConfig,
     EmbeddingClient
-} = require('../javascript/index');
+} = require('../../index');
 const fs = require('fs');
 const path = require('path');
 

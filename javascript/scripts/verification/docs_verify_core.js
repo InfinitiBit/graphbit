@@ -1,4 +1,4 @@
-const { init, version } = require('../javascript/index');
+const { init, version } = require('../../index');
 
 async function verifyCoreUsage() {
     console.log('Verifying Core Functions for Documentation...');

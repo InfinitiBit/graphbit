@@ -1,4 +1,4 @@
-const { TextSplitter } = require('../javascript/index');
+const { TextSplitter } = require('../../index');
 
 async function verifyTextSplitterUsage() {
     console.log('Verifying TextSplitter for Documentation...');

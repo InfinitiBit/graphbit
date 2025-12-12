@@ -1,4 +1,4 @@
-const { WorkflowBuilder, Executor, LlmConfig, RetryableErrorType } = require('../javascript/index');
+const { WorkflowBuilder, Executor, LlmConfig, RetryableErrorType } = require('../../index');
 
 async function verifyExecutorUsage() {
     console.log('Verifying Executor for Documentation...');

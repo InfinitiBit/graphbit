@@ -1,4 +1,4 @@
-const { EmbeddingConfig, EmbeddingClient } = require('../javascript/index');
+const { EmbeddingConfig, EmbeddingClient } = require('../../index');
 
 async function verifyEmbeddingsUsage() {
     console.log('Verifying Embeddings for Documentation...');

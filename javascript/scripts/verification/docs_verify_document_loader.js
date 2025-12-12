@@ -1,4 +1,4 @@
-const { DocumentLoader } = require('../javascript/index');
+const { DocumentLoader } = require('../../index');
 const fs = require('fs');
 const path = require('path');
 

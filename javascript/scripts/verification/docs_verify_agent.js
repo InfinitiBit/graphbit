@@ -1,4 +1,4 @@
-const { AgentBuilder, LlmConfig } = require('../javascript/index');
+const { AgentBuilder, LlmConfig } = require('../../index');
 
 async function verifyAgentUsage() {
     console.log('Verifying Agent for Documentation...');

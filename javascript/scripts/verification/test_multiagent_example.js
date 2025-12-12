@@ -2,7 +2,7 @@ const {
     init,
     AgentBuilder,
     LlmConfig
-} = require('../javascript/index');
+} = require('../../index');
 
 /**
  * Simplified Multi-Agent System Test
