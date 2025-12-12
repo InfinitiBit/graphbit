@@ -1,9 +1,11 @@
 name: JavaScript/TypeScript - Gated Release Pipeline
 
-# GATED PIPELINE: Build → Test → Publish
-# Stage 1: Build & Test (always runs)
-# Stage 2: Publish (only if Stage 1 succeeds OR manual override)
+# GATED PIPELINE: Build → Publish → Release
+# Stage 1: Build native binaries for 6 platforms
+# Stage 2: Publish to npm (only if Stage 1 succeeds OR manual override)
+# Stage 3: Create GitHub release (only if Stage 2 succeeds)
 # 
+# Note: Code quality checks (lint/test/typecheck) run in js-ts-ci-auto.yml
 # Usage: Go to Actions → This workflow → Run workflow → Fill inputs
 
 on:
@@ -41,7 +43,7 @@ env:
 
 jobs:
   # ============================================================================
-  # STAGE 1A: BUILD - Compile native binaries for 6 platforms
+  # STAGE 1: BUILD - Compile native binaries for 6 platforms
   # Gate: ALWAYS RUNS (unless skip_tests=true)
   # ============================================================================
   build:
@@ -132,68 +134,16 @@ jobs:
           retention-days: 1  # Short retention since we publish immediately
 
   # ============================================================================
-  # STAGE 1B: TEST - Validate builds before allowing publish
-  # Gate: BLOCKS publish if fails (unless force_publish=true)
-  # ============================================================================
-  test:
-    name: Validate Builds
-    needs: build
-    runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.skip_tests != 'true' }}
-    
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
-          cache-dependency-path: javascript/package-lock.json
-
-      - name: Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install npm dependencies
-        working-directory: javascript
-        run: npm ci
-
-      - name: Build debug binary
-        working-directory: javascript
-        run: npm run build:debug
-
-      - name: Run TypeScript type checking
-        working-directory: javascript
-        run: npm run typecheck
-
-      - name: Run linting
-        working-directory: javascript
-        run: npm run lint
-
-      - name: Run unit tests
-        working-directory: javascript
-        run: npm run test:unit
-
-      - name: Run type tests
-        working-directory: javascript
-        run: npm run test:types
-
-      - name: ✅ All validation checks passed
-        run: |
-          echo "::notice::Build validation successful - Ready for publish"
-          echo "VALIDATION_PASSED=true" >> $GITHUB_ENV
-
-  # ============================================================================
   # STAGE 2: PUBLISH - Collect all binaries and publish to npm
-  # Gate: Only runs if build+test passed OR force_publish=true
+  # Gate: Only runs if build passed OR force_publish=true
   # Condition: publish_mode ∈ {publish, full-release}
+  # Note: Code quality checks (lint/test/typecheck) should run in js-ts-ci-auto.yml
   # ============================================================================
   publish:
     name: Publish to npm Registry
-    needs: [build, test]  # Wait for build AND test to complete
+    needs: [build]  # Wait for build to complete
     runs-on: ubuntu-latest
-    # GATE LOGIC: (test passed OR force_publish) AND (mode is publish or full-release)
+    # GATE LOGIC: (build passed OR force_publish) AND (mode is publish or full-release)
     if: |
       (success() || github.event.inputs.force_publish == 'true') &&
       (github.event.inputs.publish_mode == 'publish' || github.event.inputs.publish_mode == 'full-release')
