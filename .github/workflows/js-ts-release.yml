@@ -88,12 +88,9 @@ jobs:
           cache-dependency-path: javascript/package-lock.json
 
       - name: Setup Rust toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
-          profile: minimal
-          override: true
-          target: ${{ matrix.target }}
+          targets: ${{ matrix.target }}
 
       - name: Install npm dependencies
         working-directory: javascript
@@ -103,10 +100,10 @@ jobs:
         working-directory: javascript
         run: npm run build -- --target ${{ matrix.target }}
 
-      - name: Upload binary artifact
-        uses: actions/upload-artifact@v3
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
         with:
-          name: bindings-${{ matrix.target }}
+          name: binaries-${{ matrix.target }}
           path: javascript/*.node
           retention-days: 1  # Short retention since we publish immediately
 
@@ -132,11 +129,7 @@ jobs:
           cache-dependency-path: javascript/package-lock.json
 
       - name: Setup Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Install npm dependencies
         working-directory: javascript
@@ -192,7 +185,7 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
 
       - name: Download all platform binaries
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           path: javascript/artifacts
 
@@ -218,8 +211,8 @@ jobs:
 
       - name: ✅ Published successfully
         run: |
-          echo "::notice::Package published to npm: @graphbit/core@${{ github.event.inputs.version }}"
-          echo "Install with: npm install @graphbit/core@${{ github.event.inputs.version }}"
+          echo "::notice::Package published to npm: graphbit@${{ github.event.inputs.version }}"
+          echo "Install with: npm install graphbit@${{ github.event.inputs.version }}"
 
   # ============================================================================
   # STAGE 3: RELEASE - Create GitHub release with changelog
@@ -252,16 +245,16 @@ jobs:
             
             ### Installation
             ```bash
-            npm install @graphbit/core@${{ steps.version.outputs.VERSION }}
+            npm install graphbit@${{ steps.version.outputs.VERSION }}
             ```
             
             ### What's Changed
             See [CHANGELOG.md](https://github.com/InfinitiBit/graphbit/blob/main/javascript/CHANGELOG.md) for detailed release notes.
             
             ### Supported Platforms
-             Linux x64, ARM64, musl
-             macOS Intel & Apple Silicon
-             Windows x64
+              Linux x64, ARM64, musl
+              macOS Intel & Apple Silicon
+              Windows x64
             
             ### Build Information
             - Branch: ${{ github.ref_name }}
