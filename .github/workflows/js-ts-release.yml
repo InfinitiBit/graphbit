@@ -1,0 +1,274 @@
+name: JavaScript/TypeScript - Gated Release Pipeline
+
+# GATED PIPELINE: Build → Test → Publish
+# Stage 1: Build & Test (always runs)
+# Stage 2: Publish (only if Stage 1 succeeds OR manual override)
+# 
+# Usage: Go to Actions → This workflow → Run workflow → Fill inputs
+
+on:
+  workflow_dispatch:  # Manual trigger only - full control
+    inputs:
+      version:
+        description: 'Version to publish (e.g., 1.0.0 without v prefix)'
+        required: true
+        type: string
+      
+      skip_tests:
+        description: 'Skip build & test validation (DANGEROUS - not recommended)'
+        required: false
+        type: boolean
+        default: false
+      
+      publish_mode:
+        description: 'Publish mode'
+        required: true
+        type: choice
+        default: 'test-only'
+        options:
+          - 'test-only'      # Stage 1 only: Build & Test
+          - 'publish'        # Stage 1 → Stage 2: Build → Test → Publish
+          - 'full-release'   # Stage 1 → Stage 2 → Stage 3: Build → Test → Publish → Release
+      
+      force_publish:
+        description: '⚠️ Force publish even if tests fail (bypass gate)'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # ============================================================================
+  # STAGE 1A: BUILD - Compile native binaries for 6 platforms
+  # Gate: ALWAYS RUNS (unless skip_tests=true)
+  # ============================================================================
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    if: ${{ github.event.inputs.skip_tests != 'true' }}  # Skip if bypassing validation
+    strategy:
+      fail-fast: false  # Continue building other platforms if one fails
+      matrix:
+        include:
+          # Linux x86_64 (Standard Linux servers)
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            
+          # Linux ARM64 (AWS Graviton, Raspberry Pi 4+)
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            
+          # Linux musl x86_64 (Alpine Linux, Docker containers)
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            
+          # macOS Intel (Older Macs)
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            
+          # macOS Apple Silicon (M1/M2/M3 Macs)
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            
+          # Windows x86_64 (Standard Windows)
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: javascript/package-lock.json
+
+      - name: Setup Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+          target: ${{ matrix.target }}
+
+      - name: Install npm dependencies
+        working-directory: javascript
+        run: npm ci
+
+      - name: Build native binary for ${{ matrix.target }}
+        working-directory: javascript
+        run: npm run build -- --target ${{ matrix.target }}
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: bindings-${{ matrix.target }}
+          path: javascript/*.node
+          retention-days: 1  # Short retention since we publish immediately
+
+  # ============================================================================
+  # STAGE 1B: TEST - Validate builds before allowing publish
+  # Gate: BLOCKS publish if fails (unless force_publish=true)
+  # ============================================================================
+  test:
+    name: Validate Builds
+    needs: build
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.skip_tests != 'true' }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: javascript/package-lock.json
+
+      - name: Setup Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+
+      - name: Install npm dependencies
+        working-directory: javascript
+        run: npm ci
+
+      - name: Build debug binary
+        working-directory: javascript
+        run: npm run build:debug
+
+      - name: Run TypeScript type checking
+        working-directory: javascript
+        run: npm run typecheck
+
+      - name: Run linting
+        working-directory: javascript
+        run: npm run lint
+
+      - name: Run unit tests
+        working-directory: javascript
+        run: npm run test:unit
+
+      - name: Run type tests
+        working-directory: javascript
+        run: npm run test:types
+
+      - name: ✅ All validation checks passed
+        run: |
+          echo "::notice::Build validation successful - Ready for publish"
+          echo "VALIDATION_PASSED=true" >> $GITHUB_ENV
+
+  # ============================================================================
+  # STAGE 2: PUBLISH - Collect all binaries and publish to npm
+  # Gate: Only runs if build+test passed OR force_publish=true
+  # Condition: publish_mode ∈ {publish, full-release}
+  # ============================================================================
+  publish:
+    name: Publish to npm Registry
+    needs: [build, test]  # Wait for build AND test to complete
+    runs-on: ubuntu-latest
+    # GATE LOGIC: (test passed OR force_publish) AND (mode is publish or full-release)
+    if: |
+      (success() || github.event.inputs.force_publish == 'true') &&
+      (github.event.inputs.publish_mode == 'publish' || github.event.inputs.publish_mode == 'full-release')
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js with npm registry
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Download all platform binaries
+        uses: actions/download-artifact@v3
+        with:
+          path: javascript/artifacts
+
+      - name: Install npm dependencies
+        working-directory: javascript
+        run: npm ci
+
+      - name: Prepare artifacts for publishing
+        working-directory: javascript
+        run: npm run artifacts
+
+      - name: ⚠️ Warning - Forced publish (tests skipped/failed)
+        if: ${{ github.event.inputs.force_publish == 'true' }}
+        run: |
+          echo "::warning::Publishing without full validation - use with caution"
+          echo "Force publish enabled by: ${{ github.actor }}"
+
+      - name: Publish package to npm
+        working-directory: javascript
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: ✅ Published successfully
+        run: |
+          echo "::notice::Package published to npm: @graphbit/core@${{ github.event.inputs.version }}"
+          echo "Install with: npm install @graphbit/core@${{ github.event.inputs.version }}"
+
+  # ============================================================================
+  # STAGE 3: RELEASE - Create GitHub release with changelog
+  # Gate: Only runs if publish succeeded
+  # Condition: publish_mode == 'full-release'
+  # ============================================================================
+  release:
+    name: Create GitHub Release
+    needs: publish  # Only create release after successful npm publish
+    runs-on: ubuntu-latest
+    if: ${{ success() && github.event.inputs.publish_mode == 'full-release' }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for changelog generation
+
+      - name: Set version from input
+        id: version
+        run: echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.version.outputs.VERSION }}
+          name: Release v${{ steps.version.outputs.VERSION }}
+          body: |
+            ## GraphBit JavaScript/TypeScript Bindings v${{ steps.version.outputs.VERSION }}
+            
+            ### Installation
+            ```bash
+            npm install @graphbit/core@${{ steps.version.outputs.VERSION }}
+            ```
+            
+            ### What's Changed
+            See [CHANGELOG.md](https://github.com/InfinitiBit/graphbit/blob/main/javascript/CHANGELOG.md) for detailed release notes.
+            
+            ### Supported Platforms
+            ✅ Linux x64, ARM64, musl
+            ✅ macOS Intel & Apple Silicon
+            ✅ Windows x64
+            
+            ### Build Information
+            - Branch: ${{ github.ref_name }}
+            - Commit: ${{ github.sha }}
+            - Triggered by: @${{ github.actor }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true  # Auto-generate from commits
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
