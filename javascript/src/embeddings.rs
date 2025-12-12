@@ -138,5 +138,95 @@ impl EmbeddingClient {
             },
         })
     }
+
+    /// Calculate cosine similarity between two embeddings
+    ///
+    /// Returns a similarity score between -1.0 and 1.0, where:
+    /// - 1.0 means identical vectors
+    /// - 0.0 means orthogonal (unrelated)
+    /// - -1.0 means opposite vectors
+    ///
+    /// # Arguments
+    /// * `embedding1` - First embedding vector
+    /// * `embedding2` - Second embedding vector
+    ///
+    /// # Returns
+    /// Cosine similarity score
+    ///
+    /// # Example
+    ///
+    /// ```javascript
+    /// const emb1 = [0.1, 0.2, 0.3, 0.4];
+    /// const emb2 = [0.15, 0.25, 0.35, 0.45];
+    /// 
+    /// const similarity = EmbeddingClient.similarity(emb1, emb2);
+    /// console.log(`Similarity: ${similarity.toFixed(4)}`); // ~0.9999
+    ///
+    /// if (similarity > 0.8) {
+    ///   console.log('Highly similar!');
+    /// }
+    /// ```
+    #[napi]
+    pub fn similarity(embedding1: Vec<f64>, embedding2: Vec<f64>) -> Result<f64> {
+        // Validate inputs
+        if embedding1.is_empty() || embedding2.is_empty() {
+            return Err(Error::from_reason("Embeddings cannot be empty"));
+        }
+
+        if embedding1.len() != embedding2.len() {
+            return Err(Error::from_reason(format!(
+                "Embeddings must have same length (got {} and {})",
+                embedding1.len(),
+                embedding2.len()
+            )));
+        }
+
+        // Convert to f32 for core library
+        let emb1_f32: Vec<f32> = embedding1.iter().map(|&x| x as f32).collect();
+        let emb2_f32: Vec<f32> = embedding2.iter().map(|&x| x as f32).collect();
+
+        // Calculate cosine similarity
+        graphbit_core::embeddings::EmbeddingService::cosine_similarity(&emb1_f32, &emb2_f32)
+            .map(|s| s as f64)
+            .map_err(crate::errors::to_napi_error)
+    }
 }
+
+/// Batch embedding options
+#[napi(object)]
+pub struct BatchEmbeddingOptions {
+    /// Maximum concurrent requests
+    pub max_concurrency: Option<u32>,
+    /// Timeout for entire batch in milliseconds
+    pub timeout_ms: Option<u32>,
+}
+
+/// Batch embedding statistics
+#[napi(object)]
+pub struct BatchEmbeddingStats {
+    /// Number of successful requests
+    pub successful_requests: u32,
+    /// Number of failed requests
+    pub failed_requests: u32,
+    /// Average response time in milliseconds
+    pub avg_response_time_ms: f64,
+    /// Total embeddings generated
+    pub total_embeddings: u32,
+    /// Total processing time in milliseconds
+    pub total_duration_ms: f64,
+}
+
+/// Batch embedding result
+#[napi(object)]
+pub struct BatchEmbeddingResult {
+    /// Array of embedding arrays (one per batch)
+    pub embeddings: Vec<Vec<Vec<f64>>>,
+    /// Errors for failed batches
+    pub errors: Vec<String>,
+    /// Processing statistics
+    pub stats: BatchEmbeddingStats,
+}
+
+// Note: Batch parallel processing requires more complex async handling
+// For now, we provide the similarity method which is the most requested feature
 
