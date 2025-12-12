@@ -12,7 +12,7 @@ Get started with GraphBit JavaScript bindings in 5 minutes.
 ### Install from npm (when published)
 
 ```bash
-npm install @graphbit/core
+npm install graphbit
 ```
 
 ### Build from Source
@@ -37,7 +37,7 @@ npm test
 ### 1. Initialize the Library
 
 ```typescript
-import { init } from '@graphbit/core';
+import { init } from 'graphbit';
 
 // Initialize GraphBit
 init();
@@ -46,7 +46,7 @@ init();
 ### 2. Configure an LLM Provider
 
 ```typescript
-import { LlmConfig } from '@graphbit/core';
+import { LlmConfig } from 'graphbit';
 
 // OpenAI
 const llmConfig = LlmConfig.openai({
@@ -71,7 +71,7 @@ const ollamaConfig = LlmConfig.ollama({
 ### 3. Create a Workflow
 
 ```typescript
-import { WorkflowBuilder } from '@graphbit/core';
+import { WorkflowBuilder } from 'graphbit';
 
 const workflow = new WorkflowBuilder('My First Workflow')
   .description('A simple workflow to get started')
@@ -84,7 +84,7 @@ console.log('Workflow created:', await workflow.name());
 ### 4. Execute the Workflow
 
 ```typescript
-import { Executor } from '@graphbit/core';
+import { Executor } from 'graphbit';
 
 const executor = new Executor(llmConfig, {
   timeoutSeconds: 60,
@@ -109,7 +109,7 @@ if (await result.isCompleted()) {
 ### Text Processing
 
 ```typescript
-import { DocumentLoader, TextSplitter } from '@graphbit/core';
+import { DocumentLoader, TextSplitter } from 'graphbit';
 
 // Load a document
 const loader = new DocumentLoader();
@@ -125,7 +125,7 @@ console.log(`Split into ${chunks.length} chunks`);
 ### Generate Embeddings
 
 ```typescript
-import { EmbeddingConfig, EmbeddingClient } from '@graphbit/core';
+import { EmbeddingConfig, EmbeddingClient } from 'graphbit';
 
 const config = EmbeddingConfig.openai(process.env.OPENAI_API_KEY, 'text-embedding-3-small');
 
@@ -139,7 +139,7 @@ console.log(`Dimensions: ${response.embeddings[0].length}`);
 ### Create an Agent
 
 ```typescript
-import { AgentBuilder } from '@graphbit/core';
+import { AgentBuilder } from 'graphbit';
 
 const agent = new AgentBuilder('Code Assistant')
   .description('An agent that helps with coding tasks')
@@ -164,7 +164,7 @@ import {
   Executor,
   TextSplitter,
   DocumentLoader,
-} from '@graphbit/core';
+} from 'graphbit';
 
 async function main() {
   // Initialize
@@ -226,7 +226,7 @@ HUGGINGFACE_API_KEY=hf_...
 
 ## Common Issues
 
-### "Cannot find module '@graphbit/core'"
+### "Cannot find module 'graphbit'"
 
 Make sure you've built the bindings:
 
