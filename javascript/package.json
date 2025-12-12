@@ -1,5 +1,5 @@
 {
-  "name": "@graphbit/core",
+  "name": "graphbit",
   "version": "0.5.1",
   "description": "JavaScript/Node.js bindings for GraphBit agentic workflow automation framework",
   "main": "index.js",
@@ -87,5 +87,15 @@
     "*.node",
     "README.md",
     "LICENSE.md"
-  ]
+  ],
+  "optionalDependencies": {
+    "graphbit-win32-x64-msvc": "0.5.1",
+    "graphbit-darwin-x64": "0.5.1",
+    "graphbit-linux-x64-gnu": "0.5.1",
+    "graphbit-darwin-arm64": "0.5.1",
+    "graphbit-linux-arm64-gnu": "0.5.1",
+    "graphbit-linux-arm64-musl": "0.5.1",
+    "graphbit-win32-arm64-msvc": "0.5.1",
+    "graphbit-linux-x64-musl": "0.5.1"
+  }
 }
