@@ -190,6 +190,22 @@ jobs:
           Write-Host "✅ Found $($binaries.Count) platform binary(ies):"
           $binaries | ForEach-Object { Write-Host "  - $_" }
 
+      - name: Verify package name matches organization
+        working-directory: javascript
+        run: |
+          PACKAGE_NAME=$(node -p "require('./package.json').name" 2>/dev/null || echo "INVALID")
+          echo "📦 Package name: $PACKAGE_NAME"
+          
+          # Validate package name is scoped to @infinitibit_gmbh organization
+          if [[ "$PACKAGE_NAME" != @infinitibit_gmbh/* ]]; then
+            echo "::error::❌ Package MUST be scoped to @infinitibit_gmbh organization"
+            echo "::error::Expected: @infinitibit_gmbh/<package-name>"
+            echo "::error::Got: $PACKAGE_NAME"
+            exit 1
+          fi
+          
+          echo "::notice::✅ Package correctly scoped to @infinitibit_gmbh organization"
+
       - name: Preflight validation (dry-run)
         working-directory: javascript
         run: |
@@ -213,8 +229,8 @@ jobs:
 
       - name: ✅ Published successfully
         run: |
-          echo "::notice::Package published to npm: graphbit@${{ github.event.inputs.version }}"
-          echo "Install with: npm install graphbit@${{ github.event.inputs.version }}"
+          echo "::notice::Package published to npm: @infinitibit_gmbh/graphbit@${{ github.event.inputs.version }}"
+          echo "Install with: npm install @infinitibit_gmbh/graphbit@${{ github.event.inputs.version }}"
 
   # ============================================================================
   # STAGE 3: RELEASE - Create GitHub release with changelog
@@ -247,7 +263,7 @@ jobs:
             
             ### Installation
             ```bash
-            npm install graphbit@${{ steps.version.outputs.VERSION }}
+            npm install @infinitibit_gmbh/graphbit@${{ steps.version.outputs.VERSION }}
             ```
             
             ### What's Changed
