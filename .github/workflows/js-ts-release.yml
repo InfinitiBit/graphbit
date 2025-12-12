@@ -102,7 +102,10 @@ jobs:
         if: matrix.target == 'x86_64-unknown-linux-musl'
         run: |
           sudo apt-get update
-          sudo apt-get install -y musl-tools
+          sudo apt-get install -y musl-tools musl-dev
+        env:
+          CC: musl-gcc
+          CXX: musl-g++
 
       - name: Install npm dependencies
         working-directory: javascript
