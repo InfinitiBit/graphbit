@@ -17,7 +17,13 @@ on:
         description: 'Lint TypeScript code'
         required: false
         type: boolean
-        default: false      run_unit_tests:
+        default: false
+      run_typecheck:
+        description: 'Run TypeScript type checking'
+        required: false
+        type: boolean
+        default: false
+      run_unit_tests:
         description: 'Run unit tests'
         required: false
         type: boolean
@@ -26,7 +32,8 @@ on:
         description: 'Run type tests'
         required: false
         type: boolean
-        default: false      run_coverage:
+        default: false
+      run_coverage:
         description: 'Run code coverage analysis'
         required: false
         type: boolean
@@ -104,6 +111,7 @@ jobs:
         run: npm run lint
 
       - name: Type check
+        if: ${{ github.event.inputs.run_typecheck == 'true' }}
         working-directory: javascript
         run: npm run typecheck
 
