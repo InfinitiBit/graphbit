@@ -1,4 +1,4 @@
-name: JavaScript CI - Manual Trigger
+name: JS-TS CI - Manual Trigger
 
 on:
   workflow_dispatch:
