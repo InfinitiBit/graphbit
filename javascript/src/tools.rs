@@ -1,19 +1,57 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+use std::time::{SystemTime, UNIX_EPOCH};
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use napi::threadsafe_function::{ErrorStrategy, ThreadsafeFunction, ThreadsafeFunctionCallMode};
 use serde_json::Value;
 use serde::{Serialize, Deserialize};
 
+/// Tool execution result
 #[napi(object)]
 #[derive(Clone)]
 pub struct ToolResult {
     pub success: bool,
-    #[napi(ts_type = "any")]
     pub result: Value,
     pub error: Option<String>,
     pub execution_time_ms: f64,
+}
+
+/// Tool metadata for monitoring and management
+#[napi(object)]
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ToolMetadata {
+    pub name: String,
+    pub description: String,
+    #[napi(ts_type = "any")]
+    pub parameters_schema: Value,
+    pub created_at: f64,
+    pub call_count: u32,
+    pub total_duration_ms: f64,
+    pub avg_duration_ms: f64,
+    pub last_called_at: Option<f64>,
+}
+
+/// Tool execution record for history tracking
+#[napi(object)]
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ToolExecution {
+    pub tool_name: String,
+    pub success: bool,
+    pub duration_ms: f64,
+    pub timestamp: f64,
+    pub error: Option<String>,
+}
+
+/// Tool statistics for monitoring
+#[napi(object)]
+pub struct ToolStats {
+    pub total_tools: u32,
+    pub total_executions: u32,
+    pub successful_executions: u32,
+    pub failed_executions: u32,
+    pub avg_execution_time_ms: f64,
+    pub total_execution_time_ms: f64,
 }
 
 use graphbit_core::llm::LlmTool;
@@ -21,11 +59,13 @@ use graphbit_core::llm::LlmTool;
 struct RegisteredTool {
     definition: LlmTool,
     callback: ThreadsafeFunction<Value, ErrorStrategy::Fatal>,
+    metadata: ToolMetadata,
 }
 
 #[napi]
 pub struct ToolRegistry {
     tools: Arc<Mutex<HashMap<String, RegisteredTool>>>,
+    execution_history: Arc<Mutex<Vec<ToolExecution>>>,
 }
 
 // Internal implementation for Rust usage
@@ -33,7 +73,15 @@ impl ToolRegistry {
     pub fn create() -> Self {
         Self {
             tools: Arc::new(Mutex::new(HashMap::new())),
+            execution_history: Arc::new(Mutex::new(Vec::new())),
         }
+    }
+
+    fn get_timestamp() -> f64 {
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs_f64()
     }
 }
 
@@ -61,11 +109,23 @@ impl ToolRegistry {
             },
         )?;
 
-        let tool = LlmTool::new(name.clone(), description, parameters);
+        let tool = LlmTool::new(name.clone(), description.clone(), parameters.clone());
+        
+        let metadata = ToolMetadata {
+            name: name.clone(),
+            description,
+            parameters_schema: parameters,
+            created_at: Self::get_timestamp(),
+            call_count: 0,
+            total_duration_ms: 0.0,
+            avg_duration_ms: 0.0,
+            last_called_at: None,
+        };
         
         let registered = RegisteredTool {
             definition: tool,
             callback: tsfn,
+            metadata,
         };
 
         let mut tools = self.tools.lock().map_err(|_| napi::Error::from_reason("Failed to lock registry"))?;
@@ -88,6 +148,32 @@ impl ToolRegistry {
         let result: napi::Result<Value> = tool.call_async(args).await;
         
         let duration = start.elapsed().as_secs_f64() * 1000.0;
+        let success = result.is_ok();
+
+        // Update metadata
+        {
+            let mut tools = self.tools.lock().map_err(|_| napi::Error::from_reason("Failed to lock registry"))?;
+            if let Some(tool) = tools.get_mut(&name) {
+                tool.metadata.call_count += 1;
+                tool.metadata.total_duration_ms += duration;
+                tool.metadata.avg_duration_ms = tool.metadata.total_duration_ms / tool.metadata.call_count as f64;
+                tool.metadata.last_called_at = Some(Self::get_timestamp());
+            }
+        }
+
+        // Record execution in history
+        let execution = ToolExecution {
+            tool_name: name.clone(),
+            success,
+            duration_ms: duration,
+            timestamp: Self::get_timestamp(),
+            error: if success { None } else { Some("Execution failed".to_string()) },
+        };
+        
+        {
+            let mut history = self.execution_history.lock().map_err(|_| napi::Error::from_reason("Failed to lock history"))?;
+            history.push(execution);
+        }
 
         match result {
             Ok(val) => Ok(ToolResult {
@@ -130,6 +216,200 @@ impl ToolRegistry {
     pub fn get_registered_tools(&self) -> napi::Result<Vec<String>> {
         let tools = self.tools.lock().map_err(|_| napi::Error::from_reason("Failed to lock registry"))?;
         Ok(tools.keys().cloned().collect())
+    }
+
+    // ========== NEW ENHANCED METHODS ==========
+
+    /// Unregister a tool by name
+    ///
+    /// # Arguments
+    /// * `name` - Name of the tool to unregister
+    ///
+    /// # Returns
+    /// true if tool was found and removed, false if not found
+    ///
+    /// # Example
+    ///
+    /// ```javascript
+    /// const removed = registry.unregisterTool('search_web');
+    /// if (removed) {
+    ///   console.log('Tool removed successfully');
+    /// }
+    /// ```
+    #[napi]
+    pub fn unregister_tool(&self, name: String) -> napi::Result<bool> {
+        let mut tools = self.tools.lock().map_err(|_| napi::Error::from_reason("Failed to lock registry"))?;
+        Ok(tools.remove(&name).is_some())
+    }
+
+    /// Get metadata for a specific tool
+    ///
+    /// Returns metadata including call count, durations, and timestamps.
+    ///
+    /// # Example
+    ///
+    /// ```javascript
+    /// const metadata = registry.getToolMetadata('search_web');
+    /// if (metadata) {
+    ///   console.log(`Calls: ${metadata.callCount}`);
+    ///   console.log(`Avg duration: ${metadata.avgDurationMs}ms`);
+    /// }
+    /// ```
+    #[napi]
+    pub fn get_tool_metadata(&self, name: String) -> napi::Result<Option<ToolMetadata>> {
+        let tools = self.tools.lock().map_err(|_| napi::Error::from_reason("Failed to lock registry"))?;
+        Ok(tools.get(&name).map(|tool| tool.metadata.clone()))
+    }
+
+    /// Get metadata for all registered tools
+    ///
+    /// # Example
+    ///
+    /// ```javascript
+    /// const allMetadata = registry.getAllMetadata();
+    /// allMetadata.forEach(meta => {
+    ///   console.log(`${meta.name}: ${meta.callCount} calls`);
+    /// });
+    /// ```
+    #[napi]
+    pub fn get_all_metadata(&self) -> napi::Result<Vec<ToolMetadata>> {
+        let tools = self.tools.lock().map_err(|_| napi::Error::from_reason("Failed to lock registry"))?;
+        Ok(tools.values().map(|tool| tool.metadata.clone()).collect())
+    }
+
+    /// Get execution history
+    ///
+    /// Returns a list of all tool executions with timestamps and durations.
+    ///
+    /// # Example
+    ///
+    /// ```javascript
+    /// const history = registry.getExecutionHistory();
+    /// history.forEach(exec => {
+    ///   console.log(`${exec.toolName}: ${exec.durationMs}ms at ${new Date(exec.timestamp * 1000)}`);
+    /// });
+    /// ```
+    #[napi]
+    pub fn get_execution_history(&self) -> napi::Result<Vec<ToolExecution>> {
+        let history = self.execution_history.lock().map_err(|_| napi::Error::from_reason("Failed to lock history"))?;
+        Ok(history.clone())
+    }
+
+    /// Clear execution history
+    ///
+    /// Removes all execution records but preserves tool metadata.
+    ///
+    /// # Example
+    ///
+    /// ```javascript
+    /// registry.clearHistory();
+    /// console.log('Execution history cleared');
+    /// ```
+    #[napi]
+    pub fn clear_history(&self) -> napi::Result<()> {
+        let mut history = self.execution_history.lock().map_err(|_| napi::Error::from_reason("Failed to lock history"))?;
+        history.clear();
+        Ok(())
+    }
+
+    /// Get comprehensive statistics across all tools
+    ///
+    /// Returns aggregated statistics including total executions,
+    /// success rates, and performance metrics.
+    ///
+    /// # Example
+    ///
+    /// ```javascript
+    /// const stats = registry.getStats();
+    /// console.log(`Total tools: ${stats.totalTools}`);
+    /// console.log(`Total executions: ${stats.totalExecutions}`);
+    /// console.log(`Success rate: ${(stats.successfulExecutions / stats.totalExecutions * 100).toFixed(2)}%`);
+    /// console.log(`Avg execution time: ${stats.avgExecutionTimeMs.toFixed(2)}ms`);
+    /// ```
+    #[napi]
+    pub fn get_stats(&self) -> napi::Result<ToolStats> {
+        let tools = self.tools.lock().map_err(|_| napi::Error::from_reason("Failed to lock registry"))?;
+        let history = self.execution_history.lock().map_err(|_| napi::Error::from_reason("Failed to lock history"))?;
+
+        let total_tools = tools.len() as u32;
+        let total_executions = history.len() as u32;
+        let successful_executions = history.iter().filter(|e| e.success).count() as u32;
+        let failed_executions = total_executions - successful_executions;
+
+        let total_execution_time_ms: f64 = history.iter().map(|e| e.duration_ms).sum();
+        let avg_execution_time_ms = if total_executions > 0 {
+            total_execution_time_ms / total_executions as f64
+        } else {
+            0.0
+        };
+
+        Ok(ToolStats {
+            total_tools,
+            total_executions,
+            successful_executions,
+            failed_executions,
+            avg_execution_time_ms,
+            total_execution_time_ms,
+        })
+    }
+
+    /// Clear all tools from the registry
+    ///
+    /// Removes all registered tools and clears history.
+    ///
+    /// # Example
+    ///
+    /// ```javascript
+    /// registry.clearAll();
+    /// console.log('All tools cleared');
+    /// ```
+    #[napi]
+    pub fn clear_all(&self) -> napi::Result<()> {
+        let mut tools = self.tools.lock().map_err(|_| napi::Error::from_reason("Failed to lock registry"))?;
+        let mut history = self.execution_history.lock().map_err(|_| napi::Error::from_reason("Failed to lock history"))?;
+        
+        tools.clear();
+        history.clear();
+        
+        Ok(())
+    }
+
+    /// Get tools in LLM-compatible format
+    ///
+    /// Returns tool definitions formatted for LLM tool calling.
+    ///
+    /// # Example
+    ///
+    /// ```javascript
+    /// const llmTools = registry.getLlmTools();
+    /// // Pass to LLM that supports tool calling
+    /// ```
+    #[napi]
+    pub fn get_llm_tools(&self) -> napi::Result<Vec<Value>> {
+        let tools = self.tools.lock().map_err(|_| napi::Error::from_reason("Failed to lock registry"))?;
+        
+        let mut llm_tools = Vec::new();
+        for tool in tools.values() {
+            let tool_json = serde_json::to_value(&tool.definition)
+                .map_err(|e| napi::Error::from_reason(format!("Failed to serialize tool: {}", e)))?;
+            llm_tools.push(tool_json);
+        }
+        
+        Ok(llm_tools)
+    }
+
+    /// Get count of registered tools
+    ///
+    /// # Example
+    ///
+    /// ```javascript
+    /// const count = registry.getToolCount();
+    /// console.log(`${count} tools registered`);
+    /// ```
+    #[napi]
+    pub fn get_tool_count(&self) -> napi::Result<u32> {
+        let tools = self.tools.lock().map_err(|_| napi::Error::from_reason("Failed to lock registry"))?;
+        Ok(tools.len() as u32)
     }
 }
 
