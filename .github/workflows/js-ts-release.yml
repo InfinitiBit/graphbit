@@ -167,6 +167,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: javascript/artifacts
+          merge-multiple: true  # Flatten all artifacts into single directory
 
       - name: Install npm dependencies
         working-directory: javascript
