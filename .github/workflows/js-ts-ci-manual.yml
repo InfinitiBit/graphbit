@@ -1,4 +1,4 @@
-name: JavaScript CI - Manual Trigger
+name: JS-TS CI - Manual Trigger
 
 on:
   workflow_dispatch:
@@ -20,6 +20,16 @@ on:
         default: false
       run_typecheck:
         description: 'Run TypeScript type checking'
+        required: false
+        type: boolean
+        default: false
+      run_unit_tests:
+        description: 'Run unit tests'
+        required: false
+        type: boolean
+        default: false
+      run_type_tests:
+        description: 'Run type tests'
         required: false
         type: boolean
         default: false
@@ -106,10 +116,12 @@ jobs:
         run: npm run typecheck
 
       - name: Run unit tests
+        if: ${{ github.event.inputs.run_unit_tests == 'true' }}
         working-directory: javascript
         run: npm run test:unit
 
       - name: Run type tests
+        if: ${{ github.event.inputs.run_type_tests == 'true' }}
         working-directory: javascript
         run: npm run test:types
 
