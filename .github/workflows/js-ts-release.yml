@@ -213,8 +213,8 @@ jobs:
 
       - name: ✅ Published successfully
         run: |
-          echo "::notice::Package published to npm: graphbit@${{ github.event.inputs.version }}"
-          echo "Install with: npm install graphbit@${{ github.event.inputs.version }}"
+          echo "::notice::Package published to npm: @infinitibit_gmbh/graphbit@${{ github.event.inputs.version }}"
+          echo "Install with: npm install @infinitibit_gmbh/graphbit@${{ github.event.inputs.version }}"
 
   # ============================================================================
   # STAGE 3: RELEASE - Create GitHub release with changelog
@@ -247,7 +247,7 @@ jobs:
             
             ### Installation
             ```bash
-            npm install graphbit@${{ steps.version.outputs.VERSION }}
+            npm install @infinitibit_gmbh/graphbit@${{ steps.version.outputs.VERSION }}
             ```
             
             ### What's Changed
