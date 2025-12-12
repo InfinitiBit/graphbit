@@ -80,6 +80,7 @@ impl From<NodeId> for graphbit_core::types::NodeId {
 
 /// Workflow execution state
 #[napi]
+#[derive(Debug)]
 pub enum WorkflowState {
     /// Workflow is pending execution
     Pending,
