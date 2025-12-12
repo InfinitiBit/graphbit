@@ -22,7 +22,7 @@ Complete API reference for the GraphBit JavaScript bindings.
 Initialize the GraphBit library. Must be called before using any other functions.
 
 ```typescript
-import { init } from '@graphbit/core';
+import { init } from 'graphbit';
 
 init();
 ```
@@ -34,7 +34,7 @@ init();
 Get the version of the GraphBit bindings.
 
 ```typescript
-import { version } from '@graphbit/core';
+import { version } from 'graphbit';
 
 const v = version();
 console.log(v); // "0.5.1"
@@ -47,7 +47,7 @@ console.log(v); // "0.5.1"
 Get detailed version information.
 
 ```typescript
-import { versionInfo } from '@graphbit/core';
+import { versionInfo } from 'graphbit';
 
 const info = versionInfo();
 console.log(info);
@@ -596,7 +596,7 @@ interface EmbeddingResponse {
 Validate JSON data against a schema.
 
 ```typescript
-import { validateJson } from '@graphbit/core';
+import { validateJson } from 'graphbit';
 
 const result = validateJson(
   JSON.stringify({ name: 'John', age: 30 }),
