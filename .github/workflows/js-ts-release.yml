@@ -214,21 +214,39 @@ jobs:
         working-directory: javascript
         run: |
           echo "📦 Publishing platform-specific packages..."
-          for pkg in npm/@infinitibit_gmbh/*; do
-            if [ -d "$pkg" ]; then
-              echo "Publishing $(basename $pkg)..."
-              cd "$pkg"
-              npm publish --access public
-              cd ../..
+          PUBLISHED_COUNT=0
+          FAILED_COUNT=0
+          
+          # NAPI-RS creates: npm/@scope/package-platform/ structure
+          for pkg_dir in npm/*/*/; do
+            if [ -d "$pkg_dir" ] && [ -f "${pkg_dir}package.json" ]; then
+              pkg_name=$(node -p "require('./${pkg_dir}package.json').name")
+              echo "Publishing $pkg_name from $pkg_dir..."
+              cd "$pkg_dir"
+              if npm publish --access public 2>&1; then
+                echo "✅ Published $pkg_name"
+                PUBLISHED_COUNT=$((PUBLISHED_COUNT + 1))
+              else
+                echo "❌ Failed to publish $pkg_name"
+                FAILED_COUNT=$((FAILED_COUNT + 1))
+              fi
+              cd ../../..
             fi
           done
+          
+          echo "📊 Summary: $PUBLISHED_COUNT published, $FAILED_COUNT failed"
+          
+          if [ $FAILED_COUNT -gt 0 ]; then
+            echo "::error::Failed to publish $FAILED_COUNT platform package(s)"
+            exit 1
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: ✅ Published successfully
         run: |
           echo "::notice::Main package published: @infinitibit_gmbh/graphbit@${{ github.event.inputs.version }}"
-          echo "::notice::Platform packages published: 6-8 optional dependencies"
+          echo "::notice::Platform packages: 6 published (Linux x64/ARM64/musl, macOS x64/ARM64, Windows x64)"
           echo "Install with: npm install @infinitibit_gmbh/graphbit@${{ github.event.inputs.version }}"
 
   # ============================================================================
