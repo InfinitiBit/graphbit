@@ -45,7 +45,7 @@ pub struct InitOptions {
 /// # Example
 ///
 /// ```javascript
-/// const { init } = require('@graphbit/core');
+/// const { init } = require('@infinitibit_gmbh/graphbit');
 ///
 /// // Simple initialization
 /// init();
@@ -99,7 +99,7 @@ pub fn init(options: Option<InitOptions>) -> Result<()> {
 /// # Example
 ///
 /// ```javascript
-/// const { version } = require('@graphbit/core');
+/// const { version } = require('@infinitibit_gmbh/graphbit');
 /// console.log(version()); // "0.5.1"
 /// ```
 #[napi]
@@ -117,7 +117,7 @@ pub fn version() -> String {
 /// # Example
 ///
 /// ```javascript
-/// const { versionInfo } = require('@graphbit/core');
+/// const { versionInfo } = require('@infinitibit_gmbh/graphbit');
 /// console.log(versionInfo());
 /// // { version: "0.5.1", rustVersion: "1.70.0", napiVersion: "2.16" }
 /// ```
@@ -163,7 +163,7 @@ pub struct SystemInfo {
 /// # Example
 ///
 /// ```javascript
-/// const { getSystemInfo } = require('@graphbit/core');
+/// const { getSystemInfo } = require('@infinitibit_gmbh/graphbit');
 /// const info = getSystemInfo();
 /// console.log(`OS: ${info.os} ${info.osVersion}`);
 /// console.log(`CPUs: ${info.cpuCount}`);
@@ -202,7 +202,7 @@ pub struct HealthStatus {
 /// # Example
 ///
 /// ```javascript
-/// const { healthCheck } = require('@graphbit/core');
+/// const { healthCheck } = require('@infinitibit_gmbh/graphbit');
 /// const health = healthCheck();
 /// if (health.healthy) {
 ///   console.log('✅ GraphBit is healthy');
@@ -243,7 +243,7 @@ pub struct RuntimeConfig {
 /// # Example
 ///
 /// ```javascript
-/// const { configureRuntime } = require('@graphbit/core');
+/// const { configureRuntime } = require('@infinitibit_gmbh/graphbit');
 /// configureRuntime({
 ///   maxThreads: 4,
 ///   enableMonitoring: true,

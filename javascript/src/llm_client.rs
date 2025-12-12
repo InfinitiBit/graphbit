@@ -160,7 +160,7 @@ impl StatsTracker {
 /// # Example
 ///
 /// ```javascript
-/// const { LlmClient, LlmConfig } = require('@graphbit/core');
+/// const { LlmClient, LlmConfig } = require('@infinitibit_gmbh/graphbit');
 ///
 /// // Create client
 /// const config = LlmConfig.openai({
