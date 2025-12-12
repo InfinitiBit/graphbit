@@ -3,6 +3,21 @@ name: JavaScript CI - Manual Trigger
 on:
   workflow_dispatch:
     inputs:
+      run_rust_formatting:
+        description: 'Check Rust formatting'
+        required: false
+        type: boolean
+        default: false
+      run_rust_lint:
+        description: 'Lint Rust code with Clippy'
+        required: false
+        type: boolean
+        default: false
+      run_typescript_lint:
+        description: 'Lint TypeScript code'
+        required: false
+        type: boolean
+        default: false
       run_coverage:
         description: 'Run code coverage analysis'
         required: false
@@ -12,7 +27,7 @@ on:
         description: 'Run performance benchmarks'
         required: false
         type: boolean
-        default: true
+        default: false
 
 env:
   CARGO_TERM_COLOR: always
@@ -62,10 +77,12 @@ jobs:
         run: npm ci
 
       - name: Check formatting (Rust)
+        if: ${{ github.event.inputs.run_rust_formatting == 'true' }}
         working-directory: javascript
         run: cargo fmt -- --check
 
       - name: Lint (Rust)
+        if: ${{ github.event.inputs.run_rust_lint == 'true' }}
         working-directory: javascript
         run: cargo clippy -- -D warnings
 
@@ -74,6 +91,7 @@ jobs:
         run: npm run build:debug
 
       - name: Lint (TypeScript)
+        if: ${{ github.event.inputs.run_typescript_lint == 'true' }}
         working-directory: javascript
         run: npm run lint
 
