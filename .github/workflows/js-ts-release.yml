@@ -134,7 +134,7 @@ jobs:
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: binaries-${{ matrix.target }}
+          name: ${{ matrix.target }}
           path: javascript/*.node
           retention-days: 1  # Short retention since we publish immediately
 
