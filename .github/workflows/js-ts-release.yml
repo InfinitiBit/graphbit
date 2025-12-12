@@ -167,30 +167,19 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: javascript/artifacts
+          merge-multiple: true  # Flatten all artifacts into single directory
 
       - name: Organize artifacts for NAPI-RS
         working-directory: javascript
         run: |
           echo "📦 Moving artifacts to root directory..."
-          # NAPI-RS expects .node files in root after artifacts command
-          # Since we downloaded manually, move them directly to root
           find artifacts -name "*.node" -exec mv {} . \;
-          
-          echo "✅ Artifacts moved. Contents:"
+          echo "✅ Found $(ls -1 *.node 2>/dev/null | wc -l) platform binary(ies)"
           ls -lh *.node
 
-      - name: Verify platform binaries exist
+      - name: Install npm dependencies
         working-directory: javascript
-        shell: pwsh
-        run: |
-          Write-Host "Checking for platform binaries after artifact preparation..."
-          $binaries = Get-ChildItem -Filter "*.node" | Select-Object -ExpandProperty Name
-          if ($binaries.Count -eq 0) {
-            Write-Error "❌ No .node binaries found after artifact preparation"
-            exit 1
-          }
-          Write-Host "✅ Found $($binaries.Count) platform binary(ies):"
-          $binaries | ForEach-Object { Write-Host "  - $_" }
+        run: npm ci
 
       - name: Verify package name matches organization
         working-directory: javascript
