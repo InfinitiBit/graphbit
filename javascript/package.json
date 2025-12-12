@@ -1,5 +1,5 @@
 {
-  "name": "graphbit",
+  "name": "@infinitibit_gmbh/graphbit",
   "version": "0.5.1",
   "description": "JavaScript/Node.js bindings for GraphBit agentic workflow automation framework",
   "main": "index.js",
