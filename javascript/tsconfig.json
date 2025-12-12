@@ -3,18 +3,17 @@
     // Target & Module: Node.js 16+ with CommonJS (matches package.json engines)
     "target": "ES2020",
     "module": "commonjs",
-    "lib": ["ES2020"],
-    
+    "lib": [
+      "ES2020"
+    ],
     // Output: Generate type definitions for consumers
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    
     // Paths: Keep files in root (matches package.json main: "index.js")
     // Note: NAPI-RS generates files directly in root, not dist/
     "outDir": "./build",
     "rootDir": "./",
-    
     // Type Safety: Strict mode enabled (catches bugs at compile-time)
     "strict": true,
     "noUnusedLocals": true,
@@ -22,7 +21,6 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
-    
     // Interoperability: Work smoothly with npm packages
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
@@ -30,46 +28,46 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "moduleResolution": "node",
-    
     // Types: Node.js environment only (no browser types)
-    "types": ["node"],
-    
+    "types": [
+      "node"
+    ],
     // Path Aliases: Clean imports without ../../../
     "paths": {
-      "@graphbit/core": ["./index"],
-      "@graphbit/core/*": ["./*"]
+      "graphbit": [
+        "./index"
+      ],
+      "graphbit/*": [
+        "./*"
+      ]
     },
-    
     // Emit Options
     "removeComments": false,
     "preserveConstEnums": true,
     "incremental": true,
     "tsBuildInfoFile": "./build/.tsbuildinfo"
   },
-  
   // Include: All TypeScript source files
   "include": [
-    "src/**/*.ts",           // 1 file: index.d.ts (type definitions from Rust)
-    "tests/**/*.ts",         // 30 files: unit, integration, type tests
-    "examples/**/*.ts",      // 16 files: usage examples
-    "benchmarks/**/*.ts",    // 1 file: performance benchmarks
-    "vitest.config.ts",      // Test configuration
-    "index.d.ts"             // Main type definitions (NAPI-RS generated)
+    "src/**/*.ts", // 1 file: index.d.ts (type definitions from Rust)
+    "tests/**/*.ts", // 30 files: unit, integration, type tests
+    "examples/**/*.ts", // 16 files: usage examples
+    "benchmarks/**/*.ts", // 1 file: performance benchmarks
+    "vitest.config.ts", // Test configuration
+    "index.d.ts" // Main type definitions (NAPI-RS generated)
   ],
-  
   // Exclude: Build artifacts, dependencies, and generated files
   "exclude": [
-    "node_modules",          // npm dependencies
-    "build",                 // TypeScript output directory
-    "dist",                  // Distribution files (if used)
-    "target",                // Rust build artifacts
-    "**/*.node",             // Native binary files
-    "**/*.js",               // JavaScript files (we only type-check TS)
-    "**/node_modules",       // Nested dependencies
-    "coverage",              // Test coverage reports
-    "scripts/**/*.py"        // Python scripts in scripts/
+    "node_modules", // npm dependencies
+    "build", // TypeScript output directory
+    "dist", // Distribution files (if used)
+    "target", // Rust build artifacts
+    "**/*.node", // Native binary files
+    "**/*.js", // JavaScript files (we only type-check TS)
+    "**/node_modules", // Nested dependencies
+    "coverage", // Test coverage reports
+    "scripts/**/*.py" // Python scripts in scripts/
   ],
-  
   // ts-node configuration (for running TS files directly)
   "ts-node": {
     "transpileOnly": true,
