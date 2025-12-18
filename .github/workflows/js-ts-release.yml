@@ -144,7 +144,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.target }}
-          path: javascript/*.node
+          path: |
+            javascript/*.node
+            javascript/index.js
+            javascript/index.d.ts
           retention-days: 1  # Short retention since we publish immediately
 
   # ============================================================================
@@ -185,10 +188,15 @@ jobs:
           
           echo "📂 Organising build artifacts..."
           find artifacts -name "*.node" -exec mv -v -t . {} +
+          
+          # Move glue code (index.js/d.ts) - these are identical across artifacts, so we just need one
+          find artifacts -name "index.js" -exec mv -v -n {} . \;
+          find artifacts -name "index.d.ts" -exec mv -v -n {} . \;
+          
           rm -rf artifacts/
           
-          echo "📜 Binary files in workspace:"
-          ls -F *.node
+          echo "📜 Files in workspace:"
+          ls -F
 
       - name: Install npm dependencies
         working-directory: javascript
