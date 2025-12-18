@@ -75,9 +75,6 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
             
-          # Linux musl ARM64 (Alpine Linux on ARM)
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-musl
 
           # Windows ARM64 (Surface Pro X, etc.)
           - os: windows-latest
@@ -330,9 +327,9 @@ jobs:
             See [CHANGELOG.md](https://github.com/InfinitiBit/graphbit/blob/main/javascript/CHANGELOG.md) for detailed release notes.
             
             ### Supported Platforms
-              Linux x64, ARM64, musl
+              Linux x64 (glibc & musl), ARM64 (glibc)
               macOS Intel & Apple Silicon
-              Windows x64
+              Windows x64 & ARM64
             
             ### Build Information
             - Branch: ${{ github.ref_name }}
