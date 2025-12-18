@@ -33,12 +33,16 @@ on:
           - 'full-release'   # Stage 1 → Stage 2 → Stage 3: Build → Test → Publish → Release
       
       force_publish:
-        description: '⚠️ Force publish even if tests fail (bypass gate)'
+        description: 'Force publish even if tests fail (bypass gate)'
         required: false
         type: boolean
         default: false
 
 # Prevent simultaneous publishes of the same package
+permissions:
+  contents: write
+  id-token: write
+
 concurrency:
   group: npm-publish-graphbit-js
   cancel-in-progress: false  # Queue instead of canceling - don't interrupt active publishes
@@ -163,6 +167,26 @@ jobs:
           node-version: 20
           registry-url: 'https://registry.npmjs.org'
 
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: javascript/artifacts
+
+      - name: Flatten and verify artifacts
+        working-directory: javascript
+        run: |
+          echo "Organising build artifacts..."
+          find artifacts -name "*.node" -exec cp -v {} . \;
+          echo "Binary files in workspace:"
+          ls -F *.node
+
+      - name: Sync package version
+        working-directory: javascript
+        run: |
+          NEW_VERSION="${{ github.event.inputs.version }}"
+          echo " Setting package version to $NEW_VERSION"
+          npm version $NEW_VERSION --no-git-tag-version --allow-same-version
+
       - name: Install npm dependencies
         working-directory: javascript
         run: npm ci
@@ -173,32 +197,38 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Binary Smoke Test
+        working-directory: javascript
+        run: |
+          echo "Running smoke test on organized binaries..."
+          node -e "const gb = require('./index.js'); console.log('Native binding loaded successfully. Version:', gb.version())"
+
       - name: Verify package name matches organization
         working-directory: javascript
         run: |
           PACKAGE_NAME=$(node -p "require('./package.json').name" 2>/dev/null || echo "INVALID")
-          echo "📦 Package name: $PACKAGE_NAME"
+          echo "Package name: $PACKAGE_NAME"
           
           # Validate package name is scoped to @infinitibit_gmbh organization
           if [[ "$PACKAGE_NAME" != @infinitibit_gmbh/* ]]; then
-            echo "::error::❌ Package MUST be scoped to @infinitibit_gmbh organization"
+            echo "::error::Package MUST be scoped to @infinitibit_gmbh organization"
             echo "::error::Expected: @infinitibit_gmbh/<package-name>"
             echo "::error::Got: $PACKAGE_NAME"
             exit 1
           fi
           
-          echo "::notice::✅ Package correctly scoped to @infinitibit_gmbh organization"
+          echo "::notice::Package correctly scoped to @infinitibit_gmbh organization"
 
       - name: Preflight validation (dry-run)
         working-directory: javascript
         run: |
           echo "Running preflight validation..."
           npm publish --dry-run --access public
-          echo "✅ Preflight validation passed - package is ready for publish"
+          echo "Preflight validation passed - package is ready for publish"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: ⚠️ Warning - Forced publish (tests skipped/failed)
+      - name: Warning - Forced publish (tests skipped/failed)
         if: ${{ github.event.inputs.force_publish == 'true' }}
         run: |
           echo "::warning::Publishing without full validation - use with caution"
@@ -213,7 +243,7 @@ jobs:
       - name: Publish platform-specific packages
         working-directory: javascript
         run: |
-          echo "📦 Publishing platform-specific packages..."
+          echo "Publishing platform-specific packages..."
           PUBLISHED_COUNT=0
           FAILED_COUNT=0
           
@@ -224,17 +254,17 @@ jobs:
               echo "Publishing $pkg_name from $pkg_dir..."
               cd "$pkg_dir"
               if npm publish --access public 2>&1; then
-                echo "✅ Published $pkg_name"
+                echo " Published $pkg_name"
                 PUBLISHED_COUNT=$((PUBLISHED_COUNT + 1))
               else
-                echo "❌ Failed to publish $pkg_name"
+                echo " Failed to publish $pkg_name"
                 FAILED_COUNT=$((FAILED_COUNT + 1))
               fi
               cd ../../..
             fi
           done
           
-          echo "📊 Summary: $PUBLISHED_COUNT published, $FAILED_COUNT failed"
+          echo " Summary: $PUBLISHED_COUNT published, $FAILED_COUNT failed"
           
           if [ $FAILED_COUNT -gt 0 ]; then
             echo "::error::Failed to publish $FAILED_COUNT platform package(s)"
@@ -243,7 +273,7 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: ✅ Published successfully
+      - name:  Published successfully
         run: |
           echo "::notice::Main package published: @infinitibit_gmbh/graphbit@${{ github.event.inputs.version }}"
           echo "::notice::Platform packages: 6 published (Linux x64/ARM64/musl, macOS x64/ARM64, Windows x64)"
