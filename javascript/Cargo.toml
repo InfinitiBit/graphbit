@@ -19,7 +19,7 @@ name = "graphbit_js"
 
 [dependencies]
 # Core GraphBit dependency
-graphbit-core = { path = "../core" }
+graphbit-core = { path = "../core", features = ["javascript"] }
 
 # napi-rs for Node.js bindings
 napi = { version = "2.16", features = ["async", "tokio_rt", "napi8", "serde-json"] }

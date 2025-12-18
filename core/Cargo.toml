@@ -26,6 +26,7 @@ uuid.workspace = true
 [features]
 default = []
 python = ["pyo3"]
+javascript = []
 
 [lints]
 workspace = true
