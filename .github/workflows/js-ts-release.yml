@@ -180,16 +180,16 @@ jobs:
           echo "Binary files in workspace:"
           ls -F *.node
 
+      - name: Install npm dependencies
+        working-directory: javascript
+        run: npm ci
+
       - name: Sync package version
         working-directory: javascript
         run: |
           NEW_VERSION="${{ github.event.inputs.version }}"
           echo " Setting package version to $NEW_VERSION"
-          npm version $NEW_VERSION --no-git-tag-version --allow-same-version
-
-      - name: Install npm dependencies
-        working-directory: javascript
-        run: npm ci
+          npm version $NEW_VERSION --no-git-tag-version --allow-same-version --no-scripts
 
       - name: Download and organize artifacts with NAPI-RS
         working-directory: javascript
