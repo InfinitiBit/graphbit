@@ -75,6 +75,14 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
             
+          # Linux musl ARM64 (Alpine Linux on ARM)
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-musl
+
+          # Windows ARM64 (Surface Pro X, etc.)
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
+
           # macOS Intel (Older Macs)
           - os: macos-latest
             target: x86_64-apple-darwin
@@ -172,12 +180,17 @@ jobs:
         with:
           path: javascript/artifacts
 
-      - name: Flatten and verify artifacts
+      - name: Clean and organize artifacts
         working-directory: javascript
         run: |
-          echo "Organising build artifacts..."
-          find artifacts -name "*.node" -exec cp -v {} . \;
-          echo "Binary files in workspace:"
+          echo "🧹 Cleaning stale distribution files..."
+          rm -rf npm/
+          
+          echo "📂 Organising build artifacts..."
+          find artifacts -name "*.node" -exec mv -v -t . {} +
+          rm -rf artifacts/
+          
+          echo "📜 Binary files in workspace:"
           ls -F *.node
 
       - name: Install npm dependencies
@@ -191,17 +204,17 @@ jobs:
           echo " Setting package version to $NEW_VERSION"
           npm version $NEW_VERSION --no-git-tag-version --allow-same-version --no-scripts
 
+      - name: Binary Smoke Test
+        working-directory: javascript
+        run: |
+          echo "🧪 Running smoke test on local binaries..."
+          node -e "const gb = require('./index.js'); console.log('✅ Native binding loaded successfully. Version:', gb.version())"
+
       - name: Download and organize artifacts with NAPI-RS
         working-directory: javascript
         run: npm run artifacts
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Binary Smoke Test
-        working-directory: javascript
-        run: |
-          echo "Running smoke test on organized binaries..."
-          node -e "const gb = require('./index.js'); console.log('Native binding loaded successfully. Version:', gb.version())"
 
       - name: Verify package name matches organization
         working-directory: javascript
