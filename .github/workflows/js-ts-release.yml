@@ -206,8 +206,26 @@ jobs:
         working-directory: javascript
         run: |
           NEW_VERSION="${{ github.event.inputs.version }}"
-          echo " Setting package version to $NEW_VERSION"
+          echo "Setting package version to $NEW_VERSION"
           npm version $NEW_VERSION --no-git-tag-version --allow-same-version --no-scripts
+          
+          # Crucial: Update optionalDependencies versions to match the new root version
+          # This prevents 404s/version mismatches during user installation
+          echo "Syncing optionalDependencies to $NEW_VERSION..."
+          VERSION_TO_SYNC="$NEW_VERSION" node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            const newVersion = process.env.VERSION_TO_SYNC;
+            if (pkg.optionalDependencies) {
+              Object.keys(pkg.optionalDependencies).forEach(dep => {
+                if (dep.startsWith('@infinitibit_gmbh/graphbit-')) {
+                  pkg.optionalDependencies[dep] = newVersion;
+                  console.log(' Updated ' + dep + ' to ' + newVersion);
+                }
+              });
+              fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+            }
+          "
 
       - name: Binary Smoke Test
         working-directory: javascript
@@ -252,42 +270,68 @@ jobs:
           echo "::warning::Publishing without full validation - use with caution"
           echo "Force publish enabled by: ${{ github.actor }}"
 
-      - name: Publish main package to npm
-        working-directory: javascript
-        run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
       - name: Publish platform-specific packages
         working-directory: javascript
+        shell: bash
         run: |
-          echo "Publishing platform-specific packages..."
+          echo "🔍 Discovering platform packages in npm/..."
+          
+          # Debug: List the structure of npm/ to verify generation
+          if [ -d "npm" ]; then
+            echo "📁 Directory structure of npm/:"
+            find npm -maxdepth 3 -ls
+          else
+            echo "::error::Directory 'npm/' not found! 'npm run artifacts' might have failed."
+            exit 1
+          fi
+          
           PUBLISHED_COUNT=0
           FAILED_COUNT=0
           
-          # NAPI-RS creates: npm/@scope/package-platform/ structure
-          for pkg_dir in npm/*/*/; do
-            if [ -d "$pkg_dir" ] && [ -f "${pkg_dir}package.json" ]; then
-              pkg_name=$(node -p "require('./${pkg_dir}package.json').name")
-              echo "Publishing $pkg_name from $pkg_dir..."
+          # Find all package.json files in npm subdirectories (handles scoped and unscoped)
+          while read -r pkg_json; do
+            pkg_dir=$(dirname "$pkg_json")
+            pkg_name=$(node -p "require('./$pkg_json').name" 2>/dev/null || echo "unknown")
+            pkg_version=$(node -p "require('./$pkg_json').version" 2>/dev/null || echo "unknown")
+            
+            echo "🚀 Publishing $pkg_name@$pkg_version from $pkg_dir..."
+            
+            # Subshell for publication to maintain main WD
+            (
               cd "$pkg_dir"
               if npm publish --access public 2>&1; then
-                echo " Published $pkg_name"
-                PUBLISHED_COUNT=$((PUBLISHED_COUNT + 1))
+                echo "✅ Successfully published $pkg_name"
+                exit 0
               else
-                echo " Failed to publish $pkg_name"
-                FAILED_COUNT=$((FAILED_COUNT + 1))
+                echo "❌ Failed to publish $pkg_name"
+                exit 1
               fi
-              cd ../../..
+            )
+            
+            if [ $? -eq 0 ]; then
+              PUBLISHED_COUNT=$((PUBLISHED_COUNT + 1))
+            else
+              FAILED_COUNT=$((FAILED_COUNT + 1))
             fi
-          done
+          done < <(find npm -name "package.json" -mindepth 2 -maxdepth 3)
           
           echo " Summary: $PUBLISHED_COUNT published, $FAILED_COUNT failed"
+          
+          if [ $PUBLISHED_COUNT -eq 0 ]; then
+             echo "::error::No platform packages were found to publish!"
+             exit 1
+          fi
           
           if [ $FAILED_COUNT -gt 0 ]; then
             echo "::error::Failed to publish $FAILED_COUNT platform package(s)"
             exit 1
           fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish main package to npm
+        working-directory: javascript
+        run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
