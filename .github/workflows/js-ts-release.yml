@@ -186,16 +186,18 @@ jobs:
           echo "🧹 Cleaning stale distribution files..."
           rm -rf npm/
           
-          echo "📂 Organising build artifacts..."
+          echo "📂 Verifying downloaded artifacts structure..."
+          find artifacts -maxdepth 3 -ls
+          
+          echo "📂 Flattening build artifacts to root..."
+          # Move all binaries to the root for the smoke test and napi artifacts discovery
           find artifacts -name "*.node" -exec mv -v -t . {} +
           
-          # Move glue code (index.js/d.ts) - these are identical across artifacts, so we just need one
-          find artifacts -name "index.js" -exec mv -v -n {} . \;
-          find artifacts -name "index.d.ts" -exec mv -v -n {} . \;
+          # Copy glue code (index.js/d.ts) to root - these are identical across all targets
+          find artifacts -name "index.js" -exec cp -v {} . \;
+          find artifacts -name "index.d.ts" -exec cp -v {} . \;
           
-          rm -rf artifacts/
-          
-          echo "📜 Files in workspace:"
+          echo "📜 Files in workspace root:"
           ls -F
 
       - name: Install npm dependencies
@@ -235,7 +237,16 @@ jobs:
 
       - name: Download and organize artifacts with NAPI-RS
         working-directory: javascript
-        run: npm run artifacts
+        run: |
+          npm run artifacts
+          echo "📁 Checking generated npm/ directory:"
+          if [ -d "npm" ]; then
+            ls -R npm/
+          else
+            echo "::warning::npm/ directory was NOT created by 'npm run artifacts'"
+          fi
+          # Clean up the raw artifacts folder now that we are done with it
+          rm -rf artifacts/
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
