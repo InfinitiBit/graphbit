@@ -193,9 +193,13 @@ jobs:
           # Move all binaries to the root for the smoke test and napi artifacts discovery
           find artifacts -name "*.node" -exec mv -v -t . {} +
           
-          # Copy glue code (index.js/d.ts) to root - these are identical across all targets
-          find artifacts -name "index.js" -exec cp -v {} . \;
-          find artifacts -name "index.d.ts" -exec cp -v {} . \;
+          # Move glue code (index.js/d.ts) to root - we only need one set, they are identical
+          # We use one from any target folder
+          find artifacts -name "index.js" -exec mv -v {} . \;
+          find artifacts -name "index.d.ts" -exec mv -v {} . \;
+          
+          echo "🧹 Removing raw artifacts folder to avoid NAPI-RS discovery conflicts..."
+          rm -rf artifacts/
           
           echo "📜 Files in workspace root:"
           ls -F
@@ -238,15 +242,19 @@ jobs:
       - name: Download and organize artifacts with NAPI-RS
         working-directory: javascript
         run: |
-          npm run artifacts
+          echo "📜 Files in workspace before organization:"
+          ls -F
+          
+          # Use npx to ensure the latest local CLI is used
+          npx napi artifacts
+          
           echo "📁 Checking generated npm/ directory:"
           if [ -d "npm" ]; then
             ls -R npm/
           else
-            echo "::warning::npm/ directory was NOT created by 'npm run artifacts'"
+            echo "::error::npm/ directory was NOT created by 'napi artifacts'. This will cause a publication failure."
+            exit 1
           fi
-          # Clean up the raw artifacts folder now that we are done with it
-          rm -rf artifacts/
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -349,7 +357,7 @@ jobs:
       - name:  Published successfully
         run: |
           echo "::notice::Main package published: @infinitibit_gmbh/graphbit@${{ github.event.inputs.version }}"
-          echo "::notice::Platform packages: 6 published (Linux x64/ARM64/musl, macOS x64/ARM64, Windows x64)"
+          echo "::notice::Platform packages: 7 published (Linux x64/ARM64/musl, macOS x64/ARM64, Windows x64/ARM64)"
           echo "Install with: npm install @infinitibit_gmbh/graphbit@${{ github.event.inputs.version }}"
 
   # ============================================================================
