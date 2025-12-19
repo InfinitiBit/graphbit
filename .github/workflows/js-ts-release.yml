@@ -244,15 +244,19 @@ jobs:
       - name: Download and organize artifacts with NAPI-RS
         working-directory: javascript
         run: |
-          # 1. Generate the npm/ directory structure and platform package.json files
-          # Crucial: Use --skip-gh-release to avoid 422 errors if the tag already exists
-          echo "📦 Generating npm/ directory structure with napi prepublish..."
-          npx napi prepublish --skip-gh-release -t npm
+          # 1. Manually create the npm/ directory structure to ensure mv success
+          echo "� Creating npm/ directory structure..."
+          mkdir -p npm/darwin-arm64
+          mkdir -p npm/darwin-x64
+          mkdir -p npm/linux-arm64-gnu
+          mkdir -p npm/linux-x64-gnu
+          mkdir -p npm/linux-x64-musl
+          mkdir -p npm/win32-arm64-msvc
+          mkdir -p npm/win32-x64-msvc
           
-          echo "📂 Mapping binaries to their respective platform packages..."
-          # We move each binary from its download folder directly into its final npm sub-package destination.
-          # This bypasses the flaky 'napi artifacts' discovery logic.
-          
+          echo "📂 Mapping binaries from artifacts/ to npm/ structure..."
+          # Move each binary from its download folder directly into its final npm destination.
+          # This bypasses all NAPI-RS discovery logic which is prone to environment failures.
           mv -v artifacts/aarch64-apple-darwin/graphbit-js.darwin-arm64.node npm/darwin-arm64/
           mv -v artifacts/x86_64-apple-darwin/graphbit-js.darwin-x64.node npm/darwin-x64/
           mv -v artifacts/aarch64-unknown-linux-gnu/graphbit-js.linux-arm64-gnu.node npm/linux-arm64-gnu/
@@ -261,15 +265,20 @@ jobs:
           mv -v artifacts/aarch64-pc-windows-msvc/graphbit-js.win32-arm64-msvc.node npm/win32-arm64-msvc/
           mv -v artifacts/x86_64-pc-windows-msvc/graphbit-js.win32-x64-msvc.node npm/win32-x64-msvc/
           
-          echo "📁 checking generated npm/ directory:"
+          echo "📦 Generating platform package.json manifests with napi prepublish..."
+          # Crucial: Use --skip-gh-release to avoid 422 errors if the tag already exists.
+          # Since binaries are already in npm/, this will correctly generate the manifests.
+          npx napi prepublish --skip-gh-release -t npm
+          
+          echo "📁 Checking generated npm/ directory integrity:"
           if [ -d "npm" ]; then
             find npm -maxdepth 3 -ls
           else
-            echo "::error::npm/ directory was NOT created correctly. Publication will fail."
+            echo "::error::npm/ directory structure validation failed."
             exit 1
           fi
           
-          # Cleanup raw artifacts and local copies before publication
+          # Cleanup raw artifacts folder before publication
           rm -rf artifacts/
           rm -f *.node
         env:
