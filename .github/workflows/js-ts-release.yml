@@ -189,15 +189,21 @@ jobs:
           echo "📂 Verifying downloaded artifacts structure..."
           find artifacts -maxdepth 3 -ls
           
-          echo "📂 Preparing local files for smoke test (without breaking NAPI-RS structure)..."
-          # Copy binaries to root for the smoke test (keeping originals in artifacts/ for NAPI-RS)
+          # Extract glue code from the first available target
+          FIRST_TARGET=$(ls artifacts | head -n 1)
+          echo "📂 Extracting glue code from $FIRST_TARGET..."
+          cp "artifacts/$FIRST_TARGET/index.js" .
+          cp "artifacts/$FIRST_TARGET/index.d.ts" .
+          
+          # Remove all glue code from artifacts folder to avoid confusing napi-rs
+          echo "🧹 Sanitizing artifacts folder (removing non-binary files)..."
+          find artifacts -name "index.js" -delete
+          find artifacts -name "index.d.ts" -delete
+          
+          echo "📂 Copying binaries to root for smoke test..."
           find artifacts -name "*.node" -exec cp -v {} . \;
           
-          # Copy glue code (index.js/d.ts) to root
-          find artifacts -name "index.js" -exec cp -v {} . \;
-          find artifacts -name "index.d.ts" -exec cp -v {} . \;
-          
-          echo "📜 Files in workspace root for smoke test:"
+          echo "📜 Workspace root prepared for smoke test:"
           ls -F
 
       - name: Install npm dependencies
@@ -238,19 +244,22 @@ jobs:
       - name: Download and organize artifacts with NAPI-RS
         working-directory: javascript
         run: |
+          # 1. CRITICAL: Cleanup root binaries before organization
+          # Having these in the root AND in artifacts/ causes NAPI-RS discovery conflicts
+          echo "🧹 Cleaning up local binaries before organization..."
+          rm -f *.node
+          
           echo "📜 Workspace state before organization:"
           ls -F
           find artifacts -maxdepth 3 -ls
           
-          # 1. First, use 'napi artifacts' to organize nested files into npm/
+          mkdir -p npm
+          
+          # 2. Use 'napi artifacts' to organize the clean 'artifacts/' folder into 'npm/'
           echo "📦 Organizing binaries into npm/ directory..."
           npx napi artifacts
           
-          # 2. Then, use 'napi prepublish' to finalize sub-packages
-          echo "📦 Prepublishing sub-packages..."
-          npx napi prepublish -t npm
-          
-          echo "📁 checking generated npm/ directory:"
+          echo "📁 Checking generated npm/ directory:"
           if [ -d "npm" ]; then
             find npm -maxdepth 3 -ls
           else
@@ -258,9 +267,8 @@ jobs:
             exit 1
           fi
           
-          # Cleanup raw artifacts and local copies before publication
+          # Cleanup raw artifacts now that they are organized
           rm -rf artifacts/
-          rm -f *.node
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
