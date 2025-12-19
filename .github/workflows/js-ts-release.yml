@@ -245,9 +245,9 @@ jobs:
         working-directory: javascript
         run: |
           # 1. Generate the npm/ directory structure and platform package.json files
+          # Crucial: Use --skip-gh-release to avoid 422 errors if the tag already exists
           echo "📦 Generating npm/ directory structure with napi prepublish..."
-          mkdir -p npm
-          npx napi prepublish -t npm
+          npx napi prepublish --skip-gh-release -t npm
           
           echo "📂 Mapping binaries to their respective platform packages..."
           # We move each binary from its download folder directly into its final npm sub-package destination.
