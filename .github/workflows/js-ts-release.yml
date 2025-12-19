@@ -246,16 +246,24 @@ jobs:
         run: |
           # 1. CRITICAL: Cleanup root binaries before organization
           # Having these in the root AND in artifacts/ causes NAPI-RS discovery conflicts
-          echo "🧹 Cleaning up local binaries before organization..."
+          echo "🧹 Cleaning up local binaries..."
           rm -f *.node
+          
+          echo "🔄 Renaming binaries to Rust triples for NAPI-RS discovery..."
+          # NAPI-RS 'artifacts' command expects [name].[triple].node
+          # We map our platform-named binaries (from 'napi build --platform') back to triples
+          mv artifacts/aarch64-apple-darwin/graphbit-js.darwin-arm64.node graphbit-js.aarch64-apple-darwin.node
+          mv artifacts/x86_64-apple-darwin/graphbit-js.darwin-x64.node graphbit-js.x86_64-apple-darwin.node
+          mv artifacts/aarch64-unknown-linux-gnu/graphbit-js.linux-arm64-gnu.node graphbit-js.aarch64-unknown-linux-gnu.node
+          mv artifacts/x86_64-unknown-linux-gnu/graphbit-js.linux-x64-gnu.node graphbit-js.x86_64-unknown-linux-gnu.node
+          mv artifacts/x86_64-unknown-linux-musl/graphbit-js.linux-x64-musl.node graphbit-js.x86_64-unknown-linux-musl.node
+          mv artifacts/aarch64-pc-windows-msvc/graphbit-js.win32-arm64-msvc.node graphbit-js.aarch64-pc-windows-msvc.node
+          mv artifacts/x86_64-pc-windows-msvc/graphbit-js.win32-x64-msvc.node graphbit-js.x86_64-pc-windows-msvc.node
           
           echo "📜 Workspace state before organization:"
           ls -F
-          find artifacts -maxdepth 3 -ls
           
-          mkdir -p npm
-          
-          # 2. Use 'napi artifacts' to organize the clean 'artifacts/' folder into 'npm/'
+          # 2. Use 'napi artifacts' to organize the triple-named files into '@infinitibit_gmbh/graphbit-<target>'
           echo "📦 Organizing binaries into npm/ directory..."
           npx napi artifacts
           
@@ -267,8 +275,9 @@ jobs:
             exit 1
           fi
           
-          # Cleanup raw artifacts now that they are organized
+          # Cleanup raw artifacts and temp triples now that they are organized
           rm -rf artifacts/
+          rm -f *.node
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
