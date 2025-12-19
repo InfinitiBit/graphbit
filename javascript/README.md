@@ -74,9 +74,8 @@ const chunks = await splitter.split(doc.content);
 
 ## Documentation
 
-- 📚 [Full Documentation](https://github.com/InfinitiBit/graphbit/tree/main/javascript/docs)
-- 🚀 [Examples](https://github.com/InfinitiBit/graphbit/tree/main/javascript/examples)
-- 🔧 [API Reference](https://github.com/InfinitiBit/graphbit/tree/main/javascript/docs/API.md)
+- 📚 [Full Documentation](https://docs.graphbit.ai/javascript/)
+- 🔧 [API Reference](https://docs.graphbit.ai/javascript/api-reference/javascript-api/)
 - 🏠 [Homepage](https://graphbit.ai)
 
 ## Requirements
@@ -86,7 +85,7 @@ const chunks = await splitter.split(doc.content);
 
 ## License
 
-See [LICENSE.md](./LICENSE.md) for details.
+See [LICENSE.md](https://github.com/InfinitiBit/graphbit/blob/main/LICENSE.md) for details.
 
 ## Links
 
