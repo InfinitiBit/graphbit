@@ -244,37 +244,16 @@ jobs:
       - name: Download and organize artifacts with NAPI-RS
         working-directory: javascript
         run: |
-          # 1. Manually create the npm/ directory structure to ensure mv success
-          echo "� Creating npm/ directory structure..."
-          mkdir -p npm/darwin-arm64
-          mkdir -p npm/darwin-x64
-          mkdir -p npm/linux-arm64-gnu
-          mkdir -p npm/linux-x64-gnu
-          mkdir -p npm/linux-x64-musl
-          mkdir -p npm/win32-arm64-msvc
-          mkdir -p npm/win32-x64-msvc
-          
-          echo "📂 Mapping binaries from artifacts/ to npm/ structure..."
-          # Move each binary from its download folder directly into its final npm destination.
-          # This bypasses all NAPI-RS discovery logic which is prone to environment failures.
-          mv -v artifacts/aarch64-apple-darwin/graphbit-js.darwin-arm64.node npm/darwin-arm64/
-          mv -v artifacts/x86_64-apple-darwin/graphbit-js.darwin-x64.node npm/darwin-x64/
-          mv -v artifacts/aarch64-unknown-linux-gnu/graphbit-js.linux-arm64-gnu.node npm/linux-arm64-gnu/
-          mv -v artifacts/x86_64-unknown-linux-gnu/graphbit-js.linux-x64-gnu.node npm/linux-x64-gnu/
-          mv -v artifacts/x86_64-unknown-linux-musl/graphbit-js.linux-x64-musl.node npm/linux-x64-musl/
-          mv -v artifacts/aarch64-pc-windows-msvc/graphbit-js.win32-arm64-msvc.node npm/win32-arm64-msvc/
-          mv -v artifacts/x86_64-pc-windows-msvc/graphbit-js.win32-x64-msvc.node npm/win32-x64-msvc/
-          
-          echo "📦 Generating platform package.json manifests with napi prepublish..."
-          # Crucial: Use --skip-gh-release to avoid 422 errors if the tag already exists.
-          # Since binaries are already in npm/, this will correctly generate the manifests.
-          npx napi prepublish --skip-gh-release -t npm
+          # Use our deterministic organization script to prepare the npm/ directory
+          echo "📦 Organizing platform packages with custom script..."
+          export RELEASE_VERSION="${{ github.event.inputs.version }}"
+          node scripts/organize-npm.js
           
           echo "📁 Checking generated npm/ directory integrity:"
           if [ -d "npm" ]; then
             find npm -maxdepth 3 -ls
           else
-            echo "::error::npm/ directory structure validation failed."
+            echo "::error::npm/ directory structure was not created correctly by the script."
             exit 1
           fi
           
