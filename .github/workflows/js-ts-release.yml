@@ -245,14 +245,17 @@ jobs:
           echo "📜 Files in workspace before organization:"
           ls -F
           
-          # Use npx to ensure the latest local CLI is used
-          npx napi artifacts
+          # Use 'napi prepublish -t npm' to organize local .node files into npm/ directory
+          # This is more reliable when files are already downloaded manually
+          npx napi prepublish -t npm
           
           echo "📁 Checking generated npm/ directory:"
           if [ -d "npm" ]; then
             ls -R npm/
           else
-            echo "::error::npm/ directory was NOT created by 'napi artifacts'. This will cause a publication failure."
+            echo "::error::npm/ directory was NOT created by 'napi prepublish'. This will cause a publication failure."
+            echo "🔍 Debugging: listing current directory to see if binaries were consumed..."
+            ls -F
             exit 1
           fi
         env:
