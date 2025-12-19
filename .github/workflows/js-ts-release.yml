@@ -244,40 +244,43 @@ jobs:
       - name: Download and organize artifacts with NAPI-RS
         working-directory: javascript
         run: |
-          # 1. CRITICAL: Cleanup root binaries before organization
-          # Having these in the root AND in artifacts/ causes NAPI-RS discovery conflicts
+          # 1. Cleanup root binaries
           echo "🧹 Cleaning up local binaries..."
           rm -f *.node
           
-          echo "🔄 Renaming binaries to Rust triples for NAPI-RS discovery..."
-          # NAPI-RS 'artifacts' command expects [name].[triple].node
-          # We map our platform-named binaries (from 'napi build --platform') back to triples
-          mv artifacts/aarch64-apple-darwin/graphbit-js.darwin-arm64.node graphbit-js.aarch64-apple-darwin.node
-          mv artifacts/x86_64-apple-darwin/graphbit-js.darwin-x64.node graphbit-js.x86_64-apple-darwin.node
-          mv artifacts/aarch64-unknown-linux-gnu/graphbit-js.linux-arm64-gnu.node graphbit-js.aarch64-unknown-linux-gnu.node
-          mv artifacts/x86_64-unknown-linux-gnu/graphbit-js.linux-x64-gnu.node graphbit-js.x86_64-unknown-linux-gnu.node
-          mv artifacts/x86_64-unknown-linux-musl/graphbit-js.linux-x64-musl.node graphbit-js.x86_64-unknown-linux-musl.node
-          mv artifacts/aarch64-pc-windows-msvc/graphbit-js.win32-arm64-msvc.node graphbit-js.aarch64-pc-windows-msvc.node
-          mv artifacts/x86_64-pc-windows-msvc/graphbit-js.win32-x64-msvc.node graphbit-js.x86_64-pc-windows-msvc.node
+          # 2. Create a clean, flat artifacts directory with triple names
+          # NAPI-RS 'artifacts' command expects [name].[triple].node in the artifacts dir
+          echo "🔄 Organizing binaries into flat ./artifacts directory with Rust triples..."
+          mkdir -p temp_artifacts
+          cp artifacts/aarch64-apple-darwin/graphbit-js.darwin-arm64.node temp_artifacts/graphbit-js.aarch64-apple-darwin.node
+          cp artifacts/x86_64-apple-darwin/graphbit-js.darwin-x64.node temp_artifacts/graphbit-js.x86_64-apple-darwin.node
+          cp artifacts/aarch64-unknown-linux-gnu/graphbit-js.linux-arm64-gnu.node temp_artifacts/graphbit-js.aarch64-unknown-linux-gnu.node
+          cp artifacts/x86_64-unknown-linux-gnu/graphbit-js.linux-x64-gnu.node temp_artifacts/graphbit-js.x86_64-unknown-linux-gnu.node
+          cp artifacts/x86_64-unknown-linux-musl/graphbit-js.linux-x64-musl.node temp_artifacts/graphbit-js.x86_64-unknown-linux-musl.node
+          cp artifacts/aarch64-pc-windows-msvc/graphbit-js.win32-arm64-msvc.node temp_artifacts/graphbit-js.aarch64-pc-windows-msvc.node
+          cp artifacts/x86_64-pc-windows-msvc/graphbit-js.win32-x64-msvc.node temp_artifacts/graphbit-js.x86_64-pc-windows-msvc.node
           
-          echo "📜 Workspace state before organization:"
-          ls -F
+          # Replace the old artifacts folder with the new sanitized one
+          rm -rf artifacts
+          mv temp_artifacts artifacts
           
-          # 2. Use 'napi artifacts' to organize the triple-named files into '@infinitibit_gmbh/graphbit-<target>'
-          echo "📦 Organizing binaries into npm/ directory..."
+          echo "📜 Sanitized artifacts folder content:"
+          ls -F artifacts/
+          
+          # 3. Use 'napi artifacts' to organize the triple-named files into 'npm/'
+          echo "📦 Running 'napi artifacts' to populate npm/ directory..."
           npx napi artifacts
           
           echo "📁 Checking generated npm/ directory:"
           if [ -d "npm" ]; then
             find npm -maxdepth 3 -ls
           else
-            echo "::error::npm/ directory was NOT created correctly. Publication will fail."
+            echo "::error::npm/ directory was NOT created correctly. 'napi artifacts' might have failed."
             exit 1
           fi
           
-          # Cleanup raw artifacts and temp triples now that they are organized
+          # Cleanup raw artifacts now that they are organized
           rm -rf artifacts/
-          rm -f *.node
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
