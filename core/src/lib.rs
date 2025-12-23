@@ -45,9 +45,13 @@ pub use workflow::{Workflow, WorkflowBuilder, WorkflowExecutor};
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// Initialize the `GraphBit` core library with default configuration
+///
+/// Note: Tracing/logging is NOT initialized here - the bindings (Python/JavaScript)
+/// control logging setup and it's disabled by default for cleaner output.
+/// To enable logging from Python: `graphbit.init(enable_tracing=True, log_level='info')`
 pub fn init() -> GraphBitResult<()> {
-    // Use try_init to avoid panicking if a global subscriber is already set
-    let _ = tracing_subscriber::fmt::try_init();
-    tracing::info!("GraphBit Core v{VERSION} initialized");
+    // Tracing is intentionally NOT initialized here.
+    // The Python/JS bindings handle tracing setup, disabled by default.
+    // This keeps output clean unless explicitly enabled by the user.
     Ok(())
 }

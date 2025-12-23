@@ -346,10 +346,9 @@ fn shutdown() -> PyResult<()> {
 /// and comprehensive error handling.
 #[pymodule]
 fn graphbit(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    // Automatically initialize the library when the module is imported
-    // This calls the `init` function with default parameters.
-    // Subsequent explicit calls to `graphbit.init()` will be no-ops due to `Once` guard.
-    init(None, None, None)?;
+    // NOTE: We do NOT auto-call init() here anymore.
+    // Users should call graphbit.init() explicitly to control tracing.
+    // If they don't call init(), we'll lazily initialize on first use.
 
     // Core functions
     m.add_function(wrap_pyfunction!(init, m)?)?;
