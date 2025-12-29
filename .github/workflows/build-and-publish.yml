@@ -1,40 +1,33 @@
 name: Build and Publish to PyPI
 
 # ============================================================================
-# Purpose: Build wheels and source distribution, then publish to PyPI
+# Purpose
+# - Build wheels for supported platforms and a source distribution (sdist)
+# - Verify artifacts, then publish to TestPyPI first and PyPI second
 #
-# This workflow:
-# - Builds wheels for all platforms (7 platforms x 4 Python versions = 28 wheels)
-# - Builds source distribution (sdist)
-# - Verifies all artifacts are present and correct
-# - Publishes to TestPyPI FIRST (mandatory safety step)
-# - Publishes to Production PyPI ONLY after TestPyPI succeeds
+# Publication Sequence
+# 1) Build wheels
+# 2) Build sdist
+# 3) Verify artifacts
+# 4) Publish to TestPyPI (safety gate)
+# 5) Publish to PyPI (only after TestPyPI succeeds)
 #
-# PUBLICATION SEQUENCE (MANDATORY):
-# 1. Build all 28 wheels (ALL must succeed)
-# 2. Build sdist (must succeed)
-# 3. Verify artifacts (must pass all checks)
-# 4. Publish to TestPyPI (mandatory for tag triggers)
-# 5. Publish to Production PyPI (only after TestPyPI succeeds)
+# Triggers
+# - Tag pushes (e.g., v0.5.0, v1.0.0): publish to TestPyPI then PyPI
+# - Manual dispatch: optional publication with safety controls
 #
-# TRIGGERS:
-# - Version tags (v0.5.0, v1.0.0, etc.) - Auto-publish to TestPyPI then PyPI
-# - Manual workflow_dispatch - Optional publish with safety controls
+# Safety Controls
+# - TestPyPI -> PyPI sequence (no direct-to-PyPI publishes)
+# - All builds must succeed before any publish
+# - Version validation (tag must match pyproject.toml when applicable)
+# - Artifact sanity checks (counts and basic structure)
+# - Skip publish when version already exists on PyPI (configurable)
 #
-# SAFETY FEATURES:
-# - Sequential publication (TestPyPI → Production PyPI)
-# - All builds must succeed before any publication
-# - Version validation (tag must match pyproject.toml)
-# - Artifact count verification (28 wheels + 1 sdist)
-# - PyPI version existence check (skip if already published)
-# - TestPyPI validation before production
+# Secrets
+# - PYPI_API_TOKEN: PyPI API token
+# - TESTPYPI_API_TOKEN: TestPyPI API token
 #
-# SECRETS REQUIRED:
-# - PYPI_API_TOKEN: PyPI API token for production uploads
-# - TESTPYPI_API_TOKEN: TestPyPI API token (REQUIRED for tag triggers)
-#
-# NOTE: This workflow does NOT create GitHub releases automatically.
-#       GitHub releases should be created manually if desired.
+# Note: This workflow does not create GitHub releases automatically.
 # ============================================================================
 
 on:
@@ -83,6 +76,10 @@ jobs:
   # ============================================================================
   # Job 1: Build Wheels for All Platforms
   # ============================================================================
+    # ============================================================================
+    # Job 1: Build Wheels (multi-platform)
+    # Builds Python wheels across the configured platform matrix.
+    # ============================================================================
   build-wheels:
     name: Build Wheel - ${{ matrix.platform.runner }} - ${{ matrix.platform.target }}
     runs-on: ${{ matrix.platform.runner }}
@@ -91,7 +88,7 @@ jobs:
       fail-fast: false
       matrix:
         platform:
-          # Linux (glibc) - Standard Linux distributions
+          # Linux (glibc) - common Linux distributions
         - runner: ubuntu-22.04
           target: x86_64
           manylinux: auto
@@ -99,7 +96,7 @@ jobs:
           target: aarch64
           manylinux: auto
 
-          # Linux (musl) - Alpine Linux and minimal containers
+          # Linux (musl) - Alpine / minimal containers
         - runner: ubuntu-22.04
           target: x86_64
           manylinux: musllinux_1_2
@@ -112,15 +109,11 @@ jobs:
           target: x64
           manylinux: default
 
-          # macOS (Intel)
-        - runner: macos-13
-          target: x86_64
-          manylinux: default
-
-          # macOS (Apple Silicon)
+          # macOS (universal2)
         - runner: macos-14
-          target: aarch64
+          target: universal2-apple-darwin
           manylinux: default
+        # Note: abi3 builds typically do not require multiple Win/macOS interpreters
 
     steps:
     - name: Checkout code
@@ -175,11 +168,11 @@ jobs:
     - name: Verify wheel contents
       shell: bash
       run: |
-        echo "📦 Built wheels:"
+        echo "[ARTIFACT] Built wheels:"
         ls -lh python/dist/
 
         echo ""
-        echo "🔍 Wheel details:"
+        echo "[INSPECT] Wheel details:"
         python -m pip install --upgrade pip wheel
         for wheel in python/dist/*.whl; do
           echo "Inspecting: $(basename $wheel)"
@@ -203,6 +196,10 @@ jobs:
   # ============================================================================
   # Job 2: Build Source Distribution
   # ============================================================================
+    # ============================================================================
+    # Job 2: Build Source Distribution (sdist)
+    # Builds the sdist needed for publication.
+    # ============================================================================
   build-sdist:
     name: Build Source Distribution
     runs-on: ubuntu-latest
@@ -243,11 +240,11 @@ jobs:
 
     - name: Verify sdist contents
       run: |
-        echo "📦 Built source distribution:"
+        echo "[ARTIFACT] Built source distribution:"
         ls -lh python/dist/
 
         echo ""
-        echo "🔍 Sdist contents:"
+        echo "[INSPECT] Sdist contents:"
         tar -tzf python/dist/*.tar.gz | head -30
 
     - name: Upload sdist artifact
@@ -266,6 +263,10 @@ jobs:
   # ============================================================================
   # Job 3: Verify Artifacts (Safety Checks)
   # ============================================================================
+    # ============================================================================
+    # Job 3: Verify Artifacts (safety checks)
+    # Performs count and structure checks on built artifacts.
+    # ============================================================================
   verify-artifacts:
     name: Verify Build Artifacts
     needs: [build-wheels, build-sdist]
@@ -297,7 +298,7 @@ jobs:
         find dist-all -name "*.whl" -exec cp {} dist/ \;
         find dist-all -name "*.tar.gz" -exec cp {} dist/ \;
 
-        echo "📦 Collected distribution files:"
+        echo "[ARTIFACT] Collected distribution files:"
         ls -lh dist/
 
     - name: Extract version from tag or pyproject.toml
@@ -323,7 +324,7 @@ jobs:
         echo "wheel_count=$WHEEL_COUNT" >> $GITHUB_OUTPUT
         echo "sdist_count=$SDIST_COUNT" >> $GITHUB_OUTPUT
 
-        echo "📊 Artifact counts:"
+        echo "[STATS] Artifact counts:"
         echo "  Wheels: $WHEEL_COUNT"
         echo "  Sdist: $SDIST_COUNT"
 
@@ -333,23 +334,23 @@ jobs:
         WHEEL_COUNT=${{ steps.count.outputs.wheel_count }}
         SDIST_COUNT=${{ steps.count.outputs.sdist_count }}
 
-        echo "📊 Verification Summary:"
+        echo "[STATS] Verification Summary:"
         echo "  Wheels found: $WHEEL_COUNT"
         echo "  Sdist found: $SDIST_COUNT"
         echo ""
 
         # Check sdist count (must be exactly 1)
         if [ "$SDIST_COUNT" -ne 1 ]; then
-          echo "❌ ERROR: Expected 1 sdist, found $SDIST_COUNT"
+          echo "[ERROR] Expected 1 sdist, found $SDIST_COUNT"
           exit 1
         else
-          echo "✅ Sdist count correct: 1"
+          echo "[OK] Sdist count correct: 1"
         fi
 
         # Report wheel count (informational only)
-        echo "✅ Found $WHEEL_COUNT wheel(s)"
+        echo "[OK] Found $WHEEL_COUNT wheel(s)"
         echo ""
-        echo "✅ Artifact verification passed!"
+        echo "[OK] Artifact verification passed!"
 
     - name: Upload verified distribution files
       uses: actions/upload-artifact@v4
@@ -362,31 +363,22 @@ jobs:
     - name: Generate verification summary
       if: always()
       run: |
-        echo "## 🔍 Artifact Verification" >> $GITHUB_STEP_SUMMARY
+        echo "## Artifact Verification" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "**Version**: ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
         echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
 
-        if [ "${{ steps.count.outputs.wheel_count }}" -eq 28 ]; then
-          echo "| Wheel Count (28) | ✅ Pass |" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "| Wheel Count (28) | ❌ Fail (${{ steps.count.outputs.wheel_count }}) |" >> $GITHUB_STEP_SUMMARY
-        fi
-
-        if [ "${{ steps.count.outputs.sdist_count }}" -eq 1 ]; then
-          echo "| Sdist Count (1) | ✅ Pass |" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "| Sdist Count (1) | ❌ Fail (${{ steps.count.outputs.sdist_count }}) |" >> $GITHUB_STEP_SUMMARY
-        fi
+        echo "| Wheels Found | ${{ steps.count.outputs.wheel_count }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Sdist Found | ${{ steps.count.outputs.sdist_count }} |" >> $GITHUB_STEP_SUMMARY
 
         if [ "${{ steps.verify.outputs.passed }}" = "true" ]; then
-          echo "| Version Check | ✅ Pass |" >> $GITHUB_STEP_SUMMARY
-          echo "| Absolute Paths | ✅ None Found |" >> $GITHUB_STEP_SUMMARY
-          echo "| Overall | ✅ **PASSED** |" >> $GITHUB_STEP_SUMMARY
+          echo "| Version Check | OK Pass |" >> $GITHUB_STEP_SUMMARY
+          echo "| Absolute Paths | OK None Found |" >> $GITHUB_STEP_SUMMARY
+          echo "| Overall | OK **PASSED** |" >> $GITHUB_STEP_SUMMARY
         else
-          echo "| Overall | ❌ **FAILED** |" >> $GITHUB_STEP_SUMMARY
+          echo "| Overall | ERROR **FAILED** |" >> $GITHUB_STEP_SUMMARY
         fi
 
   # ============================================================================
@@ -396,18 +388,23 @@ jobs:
   # For tag triggers: Always runs (TestPyPI-first approach)
   # For manual triggers: Runs if use_test_pypi_only=true OR publish_to_pypi=true
   # ============================================================================
+    # ============================================================================
+    # Job 4: Publish to TestPyPI
+    # Test gate before PyPI. Required for tag-triggered publishes; configurable
+    # for manual runs. Production publish occurs only if this succeeds.
+    # ============================================================================
   publish-testpypi:
     name: Publish to TestPyPI
     needs: [build-wheels, build-sdist, verify-artifacts]
     if: always()
     runs-on: ubuntu-latest
-    # Uncomment to require manual approval:
+    # Optional: require manual approval via environments
     # environment: testpypi
 
     steps:
     - name: Safety Notice - TestPyPI First
       run: |
-        echo "🛡️ SAFETY STEP: Publishing to TestPyPI first"
+        echo "[SAFETY] Publishing to TestPyPI first"
         echo ""
         echo "This is a mandatory safety step before Production PyPI publication."
         echo "TestPyPI allows us to:"
@@ -435,24 +432,24 @@ jobs:
     - name: Verify TestPyPI upload
       run: |
         VERSION=${{ needs.verify-artifacts.outputs.version }}
-        echo "⏳ Waiting for TestPyPI to process the upload..."
+        echo "[WAIT] Waiting for TestPyPI to process the upload..."
         sleep 30
 
-        echo "✅ Package uploaded to TestPyPI"
-        echo "🔗 View at: https://test.pypi.org/project/graphbit/$VERSION/"
+        echo "[OK] Package uploaded to TestPyPI"
+        echo "[LINK] View at: https://test.pypi.org/project/graphbit/$VERSION/"
         echo ""
         echo "To test installation:"
         echo "  pip install --index-url https://test.pypi.org/simple/ graphbit==$VERSION"
 
     - name: Generate TestPyPI summary
       run: |
-        echo "## 📦 TestPyPI Publication" >> $GITHUB_STEP_SUMMARY
+        echo "## TestPyPI Publication" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "✅ **Published** - Version ${{ needs.verify-artifacts.outputs.version }} uploaded to TestPyPI" >> $GITHUB_STEP_SUMMARY
+        echo "[OK] **Published** - Version ${{ needs.verify-artifacts.outputs.version }} uploaded to TestPyPI" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "🔗 [View on TestPyPI](https://test.pypi.org/project/graphbit/${{ needs.verify-artifacts.outputs.version }}/)" >> $GITHUB_STEP_SUMMARY
+        echo "[View on TestPyPI](https://test.pypi.org/project/graphbit/${{ needs.verify-artifacts.outputs.version }}/)" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### 🧪 Test Installation" >> $GITHUB_STEP_SUMMARY
+        echo "### Test Installation" >> $GITHUB_STEP_SUMMARY
         echo '```bash' >> $GITHUB_STEP_SUMMARY
         echo "pip install --index-url https://test.pypi.org/simple/ graphbit==${{ needs.verify-artifacts.outputs.version }}" >> $GITHUB_STEP_SUMMARY
         echo '```' >> $GITHUB_STEP_SUMMARY
@@ -465,25 +462,30 @@ jobs:
   # For manual triggers: Runs if publish_to_pypi=true AND TestPyPI succeeded
   # Skipped if: use_test_pypi_only=true (TestPyPI-only mode)
   # ============================================================================
+    # ============================================================================
+    # Job 5: Publish to PyPI
+    # Runs only after TestPyPI has succeeded. For manual runs, requires
+    # publish_to_pypi=true and is skipped when use_test_pypi_only=true.
+    # ============================================================================
   publish-pypi:
     name: Publish to PyPI
     needs: [build-wheels, build-sdist, verify-artifacts, publish-testpypi]
     if: always()
     runs-on: ubuntu-latest
-    # Uncomment to require manual approval for production releases:
+    # Optional: require manual approval for production releases
     # environment: pypi-production
 
     steps:
     - name: Confirm TestPyPI Success
       run: |
-        echo "✅ SAFETY CHECKPOINT PASSED"
+        echo "[OK] SAFETY CHECKPOINT PASSED"
         echo ""
         echo "TestPyPI publication succeeded!"
         echo "All safety checks passed:"
-        echo "  ✅ All 28 wheels built successfully"
-        echo "  ✅ Source distribution built successfully"
-        echo "  ✅ Artifact verification passed"
-        echo "  ✅ TestPyPI publication succeeded"
+        echo "  [OK] All wheels built successfully"
+        echo "  [OK] Source distribution built successfully"
+        echo "  [OK] Artifact verification passed"
+        echo "  [OK] TestPyPI publication succeeded"
         echo ""
         echo "Proceeding with Production PyPI publication..."
 
@@ -511,11 +513,11 @@ jobs:
         echo "Package version: $PACKAGE_VERSION"
 
         if [ "$TAG_VERSION" != "$PACKAGE_VERSION" ]; then
-          echo "❌ ERROR: Tag version ($TAG_VERSION) doesn't match package version ($PACKAGE_VERSION)"
+          echo "[ERROR] Tag version ($TAG_VERSION) doesn't match package version ($PACKAGE_VERSION)"
           exit 1
         fi
 
-        echo "✅ Version verification passed"
+        echo "[OK] Version verification passed"
 
     - name: Check if version already exists on PyPI
       id: check_version
@@ -542,19 +544,19 @@ jobs:
           echo "$VERSION_EXISTS" >> $GITHUB_OUTPUT
 
           if [ "$VERSION_EXISTS" = "exists=true" ]; then
-            echo "⚠️  Version $VERSION already exists on PyPI"
+            echo "[WARN] Version $VERSION already exists on PyPI"
             if [ "${{ inputs.skip_existing }}" = "true" ]; then
               echo "Skipping upload (skip_existing=true)"
             else
-              echo "❌ ERROR: Version already exists and skip_existing=false"
+              echo "[ERROR] Version already exists and skip_existing=false"
               exit 1
             fi
           else
-            echo "✅ Version $VERSION is new, proceeding with upload"
+            echo "[OK] Version $VERSION is new, proceeding with upload"
           fi
         else
           echo "exists=false" >> $GITHUB_OUTPUT
-          echo "✅ Could not check PyPI, assuming version is new"
+          echo "[OK] Could not check PyPI, assuming version is new"
         fi
 
     - name: Generate build attestation
@@ -576,30 +578,30 @@ jobs:
       if: steps.check_version.outputs.exists != 'exists=true'
       run: |
         VERSION=${{ needs.verify-artifacts.outputs.version }}
-        echo "⏳ Waiting for PyPI to process the upload..."
+        echo "[WAIT] Waiting for PyPI to process the upload..."
         sleep 30
 
         echo "Verifying package is available on PyPI..."
         if pip index versions graphbit 2>/dev/null | grep -q "$VERSION"; then
-          echo "✅ Package successfully uploaded to PyPI"
+          echo "[OK] Package successfully uploaded to PyPI"
         else
-          echo "⚠️  Package may still be processing on PyPI"
+          echo "[WARN] Package may still be processing on PyPI"
         fi
 
     - name: Generate PyPI publication summary
       if: always()
       run: |
-        echo "## 📦 PyPI Publication" >> $GITHUB_STEP_SUMMARY
+        echo "## PyPI Publication" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
 
         if [ "${{ steps.check_version.outputs.exists }}" = "exists=true" ]; then
-          echo "⏭️  **Skipped** - Version ${{ needs.verify-artifacts.outputs.version }} already exists on PyPI" >> $GITHUB_STEP_SUMMARY
+          echo "[SKIP] **Skipped** - Version ${{ needs.verify-artifacts.outputs.version }} already exists on PyPI" >> $GITHUB_STEP_SUMMARY
         else
-          echo "✅ **Published** - Version ${{ needs.verify-artifacts.outputs.version }} uploaded to PyPI" >> $GITHUB_STEP_SUMMARY
+          echo "[OK] **Published** - Version ${{ needs.verify-artifacts.outputs.version }} uploaded to PyPI" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "🔗 [View on PyPI](https://pypi.org/project/graphbit/${{ needs.verify-artifacts.outputs.version }}/)" >> $GITHUB_STEP_SUMMARY
+          echo "[View on PyPI](https://pypi.org/project/graphbit/${{ needs.verify-artifacts.outputs.version }}/)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📥 Installation" >> $GITHUB_STEP_SUMMARY
+          echo "### Installation" >> $GITHUB_STEP_SUMMARY
           echo '```bash' >> $GITHUB_STEP_SUMMARY
           echo "pip install graphbit==${{ needs.verify-artifacts.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
@@ -608,6 +610,10 @@ jobs:
   # ============================================================================
   # Job 6: Workflow Summary (Always runs)
   # ============================================================================
+    # ============================================================================
+    # Job 6: Workflow Summary (always)
+    # Writes a concise status summary to the job summary.
+    # ============================================================================
   workflow-summary:
     name: Workflow Summary
     needs: [build-wheels, build-sdist, verify-artifacts, publish-testpypi, publish-pypi]
@@ -617,7 +623,7 @@ jobs:
     steps:
     - name: Generate comprehensive workflow summary
       run: |
-        echo "# 🎯 Build and Publish Workflow Summary" >> $GITHUB_STEP_SUMMARY
+        echo "# Build and Publish Workflow Summary" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "**Trigger**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
         echo "**Ref**: ${{ github.ref }}" >> $GITHUB_STEP_SUMMARY
@@ -625,48 +631,48 @@ jobs:
         echo "**Version**: ${{ needs.verify-artifacts.outputs.version || 'N/A' }}" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
 
-        echo "## 📊 Job Status" >> $GITHUB_STEP_SUMMARY
+        echo "## Job Status" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
         echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
 
         # Build Wheels
         if [ "${{ needs.build-wheels.result }}" = "success" ]; then
-          echo "| 🔨 Build Wheels | ✅ Success (7 platforms) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build Wheels | OK Success (7 platforms) |" >> $GITHUB_STEP_SUMMARY
         else
-          echo "| 🔨 Build Wheels | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build Wheels | ERROR Failed |" >> $GITHUB_STEP_SUMMARY
         fi
 
         # Build Sdist
         if [ "${{ needs.build-sdist.result }}" = "success" ]; then
-          echo "| 📦 Source Distribution | ✅ Success |" >> $GITHUB_STEP_SUMMARY
+          echo "| Source Distribution | OK Success |" >> $GITHUB_STEP_SUMMARY
         else
-          echo "| 📦 Source Distribution | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Source Distribution | ERROR Failed |" >> $GITHUB_STEP_SUMMARY
         fi
 
         # Verify Artifacts
         if [ "${{ needs.verify-artifacts.result }}" = "success" ]; then
-          echo "| 🔍 Verify Artifacts | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Verify Artifacts | OK Passed |" >> $GITHUB_STEP_SUMMARY
         else
-          echo "| 🔍 Verify Artifacts | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Verify Artifacts | ERROR Failed |" >> $GITHUB_STEP_SUMMARY
         fi
 
         # TestPyPI (MANDATORY for tag triggers)
         if [ "${{ needs.publish-testpypi.result }}" = "success" ]; then
-          echo "| 🧪 TestPyPI Publication (Safety Step) | ✅ Published |" >> $GITHUB_STEP_SUMMARY
+          echo "| TestPyPI Publication (Safety Step) | OK Published |" >> $GITHUB_STEP_SUMMARY
         elif [ "${{ needs.publish-testpypi.result }}" = "skipped" ]; then
-          echo "| 🧪 TestPyPI Publication (Safety Step) | ⏭️  Skipped |" >> $GITHUB_STEP_SUMMARY
+          echo "| TestPyPI Publication (Safety Step) | Skipped |" >> $GITHUB_STEP_SUMMARY
         else
-          echo "| 🧪 TestPyPI Publication (Safety Step) | ❌ Failed (blocks Production) |" >> $GITHUB_STEP_SUMMARY
+          echo "| TestPyPI Publication (Safety Step) | ERROR Failed (blocks Production) |" >> $GITHUB_STEP_SUMMARY
         fi
 
         # PyPI (ONLY after TestPyPI succeeds)
         if [ "${{ needs.publish-pypi.result }}" = "success" ]; then
-          echo "| 🚀 PyPI Publication (After TestPyPI) | ✅ Published |" >> $GITHUB_STEP_SUMMARY
+          echo "| PyPI Publication (After TestPyPI) | OK Published |" >> $GITHUB_STEP_SUMMARY
         elif [ "${{ needs.publish-pypi.result }}" = "skipped" ]; then
-          echo "| 🚀 PyPI Publication (After TestPyPI) | ⏭️  Skipped |" >> $GITHUB_STEP_SUMMARY
+          echo "| PyPI Publication (After TestPyPI) | Skipped |" >> $GITHUB_STEP_SUMMARY
         else
-          echo "| 🚀 PyPI Publication (After TestPyPI) | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
+          echo "| PyPI Publication (After TestPyPI) | ERROR Failed |" >> $GITHUB_STEP_SUMMARY
         fi
 
         echo "" >> $GITHUB_STEP_SUMMARY
@@ -675,35 +681,35 @@ jobs:
         if [ "${{ needs.build-wheels.result }}" = "success" ] && \
            [ "${{ needs.build-sdist.result }}" = "success" ] && \
            [ "${{ needs.verify-artifacts.result }}" = "success" ]; then
-          echo "## ✅ Workflow Completed Successfully" >> $GITHUB_STEP_SUMMARY
+          echo "## Workflow Completed Successfully" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           if [ "${{ needs.publish-pypi.result }}" = "success" ]; then
-            echo "🎉 **Package published to Production PyPI!**" >> $GITHUB_STEP_SUMMARY
+            echo "**Package published to Production PyPI!**" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "**Publication Sequence:**" >> $GITHUB_STEP_SUMMARY
-            echo "1. ✅ Built all 28 wheels + sdist" >> $GITHUB_STEP_SUMMARY
-            echo "2. ✅ Verified all artifacts" >> $GITHUB_STEP_SUMMARY
-            echo "3. ✅ Published to TestPyPI (safety step)" >> $GITHUB_STEP_SUMMARY
-            echo "4. ✅ Published to Production PyPI" >> $GITHUB_STEP_SUMMARY
+            echo "1. Built all wheels + sdist" >> $GITHUB_STEP_SUMMARY
+            echo "2. Verified all artifacts" >> $GITHUB_STEP_SUMMARY
+            echo "3. Published to TestPyPI (safety step)" >> $GITHUB_STEP_SUMMARY
+            echo "4. Published to Production PyPI" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "Install with: \`pip install graphbit==${{ needs.verify-artifacts.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
           elif [ "${{ needs.publish-testpypi.result }}" = "success" ]; then
-            echo "🧪 **Package published to TestPyPI only!**" >> $GITHUB_STEP_SUMMARY
+            echo "**Package published to TestPyPI only!**" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "Production PyPI publication was skipped (use_test_pypi_only=true)" >> $GITHUB_STEP_SUMMARY
           else
-            echo "📦 **Artifacts built successfully!**" >> $GITHUB_STEP_SUMMARY
+            echo "**Artifacts built successfully!**" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "Download artifacts from the workflow run to test locally." >> $GITHUB_STEP_SUMMARY
           fi
         else
-          echo "## ⚠️  Workflow Completed with Issues" >> $GITHUB_STEP_SUMMARY
+          echo "## Workflow Completed with Issues" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Some jobs failed. Please review the logs above." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ "${{ needs.publish-testpypi.result }}" = "failure" ]; then
-            echo "❌ **TestPyPI publication failed - Production PyPI blocked**" >> $GITHUB_STEP_SUMMARY
+            echo "**TestPyPI publication failed - Production PyPI blocked**" >> $GITHUB_STEP_SUMMARY
           fi
         fi
 

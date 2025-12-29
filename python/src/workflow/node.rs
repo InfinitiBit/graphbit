@@ -112,14 +112,9 @@ impl Node {
             }
             node.config.insert(
                 "temperature".to_string(),
-                serde_json::Value::Number(
-                    serde_json::Number::from_f64(temp as f64)
-                        .ok_or_else(|| {
-                            PyErr::new::<pyo3::exceptions::PyValueError, _>(
-                                "Invalid temperature value",
-                            )
-                        })?,
-                ),
+                serde_json::Value::Number(serde_json::Number::from_f64(temp as f64).ok_or_else(
+                    || PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid temperature value"),
+                )?),
             );
         }
 
