@@ -20,7 +20,7 @@ class LiteLLMLLM:
         self.api_key = api_key
         self.config = kwargs
 
-    def complete(
+    def chat(
         self,
         model: str,
         messages: List[Dict[str, str]],
@@ -100,4 +100,3 @@ class LiteLLMLLM:
             return response.choices[0].message.content
         except (AttributeError, IndexError, KeyError) as e:
             raise Exception(f"Failed to extract content from response: {str(e)}")
-

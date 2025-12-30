@@ -20,7 +20,7 @@ classifiers = [
   "Programming Language :: Python :: 3.14",
   "Programming Language :: Rust",
   "Topic :: Software Development :: Libraries :: Python Modules",
-  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence"
 ]
 dependencies = [
   "aiofiles>=23.0.0",
@@ -29,7 +29,8 @@ dependencies = [
   "rich>=13.0.0",
   "typer>=0.9.0",
   "huggingface_hub>=0.33.4",
-  "numpy>=1.24.0"
+  "numpy>=1.24.0",
+  "litellm>=1.80.5"
 ]
 description = "GraphBit - Advanced workflow automation and AI agent orchestration library"
 keywords = ["ai", "agents", "workflow", "automation", "rust", "python", "llm", "orchestration"]
