@@ -31,7 +31,8 @@ dependencies = [
   "rich>=13.0.0",
   "typer>=0.9.0",
   "huggingface_hub>=0.33.4",
-  "numpy>=1.24.0"
+  "numpy>=1.24.0",
+  "litellm>=1.80.5"
 ]
 description = "GraphBit - Advanced workflow automation and AI agent orchestration library"
 keywords = ["ai", "agents", "workflow", "automation", "rust", "python", "llm", "orchestration"]
@@ -124,7 +125,7 @@ module-name = "graphbit"
 # Build profile for optimized releases
 profile = "release"
 # Python interpreter finding
-python-source = "python-src"
+python-source = "python/python-src"
 # Enable auditwheel for proper PyPI compatibility
 skip-auditwheel = false
 # Build optimizations

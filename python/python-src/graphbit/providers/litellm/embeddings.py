@@ -91,7 +91,7 @@ class LiteLLMEmbeddings:
         except Exception as e:
             raise Exception(f"LiteLLM embedding failed: {str(e)}")
 
-    def embed_batch(
+    def embed_many(
         self,
         model: str,
         texts: List[str],
