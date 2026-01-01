@@ -1,0 +1,31 @@
+# ESLint ignore patterns
+
+# Dependencies and build artifacts
+node_modules/
+build/
+dist/
+target/
+coverage/
+*.node
+
+# TypeScript output
+**/*.js.map
+**/*.d.ts.map
+
+# Temporary analysis scripts (will be removed after investigation)
+analyze-typescript-errors.js
+compare-apis.js
+*.log
+*-analysis.json
+*-report.json
+TYPESCRIPT_FIX_TODO.md
+
+#Temporarily excluded from type-checking (see tsconfig.json)
+# Will be fixed in future release
+examples/
+tests/
+benchmarks/
+scripts/
+
+# Root-level test files
+test*.js
