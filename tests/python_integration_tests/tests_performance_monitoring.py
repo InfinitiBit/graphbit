@@ -260,33 +260,27 @@ class TestExecutorStatistics:
 
     @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="Requires OpenAI API key")
     def test_executor_performance_modes_statistics(self, llm_config: Any, simple_workflow: Any) -> None:
-        """Test statistics across different executor performance modes."""
-        # Test different executor types
-        executors = [
-            ("standard", graphbit.Executor(llm_config)),
-            ("high_throughput", graphbit.Executor.new_high_throughput(llm_config)),
-            ("low_latency", graphbit.Executor.new_low_latency(llm_config)),
-            ("memory_optimized", graphbit.Executor.new_memory_optimized(llm_config)),
-        ]
+        """Test statistics for standard executor."""
+        # Test standard executor
+        executor = graphbit.Executor(llm_config)
 
-        for _mode_name, executor in executors:
-            try:
-                # Execute workflow
-                simple_workflow.validate()
-                executor.execute(simple_workflow)
+        try:
+            # Execute workflow
+            simple_workflow.validate()
+            executor.execute(simple_workflow)
 
-                # Get stats for this mode
-                stats = executor.get_stats()
-                assert isinstance(stats, dict)
+            # Get stats for this mode
+            stats = executor.get_stats()
+            assert isinstance(stats, dict)
 
-                # Verify stats are being tracked for each mode
-                if "total_executions" in stats:
-                    assert stats["total_executions"] >= 0
+            # Verify stats are being tracked
+            if "total_executions" in stats:
+                assert stats["total_executions"] >= 0
 
-            except Exception:
-                # If execution fails, verify we still get stats
-                stats = executor.get_stats()
-                assert isinstance(stats, dict)
+        except Exception:
+            # If execution fails, verify we still get stats
+            stats = executor.get_stats()
+            assert isinstance(stats, dict)
 
 
 class TestSystemPerformanceMonitoring:

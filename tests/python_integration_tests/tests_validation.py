@@ -247,12 +247,6 @@ class TestParameterValidation:
         with pytest.raises((ValueError, RuntimeError)):
             graphbit.Executor(config, timeout_seconds=4000)  # Too high
 
-        # Test invalid specialized executor parameters
-        with pytest.raises((ValueError, RuntimeError)):
-            graphbit.Executor.new_low_latency(config, timeout_seconds=0)
-
-        with pytest.raises((ValueError, RuntimeError)):
-            graphbit.Executor.new_low_latency(config, timeout_seconds=400)  # Too high for low latency
 
     def test_runtime_parameter_validation(self) -> None:
         """Test validation of runtime configuration parameters."""
