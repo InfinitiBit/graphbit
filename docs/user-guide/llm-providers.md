@@ -533,6 +533,88 @@ reasoning_config = LlmConfig.deepseek(
 )
 ```
 
+### Litellm Configuration
+
+Configure LiteLLM as a unified provider to access 100+ LLMs (OpenAI, Azure, Anthropic, Mistral etc.) using a single OpenAI-compatible interface:
+
+```python
+# Basic LiteLLM configuration
+config = LlmConfig.litellm(
+    model="gpt-4o-mini",  # Any LiteLLM-supported model
+    api_key=os.getenv("OPENAI_API_KEY")  # Provider-specific key
+)
+
+# Access configuration details
+print(f"Provider: {config.provider()}")  # "litellm"
+print(f"Model: {config.model()}")        # "gpt-4o-mini"
+```
+
+#### Available Litellm Models
+
+| Model                            | Provider   | Best For                     | Context Length | Cost (per 1M tokens)* |
+| -------------------------------- | ---------- | ---------------------------- | -------------- | --------------------- |
+| `gpt-4o-mini`                    | OpenAI     | Fast, low-cost general tasks | 128K           | ~$0.15 / $0.60        |
+| `claude-3-haiku-20240307`        | Anthropic  | Safe & concise reasoning     | 200K           | ~$0.25 / $1.25        |
+| `mistral-large-latest`           | Mistral    | Strong reasoning             | 32K            | ~$2.00 / $6.00        |
+| `groq/llama3-70b-8192`           | Groq       | Ultra-fast inference         | 8K             | ~$0.59 / $0.79        |
+
+
+```python
+# Fast & cost-effective (OpenAI)
+fast_config = LlmConfig.litellm(
+    model="gpt-4o-mini",
+    api_key=os.getenv("OPENAI_API_KEY")
+)
+
+# Long-context reasoning (Anthropic)
+long_context_config = LlmConfig.litellm(
+    model="claude-3-haiku-20240307",
+    api_key=os.getenv("ANTHROPIC_API_KEY")
+)
+
+# High-performance open-source (Groq)
+speed_config = LlmConfig.litellm(
+    model="groq/llama3-70b-8192",
+    api_key=os.getenv("GROQ_API_KEY")
+)
+```
+
+#### TogetherAI Features
+
+- ✅ Single API for 100+ Models
+- ✅ OpenAI-Compatible Interface
+- ✅ Function / Tool Calling
+- ✅ Streaming Responses
+- ✅ Automatic Retries & Fallbacks
+- ✅ Cost Tracking per Request
+- ✅ Async & Sync Support
+
+#### Getting Started with TogetherAI
+
+```python
+# Complete example
+import os
+from graphbit import LlmConfig, LlmClient
+
+# Configure LiteLLM
+config = LlmConfig.litellm(
+    model="gpt-4o-mini",
+    api_key=os.getenv("OPENAI_API_KEY")
+)
+
+# Create client and generate text
+client = LlmClient(config)
+
+response = client.complete(
+    prompt="Explain quantum computing in simple terms",
+    max_tokens=200,
+    temperature=0.7
+)
+
+print(response)
+
+```
+
 ### TogetherAI Configuration
 
 Configure TogetherAI provider for access to open-source models with competitive pricing:
