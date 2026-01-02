@@ -1,0 +1,418 @@
+name: JavaScript/TypeScript - Gated Release Pipeline
+
+# GATED PIPELINE: Build → Publish → Release
+# Stage 1: Build native binaries for 6 platforms
+# Stage 2: Publish to npm (only if Stage 1 succeeds OR manual override)
+# Stage 3: Create GitHub release (only if Stage 2 succeeds)
+# 
+# Note: Code quality checks (lint/test/typecheck) run in js-ts-ci-auto.yml
+# Usage: Go to Actions → This workflow → Run workflow → Fill inputs
+
+on:
+  workflow_dispatch:  # Manual trigger only - full control
+    inputs:
+      version:
+        description: 'Version to publish (e.g., 1.0.0 without v prefix)'
+        required: true
+        type: string
+      
+      skip_tests:
+        description: 'Skip build & test validation (DANGEROUS - not recommended)'
+        required: false
+        type: boolean
+        default: false
+      
+      publish_mode:
+        description: 'Publish mode'
+        required: true
+        type: choice
+        default: 'test-only'
+        options:
+          - 'test-only'      # Stage 1 only: Build & Test
+          - 'publish'        # Stage 1 → Stage 2: Build → Test → Publish
+          - 'full-release'   # Stage 1 → Stage 2 → Stage 3: Build → Test → Publish → Release
+      
+      force_publish:
+        description: 'Force publish even if tests fail (bypass gate)'
+        required: false
+        type: boolean
+        default: false
+
+# Prevent simultaneous publishes of the same package
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: npm-publish-graphbit-js
+  cancel-in-progress: false  # Queue instead of canceling - don't interrupt active publishes
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # ============================================================================
+  # STAGE 1: BUILD - Compile native binaries for 6 platforms
+  # Gate: ALWAYS RUNS (unless skip_tests=true)
+  # ============================================================================
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    if: ${{ github.event.inputs.skip_tests != 'true' }}  # Skip if bypassing validation
+    strategy:
+      fail-fast: false  # Continue building other platforms if one fails
+      matrix:
+        include:
+          # Linux x86_64 (Standard Linux servers)
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            
+          # Linux ARM64 (AWS Graviton, Raspberry Pi 4+)
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            
+          # Linux musl x86_64 (Alpine Linux, Docker containers)
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            
+
+          # Windows ARM64 (Surface Pro X, etc.)
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
+
+          # macOS Intel (Older Macs)
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            
+          # macOS Apple Silicon (M1/M2/M3 Macs)
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            
+          # Windows x86_64 (Standard Windows)
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: javascript/package-lock.json
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install cross-compilation tools (Linux ARM64)
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+          
+      - name: Configure ARM64 linker
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          mkdir -p ~/.cargo
+          cat >> ~/.cargo/config.toml << 'EOF'
+          [target.aarch64-unknown-linux-gnu]
+          linker = "aarch64-linux-gnu-gcc"
+          EOF
+
+      - name: Install cross-compilation tools (Linux MUSL)
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools musl-dev
+        env:
+          CC: musl-gcc
+          CXX: musl-g++
+
+      - name: Install npm dependencies
+        working-directory: javascript
+        run: npm ci
+
+      - name: Build native binary for ${{ matrix.target }}
+        working-directory: javascript
+        run: npm run build -- --target ${{ matrix.target }}
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: |
+            javascript/*.node
+            javascript/index.js
+            javascript/index.d.ts
+          retention-days: 1  # Short retention since we publish immediately
+
+  # ============================================================================
+  # STAGE 2: PUBLISH - Collect all binaries and publish to npm
+  # Gate: Only runs if build passed OR force_publish=true
+  # Condition: publish_mode ∈ {publish, full-release}
+  # Note: Code quality checks (lint/test/typecheck) should run in js-ts-ci-auto.yml
+  # ============================================================================
+  publish:
+    name: Publish to npm Registry
+    needs: [build]  # Wait for build to complete
+    runs-on: ubuntu-latest
+    # GATE LOGIC: (build passed OR force_publish) AND (mode is publish or full-release)
+    if: |
+      (success() || github.event.inputs.force_publish == 'true') &&
+      (github.event.inputs.publish_mode == 'publish' || github.event.inputs.publish_mode == 'full-release')
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js with npm registry
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: javascript/artifacts
+
+      - name: Clean and organize artifacts
+        working-directory: javascript
+        run: |
+          echo "🧹 Cleaning stale distribution files..."
+          rm -rf npm/
+          
+          echo "📂 Verifying downloaded artifacts structure..."
+          find artifacts -maxdepth 3 -ls
+          
+          # Extract glue code from the first available target
+          FIRST_TARGET=$(ls artifacts | head -n 1)
+          echo "📂 Extracting glue code from $FIRST_TARGET..."
+          cp "artifacts/$FIRST_TARGET/index.js" .
+          cp "artifacts/$FIRST_TARGET/index.d.ts" .
+          
+          # Remove all glue code from artifacts folder to avoid confusing napi-rs
+          echo "🧹 Sanitizing artifacts folder (removing non-binary files)..."
+          find artifacts -name "index.js" -delete
+          find artifacts -name "index.d.ts" -delete
+          
+          echo "📂 Copying binaries to root for smoke test..."
+          find artifacts -name "*.node" -exec cp -v {} . \;
+          
+          echo "📜 Workspace root prepared for smoke test:"
+          ls -F
+
+      - name: Install npm dependencies
+        working-directory: javascript
+        run: npm ci
+
+      - name: Sync package version
+        working-directory: javascript
+        run: |
+          NEW_VERSION="${{ github.event.inputs.version }}"
+          echo "Setting package version to $NEW_VERSION"
+          npm version $NEW_VERSION --no-git-tag-version --allow-same-version --no-scripts
+          
+          # Crucial: Update optionalDependencies versions to match the new root version
+          # This prevents 404s/version mismatches during user installation
+          echo "Syncing optionalDependencies to $NEW_VERSION..."
+          VERSION_TO_SYNC="$NEW_VERSION" node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            const newVersion = process.env.VERSION_TO_SYNC;
+            if (pkg.optionalDependencies) {
+              Object.keys(pkg.optionalDependencies).forEach(dep => {
+                if (dep.startsWith('@infinitibit_gmbh/graphbit-')) {
+                  pkg.optionalDependencies[dep] = newVersion;
+                  console.log(' Updated ' + dep + ' to ' + newVersion);
+                }
+              });
+              fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+            }
+          "
+
+      - name: Binary Smoke Test
+        working-directory: javascript
+        run: |
+          echo "🧪 Running smoke test on local binaries..."
+          node -e "const gb = require('./index.js'); console.log('✅ Native binding loaded successfully. Version:', gb.version())"
+
+      - name: Download and organize artifacts with NAPI-RS
+        working-directory: javascript
+        run: |
+          # Use our deterministic organization script to prepare the npm/ directory
+          echo "📦 Organizing platform packages with custom script..."
+          export RELEASE_VERSION="${{ github.event.inputs.version }}"
+          node scripts/organize-npm.js
+          
+          echo "📁 Checking generated npm/ directory integrity:"
+          if [ -d "npm" ]; then
+            find npm -maxdepth 3 -ls
+          else
+            echo "::error::npm/ directory structure was not created correctly by the script."
+            exit 1
+          fi
+          
+          # Cleanup raw artifacts folder before publication
+          rm -rf artifacts/
+          rm -f *.node
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify package name matches organization
+        working-directory: javascript
+        run: |
+          PACKAGE_NAME=$(node -p "require('./package.json').name" 2>/dev/null || echo "INVALID")
+          echo "Package name: $PACKAGE_NAME"
+          
+          # Validate package name is scoped to @infinitibit_gmbh organization
+          if [[ "$PACKAGE_NAME" != @infinitibit_gmbh/* ]]; then
+            echo "::error::Package MUST be scoped to @infinitibit_gmbh organization"
+            echo "::error::Expected: @infinitibit_gmbh/<package-name>"
+            echo "::error::Got: $PACKAGE_NAME"
+            exit 1
+          fi
+          
+          echo "::notice::Package correctly scoped to @infinitibit_gmbh organization"
+
+      - name: Preflight validation (dry-run)
+        working-directory: javascript
+        run: |
+          echo "Running preflight validation..."
+          npm publish --dry-run --access public
+          echo "Preflight validation passed - package is ready for publish"
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Warning - Forced publish (tests skipped/failed)
+        if: ${{ github.event.inputs.force_publish == 'true' }}
+        run: |
+          echo "::warning::Publishing without full validation - use with caution"
+          echo "Force publish enabled by: ${{ github.actor }}"
+
+      - name: Publish platform-specific packages
+        working-directory: javascript
+        shell: bash
+        run: |
+          echo "🔍 Discovering platform packages in npm/..."
+          
+          # Debug: List the structure of npm/ to verify generation
+          if [ -d "npm" ]; then
+            echo "📁 Directory structure of npm/:"
+            find npm -maxdepth 3 -ls
+          else
+            echo "::error::Directory 'npm/' not found! 'npm run artifacts' might have failed."
+            exit 1
+          fi
+          
+          PUBLISHED_COUNT=0
+          FAILED_COUNT=0
+          
+          # Find all package.json files in npm subdirectories (handles scoped and unscoped)
+          while read -r pkg_json; do
+            pkg_dir=$(dirname "$pkg_json")
+            pkg_name=$(node -p "require('./$pkg_json').name" 2>/dev/null || echo "unknown")
+            pkg_version=$(node -p "require('./$pkg_json').version" 2>/dev/null || echo "unknown")
+            
+            echo "🚀 Publishing $pkg_name@$pkg_version from $pkg_dir..."
+            
+            # Subshell for publication to maintain main WD
+            (
+              cd "$pkg_dir"
+              if npm publish --access public 2>&1; then
+                echo "✅ Successfully published $pkg_name"
+                exit 0
+              else
+                echo "❌ Failed to publish $pkg_name"
+                exit 1
+              fi
+            )
+            
+            if [ $? -eq 0 ]; then
+              PUBLISHED_COUNT=$((PUBLISHED_COUNT + 1))
+            else
+              FAILED_COUNT=$((FAILED_COUNT + 1))
+            fi
+          done < <(find npm -name "package.json" -mindepth 2 -maxdepth 3)
+          
+          echo " Summary: $PUBLISHED_COUNT published, $FAILED_COUNT failed"
+          
+          if [ $PUBLISHED_COUNT -eq 0 ]; then
+             echo "::error::No platform packages were found to publish!"
+             exit 1
+          fi
+          
+          if [ $FAILED_COUNT -gt 0 ]; then
+            echo "::error::Failed to publish $FAILED_COUNT platform package(s)"
+            exit 1
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish main package to npm
+        working-directory: javascript
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name:  Published successfully
+        run: |
+          echo "::notice::Main package published: @infinitibit_gmbh/graphbit@${{ github.event.inputs.version }}"
+          echo "::notice::Platform packages: 7 published (Linux x64/ARM64/musl, macOS x64/ARM64, Windows x64/ARM64)"
+          echo "Install with: npm install @infinitibit_gmbh/graphbit@${{ github.event.inputs.version }}"
+
+  # ============================================================================
+  # STAGE 3: RELEASE - Create GitHub release with changelog
+  # Gate: Only runs if publish succeeded
+  # Condition: publish_mode == 'full-release'
+  # ============================================================================
+  release:
+    name: Create GitHub Release
+    needs: publish  # Only create release after successful npm publish
+    runs-on: ubuntu-latest
+    if: ${{ success() && github.event.inputs.publish_mode == 'full-release' }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for changelog generation
+
+      - name: Set version from input
+        id: version
+        run: echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.version.outputs.VERSION }}
+          name: Release v${{ steps.version.outputs.VERSION }}
+          body: |
+            ## GraphBit JavaScript/TypeScript Bindings v${{ steps.version.outputs.VERSION }}
+            
+            ### Installation
+            ```bash
+            npm install @infinitibit_gmbh/graphbit@${{ steps.version.outputs.VERSION }}
+            ```
+            
+            ### What's Changed
+            See [CHANGELOG.md](https://github.com/InfinitiBit/graphbit/blob/main/javascript/CHANGELOG.md) for detailed release notes.
+            
+            ### Supported Platforms
+              Linux x64 (glibc & musl), ARM64 (glibc)
+              macOS Intel & Apple Silicon
+              Windows x64 & ARM64
+            
+            ### Build Information
+            - Branch: ${{ github.ref_name }}
+            - Commit: ${{ github.sha }}
+            - Triggered by: @${{ github.actor }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true  # Auto-generate from commits
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
