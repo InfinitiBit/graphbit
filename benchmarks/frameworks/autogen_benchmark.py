@@ -1,14 +1,14 @@
-"""LangChain framework benchmark implementation."""
+"""AutoGen framework benchmark implementation."""
 
 import asyncio
 import os
 from typing import Any, Dict, Optional
 
-from langchain_core.prompts import PromptTemplate
-from langchain_anthropic import ChatAnthropic
-from langchain_ollama import ChatOllama
-from langchain_openai import ChatOpenAI
-from pydantic import SecretStr
+from autogen_agentchat.agents import AssistantAgent
+from autogen_agentchat.messages import TextMessage
+from autogen_ext.models.anthropic import AnthropicChatCompletionClient
+from autogen_ext.models.ollama import OllamaChatCompletionClient
+from autogen_ext.models.openai import OpenAIChatCompletionClient
 
 from .common import (
     COMPLEX_WORKFLOW_STEPS,
@@ -27,14 +27,13 @@ from .common import (
 )
 
 
-class LangChainBenchmark(BaseBenchmark):
-    """LangChain framework benchmark implementation."""
+class AutogenBenchmark(BaseBenchmark):
+    """AutoGen framework benchmark implementation."""
 
     def __init__(self, config: Dict[str, Any], num_runs: Optional[int] = None):
-        """Initialize LangChain benchmark with configuration."""
+        """Initialize AutoGen benchmark with configuration."""
         super().__init__(config, num_runs=num_runs)
-        self.llm: Optional[Any] = None
-        self.chains: Dict[str, PromptTemplate | Any] = {}
+        self.agent: Optional[AssistantAgent] = None
 
     def _get_llm_params(self) -> tuple[int, float]:
         """Get max_tokens and temperature from configuration."""
@@ -44,7 +43,7 @@ class LangChainBenchmark(BaseBenchmark):
         return llm_config_obj.max_tokens, llm_config_obj.temperature
 
     async def setup(self) -> None:
-        """Set up LangChain for benchmarking."""
+        """Set up AutoGen for benchmarking."""
         # Get LLM configuration from config
         llm_config_obj: LLMConfig | None = self.config.get("llm_config")
         if not llm_config_obj:
@@ -57,72 +56,68 @@ class LangChainBenchmark(BaseBenchmark):
             if not api_key:
                 raise ValueError("OpenAI API key not found in environment or config")
 
-            self.llm = ChatOpenAI(
-                model=llm_config_obj.model,
-                api_key=SecretStr(api_key),
+            self.model_client = OpenAIChatCompletionClient(
+                model=self.model,
+                api_key=api_key,
                 temperature=temperature,
+                max_tokens=max_tokens,
             )
+            self.agent = AssistantAgent("assistant", model_client=self.model_client)
 
         elif llm_config_obj.provider == LLMProvider.ANTHROPIC:
             api_key = llm_config_obj.api_key or os.getenv("ANTHROPIC_API_KEY")
             if not api_key:
                 raise ValueError("Anthropic API key not found in environment or config")
-
-            self.llm = ChatAnthropic(
-                model=llm_config_obj.model,
-                api_key=SecretStr(api_key),
+            self.model_client = AnthropicChatCompletionClient(
+                model=self.model,
+                api_key=api_key,
                 temperature=temperature,
                 max_tokens=max_tokens,
             )
+            self.agent = AssistantAgent("assistant", model_client=self.model_client)
 
         elif llm_config_obj.provider == LLMProvider.OLLAMA:
             base_url = llm_config_obj.base_url or "http://localhost:11434"
-
-            self.llm = ChatOllama(
-                model=llm_config_obj.model,
-                base_url=base_url,
-                temperature=temperature,
-                num_predict=max_tokens,
+            model_client = OllamaChatCompletionClient(
+                model=self.model,
+                host=base_url,
+                options={
+                    "temperature": temperature,
+                    "num_predict": max_tokens,
+                },
             )
+            self.agent = AssistantAgent("assistant", model_client=model_client)
 
         else:
-            raise ValueError(f"Unsupported provider for LangChain: {llm_config_obj.provider}")
-
-        self._setup_chains()
-
-    def _setup_chains(self) -> None:
-        """Set up common LangChain chains using RunnableSequence."""
-        assert self.llm is not None, "LLM not initialized"
-
-        simple_prompt = PromptTemplate(input_variables=["task"], template="{task}")
-        self.chains["simple"] = simple_prompt | self.llm
-
-        sequential_prompt = PromptTemplate(
-            input_variables=["task", "previous_result"],
-            template="Previous result: {previous_result}\n\nNew task: {task}",
-        )
-        self.chains["sequential"] = sequential_prompt | self.llm
-
-        complex_prompt = PromptTemplate(
-            input_variables=["task", "context"],
-            template="Context: {context}\n\nTask: {task}",
-        )
-        self.chains["complex"] = complex_prompt | self.llm
+            raise ValueError(f"Unsupported provider for AutoGen: {llm_config_obj.provider}")
 
     async def teardown(self) -> None:
-        """Cleanup LangChain resources."""
-        self.llm = None
-        self.chains.clear()
+        """Cleanup AutoGen resources."""
+        self.agent = None
+
+    async def _ask(self, prompt: str) -> str:
+        assert self.agent is not None
+        agent = self.agent
+        response = await agent.on_messages(
+            [TextMessage(content=prompt, source="user")],
+            None,
+        )
+        return response.chat_message.content
 
     async def run_simple_task(self) -> BenchmarkMetrics:
-        """Run a simple single-task benchmark using LangChain."""
+        """Run a simple single-task benchmark using AutoGen."""
         self.monitor.start_monitoring()
         token_count: int = 0
 
         try:
-            chain = self.chains["simple"]
-            result = await chain.ainvoke({"task": SIMPLE_TASK_PROMPT})
-            result_content = result.content if hasattr(result, "content") else str(result)
+            result_content = ""
+            agent = self.agent
+            result = await agent.run(task=SIMPLE_TASK_PROMPT)
+            llm_response = []
+            for message in result.messages:
+                if message.source != "user":
+                    llm_response.append(message.content)
+            result_content = "".join(llm_response)
 
             self.log_output(
                 scenario_name=BenchmarkScenario.SIMPLE_TASK.value,
@@ -145,22 +140,28 @@ class LangChainBenchmark(BaseBenchmark):
         return metrics
 
     async def run_sequential_pipeline(self) -> BenchmarkMetrics:
-        """Run a sequential pipeline benchmark using LangChain."""
+        """Run a sequential pipeline benchmark using AutoGen."""
         self.monitor.start_monitoring()
         total_tokens = 0
         previous_result = ""
 
         try:
-            chain = self.chains["sequential"]
+            agent = self.agent
             for i, task in enumerate(SEQUENTIAL_TASKS):
-                result = await chain.ainvoke({"task": task, "previous_result": previous_result if i > 0 else "None"})
-                result_content = result.content if hasattr(result, "content") else str(result)
+                prompt = f"Previous result:\n{previous_result}\n\nNew task:\n{task}" if i > 0 else task
+
+                response = await agent.on_messages(
+                    [TextMessage(content=prompt, source="user")],
+                    None,
+                )
+
+                result_content = response.chat_message.content
                 previous_result = result_content
                 total_tokens += count_tokens_estimate(task + result_content)
 
                 self.log_output(
                     scenario_name=BenchmarkScenario.SEQUENTIAL_PIPELINE.value,
-                    task_name=f"Task {i+1}",
+                    task_name=f"Task {i + 1}",
                     output=result_content,
                 )
 
@@ -173,36 +174,32 @@ class LangChainBenchmark(BaseBenchmark):
 
         metrics = self.monitor.stop_monitoring()
         metrics.token_count = total_tokens
-        metrics.throughput_tasks_per_sec = calculate_throughput(len(SEQUENTIAL_TASKS), metrics.execution_time_ms / 1000)
+        metrics.throughput_tasks_per_sec = calculate_throughput(
+            len(SEQUENTIAL_TASKS), metrics.execution_time_ms / 1000
+        )
         return metrics
 
     async def run_parallel_pipeline(self) -> BenchmarkMetrics:
-        """Run a parallel pipeline benchmark using LangChain."""
+        """Run a parallel pipeline benchmark using AutoGen."""
         self.monitor.start_monitoring()
+        total_tokens = 0
+        concurrency = int(self.config.get("concurrency", len(PARALLEL_TASKS)))
+        sem = asyncio.Semaphore(concurrency)
+
+        async def run_task(task: str) -> str:
+            async with sem:
+                return await self._ask(task)
 
         try:
-            chain = self.chains["simple"]
-            concurrency: int = int(self.config.get("concurrency", len(PARALLEL_TASKS)))
-            sem = asyncio.Semaphore(concurrency)
-
-            async def run_with_sem(t: str) -> Any:
-                async with sem:
-                    return await chain.ainvoke({"task": t})
-
-            tasks = [run_with_sem(task) for task in PARALLEL_TASKS]
-            results = await asyncio.gather(*tasks)
-
-            result_contents = [result.content if hasattr(result, "content") else str(result) for result in results]
-
-            for i, result_content in enumerate(result_contents):
+            results = await asyncio.gather(*(run_task(t) for t in PARALLEL_TASKS))
+            for i, output in enumerate(results):
                 self.log_output(
-                    scenario_name=BenchmarkScenario.PARALLEL_PIPELINE.value,
-                    task_name=f"Task {i+1}",
-                    output=result_content,
+                    BenchmarkScenario.PARALLEL_PIPELINE.value,
+                    f"Task {i + 1}",
+                    output,
                 )
 
-            total_tokens = sum(count_tokens_estimate(task + str(result)) for task, result in zip(PARALLEL_TASKS, result_contents))
-
+            total_tokens = sum(count_tokens_estimate(t + r) for t, r in zip(PARALLEL_TASKS, results))
         except Exception as e:
             self.logger.error(f"Error in parallel pipeline benchmark: {e}")
             metrics = self.monitor.stop_monitoring()
@@ -217,33 +214,32 @@ class LangChainBenchmark(BaseBenchmark):
         return metrics
 
     async def run_complex_workflow(self) -> BenchmarkMetrics:
-        """Run a complex workflow benchmark using LangChain."""
+        """Run a complex workflow benchmark using AutoGen."""
         self.monitor.start_monitoring()
         total_tokens = 0
         results: Dict[str, str] = {}
 
         try:
-            chain = self.chains["complex"]
-
             for step in COMPLEX_WORKFLOW_STEPS:
-                context_parts = [f"{dep}: {results[dep]}" for dep in step["depends_on"] if dep in results]
-                context = " | ".join(context_parts) if context_parts else "None"
-
-                result = await chain.ainvoke(
-                    {
-                        "task": step["prompt"],
-                        "context": context,
-                    }
+                context = (
+                    " | ".join(
+                        f"{dependency}: {results[dependency]}"
+                        for dependency in step["depends_on"]
+                        if dependency in results
+                    )
+                    or "None"
                 )
 
-                result_content = result.content if hasattr(result, "content") else str(result)
-                results[step["task"]] = result_content
-                total_tokens += count_tokens_estimate(step["prompt"] + context + result_content)
+                prompt = f"Context:\n{context}\n\nTask:\n{step['prompt']}"
+                output = await self._ask(prompt)
+
+                results[step["task"]] = output
+                total_tokens += count_tokens_estimate(prompt + output)
 
                 self.log_output(
-                    scenario_name=BenchmarkScenario.COMPLEX_WORKFLOW.value,
-                    task_name=step["task"],
-                    output=result_content,
+                    BenchmarkScenario.COMPLEX_WORKFLOW.value,
+                    step["task"],
+                    output,
                 )
 
         except Exception as e:
@@ -255,19 +251,19 @@ class LangChainBenchmark(BaseBenchmark):
 
         metrics = self.monitor.stop_monitoring()
         metrics.token_count = total_tokens
-        metrics.throughput_tasks_per_sec = calculate_throughput(len(COMPLEX_WORKFLOW_STEPS), metrics.execution_time_ms / 1000)
+        metrics.throughput_tasks_per_sec = calculate_throughput(
+            len(COMPLEX_WORKFLOW_STEPS), metrics.execution_time_ms / 1000
+        )
         return metrics
 
     async def run_memory_intensive(self) -> BenchmarkMetrics:
-        """Run a memory-intensive benchmark using LangChain."""
+        """Run a memory-intensive benchmark using AutoGen."""
         self.monitor.start_monitoring()
         token_count = 0
 
         try:
-            chain = self.chains["simple"]
-            large_data = ["data" * 1000] * 1000  # ~4MB of string data
-            result = await chain.ainvoke({"task": MEMORY_INTENSIVE_PROMPT})
-            result_content = result.content if hasattr(result, "content") else str(result)
+            large_data = ["data" * 1000] * 1000  # ~4MB
+            result_content = await self._ask(MEMORY_INTENSIVE_PROMPT)
             del large_data
 
             self.log_output(
@@ -291,32 +287,26 @@ class LangChainBenchmark(BaseBenchmark):
         return metrics
 
     async def run_concurrent_tasks(self) -> BenchmarkMetrics:
-        """Run concurrent tasks benchmark using LangChain."""
+        """Run concurrent tasks benchmark using AutoGen."""
         self.monitor.start_monitoring()
         total_tokens = 0
+        concurrency = int(self.config.get("concurrency", len(CONCURRENT_TASK_PROMPTS)))
+        sem = asyncio.Semaphore(concurrency)
+
+        async def run_task(prompt: str) -> str:
+            async with sem:
+                return await self._ask(prompt)
 
         try:
-            chain = self.chains["simple"]
-            concurrency: int = int(self.config.get("concurrency", len(CONCURRENT_TASK_PROMPTS)))
-            sem = asyncio.Semaphore(concurrency)
-
-            async def run_with_sem(p: str) -> Any:
-                async with sem:
-                    return await chain.ainvoke({"task": p})
-
-            tasks = [run_with_sem(prompt) for prompt in CONCURRENT_TASK_PROMPTS]
-            results = await asyncio.gather(*tasks)
-
-            result_contents = [result.content if hasattr(result, "content") else str(result) for result in results]
-
-            for i, result_content in enumerate(result_contents):
+            results = await asyncio.gather(*(run_task(p) for p in CONCURRENT_TASK_PROMPTS))
+            for i, output in enumerate(results):
                 self.log_output(
-                    scenario_name=BenchmarkScenario.CONCURRENT_TASKS.value,
-                    task_name=f"Task {i+1}",
-                    output=result_content,
+                    BenchmarkScenario.CONCURRENT_TASKS.value,
+                    f"Task {i + 1}",
+                    output,
                 )
 
-            total_tokens = sum(count_tokens_estimate(prompt + result) for prompt, result in zip(CONCURRENT_TASK_PROMPTS, result_contents))
+            total_tokens = sum(count_tokens_estimate(p + r) for p, r in zip(CONCURRENT_TASK_PROMPTS, results))
 
         except Exception as e:
             self.logger.error(f"Error in concurrent tasks benchmark: {e}")
@@ -329,5 +319,7 @@ class LangChainBenchmark(BaseBenchmark):
         metrics = self.monitor.stop_monitoring()
         metrics.token_count = total_tokens
         metrics.concurrent_tasks = len(CONCURRENT_TASK_PROMPTS)
-        metrics.throughput_tasks_per_sec = calculate_throughput(len(CONCURRENT_TASK_PROMPTS), metrics.execution_time_ms / 1000)
+        metrics.throughput_tasks_per_sec = calculate_throughput(
+            len(CONCURRENT_TASK_PROMPTS), metrics.execution_time_ms / 1000
+        )
         return metrics

@@ -4,7 +4,7 @@ import asyncio
 import os
 from typing import Any, Dict, List, Optional
 
-from langchain.schema import HumanMessage
+from langchain_core.messages import HumanMessage
 from langgraph.graph import END, StateGraph
 from typing_extensions import TypedDict
 
