@@ -124,7 +124,7 @@ module-name = "graphbit"
 # Build profile for optimized releases
 profile = "release"
 # Python interpreter finding
-python-source = "python-src"
+python-source = "python/python-src"
 # Enable auditwheel for proper PyPI compatibility
 skip-auditwheel = false
 # Build optimizations
