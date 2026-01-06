@@ -31,7 +31,7 @@
     <a href="https://github.com/InfinitiBit/graphbit/blob/main/CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome"></a>
     <br>
     <a href="https://www.rust-lang.org"><img src="https://img.shields.io/badge/rust-1.70+-orange.svg?logo=rust" alt="Rust Version"></a>
-    <a href="https://www.python.org"><img src="https://img.shields.io/badge/python-3.10--3.13-blue.svg?logo=python&logoColor=white" alt="Python Version"></a>
+    <a href="https://www.python.org"><img src="https://img.shields.io/badge/python-3.9--3.13-blue.svg?logo=python&logoColor=white" alt="Python Version"></a>
     <a href="https://github.com/InfinitiBit/graphbit/blob/main/LICENSE.md"><img src="https://img.shields.io/badge/license-Custom-lightgrey.svg" alt="License"></a>
 
 </p>
@@ -60,7 +60,7 @@
 
 ## Informazioni su GraphBit
 
-GraphBit è un framework IA agentico open-source per sviluppatori che necessitano di esecuzione deterministica, concorrente e a basso overhead.
+GraphBit è un framework IA agentico a sorgente disponibile per sviluppatori che necessitano di esecuzione deterministica, concorrente e a basso overhead.
 
 ## Perché GraphBit?
 
