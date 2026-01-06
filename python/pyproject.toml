@@ -58,6 +58,6 @@ python-source = "python-src"
 skip-auditwheel = false
 strip = true
 
-# Post-build script - shows license notice after build
-[tool.maturin.scripts]
-post-build = "build_notice:show_build_license_notice"
+# # Post-build script - shows license notice after build
+# [tool.maturin.scripts]
+# post-build = "build_notice:show_build_license_notice"
