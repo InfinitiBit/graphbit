@@ -3,7 +3,7 @@
 # GraphBit - High Performance Agentic Framework
 
 <p align="center">
-    <img src="../assets/GraphBit_Final_GB_Github_GIF.gif" style="max-width: 100%; height: auto;" alt="Logo" />
+    <img src="https://raw.githubusercontent.com/InfinitiBit/graphbit/refs/heads/main/assets/logo(circle).png" style="max-width: 200px; height: auto;" alt="GraphBit Logo" />
 </p>
 
 <!-- Added placeholders for links, fill it up when the corresponding links are available. -->
@@ -14,14 +14,40 @@
     <br /><br />
 </p>
 
-[![Build Status](https://img.shields.io/github/actions/workflow/status/InfinitiBit/graphbit/update-docs.yml?branch=main)](https://github.com/InfinitiBit/graphbit/actions/workflows/update-docs.yml)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/InfinitiBit/graphbit/blob/main/CONTRIBUTING.md)
-[![Rust Version](https://img.shields.io/badge/rust-1.70+-blue.svg)](https://www.rust-lang.org)
-[![Python Version](https://img.shields.io/badge/python-3.10--3.13-blue.svg)](https://www.python.org)
+<p align="center">
+    <a href="https://trendshift.io/repositories/14884" target="_blank"><img src="https://trendshift.io/api/badge/repositories/14884" alt="InfinitiBit%2Fgraphbit | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
+    <br>
+    <a href="https://pepy.tech/projects/graphbit"><img src="https://static.pepy.tech/personalized-badge/graphbit?period=total&units=INTERNATIONAL_SYSTEM&left_color=GREY&right_color=GREEN&left_text=Downloads" alt="PyPI Downloads"/></a>
+</p>
+
+<p align="center">
+    <a href="https://pypi.org/project/graphbit/"><img src="https://img.shields.io/pypi/v/graphbit?color=blue&label=PyPI" alt="PyPI"></a>
+    <!-- <a href="https://pypi.org/project/graphbit/"><img src="https://img.shields.io/pypi/dm/graphbit?color=blue&label=Downloads" alt="PyPI Downloads"></a> -->
+    <a href="https://github.com/InfinitiBit/graphbit/actions/workflows/update-docs.yml"><img src="https://img.shields.io/github/actions/workflow/status/InfinitiBit/graphbit/update-docs.yml?branch=main&label=Build" alt="Build Status"></a>
+    <a href="https://github.com/InfinitiBit/graphbit/blob/main/CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome"></a>
+    <br>
+    <a href="https://www.rust-lang.org"><img src="https://img.shields.io/badge/rust-1.70+-orange.svg?logo=rust" alt="Rust Version"></a>
+    <a href="https://www.python.org"><img src="https://img.shields.io/badge/python-3.10--3.13-blue.svg?logo=python&logoColor=white" alt="Python Version"></a>
+    <a href="https://github.com/InfinitiBit/graphbit/blob/main/LICENSE.md"><img src="https://img.shields.io/badge/license-Custom-lightgrey.svg" alt="License"></a>
+
+</p>
+<p align="center">
+    <a href="https://www.youtube.com/@graphbitAI"><img src="https://img.shields.io/badge/YouTube-FF0000?logo=youtube&logoColor=white" alt="YouTube"></a>
+    <a href="https://x.com/graphbit_ai"><img src="https://img.shields.io/badge/X-000000?logo=x&logoColor=white" alt="X"></a>
+    <a href="https://discord.com/invite/huVJwkyu"><img src="https://img.shields.io/badge/Discord-7289da?logo=discord&logoColor=white" alt="Discord"></a>
+    <a href="https://www.linkedin.com/showcase/graphbitai/"><img src="https://img.shields.io/badge/LinkedIn-0077B5?logo=linkedin&logoColor=white" alt="LinkedIn"></a>
+</p>
 
 **Type-Safe AI Agent Workflows with Rust Performance**
 
 </div>
+
+---
+
+**Read this in other languages**: [🇨🇳 简体中文](README_Multi_Lingual_i18n_Files/README.zh-CN.md) | [🇨🇳 繁體中文](README_Multi_Lingual_i18n_Files/README.zh-TW.md) | [🇪🇸 Español](README_Multi_Lingual_i18n_Files/README.es.md) | [🇫🇷 Français](README_Multi_Lingual_i18n_Files/README.fr.md) | [🇩🇪 Deutsch](README_Multi_Lingual_i18n_Files/README.de.md) | [🇯🇵 日本語](README_Multi_Lingual_i18n_Files/README.ja.md) | [🇰🇷 한국어](README_Multi_Lingual_i18n_Files/README.ko.md) | [🇮🇳 हिन्दी](README_Multi_Lingual_i18n_Files/README.hi.md) | [🇸🇦 العربية](README_Multi_Lingual_i18n_Files/README.ar.md) | [🇮🇹 Italiano](README_Multi_Lingual_i18n_Files/README.it.md) | [🇧🇷 Português](README_Multi_Lingual_i18n_Files/README.pt-BR.md) | [🇷🇺 Русский](README_Multi_Lingual_i18n_Files/README.ru.md) | [🇧🇩 বাংলা](README_Multi_Lingual_i18n_Files/README.bn.md)
+
+---
+
 
 Graphbit is an **industry-grade agentic AI framework** built for developers and AI teams that demand stability, scalability, and low resource usage. 
 
@@ -117,7 +143,7 @@ print("\nData Processor Output: \n", result.get_node_output("Data Processor"))
 ## High-Level Architecture
 
 <p align="center">
-  <img src="assets/architecture.svg" height="250" alt="GraphBit Architecture">
+  <img src="https://raw.githubusercontent.com/InfinitiBit/graphbit/092af98af8bd0f00ec924d3879dbcb98353cfd8d/assets/architecture.svg" height="250" alt="GraphBit Architecture">
 </p>
 
 Three-tier design for reliability and performance:
