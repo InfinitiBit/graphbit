@@ -339,42 +339,20 @@ fn shutdown() -> PyResult<()> {
     Ok(())
 }
 
-/// Get allocator information with runtime verification
+/// Get allocator information with TRUE allocator-specific runtime verification
 ///
 /// Returns a tuple of (allocator_name, verification_status)
+/// The verification uses allocator-specific APIs to confirm which allocator is active
 fn get_allocator_info() -> (String, bool) {
-    // Python bindings always use system allocator (no global allocator set)
-    // Core library uses platform-specific allocators
-
-    #[cfg(target_os = "linux")]
-    {
-        // Linux uses jemalloc in core, system in Python bindings
-        ("jemalloc".to_string(), true)
-    }
-
-    #[cfg(target_os = "macos")]
-    {
-        // macOS uses mimalloc in core, system in Python bindings
-        ("mimalloc".to_string(), true)
-    }
-
-    #[cfg(target_os = "windows")]
-    {
-        // Windows uses mimalloc in core, system in Python bindings
-        ("mimalloc".to_string(), true)
-    }
-
-    #[cfg(all(unix, not(any(target_os = "linux", target_os = "macos"))))]
-    {
-        // Other Unix uses jemalloc in core, system in Python bindings
-        ("jemalloc".to_string(), true)
-    }
-
-    #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows", unix)))]
-    {
-        // Fallback for unknown platforms
-        ("system".to_string(), true)
-    }
+    // Get the expected allocator name from the core library
+    let allocator_name = graphbit_core::get_allocator_name().to_string();
+    
+    // Perform ALLOCATOR-SPECIFIC runtime verification
+    // This uses mimalloc's mi_version() or jemalloc's direct allocation
+    // to PROVE which allocator is active (not just that allocation works)
+    let verified = graphbit_core::verify_specific_allocator();
+    
+    (allocator_name, verified)
 }
 
 /// The main Python module definition
