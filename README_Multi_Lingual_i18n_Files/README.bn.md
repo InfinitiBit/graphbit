@@ -29,7 +29,7 @@
     <a href="https://github.com/InfinitiBit/graphbit/blob/main/CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome"></a>
     <br>
     <a href="https://www.rust-lang.org"><img src="https://img.shields.io/badge/rust-1.70+-orange.svg?logo=rust" alt="Rust Version"></a>
-    <a href="https://www.python.org"><img src="https://img.shields.io/badge/python-3.10--3.13-blue.svg?logo=python&logoColor=white" alt="Python Version"></a>
+    <a href="https://www.python.org"><img src="https://img.shields.io/badge/python-3.9--3.13-blue.svg?logo=python&logoColor=white" alt="Python Version"></a>
     <a href="https://github.com/InfinitiBit/graphbit/blob/main/LICENSE.md"><img src="https://img.shields.io/badge/license-Custom-lightgrey.svg" alt="License"></a>
 
 </p>
@@ -58,7 +58,7 @@
 
 ## GraphBit সম্পর্কে
 
-GraphBit হল একটি ওপেন-সোর্স এজেন্টিক AI ফ্রেমওয়ার্ক যা ডেভেলপারদের জন্য যাদের নির্ধারণমূলক, সমসাময়িক এবং কম ওভারহেড এক্সিকিউশন প্রয়োজন।
+GraphBit হল একটি উৎস উপলব্ধ এজেন্টিক AI ফ্রেমওয়ার্ক যা ডেভেলপারদের জন্য যাদের নির্ধারণমূলক, সমসাময়িক এবং কম ওভারহেড এক্সিকিউশন প্রয়োজন।
 
 ## কেন GraphBit?
 
