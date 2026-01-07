@@ -116,6 +116,7 @@ jemallocator = "0.5"
 # Utilities
 lazy_static = "1.4"
 lopdf = "0.32"
+mimalloc = {version = "0.1", default-features = false}
 num_cpus = "1.16"
 pdf-extract = "0.10"
 # Graph and algorithms
