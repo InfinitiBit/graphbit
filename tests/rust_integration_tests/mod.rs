@@ -6,6 +6,7 @@
 
 pub mod agent_tests;
 pub mod azure_openai_integration_tests;
+pub mod cloudflare_test;
 pub mod concurrency_tests;
 pub mod doc_processing_tests;
 /// Integration tests for document loading functionality
@@ -91,6 +92,42 @@ pub fn get_anthropic_api_key_or_skip() -> String {
         Ok(key) if !key.is_empty() && key != "test-api-key-placeholder" => key,
         _ => {
             println!("Skipping test - no valid ANTHROPIC_API_KEY found");
+            panic!("TEST_SKIP");
+        }
+    }
+}
+
+/// Check if a valid `Cloudflare` API key is available
+pub fn has_cloudflare_key() -> bool {
+    std::env::var("CLOUDFLARE_API_KEY")
+        .map(|key| !key.is_empty() && key != "test-api-key-placeholder")
+        .unwrap_or(false)
+}
+
+/// Check if a valid `Cloudflare` account ID is available
+pub fn has_cloudflare_account() -> bool {
+    std::env::var("CLOUDFLARE_ACCOUNT_ID")
+        .map(|id| !id.is_empty() && id != "test-account-id-placeholder")
+        .unwrap_or(false)
+}
+
+/// Get `Cloudflare` API key or skip test if not available
+pub fn get_cloudflare_key_or_skip() -> String {
+    match std::env::var("CLOUDFLARE_API_KEY") {
+        Ok(key) if !key.is_empty() && key != "test-api-key-placeholder" => key,
+        _ => {
+            println!("Skipping test - no valid CLOUDFLARE_API_KEY found");
+            panic!("TEST_SKIP");
+        }
+    }
+}
+
+/// Get `Cloudflare` account ID or skip test if not available
+pub fn get_cloudflare_account_or_skip() -> String {
+    match std::env::var("CLOUDFLARE_ACCOUNT_ID") {
+        Ok(id) if !id.is_empty() && id != "test-account-id-placeholder" => id,
+        _ => {
+            println!("Skipping test - no valid CLOUDFLARE_ACCOUNT_ID found");
             panic!("TEST_SKIP");
         }
     }

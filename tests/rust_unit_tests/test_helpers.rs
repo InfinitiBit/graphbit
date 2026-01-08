@@ -43,6 +43,26 @@ pub fn has_togetherai_key() -> bool {
 }
 
 #[allow(dead_code)]
+pub fn has_cloudflare_key() -> bool {
+    env::var("CLOUDFLARE_API_KEY").is_ok()
+}
+
+#[allow(dead_code)]
+pub fn has_cloudflare_account() -> bool {
+    env::var("CLOUDFLARE_ACCOUNT_ID").is_ok()
+}
+
+#[allow(dead_code)]
+pub fn get_cloudflare_key_or_skip() -> String {
+    env::var("CLOUDFLARE_API_KEY").expect("CLOUDFLARE_API_KEY environment variable not set")
+}
+
+#[allow(dead_code)]
+pub fn get_cloudflare_account_or_skip() -> String {
+    env::var("CLOUDFLARE_ACCOUNT_ID").expect("CLOUDFLARE_ACCOUNT_ID environment variable not set")
+}
+
+#[allow(dead_code)]
 // `Ollama` Helper
 pub async fn is_ollama_available() -> bool {
     let client = reqwest::Client::new();
