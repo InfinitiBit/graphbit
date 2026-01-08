@@ -51,10 +51,32 @@ version.workspace = true
 [target.aarch64-unknown-linux-gnu.dependencies]
 openssl = {version = "0.10", features = ["vendored"]}
 
+# Other Unix systems: jemalloc (broad compatibility)
+[target.'cfg(all(unix, not(any(target_os = "linux", target_os = "macos"))))']
+
+[target.'cfg(all(unix, not(any(target_os = "linux", target_os = "macos"))))'.dependencies]
+jemallocator.workspace = true
+
 # Enable vendored OpenSSL for musl targets (Alpine Linux)
 # musl containers don't have OpenSSL dev packages, so we compile from source
+[target.'cfg(target_env = "musl")']
+
 [target.'cfg(target_env = "musl")'.dependencies]
 openssl = {version = "0.10", features = ["vendored"]}
 
-[target.'cfg(unix)'.dependencies]
+# Platform-specific memory allocators
+# Linux: jemalloc
+[target.'cfg(target_os = "linux")']
+
+[target.'cfg(target_os = "linux")'.dependencies]
 jemallocator.workspace = true
+
+# macOS: mimalloc
+[target.'cfg(target_os = "macos")']
+
+[target.'cfg(target_os = "macos")'.dependencies]
+mimalloc.workspace = true
+
+# Windows: mimalloc
+[target.'cfg(target_os = "windows")'.dependencies]
+mimalloc.workspace = true
