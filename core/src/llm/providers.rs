@@ -7,12 +7,25 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[cfg(feature = "python")]
-fn default_python_instance() -> std::sync::Arc<pyo3::PyObject> {
-    // This is a placeholder that should never be used
-    // The python_instance should always be set when creating a PythonBridge config
-    panic!(
-        "PythonBridge config cannot be deserialized - python_instance must be set programmatically"
-    )
+#[cfg(feature = "python")]
+lazy_static::lazy_static! {
+    static ref PYTHON_INSTANCE_REGISTRY: std::sync::Mutex<HashMap<String, std::sync::Arc<pyo3::PyObject>>> = std::sync::Mutex::new(HashMap::new());
+}
+
+#[cfg(feature = "python")]
+pub fn register_python_instance(id: String, instance: std::sync::Arc<pyo3::PyObject>) {
+    if let Ok(mut registry) = PYTHON_INSTANCE_REGISTRY.lock() {
+        registry.insert(id, instance);
+    }
+}
+
+#[cfg(feature = "python")]
+pub fn get_python_instance(id: &str) -> Option<std::sync::Arc<pyo3::PyObject>> {
+    if let Ok(registry) = PYTHON_INSTANCE_REGISTRY.lock() {
+        registry.get(id).cloned()
+    } else {
+        None
+    }
 }
 
 /// Configuration for different LLM providers
@@ -168,10 +181,13 @@ pub enum LlmConfig {
     #[cfg(feature = "python")]
     PythonBridge {
         /// Python object instance that implements the LLM interface
-        #[serde(skip, default = "default_python_instance")]
-        python_instance: std::sync::Arc<pyo3::PyObject>,
+        #[serde(skip)]
+        python_instance: Option<std::sync::Arc<pyo3::PyObject>>,
         /// Model name to use
         model: String,
+        /// Unique instance ID for serialization persistence
+        #[serde(default)]
+        instance_id: Option<String>,
     },
     /// Custom LLM provider configuration
     Custom {
