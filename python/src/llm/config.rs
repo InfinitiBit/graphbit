@@ -319,4 +319,30 @@ impl LlmConfig {
             false
         }
     }
+    /// Context manager entry point
+    ///
+    /// Enables `with` statement usage for automatic resource cleanup:
+    ///
+    /// Example:
+    ///     with LlmConfig.huggingface(api_key="...", model="...") as config:
+    ///         # use config
+    ///     # cleanup() called automatically
+    fn __enter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
+        slf
+    }
+
+    /// Context manager exit point
+    ///
+    /// Automatically calls `cleanup()` when exiting the `with` block.
+    /// Returns False to not suppress any exceptions.
+    #[pyo3(signature = (_exc_type=None, _exc_val=None, _exc_tb=None))]
+    fn __exit__(
+        &self,
+        _exc_type: Option<PyObject>,
+        _exc_val: Option<PyObject>,
+        _exc_tb: Option<PyObject>,
+    ) -> bool {
+        self.cleanup();
+        false
+    }    
 }
