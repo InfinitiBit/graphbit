@@ -15,7 +15,7 @@
 The benchmark suite measures and compares:
 - **Execution Time**: Task completion speed in milliseconds
 - **Memory Usage**: RAM consumption in MB
-- **CPU Usage**: Processor utilization percentage  
+- **CPU Usage**: Processor utilization percentage
 - **Token Count**: LLM token consumption
 - **Throughput**: Tasks completed per second
 - **Error Rate**: Failure percentage across scenarios
@@ -44,6 +44,33 @@ The suite runs six different scenarios to test various aspects of framework perf
 4. **Complex Workflow**: Multi-step workflow with conditional logic
 5. **Memory Intensive**: Large data processing tasks
 6. **Concurrent Tasks**: Multiple simultaneous operations
+
+---
+
+## Environment Setup
+
+`graphbit-benchmarks` supports **both Poetry and uv** for dependency management.
+
+> **Python requirement:** `>=3.10,<3.14`  
+> Tested only on Python **3.10, 3.11, 3.12, 3.13**. This is because frameworks other than GraphBit do not support Python **3.9**.
+
+### Option 1: Using `uv` (Recommended)
+
+`uv` reads dependencies from the `[project]` section in `pyproject.toml`.
+
+```bash
+uv sync
+source .venv/bin/activate # .venv\bin\activate for windows
+```
+
+### Option 2: Using `poetry`
+
+`poetry` reads dependencies from the `[tool.poetry]` section in `pyproject.toml`.
+
+```bash
+poetry install --no-root
+poetry env activate
+```
 
 ---
 
