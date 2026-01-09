@@ -1,7 +1,7 @@
 //! LLM configuration for GraphBit Python bindings
 
 use crate::validation::validate_api_key;
-use graphbit_core::llm::providers::register_python_instance;
+use graphbit_core::llm::providers::{register_python_instance, unregister_python_instance};
 use graphbit_core::llm::LlmConfig as CoreLlmConfig;
 use pyo3::prelude::*;
 use uuid::Uuid;
@@ -295,5 +295,28 @@ impl LlmConfig {
 
     fn model(&self) -> String {
         self.inner.model_name().to_string()
+    }
+
+    /// Cleanup the Python instance from the global registry
+    ///
+    /// Call this method when you're done using a HuggingFace or other PythonBridge
+    /// configuration to free memory and Python resources.
+    ///
+    /// Returns True if an instance was removed, False otherwise.
+    ///
+    /// Example:
+    ///     config = LlmConfig.huggingface(api_key="...", model="...")
+    ///     # ... use config ...
+    ///     config.cleanup()  # Frees resources
+    fn cleanup(&self) -> bool {
+        if let CoreLlmConfig::PythonBridge {
+            instance_id: Some(ref id),
+            ..
+        } = self.inner
+        {
+            unregister_python_instance(id)
+        } else {
+            false
+        }
     }
 }
