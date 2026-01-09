@@ -12,6 +12,11 @@ lazy_static::lazy_static! {
     static ref PYTHON_INSTANCE_REGISTRY: std::sync::Mutex<HashMap<String, std::sync::Arc<pyo3::PyObject>>> = std::sync::Mutex::new(HashMap::new());
 }
 
+/// Register a Python LLM instance in the global registry
+///
+/// This function stores a Python object instance (wrapped in an `Arc`) with a unique ID,
+/// allowing the Rust code to reference and retrieve the Python object later during serialization
+/// and deserialization of `LlmConfig::PythonBridge`.
 #[cfg(feature = "python")]
 pub fn register_python_instance(id: String, instance: std::sync::Arc<pyo3::PyObject>) {
     if let Ok(mut registry) = PYTHON_INSTANCE_REGISTRY.lock() {
@@ -19,12 +24,29 @@ pub fn register_python_instance(id: String, instance: std::sync::Arc<pyo3::PyObj
     }
 }
 
+/// Retrieve a Python LLM instance from the global registry
+///
+/// Returns the Python object instance associated with the given ID, or `None` if not found
+/// or if the registry lock cannot be acquired.
 #[cfg(feature = "python")]
 pub fn get_python_instance(id: &str) -> Option<std::sync::Arc<pyo3::PyObject>> {
     if let Ok(registry) = PYTHON_INSTANCE_REGISTRY.lock() {
         registry.get(id).cloned()
     } else {
         None
+    }
+}
+
+/// Remove a Python instance from the registry
+///
+/// Returns `true` if the instance was found and removed, `false` otherwise.
+/// This should be called when the `LlmConfig` is no longer needed to free resources.
+#[cfg(feature = "python")]
+pub fn unregister_python_instance(id: &str) -> bool {
+    if let Ok(mut registry) = PYTHON_INSTANCE_REGISTRY.lock() {
+        registry.remove(id).is_some()
+    } else {
+        false
     }
 }
 
