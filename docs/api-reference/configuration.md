@@ -267,7 +267,15 @@ executor = Executor(
 ### Runtime Configuration
 
 ```python
-# Configure executor settings
+# Configure lightweight mode during initialization
+executor = Executor(
+    llm_config,
+    lightweight_mode=True,    # Enable low-latency mode
+    timeout_seconds=30,
+    debug=False
+)
+
+# Or configure other executor settings
 executor.configure(
     timeout_seconds=600,       # Execution timeout (1-3600 seconds)
     max_retries=5,            # Maximum retries (0-10)
@@ -275,9 +283,9 @@ executor.configure(
     debug=False               # Debug mode
 )
 
-# Legacy configuration methods
-executor.set_lightweight_mode(True)  # Enable lightweight mode
+# Check if lightweight mode is enabled
 is_lightweight = executor.is_lightweight_mode()  # Check mode
+print(f"Lightweight mode: {is_lightweight}")
 ```
 
 ### Executor Statistics

@@ -166,57 +166,6 @@ impl WorkflowExecutor {
         }
     }
 
-    /// Create a workflow executor optimized for high throughput
-    pub fn new_high_throughput() -> Self {
-        let concurrency_config = ConcurrencyConfig::high_throughput();
-        let concurrency_manager = Arc::new(ConcurrencyManager::new(concurrency_config));
-
-        Self {
-            agents: Arc::new(RwLock::new(HashMap::with_capacity(16))),
-            concurrency_manager,
-            max_node_execution_time_ms: None,
-            fail_fast: false,
-            default_retry_config: Some(RetryConfig::default()),
-            circuit_breakers: Arc::new(RwLock::new(HashMap::with_capacity(8))),
-            circuit_breaker_config: CircuitBreakerConfig::default(),
-            default_llm_config: None,
-        }
-    }
-
-    /// Create a workflow executor optimized for low latency
-    pub fn new_low_latency() -> Self {
-        let concurrency_config = ConcurrencyConfig::low_latency();
-        let concurrency_manager = Arc::new(ConcurrencyManager::new(concurrency_config));
-
-        Self {
-            agents: Arc::new(RwLock::new(HashMap::with_capacity(16))),
-            concurrency_manager,
-            max_node_execution_time_ms: None,
-            fail_fast: true,            // Fail fast for low latency
-            default_retry_config: None, // No retries for low latency
-            circuit_breakers: Arc::new(RwLock::new(HashMap::with_capacity(8))),
-            circuit_breaker_config: CircuitBreakerConfig::default(),
-            default_llm_config: None,
-        }
-    }
-
-    /// Create a workflow executor optimized for memory usage
-    pub fn new_memory_optimized() -> Self {
-        let concurrency_config = ConcurrencyConfig::memory_optimized();
-        let concurrency_manager = Arc::new(ConcurrencyManager::new(concurrency_config));
-
-        Self {
-            agents: Arc::new(RwLock::new(HashMap::with_capacity(8))),
-            concurrency_manager,
-            max_node_execution_time_ms: None,
-            fail_fast: false,
-            default_retry_config: Some(RetryConfig::default()),
-            circuit_breakers: Arc::new(RwLock::new(HashMap::with_capacity(4))),
-            circuit_breaker_config: CircuitBreakerConfig::default(),
-            default_llm_config: None,
-        }
-    }
-
     /// Register an agent with the executor
     pub async fn register_agent(&self, agent: Arc<dyn AgentTrait>) {
         let agent_id = agent.id().clone();

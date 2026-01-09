@@ -1230,9 +1230,11 @@ executor = Executor(
 
 **Parameters**:
 - `config` (LlmConfig): LLM configuration
-- `lightweight_mode` (bool, optional): Enable lightweight mode (low latency)
+- `lightweight_mode` (bool, optional): Enable lightweight mode (low latency) - set during initialization
 - `timeout_seconds` (int, optional): Execution timeout (1-3600 seconds)
 - `debug` (bool, optional): Enable debug mode
+
+**Note**: The `lightweight_mode` parameter is set during executor creation and cannot be changed later. Use `is_lightweight_mode()` to check the current mode.
 
 #### Configuration Methods
 
@@ -1246,13 +1248,6 @@ executor.configure(
     enable_metrics=True,
     debug=False
 )
-```
-
-##### `set_lightweight_mode(enabled)`
-Legacy method for backward compatibility.
-
-```python
-executor.set_lightweight_mode(True)
 ```
 
 ##### `is_lightweight_mode()`
