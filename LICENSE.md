@@ -1,6 +1,6 @@
 # GRAPHBIT FRAMEWORK LICENSE
 
-Copyright © 2023–2025 InfinitiBit GmbH. All rights reserved.
+Copyright © 2023–2026 InfinitiBit GmbH. All rights reserved.
 
 By downloading, installing, or using the GraphBit framework (the “framework”), you agree to this License.
 
