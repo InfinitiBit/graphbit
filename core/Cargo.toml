@@ -33,6 +33,7 @@ workspace = true
 [package]
 description = "Core engine for GraphBit agentic workflow automation"
 name = "graphbit-core"
+build = "build.rs"
 authors.workspace = true
 categories.workspace = true
 documentation.workspace = true
