@@ -19,30 +19,22 @@ Configure OpenAI embedding provider:
 ```python
 import os
 
-from graphbit import EmbeddingConfig
+from graphbit import EmbeddingConfig, EmbeddingClient
 
 # Basic OpenAI configuration
-embedding_config = EmbeddingConfig.openai(
+openai_embedding_config = EmbeddingConfig.openai(
     api_key=os.getenv("OPENAI_API_KEY"),
     model="text-embedding-3-small"  # Optional - defaults to text-embedding-3-small
 )
 
-print(f"Provider: OpenAI")
-print(f"Model: {embedding_config.model}")
-```
-
-## Basic Usage
-
-### Creating Embedding Client
-
-```python
-from graphbit import EmbeddingClient
-
 # Create embedding client
-embedding_client = EmbeddingClient(embedding_config)
+openai_embedding_client = EmbeddingClient(openai_embedding_config)
+
+print(f"Provider: OpenAI")
+print(f"Model: {openai_embedding_config.model}")
 ```
 
-### Single Text Embedding
+#### Single Text Embedding
 
 Generate embeddings for individual texts:
 
@@ -56,7 +48,7 @@ print(f"Vector dimension: {len(vector)}")
 print(f"First 5 values: {vector[:5]}")
 ```
 
-### Batch Text Embeddings
+#### Batch Text Embeddings
 
 Process multiple texts efficiently:
 
@@ -76,6 +68,85 @@ print(f"Generated {len(vectors)} embeddings")
 for i, (text, vector) in enumerate(zip(texts, vectors)):
     print(f"Text {i+1}: {text[:50]}...")
     print(f"Vector dimension: {len(vector)}")
+```
+
+### Litellm Configuration
+
+Configure Litellm embedding provider:
+
+```python
+import os
+
+from graphbit import EmbeddingConfig, EmbeddingClient
+
+# Litellm openai configuration
+openai_embedding_config = EmbeddingConfig.litellm(
+    api_key=os.getenv("OPENAI_API_KEY"),
+    model="text-embedding-3-small"
+)
+
+# Litellm mistal AI configuration
+mistal_embedding_config = EmbeddingConfig.litellm(
+    api_key=os.getenv("MISTRAL_API_KEY"),
+    model="mistral/mistral-embed"
+)
+
+# Create embedding clients
+openai_embedding_client = EmbeddingClient(openai_embedding_config)
+
+mistral_embedding_client = EmbeddingClient(mistral_embedding_config)
+```
+
+#### Single Text Embedding
+
+Generate embeddings for individual texts:
+
+```python
+# Embed single text
+text = "GraphBit is a powerful framework for AI agent workflows"
+
+# Openai embedding
+openai_embedding = openai_embedding_client.embed(text)
+
+# Mistral embedding
+mistral_embedding = mistral_embedding_client.embed(text)
+
+print(f"Text: {text}")
+print(f"Openai Embedding dimension: {len(openai_embedding)}")
+print(f"Openai Embedding first 5 values: {openai_embedding[:5]}")
+print(f"Mistral Embedding dimension: {len(mistral_embedding)}")
+print(f"Mistral Embedding first 5 values: {mistral_embedding[:5]}")
+```
+
+#### Batch Text Embeddings
+
+Process multiple texts efficiently:
+
+```python
+# Embed multiple texts
+texts = [
+    "Machine learning is transforming industries",
+    "Natural language processing enables computers to understand text", 
+    "Deep learning models require large datasets",
+    "AI ethics is becoming increasingly important",
+    "Transformer architectures revolutionized NLP"
+]
+
+# Openai Embeddings
+openai_embeddings = openai_embedding_client.embed_many(texts)
+
+# Mistral Embeddings
+mistral_embeddings = mistral_embedding_client.embed_many(texts)
+
+print(f"Openai generated {len(openai_embeddings)} embeddings")
+for i, (text, openai_embedding) in enumerate(zip(texts, openai_embeddings)):
+    print(f"Text {i+1}: {text[:50]}...")
+    print(f"Openai embedding dimension: {len(openai_embedding)}")
+
+print(f"Mistral generated {len(mistral_embeddings)} embeddings")
+for i, (text, mistral_embedding) in enumerate(zip(texts, mistral_embeddings)):
+    print(f"Text {i+1}: {text[:50]}...")
+    print(f"Mistral embedding dimension: {len(mistral_embedding)}")
 ```
 
 ## Similarity Calculations
