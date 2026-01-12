@@ -1,0 +1,33 @@
+{
+  "title": "GraphBit Test Data",
+  "version": "1.0.0",
+  "description": "Sample JSON data for testing document loading",
+  "features": [
+    "Multi-Agent Orchestration",
+    "Workflow Management",
+    "LLM Integration",
+    "Document Processing",
+    "Text Splitting"
+  ],
+  "providers": {
+    "openai": {
+      "models": ["gpt-4", "gpt-4-turbo", "gpt-3.5-turbo"],
+      "supported": true
+    },
+    "anthropic": {
+      "models": ["claude-3-opus", "claude-3-sonnet", "claude-3-haiku"],
+      "supported": true
+    },
+    "ollama": {
+      "models": ["llama2", "mistral", "codellama"],
+      "supported": true
+    }
+  },
+  "statistics": {
+    "total_tests": 158,
+    "passing_tests": 158,
+    "code_coverage": 85,
+    "integration_tests": 4
+  }
+}
+

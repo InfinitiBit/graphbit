@@ -4,9 +4,9 @@
 //! for building and executing agentic workflows in `GraphBit`.
 
 // Use jemalloc as the global allocator for better performance
-// Disable for Python bindings to avoid TLS block allocation issues
+// Disable for Node.js and Python bindings to avoid TLS block allocation issues
 // Also disable on Windows where jemalloc support is problematic
-#[cfg(all(not(feature = "python"), unix))]
+#[cfg(all(not(any(feature = "python", feature = "javascript")), unix))]
 #[global_allocator]
 static GLOBAL: jemallocator::Jemalloc = jemallocator::Jemalloc;
 
