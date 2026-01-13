@@ -6,6 +6,7 @@ use crate::llm::{
     FinishReason, LlmMessage, LlmRequest, LlmResponse, LlmRole, LlmTool, LlmToolCall, LlmUsage,
 };
 use async_trait::async_trait;
+use futures::stream::{Stream, StreamExt};
 use reqwest::Client;
 use serde::{Deserialize, Deserializer, Serialize};
 
@@ -220,6 +221,7 @@ impl LlmProviderTrait for OpenAiProvider {
             } else {
                 None
             },
+            stream: None, // Disable streaming for complete method
         };
 
         // Add extra parameters
@@ -273,6 +275,155 @@ impl LlmProviderTrait for OpenAiProvider {
             || self.model.starts_with("gpt-3.5-turbo")
     }
 
+    async fn stream(
+        &self,
+        request: LlmRequest,
+    ) -> GraphBitResult<Box<dyn Stream<Item = GraphBitResult<LlmResponse>> + Unpin + Send>> {
+        let url = format!("{}/chat/completions", self.base_url);
+
+        let messages: Vec<OpenAiMessage> =
+            request.messages.iter().map(Self::convert_message).collect();
+
+        let tools: Option<Vec<OpenAiTool>> = if request.tools.is_empty() {
+            None
+        } else {
+            Some(request.tools.iter().map(Self::convert_tool).collect())
+        };
+
+        let body = OpenAiRequest {
+            model: self.model.clone(),
+            messages,
+            max_tokens: request.max_tokens,
+            temperature: request.temperature,
+            top_p: request.top_p,
+            tools: tools.clone(),
+            tool_choice: if tools.is_some() {
+                Some("auto".to_string())
+            } else {
+                None
+            },
+            stream: Some(true), // Enable streaming
+        };
+
+        // Add extra parameters
+        let mut request_json = serde_json::to_value(&body)?;
+        if let serde_json::Value::Object(ref mut map) = request_json {
+            for (key, value) in request.extra_params {
+                map.insert(key, value);
+            }
+        }
+
+        let mut req_builder = self
+            .client
+            .post(&url)
+            .header("Authorization", format!("Bearer {}", self.api_key))
+            .header("Content-Type", "application/json")
+            .json(&request_json);
+
+        if let Some(org) = &self.organization {
+            req_builder = req_builder.header("OpenAI-Organization", org);
+        }
+
+        let response = req_builder
+            .send()
+            .await
+            .map_err(|e| GraphBitError::llm_provider("openai", format!("Request failed: {e}")))?;
+
+        if !response.status().is_success() {
+            let error_text = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(GraphBitError::llm_provider(
+                "openai",
+                format!("API error: {error_text}"),
+            ));
+        }
+
+        // Parse SSE stream with proper line buffering
+        let model = self.model.clone();
+        let byte_stream = response.bytes_stream();
+
+        // Use a stateful stream that buffers incomplete lines
+        let stream = futures::stream::unfold(
+            (byte_stream, String::new()),
+            move |(mut byte_stream, mut buffer)| {
+                let model = model.clone();
+                async move {
+                    while let Some(chunk_result) = byte_stream.next().await {
+                        let chunk = match chunk_result {
+                            Ok(c) => c,
+                            Err(e) => {
+                                return Some((
+                                    Err(GraphBitError::llm_provider(
+                                        "openai",
+                                        format!("Stream error: {e}"),
+                                    )),
+                                    (byte_stream, buffer),
+                                ));
+                            }
+                        };
+
+                        // Append new data to buffer
+                        buffer.push_str(&String::from_utf8_lossy(&chunk));
+
+                        // Process complete lines
+                        while let Some(newline_pos) = buffer.find('\n') {
+                            let line = buffer[..newline_pos].trim().to_string();
+                            buffer = buffer[newline_pos + 1..].to_string();
+
+                            // Skip empty lines and comments
+                            if line.is_empty() || line.starts_with(':') {
+                                continue;
+                            }
+
+                            // Check for data: prefix
+                            if let Some(data) = line.strip_prefix("data: ") {
+                                // Check for [DONE] marker
+                                if data.trim() == "[DONE]" {
+                                    return None; // End of stream
+                                }
+
+                                // Parse JSON chunk
+                                match serde_json::from_str::<OpenAiStreamChunk>(data) {
+                                    Ok(stream_chunk) => {
+                                        if let Some(choice) = stream_chunk.choices.first() {
+                                            if let Some(content) = &choice.delta.content {
+                                                if !content.is_empty() {
+                                                    let response =
+                                                        LlmResponse::new(content.clone(), &model)
+                                                            .with_id(stream_chunk.id);
+                                                    return Some((
+                                                        Ok(response),
+                                                        (byte_stream, buffer),
+                                                    ));
+                                                }
+                                            }
+                                        }
+                                    }
+                                    Err(e) => {
+                                        tracing::warn!(
+                                            "Failed to parse stream chunk: {e}, data: {data}"
+                                        );
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Stream ended
+                    None
+                }
+            },
+        );
+
+        Ok(Box::new(Box::pin(stream)))
+    }
+
+    fn supports_streaming(&self) -> bool {
+        true // OpenAI supports streaming
+    }
+
     fn max_context_length(&self) -> Option<u32> {
         match self.model.as_str() {
             "gpt-4" => Some(8192),
@@ -316,6 +467,8 @@ struct OpenAiRequest {
     tools: Option<Vec<OpenAiTool>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     tool_choice: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    stream: Option<bool>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -380,4 +533,25 @@ where
 {
     let opt: Option<String> = Option::deserialize(deserializer)?;
     Ok(opt.unwrap_or_default())
+}
+
+// Streaming-specific types
+#[derive(Debug, Deserialize)]
+struct OpenAiStreamChunk {
+    id: String,
+    choices: Vec<OpenAiStreamChoice>,
+}
+
+#[derive(Debug, Deserialize)]
+struct OpenAiStreamChoice {
+    delta: OpenAiDelta,
+    finish_reason: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct OpenAiDelta {
+    #[serde(default)]
+    content: Option<String>,
+    #[serde(default)]
+    role: Option<String>,
 }
