@@ -349,18 +349,31 @@ result = asyncio.run(chat())
 
 **Returns**: `Awaitable[str]` - Generated response
 
-##### `complete_stream(prompt, max_tokens=None, temperature=None)`
-Stream completion (alias for async complete).
+##### `stream(prompt, max_tokens=None, temperature=None)`
+Stream completion with TRUE real-time token streaming. Returns a `StreamIterator` that yields chunks as they arrive from the LLM.
 
 ```python
 import asyncio
 
 async def stream():
-    response = await client.complete_stream("Write a poem")
-    return response
+    iterator = client.stream("Write a short poem about coding")
+    # Prints chunks in real-time and returns the full response
+    response = await iterator.streaming_response()
+    print(f"\n\nFull response ({len(response)} chars): {response}")
 
-result = asyncio.run(stream())
+asyncio.run(stream())
 ```
+
+**Parameters**:
+- `prompt` (str): Input prompt
+- `max_tokens` (int, optional): Maximum tokens to generate (1-100000)
+- `temperature` (float, optional): Sampling temperature (0.0-2.0)
+
+**Returns**: `StreamIterator` - An async iterator yielding string chunks
+
+**StreamIterator Methods**:
+- `__aiter__()` / `__anext__()`: Async iteration protocol for manual chunk processing
+- `streaming_response()`: Convenience method that prints chunks in real-time and returns the complete response as a string
 
 ##### `get_stats()`
 Get comprehensive client statistics.
