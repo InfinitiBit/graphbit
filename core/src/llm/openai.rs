@@ -9,6 +9,8 @@ use async_trait::async_trait;
 use futures::stream::{Stream, StreamExt};
 use reqwest::Client;
 use serde::{Deserialize, Deserializer, Serialize};
+use std::time::Duration;
+use tokio::time::timeout;
 
 /// `OpenAI` API provider
 pub struct OpenAiProvider {
@@ -324,33 +326,114 @@ impl LlmProviderTrait for OpenAiProvider {
             req_builder = req_builder.header("OpenAI-Organization", org);
         }
 
-        let response = req_builder
-            .send()
+        // Timeout constants for different phases of the request
+        // CONNECTION_TIMEOUT: Covers DNS resolution, TCP connection, TLS handshake, and first byte
+        // Should be generous for slow networks but prevent infinite hangs
+        const CONNECTION_TIMEOUT: Duration = Duration::from_secs(60);
+        // ERROR_BODY_TIMEOUT: Time to read error response body (usually small)
+        const ERROR_BODY_TIMEOUT: Duration = Duration::from_secs(10);
+        // CHUNK_TIMEOUT: Maximum time between streaming chunks
+        // If OpenAI stops sending chunks for this long, we timeout
+        const CHUNK_TIMEOUT: Duration = Duration::from_secs(30);
+
+        // Apply timeout to initial connection and first response byte
+        // This prevents hanging forever if OpenAI is unreachable or slow
+        let response = timeout(CONNECTION_TIMEOUT, req_builder.send())
             .await
+            .map_err(|_| {
+                GraphBitError::llm_provider(
+                    "openai",
+                    format!(
+                        "Connection timeout after {:?} - OpenAI did not respond. \
+                         Check network connectivity and OpenAI status.",
+                        CONNECTION_TIMEOUT
+                    ),
+                )
+            })?
             .map_err(|e| GraphBitError::llm_provider("openai", format!("Request failed: {e}")))?;
 
         if !response.status().is_success() {
-            let error_text = response
-                .text()
+            // Apply timeout to reading error body to prevent hanging on malformed responses
+            let error_text = timeout(ERROR_BODY_TIMEOUT, response.text())
                 .await
-                .unwrap_or_else(|_| "Unknown error".to_string());
+                .unwrap_or_else(|_| {
+                    Ok(format!(
+                        "Error body read timeout after {:?}",
+                        ERROR_BODY_TIMEOUT
+                    ))
+                })
+                .unwrap_or_else(|_| "Unknown error (failed to read body)".to_string());
+
             return Err(GraphBitError::llm_provider(
                 "openai",
                 format!("API error: {error_text}"),
             ));
         }
 
-        // Parse SSE stream with proper line buffering
+        // Parse SSE stream with proper line buffering and per-chunk timeout
+        // This prevents hanging forever if OpenAI stops responding mid-stream
         let model = self.model.clone();
         let byte_stream = response.bytes_stream();
 
-        // Use a stateful stream that buffers incomplete lines
+        // State tuple: (byte_stream, buffer, timeout_occurred, consecutive_parse_errors, total_parse_errors)
+        // - consecutive_parse_errors: Resets on successful parse, triggers error if too high
+        // - total_parse_errors: Running count for logging
+        const MAX_CONSECUTIVE_PARSE_ERRORS: u32 = 5;
+
+        // Use a stateful stream that buffers incomplete lines with timeout protection
         let stream = futures::stream::unfold(
-            (byte_stream, String::new()),
-            move |(mut byte_stream, mut buffer)| {
+            (byte_stream, String::new(), false, 0u32, 0u32), // Extended state with error tracking
+            move |(
+                mut byte_stream,
+                mut buffer,
+                timeout_occurred,
+                mut consecutive_parse_errors,
+                mut total_parse_errors,
+            )| {
                 let model = model.clone();
                 async move {
-                    while let Some(chunk_result) = byte_stream.next().await {
+                    // If we already had a timeout, don't continue
+                    if timeout_occurred {
+                        return None;
+                    }
+
+                    loop {
+                        // Apply timeout to each chunk read to prevent indefinite hanging
+                        let chunk_result = match timeout(CHUNK_TIMEOUT, byte_stream.next()).await {
+                            Ok(Some(result)) => result,
+                            Ok(None) => {
+                                // Stream naturally ended
+                                // Log if there were parse errors during the stream
+                                if total_parse_errors > 0 {
+                                    tracing::warn!(
+                                        "Stream ended with {} total parse errors. Some data may have been lost.",
+                                        total_parse_errors
+                                    );
+                                }
+                                return None;
+                            }
+                            Err(_) => {
+                                // Timeout occurred - OpenAI stopped responding
+                                // Return an error so user knows the response may be incomplete
+                                tracing::warn!(
+                                    "Stream chunk timeout after {:?} - OpenAI stopped responding. \
+                                     Response may be incomplete.",
+                                    CHUNK_TIMEOUT
+                                );
+                                // Return error to notify user, then end stream
+                                return Some((
+                                    Err(GraphBitError::llm_provider(
+                                        "openai",
+                                        format!(
+                                            "Stream timeout after {:?} - response may be incomplete",
+                                            CHUNK_TIMEOUT
+                                        ),
+                                    )),
+                                    (byte_stream, buffer, true, consecutive_parse_errors, total_parse_errors),
+                                ));
+                            }
+                        };
+
                         let chunk = match chunk_result {
                             Ok(c) => c,
                             Err(e) => {
@@ -359,7 +442,13 @@ impl LlmProviderTrait for OpenAiProvider {
                                         "openai",
                                         format!("Stream error: {e}"),
                                     )),
-                                    (byte_stream, buffer),
+                                    (
+                                        byte_stream,
+                                        buffer,
+                                        false,
+                                        consecutive_parse_errors,
+                                        total_parse_errors,
+                                    ),
                                 ));
                             }
                         };
@@ -367,10 +456,11 @@ impl LlmProviderTrait for OpenAiProvider {
                         // Append new data to buffer
                         buffer.push_str(&String::from_utf8_lossy(&chunk));
 
-                        // Process complete lines
+                        // Process complete lines using drain() to avoid allocations
                         while let Some(newline_pos) = buffer.find('\n') {
-                            let line = buffer[..newline_pos].trim().to_string();
-                            buffer = buffer[newline_pos + 1..].to_string();
+                            // Extract the line without allocating a new String
+                            let line: String = buffer.drain(..=newline_pos).collect();
+                            let line = line.trim();
 
                             // Skip empty lines and comments
                             if line.is_empty() || line.starts_with(':') {
@@ -381,12 +471,22 @@ impl LlmProviderTrait for OpenAiProvider {
                             if let Some(data) = line.strip_prefix("data: ") {
                                 // Check for [DONE] marker
                                 if data.trim() == "[DONE]" {
+                                    // Log if there were parse errors during the stream
+                                    if total_parse_errors > 0 {
+                                        tracing::warn!(
+                                            "Stream completed with {} total parse errors. Some data may have been lost.",
+                                            total_parse_errors
+                                        );
+                                    }
                                     return None; // End of stream
                                 }
 
                                 // Parse JSON chunk
                                 match serde_json::from_str::<OpenAiStreamChunk>(data) {
                                     Ok(stream_chunk) => {
+                                        // Reset consecutive error counter on success
+                                        consecutive_parse_errors = 0;
+
                                         if let Some(choice) = stream_chunk.choices.first() {
                                             if let Some(content) = &choice.delta.content {
                                                 if !content.is_empty() {
@@ -395,24 +495,57 @@ impl LlmProviderTrait for OpenAiProvider {
                                                             .with_id(stream_chunk.id);
                                                     return Some((
                                                         Ok(response),
-                                                        (byte_stream, buffer),
+                                                        (
+                                                            byte_stream,
+                                                            buffer,
+                                                            false,
+                                                            consecutive_parse_errors,
+                                                            total_parse_errors,
+                                                        ),
                                                     ));
                                                 }
                                             }
                                         }
                                     }
                                     Err(e) => {
+                                        // Track parse errors
+                                        consecutive_parse_errors += 1;
+                                        total_parse_errors += 1;
+
+                                        // Log the parse error with context
                                         tracing::warn!(
-                                            "Failed to parse stream chunk: {e}, data: {data}"
+                                            "Failed to parse stream chunk (consecutive: {}, total: {}): {}, data: {}",
+                                            consecutive_parse_errors,
+                                            total_parse_errors,
+                                            e,
+                                            if data.len() > 200 { &data[..200] } else { data }
                                         );
+
+                                        // If too many consecutive parse errors, fail the stream
+                                        // This indicates something is seriously wrong (corrupted stream, API change, etc.)
+                                        if consecutive_parse_errors >= MAX_CONSECUTIVE_PARSE_ERRORS
+                                        {
+                                            return Some((
+                                                Err(GraphBitError::llm_provider(
+                                                    "openai",
+                                                    format!(
+                                                        "Stream corrupted: {} consecutive parse errors. \
+                                                         Last error: {}. Data may be incomplete.",
+                                                        consecutive_parse_errors,
+                                                        e
+                                                    ),
+                                                )),
+                                                (byte_stream, buffer, true, consecutive_parse_errors, total_parse_errors),
+                                            ));
+                                        }
+
+                                        // For occasional errors (< threshold), continue but track
+                                        // This handles edge cases like partial chunks or unusual formatting
                                     }
                                 }
                             }
                         }
                     }
-
-                    // Stream ended
-                    None
                 }
             },
         );
