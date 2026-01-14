@@ -8,7 +8,7 @@
 //! - Request/response validation
 //! - Performance monitoring and metrics
 
-use futures::StreamExt;
+use futures::{Stream, StreamExt};
 use graphbit_core::errors::GraphBitResult;
 use graphbit_core::llm::{LlmMessage, LlmProviderTrait, LlmRequest};
 use pyo3::prelude::*;
@@ -1101,46 +1101,44 @@ impl LlmClient {
 }
 
 /// Python async iterator for true real-time streaming
-/// Yields chunks as they arrive from the LLM provider
+/// Each iterator owns its own stream - no shared state between different iterators
+///
+/// IMPORTANT: Uses OnceCell for initialization to avoid holding mutex across await points
+/// which would cause deadlocks in concurrent scenarios.
 #[pyclass]
 pub struct StreamIterator {
     provider: Arc<RwLock<Box<dyn LlmProviderTrait>>>,
-    config: ClientConfig,
     prompt: String,
     max_tokens: Option<u32>,
     temperature: Option<f32>,
-    // Stream state - initialized on first __anext__ call
+    // OnceCell for one-time lazy initialization - thread-safe without holding locks
+    initialized: Arc<tokio::sync::OnceCell<()>>,
+    // Stream is created once per iterator and consumed
+    // Mutex is ONLY held briefly for polling, never across provider.stream() call
     stream: Arc<
         tokio::sync::Mutex<
             Option<
-                Pin<
-                    Box<
-                        dyn futures::Stream<Item = GraphBitResult<graphbit_core::llm::LlmResponse>>
-                            + Send,
-                    >,
-                >,
+                Pin<Box<dyn Stream<Item = GraphBitResult<graphbit_core::llm::LlmResponse>> + Send>>,
             >,
         >,
     >,
-    initialized: Arc<tokio::sync::Mutex<bool>>,
 }
 
 impl StreamIterator {
     fn new(
         provider: Arc<RwLock<Box<dyn LlmProviderTrait>>>,
-        config: ClientConfig,
+        _config: ClientConfig, // Unused but kept for API compatibility
         prompt: String,
         max_tokens: Option<u32>,
         temperature: Option<f32>,
     ) -> Self {
         Self {
             provider,
-            config,
             prompt,
             max_tokens,
             temperature,
+            initialized: Arc::new(tokio::sync::OnceCell::new()),
             stream: Arc::new(tokio::sync::Mutex::new(None)),
-            initialized: Arc::new(tokio::sync::Mutex::new(false)),
         }
     }
 }
@@ -1153,7 +1151,6 @@ impl StreamIterator {
 
     fn __anext__<'a>(&'a self, py: Python<'a>) -> PyResult<Bound<'a, PyAny>> {
         let provider = Arc::clone(&self.provider);
-        let config = self.config.clone();
         let prompt = self.prompt.clone();
         let max_tokens = self.max_tokens;
         let temperature = self.temperature;
@@ -1161,40 +1158,46 @@ impl StreamIterator {
         let initialized = Arc::clone(&self.initialized);
 
         pyo3_async_runtimes::tokio::future_into_py(py, async move {
-            // Initialize stream on first call
-            let mut is_init = initialized.lock().await;
-            if !*is_init {
-                // Build request
-                let mut request = LlmRequest::new(prompt);
-                if let Some(tokens) = max_tokens {
-                    request = request.with_max_tokens(tokens);
-                }
-                if let Some(temp) = temperature {
-                    request = request.with_temperature(temp);
-                }
+            // Phase 1: Initialize stream if needed (using OnceCell - no lock held during init)
+            // This ensures initialization happens exactly once, without holding mutex
+            let init_result = initialized
+                .get_or_try_init(|| async {
+                    // Build request
+                    let mut request = LlmRequest::new(prompt.clone());
+                    if let Some(tokens) = max_tokens {
+                        request = request.with_max_tokens(tokens);
+                    }
+                    if let Some(temp) = temperature {
+                        request = request.with_temperature(temp);
+                    }
 
-                // Get stream from provider
-                let guard = provider.read().await;
-                let provider_stream = guard.stream(request).await.map_err(to_py_error)?;
+                    // Get stream from provider (NO MUTEX HELD during this await!)
+                    let guard = provider.read().await;
+                    let provider_stream = guard.stream(request).await.map_err(to_py_error)?;
+                    drop(guard); // Explicitly drop read lock before acquiring mutex
 
-                // Store the stream
-                let mut stream_guard = stream.lock().await;
-                *stream_guard = Some(Box::pin(provider_stream));
-                *is_init = true;
-                drop(stream_guard);
-            }
-            drop(is_init);
+                    // Now briefly hold mutex just to store the stream
+                    let mut stream_guard = stream.lock().await;
+                    *stream_guard = Some(Box::pin(provider_stream));
+                    drop(stream_guard); // Explicitly release mutex
 
-            // Get next chunk from stream
+                    Ok::<(), PyErr>(())
+                })
+                .await;
+
+            // Check if initialization failed
+            init_result?;
+
+            // Phase 2: Get next chunk (brief mutex hold for polling only)
             let mut stream_guard = stream.lock().await;
             if let Some(ref mut s) = *stream_guard {
+                // Poll for next item - this is quick, no network I/O here
+                // The actual network I/O happens inside the stream's internal state
                 if let Some(result) = s.next().await {
                     match result {
                         Ok(response) => Ok(response.content),
                         Err(e) => {
-                            if config.debug {
-                                warn!("Stream chunk error: {}", e);
-                            }
+                            // Always propagate errors - don't swallow them
                             Err(to_py_error(e))
                         }
                     }
@@ -1205,7 +1208,7 @@ impl StreamIterator {
                     ))
                 }
             } else {
-                // Should never happen
+                // Should never happen after OnceCell initialization
                 Err(PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
                     "Stream not initialized",
                 ))
@@ -1221,41 +1224,62 @@ impl StreamIterator {
     ///     # Chunks are printed in real-time, then full response is returned
     fn streaming_response<'a>(&'a self, py: Python<'a>) -> PyResult<Bound<'a, PyAny>> {
         let provider = Arc::clone(&self.provider);
-        let config = self.config.clone();
         let prompt = self.prompt.clone();
         let max_tokens = self.max_tokens;
         let temperature = self.temperature;
+        let stream = Arc::clone(&self.stream);
+        let initialized = Arc::clone(&self.initialized);
 
         pyo3_async_runtimes::tokio::future_into_py(py, async move {
-            // Build request
-            let mut request = LlmRequest::new(prompt);
-            if let Some(tokens) = max_tokens {
-                request = request.with_max_tokens(tokens);
-            }
-            if let Some(temp) = temperature {
-                request = request.with_temperature(temp);
-            }
-
-            // Get stream from provider
-            let guard = provider.read().await;
-            let mut stream = guard.stream(request).await.map_err(to_py_error)?;
-
-            // Collect and print chunks in real-time
-            let mut full_response = String::new();
-            while let Some(result) = stream.next().await {
-                match result {
-                    Ok(response) => {
-                        // Print chunk immediately (to stdout)
-                        print!("{}", response.content);
-                        use std::io::Write;
-                        std::io::stdout().flush().unwrap();
-
-                        // Accumulate for final response
-                        full_response.push_str(&response.content);
+            // Phase 1: Initialize stream if needed (using OnceCell - no lock held during init)
+            let init_result = initialized
+                .get_or_try_init(|| async {
+                    // Build request
+                    let mut request = LlmRequest::new(prompt.clone());
+                    if let Some(tokens) = max_tokens {
+                        request = request.with_max_tokens(tokens);
                     }
-                    Err(e) => {
-                        if config.debug {
-                            warn!("Stream chunk error: {}", e);
+                    if let Some(temp) = temperature {
+                        request = request.with_temperature(temp);
+                    }
+
+                    // Get stream from provider (NO MUTEX HELD during this await!)
+                    let guard = provider.read().await;
+                    let provider_stream = guard.stream(request).await.map_err(to_py_error)?;
+                    drop(guard); // Explicitly drop read lock before acquiring mutex
+
+                    // Now briefly hold mutex just to store the stream
+                    let mut stream_guard = stream.lock().await;
+                    *stream_guard = Some(Box::pin(provider_stream));
+                    drop(stream_guard); // Explicitly release mutex
+
+                    Ok::<(), PyErr>(())
+                })
+                .await;
+
+            // Check if initialization failed
+            init_result?;
+
+            // Phase 2: Collect and print chunks in real-time
+            let mut full_response = String::new();
+
+            // Hold mutex for streaming - but now we're just polling, not doing heavy I/O
+            let mut stream_guard = stream.lock().await;
+            if let Some(ref mut s) = *stream_guard {
+                while let Some(result) = s.next().await {
+                    match result {
+                        Ok(response) => {
+                            // Print chunk immediately (to stdout) - handle errors gracefully
+                            print!("{}", response.content);
+                            use std::io::Write;
+                            let _ = std::io::stdout().flush(); // Don't panic if flush fails
+
+                            // Accumulate for final response
+                            full_response.push_str(&response.content);
+                        }
+                        Err(e) => {
+                            // Always propagate errors
+                            return Err(to_py_error(e));
                         }
                     }
                 }
