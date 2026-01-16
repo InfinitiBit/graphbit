@@ -30,6 +30,7 @@ RUN uv venv && \
     uv sync --no-dev
 
 # Copy all benchmark source files
+# This includes .env if present (and not in .dockerignore)
 COPY . ./
 
 # Create results and logs directories
