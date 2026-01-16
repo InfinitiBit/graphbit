@@ -4,12 +4,6 @@ import asyncio
 import os
 from typing import Any, Dict, Optional
 
-from langchain_anthropic import ChatAnthropic
-from langchain_core.prompts import PromptTemplate
-from langchain_ollama import ChatOllama
-from langchain_openai import ChatOpenAI
-from pydantic import SecretStr
-
 from .common import (
     COMPLEX_WORKFLOW_STEPS,
     CONCURRENT_TASK_PROMPTS,
@@ -34,7 +28,8 @@ class LangChainBenchmark(BaseBenchmark):
         """Initialize LangChain benchmark with configuration."""
         super().__init__(config, num_runs=num_runs)
         self.llm: Optional[Any] = None
-        self.chains: Dict[str, PromptTemplate | Any] = {}
+        self.chains: Dict[str, Any] = {}
+        self._PromptTemplate: Optional[Any] = None  # Lazy loaded
 
     def _get_llm_params(self) -> tuple[int, float]:
         """Get max_tokens and temperature from configuration."""
@@ -45,6 +40,12 @@ class LangChainBenchmark(BaseBenchmark):
 
     async def setup(self) -> None:
         """Set up LangChain for benchmarking."""
+        # Lazy import LangChain dependencies
+        from langchain_core.prompts import PromptTemplate
+        from pydantic import SecretStr
+        
+        self._PromptTemplate = PromptTemplate
+        
         # Get LLM configuration from config
         llm_config_obj: LLMConfig | None = self.config.get("llm_config")
         if not llm_config_obj:
@@ -53,6 +54,8 @@ class LangChainBenchmark(BaseBenchmark):
         max_tokens, temperature = self._get_llm_params()
 
         if llm_config_obj.provider == LLMProvider.OPENAI:
+            from langchain_openai import ChatOpenAI
+            
             api_key = llm_config_obj.api_key or os.getenv("OPENAI_API_KEY")
             if not api_key:
                 raise ValueError("OpenAI API key not found in environment or config")
@@ -64,6 +67,8 @@ class LangChainBenchmark(BaseBenchmark):
             )
 
         elif llm_config_obj.provider == LLMProvider.ANTHROPIC:
+            from langchain_anthropic import ChatAnthropic
+            
             api_key = llm_config_obj.api_key or os.getenv("ANTHROPIC_API_KEY")
             if not api_key:
                 raise ValueError("Anthropic API key not found in environment or config")
@@ -76,6 +81,8 @@ class LangChainBenchmark(BaseBenchmark):
             )
 
         elif llm_config_obj.provider == LLMProvider.OLLAMA:
+            from langchain_ollama import ChatOllama
+            
             base_url = llm_config_obj.base_url or "http://localhost:11434"
 
             self.llm = ChatOllama(
@@ -93,6 +100,9 @@ class LangChainBenchmark(BaseBenchmark):
     def _setup_chains(self) -> None:
         """Set up common LangChain chains using RunnableSequence."""
         assert self.llm is not None, "LLM not initialized"
+        assert self._PromptTemplate is not None, "PromptTemplate not loaded"
+        
+        PromptTemplate = self._PromptTemplate
 
         simple_prompt = PromptTemplate(input_variables=["task"], template="{task}")
         self.chains["simple"] = simple_prompt | self.llm
