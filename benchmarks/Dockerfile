@@ -1,56 +1,66 @@
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 # Set environment variables
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV DEBIAN_FRONTEND=noninteractive
-ENV RUST_LOG=info
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUTF8=1 \
+    DEBIAN_FRONTEND=noninteractive \
+    RUST_LOG=info
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
-    build-essential \
     curl \
-    git \
-    pkg-config \
-    libssl-dev \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Poetry and uv
-RUN pip install --no-cache-dir \
-    poetry \
-    uv
-
-# Configure Poetry
-ENV POETRY_NO_INTERACTION=1 \
-    POETRY_VENV_IN_PROJECT=1 \
-    POETRY_CACHE_DIR=/tmp/poetry_cache
+# Install UV (modern Python package installer)
+RUN pip install --no-cache-dir uv
 
 # Set working directory
-WORKDIR /app
+WORKDIR /app/benchmarks
 
-# Copy dependency files
-COPY pyproject.toml poetry.lock* ./
+# Copy pyproject.toml (build context is benchmarks/, so no prefix needed)
+COPY pyproject.toml ./
 
-# Install Python dependencies
-RUN poetry install --no-root
+# Install dependencies from PyPI
+# UV will fetch graphbit>=0.6.0 from PyPI as a binary wheel
+RUN uv venv && \
+    . .venv/bin/activate && \
+    uv pip install graphbit>=0.6.0 && \
+    uv sync --no-dev
 
-# ---- uv alternative (optional) ----
-# RUN uv sync
-
-# Copy benchmark files
-COPY . ./benchmarks/
+# Copy all benchmark source files
+COPY . ./
 
 # Create results and logs directories
-RUN mkdir -p /app/benchmarks/results \
-    /app/benchmarks/logs
+RUN mkdir -p results logs
 
 # Create entrypoint script
-RUN echo '#!/bin/bash' > /app/entrypoint.sh && \
-    echo 'set -e' >> /app/entrypoint.sh && \
-    echo 'exec poetry run python benchmarks/"$@"' >> /app/entrypoint.sh && \
-    chmod +x /app/entrypoint.sh
+RUN echo '#!/bin/bash' > /entrypoint.sh && \
+    echo 'set -e' >> /entrypoint.sh && \
+    echo 'cd /app/benchmarks' >> /entrypoint.sh && \
+    echo '. .venv/bin/activate' >> /entrypoint.sh && \
+    echo '# If first arg is a .py file or benchmark script, prepend python' >> /entrypoint.sh && \
+    echo 'if [[ "$1" == *.py ]] || [[ "$1" == run_benchmark.py ]]; then' >> /entrypoint.sh && \
+    echo '  exec python "$@"' >> /entrypoint.sh && \
+    echo 'else' >> /entrypoint.sh && \
+    echo '  exec "$@"' >> /entrypoint.sh && \
+    echo 'fi' >> /entrypoint.sh && \
+    chmod +x /entrypoint.sh
+
+# Health check - verify all frameworks import successfully
+RUN . .venv/bin/activate && python -c "\
+import graphbit; print(f'✓ GraphBit {graphbit.__version__}'); \
+import langchain; print('✓ LangChain'); \
+import langgraph; print('✓ LangGraph'); \
+import autogen_agentchat; print('✓ AutoGen'); \
+import crewai; print('✓ CrewAI'); \
+import pydantic_ai; print('✓ PydanticAI'); \
+import llama_index; print('✓ LlamaIndex'); \
+print('All 7 frameworks OK!')"
+
+WORKDIR /app/benchmarks
 
 # Default command
-ENTRYPOINT ["/app/entrypoint.sh"]
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["run_benchmark.py", "--help"]
