@@ -74,6 +74,26 @@ class PydanticAIBenchmark(BaseBenchmark):
         elif llm_config_obj.provider == LLMProvider.OLLAMA:
             raise ValueError("PydanticAI does not support OLLAMA provider. Please use OpenAI or Anthropic.")
 
+        elif llm_config_obj.provider == LLMProvider.AZURE_OPENAI:
+            from pydantic_ai.models.openai import OpenAIModel
+            
+            api_key = llm_config_obj.api_key or os.getenv("AZURE_OPENAI_API_KEY")
+            azure_endpoint = llm_config_obj.base_url or os.getenv("AZURE_OPENAI_ENDPOINT")
+            api_version = llm_config_obj.api_version or os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-15-preview")
+            
+            if not api_key:
+                raise ValueError("Azure OpenAI API key not found in environment or config")
+            if not azure_endpoint:
+                raise ValueError("Azure OpenAI endpoint not found in environment or config")
+
+            # PydanticAI uses OpenAIModel with Azure parameters
+            self.model = OpenAIModel(
+                model_name=llm_config_obj.model,  # deployment name
+                base_url=f"{azure_endpoint}/openai/deployments/{llm_config_obj.model}",
+                api_key=api_key,
+                openai_client_params={"default_headers": {"api-version": api_version}},
+            )
+
         else:
             raise ValueError(f"Unsupported provider for PydanticAI: {llm_config_obj.provider}")
 

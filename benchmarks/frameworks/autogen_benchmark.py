@@ -88,6 +88,28 @@ class AutogenBenchmark(BaseBenchmark):
             )
             self.agent = AssistantAgent("assistant", model_client=model_client)
 
+        elif llm_config_obj.provider == LLMProvider.AZURE_OPENAI:
+            from autogen_ext.models.openai import AzureOpenAIChatCompletionClient
+            
+            api_key = llm_config_obj.api_key or os.getenv("AZURE_OPENAI_API_KEY")
+            azure_endpoint = llm_config_obj.base_url or os.getenv("AZURE_OPENAI_ENDPOINT")
+            api_version = llm_config_obj.api_version or os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-15-preview")
+            
+            if not api_key:
+                raise ValueError("Azure OpenAI API key not found in environment or config")
+            if not azure_endpoint:
+                raise ValueError("Azure OpenAI endpoint not found in environment or config")
+
+            self.model_client = AzureOpenAIChatCompletionClient(
+                azure_endpoint=azure_endpoint,
+                api_version=api_version,
+                model=self.model,  # deployment name
+                api_key=api_key,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+            self.agent = AssistantAgent("assistant", model_client=self.model_client)
+
         else:
             raise ValueError(f"Unsupported provider for AutoGen: {llm_config_obj.provider}")
 

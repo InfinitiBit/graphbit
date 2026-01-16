@@ -91,6 +91,25 @@ class CrewAIBenchmark(BaseBenchmark):
                 max_tokens=max_tokens,
             )
 
+        elif llm_config_obj.provider == LLMProvider.AZURE_OPENAI:
+            api_key = llm_config_obj.api_key or os.getenv("AZURE_OPENAI_API_KEY")
+            azure_endpoint = llm_config_obj.base_url or os.getenv("AZURE_OPENAI_ENDPOINT")
+            api_version = llm_config_obj.api_version or os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-15-preview")
+            
+            if not api_key:
+                raise ValueError("Azure OpenAI API key not found in environment or config")
+            if not azure_endpoint:
+                raise ValueError("Azure OpenAI endpoint not found in environment or config")
+
+            self.llm = LLM(
+                model=f"azure/{llm_config_obj.model}",  # CrewAI uses azure/ prefix
+                api_key=api_key,
+                base_url=azure_endpoint,
+                api_version=api_version,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+
         else:
             raise ValueError(f"Unsupported provider for CrewAI: {llm_config_obj.provider}")
 

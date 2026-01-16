@@ -98,6 +98,34 @@ class GraphBitBenchmark(BaseBenchmark):
             elif llm_config_obj.provider == LLMProvider.OLLAMA:
                 self.llm_config = LlmConfig.ollama(llm_config_obj.model)
 
+            elif llm_config_obj.provider == LLMProvider.AZURE_OPENAI:
+                api_key = llm_config_obj.api_key or os.getenv("AZURE_OPENAI_API_KEY")
+                azure_endpoint = llm_config_obj.base_url or os.getenv("AZURE_OPENAI_ENDPOINT")
+                api_version = llm_config_obj.api_version or os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-15-preview")
+                
+                if not api_key:
+                    raise ValueError("Azure OpenAI API key not found in environment or config")
+                if not azure_endpoint:
+                    raise ValueError("Azure OpenAI endpoint not found in environment or config")
+
+                # GraphBit may have azure_openai() method, otherwise use custom config
+                try:
+                    # Try GraphBit's built-in Azure support if available
+                    # Based on signature: (api_key, deployment_name, endpoint, api_version=None)
+                    self.llm_config = LlmConfig.azure_openai(
+                        api_key=api_key,
+                        deployment_name=llm_config_obj.model,  # Correct argument name
+                        endpoint=azure_endpoint,
+                        api_version=api_version,
+                    )
+                except AttributeError:
+                    # Fallback: Use OpenAI config with Azure parameters
+                    # This may need adjustment based on GraphBit's actual Azure support
+                    raise ValueError(
+                        "GraphBit Azure OpenAI support not yet implemented. "
+                        "Please check GraphBit documentation for Azure configuration."
+                    )
+
             else:
                 raise ValueError(f"Unsupported provider for GraphBit: {llm_config_obj.provider}")
 
