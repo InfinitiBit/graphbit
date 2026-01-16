@@ -89,6 +89,7 @@ FRAMEWORK_METADATA: Dict[FrameworkType, Dict[str, str]] = {
     FrameworkType.CREWAI: {"name": "CrewAI", "color": "#592E83"},
     FrameworkType.PYDANTIC_AI: {"name": "PydanticAI", "color": "#F18F01"},
     FrameworkType.LLAMAINDEX: {"name": "LlamaIndex", "color": "#C73E1D"},
+    FrameworkType.AUTOGEN: {"name": "AutoGen", "color": "#1B4F72"},
 }
 
 
@@ -120,6 +121,9 @@ def load_framework_benchmark(
         elif framework_type == FrameworkType.LLAMAINDEX:
             from frameworks.llamaindex_benchmark import LlamaIndexBenchmark
             return LlamaIndexBenchmark(config, num_runs=num_runs)
+        elif framework_type == FrameworkType.AUTOGEN:
+            from frameworks.autogen_benchmark import AutogenBenchmark
+            return AutogenBenchmark(config, num_runs=num_runs)
         else:
             return None
     except ImportError as e:
@@ -721,6 +725,8 @@ def main(
                     "llama_index": FrameworkType.LLAMAINDEX,
                     "crewai": FrameworkType.CREWAI,
                     "crew_ai": FrameworkType.CREWAI,
+                    "autogen": FrameworkType.AUTOGEN,
+                    "auto_gen": FrameworkType.AUTOGEN,
                 }
                 if name in name_mapping:
                     selected_frameworks.append(name_mapping[name])

@@ -121,6 +121,7 @@ class FrameworkType(Enum):
     PYDANTIC_AI = "PydanticAI"
     LLAMAINDEX = "LlamaIndex"
     CREWAI = "CrewAI"
+    AUTOGEN = "AutoGen"
 
 
 class BenchmarkScenario(Enum):
