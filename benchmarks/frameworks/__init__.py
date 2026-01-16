@@ -2,7 +2,15 @@
 
 __version__ = "0.4.0"
 
-from .common import BenchmarkMetrics, BenchmarkScenario, FrameworkType
+from .common import (
+    BenchmarkMetrics,
+    BenchmarkScenario,
+    FrameworkType,
+    LLMConfig,
+    LLMProvider,
+    create_llm_config_from_args,
+    get_provider_models,
+)
 
 # Specific benchmark classes are imported lazily by ``run_benchmark.py`` to
 # avoid hard dependencies when the package is imported simply to inspect CLI
@@ -13,4 +21,8 @@ __all__ = [
     "BenchmarkMetrics",
     "BenchmarkScenario",
     "FrameworkType",
+    "LLMConfig",
+    "LLMProvider",
+    "create_llm_config_from_args",
+    "get_provider_models",
 ]

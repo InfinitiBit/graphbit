@@ -23,6 +23,10 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import click
+from dotenv import load_dotenv
+
+# Load environment variables from .env file immediately
+load_dotenv()
 
 # Visualization imports are optional - loaded lazily when needed
 try:
@@ -680,6 +684,14 @@ def main(
         click.echo("Error: Anthropic API key is required", err=True)
         click.echo("Set it using: export ANTHROPIC_API_KEY=your_api_key_here")
         click.echo("Or use: --api-key your_api_key_here")
+        return
+    elif provider == "azure_openai" and not (api_key or os.environ.get("AZURE_OPENAI_API_KEY")):
+        click.echo("Error: Azure OpenAI configuration is required", err=True)
+        click.echo("Required environment variables:")
+        click.echo("  AZURE_OPENAI_API_KEY=your_api_key")
+        click.echo("  AZURE_OPENAI_ENDPOINT=https://YOUR_RESOURCE.openai.azure.com/")
+        click.echo("  AZURE_OPENAI_API_VERSION=2024-02-15-preview (optional, has default)")
+        click.echo("Or use CLI options: --api-key and --base-url")
         return
 
     click.echo("🚀 " + click.style("GraphBit Framework Benchmark", fg="bright_blue", bold=True))

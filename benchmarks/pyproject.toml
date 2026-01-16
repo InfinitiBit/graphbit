@@ -18,10 +18,12 @@ dependencies = [
   "llama-index>=0.14.12",
   "llama-index-llms-anthropic>=0.10.5",
   "llama-index-llms-ollama>=0.9.1",
+  "llama-index-llms-azure-openai>=0.3.0",
   "pydantic-ai>=1.22.0",
   "openai>=1.83.0",
   "click>=8.1.0",
-  "datasets>=2.14.0"
+  "datasets>=2.14.0",
+  "python-dotenv>=1.0.0"
 ]
 description = "Benchmarking package for GraphBit framework"
 name = "graphbit-benchmarks"

@@ -15,6 +15,11 @@ import os
 from pathlib import Path
 from typing import Dict, List, Optional
 
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
 def load_gaia_validation_set():
     """Load GAIA validation set using HuggingFace datasets library."""
     try:

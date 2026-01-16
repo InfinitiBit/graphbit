@@ -7,9 +7,15 @@ in frameworks/common.py while preserving all other functionality.
 """
 
 import json
+import json
 import re
 from pathlib import Path
 from typing import List, Dict
+
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 def load_selected_questions(json_file: str = "gaia_selected_questions.json") -> Dict:
     """Load the selected GAIA questions from JSON."""

@@ -34,7 +34,7 @@ import psutil
 # Standard LLM Configuration Constants
 DEFAULT_TEMPERATURE = 0.1
 DEFAULT_MAX_TOKENS = 2000
-DEFAULT_MODEL = "gpt-4o-mini"
+DEFAULT_MODEL = "gpt-4o"
 
 
 class LLMProvider(Enum):
@@ -43,6 +43,7 @@ class LLMProvider(Enum):
     OPENAI = "openai"
     ANTHROPIC = "anthropic"
     OLLAMA = "ollama"
+    AZURE_OPENAI = "azure_openai"
 
 
 @dataclass
@@ -63,9 +64,23 @@ class LLMConfig:
 
 # Provider-specific model presets
 PROVIDER_MODELS = {
-    LLMProvider.OPENAI: ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo", "o1-preview", "o1-mini"],
-    LLMProvider.ANTHROPIC: ["claude-3-5-haiku-20241022", "claude-3-opus-20240229", "claude-3-sonnet-20240229", "claude-3-haiku-20240307"],
-    LLMProvider.OLLAMA: ["llama3.2", "llama3.1", "codellama", "mistral", "phi3", "qwen2.5"],
+    LLMProvider.OPENAI: [
+        "gpt-5", "gpt-5-mini", "gpt-4.5-preview", "gpt-4o", "gpt-4o-mini", 
+        "gpt-4-turbo", "gpt-3.5-turbo", "o1-preview", "o1-mini", "o3-mini"
+    ],
+    LLMProvider.ANTHROPIC: [
+        "claude-4.5-opus", "claude-4.5-sonnet", "claude-4.5-haiku",
+        "claude-3-5-haiku-20241022", "claude-3-opus-20240229", "claude-3-sonnet-20240229", "claude-3-haiku-20240307"
+    ],
+    LLMProvider.OLLAMA: [
+        "llama3.3", "llama3.2", "llama3.1", "phi4", "gemma2", "deepseek-r1", "qwen2.5-coder",
+        "codellama", "mistral", "phi3", "qwen2.5"
+    ],
+    LLMProvider.AZURE_OPENAI: [
+        "gpt-5", "gpt-5-mini", "gpt-4.5", "gpt-4o", "gpt-4o-mini", 
+        "gpt-4", "gpt-4-32k", "gpt-4-turbo", "gpt-35-turbo", "gpt-35-turbo-16k",
+        "o1-preview", "o1-mini", "o3-mini"
+    ],  # Azure deployment names
 }
 
 
@@ -503,4 +518,93 @@ def get_cpu_affinity_or_count_fallback() -> int:
         except Exception:
             return os.cpu_count() or 4
     return os.cpu_count() or 4
+
+
+def get_provider_models(provider_name: str) -> Optional[List[str]]:
+    """Get list of available models for a given provider.
+    
+    Args:
+        provider_name: Name of the provider (e.g., 'openai', 'azure_openai')
+        
+    Returns:
+        List of model names or None if provider not found
+    """
+    try:
+        provider_enum = LLMProvider(provider_name)
+        return PROVIDER_MODELS.get(provider_enum)
+    except ValueError:
+        return None
+
+
+def create_llm_config_from_args(
+    provider: str,
+    model: str,
+    temperature: float,
+    max_tokens: int,
+    api_key: Optional[str] = None,
+    base_url: Optional[str] = None,
+) -> LLMConfig:
+    """Create LLMConfig from command-line arguments.
+    
+    Args:
+        provider: Provider name string
+        model: Model name or deployment name (for Azure)
+        temperature: Temperature parameter
+        max_tokens: Maximum tokens  
+        api_key: Optional API key (overrides environment variable)
+        base_url: Optional base URL for custom endpoints
+        
+    Returns:
+        Configured LLMConfig object
+        
+    Raises:
+        ValueError: If required configuration is missing
+    """
+    provider_enum = LLMProvider(provider)
+    
+    # Handle Azure OpenAI specifically
+    if provider_enum == LLMProvider.AZURE_OPENAI:
+        # Get Azure-specific environment variables
+        endpoint = base_url or os.getenv("AZURE_OPENAI_ENDPOINT")
+        api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-15-preview")
+        azure_api_key = api_key or os.getenv("AZURE_OPENAI_API_KEY")
+        
+        if not endpoint:
+            raise ValueError(
+                "Azure OpenAI endpoint required. Set AZURE_OPENAI_ENDPOINT environment variable "
+                "or use --base-url"
+            )
+        
+        if not azure_api_key:
+            raise ValueError(
+                "Azure OpenAI API key required. Set AZURE_OPENAI_API_KEY environment variable "
+                "or use --api-key"
+            )
+        
+        return LLMConfig(
+            provider=provider_enum,
+            model=model,  # For Azure, this is the deployment name
+            api_key=azure_api_key,
+            base_url=endpoint,
+            api_version=api_version,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+    
+    # Handle other providers (OpenAI, Anthropic, Ollama)
+    final_api_key = api_key
+    if not final_api_key:
+        if provider_enum == LLMProvider.OPENAI:
+            final_api_key = os.getenv("OPENAI_API_KEY")
+        elif provider_enum == LLMProvider.ANTHROPIC:
+            final_api_key = os.getenv("ANTHROPIC_API_KEY")
+    
+    return LLMConfig(
+        provider=provider_enum,
+        model=model,
+        api_key=final_api_key,
+        base_url=base_url,
+        temperature=temperature,
+        max_tokens=max_tokens,
+    )
 
