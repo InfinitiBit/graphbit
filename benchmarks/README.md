@@ -3,7 +3,7 @@
 # GraphBit Framework Benchmarks
 
 <p>
-    This directory contains comprehensive benchmarking tools for comparing GraphBit with other popular AI agent frameworks including LangChain, LangGraph, PydanticAI, LlamaIndex, and CrewAI.
+    This directory contains comprehensive benchmarking tools for comparing GraphBit with other popular AI agent frameworks including LangChain, LangGraph, PydanticAI, LlamaIndex, CrewAI, and AutoGen.
 </p>
 
 </div>
@@ -31,6 +31,7 @@ The benchmark suite measures and compares:
 - PydanticAI
 - LlamaIndex
 - CrewAI
+- AutoGen
 
 ---
 
