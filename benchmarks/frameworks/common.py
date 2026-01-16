@@ -218,7 +218,7 @@ class BaseBenchmark(ABC):
         # Initialize logger
         framework_name = self.__class__.__name__.replace("Benchmark", "")
         log_dir = config.get("log_dir", "logs")
-        self.logger = BenchmarkLogger(framework_name, log_dir, num_runs=num_runs if num_runs is not None else 10)
+        self.logger = BenchmarkLogger(framework_name, log_dir, num_runs=num_runs)
 
     def log_output(self, scenario_name: str, task_name: str, output: str) -> None:
         """Log LLM output to framework-specific log file."""

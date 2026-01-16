@@ -74,7 +74,7 @@ def _default_concurrency() -> int:
 
 
 # Central global variable for number of runs
-NUM_RUNS = 10
+NUM_RUNS = 1
 DEFAULT_CONCURRENCY = _default_concurrency()
 
 # Framework specific modules are loaded lazily inside ``main`` to allow running
