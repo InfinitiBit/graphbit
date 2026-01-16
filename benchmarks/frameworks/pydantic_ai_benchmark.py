@@ -4,11 +4,6 @@ import asyncio
 import os
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel
-from pydantic_ai import Agent
-from pydantic_ai.models.openai import OpenAIModel
-from pydantic_ai.settings import ModelSettings
-
 from .common import (
     COMPLEX_WORKFLOW_STEPS,
     CONCURRENT_TASK_PROMPTS,
@@ -26,28 +21,6 @@ from .common import (
 )
 
 
-# Define response models for Pydantic AI
-class SimpleResponse(BaseModel):
-    """Response model for simple tasks."""
-
-    result: str
-
-
-class SequentialResponse(BaseModel):
-    """Response model for sequential tasks."""
-
-    step_result: str
-    step_index: int
-
-
-class ComplexResponse(BaseModel):
-    """Response model for complex workflow tasks."""
-
-    task_name: str
-    result: str
-    depends_on: List[str]
-
-
 class PydanticAIBenchmark(BaseBenchmark):
     """Pydantic AI framework benchmark implementation."""
 
@@ -55,7 +28,10 @@ class PydanticAIBenchmark(BaseBenchmark):
         """Initialize PydanticAI benchmark with configuration."""
         super().__init__(config, num_runs=num_runs)
         self.model: Optional[Any] = None
-        self.agents: Dict[str, Agent] = {}
+        self.agents: Dict[str, Any] = {}
+        # Lazy loaded classes
+        self._Agent: Optional[Any] = None
+        self._ModelSettings: Optional[Any] = None
 
     def _get_llm_params(self) -> tuple[int, float]:
         """Get max_tokens and temperature from configuration."""
@@ -66,11 +42,20 @@ class PydanticAIBenchmark(BaseBenchmark):
 
     async def setup(self) -> None:
         """Set up Pydantic AI for benchmarking."""
+        # Lazy import PydanticAI dependencies
+        from pydantic_ai import Agent
+        from pydantic_ai.settings import ModelSettings
+        
+        self._Agent = Agent
+        self._ModelSettings = ModelSettings
+        
         llm_config_obj: LLMConfig | None = self.config.get("llm_config")
         if not llm_config_obj:
             raise ValueError("LLMConfig not found in configuration")
 
         if llm_config_obj.provider == LLMProvider.OPENAI:
+            from pydantic_ai.models.openai import OpenAIModel
+            
             api_key = llm_config_obj.api_key or os.getenv("OPENAI_API_KEY")
             if not api_key:
                 raise ValueError("OpenAI API key not found in environment or config")
@@ -78,17 +63,15 @@ class PydanticAIBenchmark(BaseBenchmark):
             self.model = OpenAIModel(model_name=llm_config_obj.model)
 
         elif llm_config_obj.provider == LLMProvider.ANTHROPIC:
-            # PydanticAI supports Anthropic models
+            from pydantic_ai.models.anthropic import AnthropicModel
+            
             api_key = llm_config_obj.api_key or os.getenv("ANTHROPIC_API_KEY")
             if not api_key:
                 raise ValueError("Anthropic API key not found in environment or config")
 
-            from pydantic_ai.models.anthropic import AnthropicModel
-
             self.model = AnthropicModel(model_name=llm_config_obj.model)
 
         elif llm_config_obj.provider == LLMProvider.OLLAMA:
-            # PydanticAI does not support Ollama
             raise ValueError("PydanticAI does not support OLLAMA provider. Please use OpenAI or Anthropic.")
 
         else:
@@ -101,6 +84,11 @@ class PydanticAIBenchmark(BaseBenchmark):
         """Set up common Pydantic AI agents."""
         if self.model is None:
             raise ValueError("Model not initialized")
+        assert self._Agent is not None, "Agent class not loaded"
+        assert self._ModelSettings is not None, "ModelSettings class not loaded"
+        
+        Agent = self._Agent
+        ModelSettings = self._ModelSettings
 
         max_tokens, temperature = self._get_llm_params()
         model_settings = ModelSettings(
@@ -111,28 +99,24 @@ class PydanticAIBenchmark(BaseBenchmark):
         self.agents["simple"] = Agent(
             model=self.model,
             output_type=str,
-            system_prompt="You are a helpful AI assistant. Respond with analysis and insights.",
             model_settings=model_settings,
         )
 
         self.agents["sequential"] = Agent(
             model=self.model,
             output_type=str,
-            system_prompt="You are processing tasks in sequence. Use previous results to inform your response.",
             model_settings=model_settings,
         )
 
         self.agents["complex"] = Agent(
             model=self.model,
             output_type=str,
-            system_prompt="You are part of a complex workflow. Consider dependencies and context.",
             model_settings=model_settings,
         )
 
         self.agents["general"] = Agent(
             model=self.model,
             output_type=str,
-            system_prompt="You are a helpful AI assistant.",
             model_settings=model_settings,
         )
 
