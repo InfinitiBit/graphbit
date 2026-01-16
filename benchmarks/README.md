@@ -159,6 +159,52 @@ poetry run python run_benchmark.py \
   --scenarios simple_task,parallel_pipeline
 ```
 
+### Azure OpenAI Provider
+
+Azure OpenAI uses **deployment names** instead of model names.
+
+**Setup:**
+
+Set three environment variables:
+
+```bash
+# Unix/Linux/macOS
+export AZURE_OPENAI_API_KEY=your_key_here
+export AZURE_OPENAI_ENDPOINT=https://YOUR_RESOURCE.openai.azure.com/
+export AZURE_OPENAI_API_VERSION=2024-02-15-preview
+
+# Windows PowerShell
+$env:AZURE_OPENAI_API_KEY="your_key_here"
+$env:AZURE_OPENAI_ENDPOINT="https://YOUR_RESOURCE.openai.azure.com/"
+$env:AZURE_OPENAI_API_VERSION="2025-01-01-preview"
+```
+
+**Running Benchmarks:**
+
+```bash
+# Basic usage (with environment variables set)
+python run_benchmark.py \
+  --provider azure_openai \
+  --model YOUR_DEPLOYMENT_NAME \
+  --frameworks langchain,langgraph
+
+# With CLI arguments (overrides env vars)
+python run_benchmark.py \
+  --provider azure_openai \
+  --model YOUR_DEPLOYMENT_NAME \
+  --api-key YOUR_KEY \
+  --base-url https://YOUR_RESOURCE.openai.azure.com/
+
+# List available deployment models
+python run_benchmark.py --provider azure_openai --list-models
+```
+
+**Important Notes:**
+- **Deployment Name**: Use your Azure deployment name as the `--model` argument.
+- **Endpoint**: Must include `https://` and usually ends with `/`.
+- **API Version**: Defaults to `2025-01-01-preview` if not specified.
+
+
 ### Concurrency Control
 
 Use `--concurrency` to define how many tasks run in parallel.
@@ -167,10 +213,10 @@ Increase this value cautiously to avoid CPU contention.
 
 ```bash
 # Using activated environment
-python benchmarks/run_benchmark.py --provider openai --model gpt-4o-mini --concurrency 8
+python benchmarks/run_benchmark.py --provider openai --model gpt-4o --concurrency 8
 
 # Or with uv
-uv run python run_benchmark.py --provider openai --model gpt-4o-mini --concurrency 8
+uv run python run_benchmark.py --provider openai --model gpt-4o --concurrency 8
 ```
 
 ### CPU Core Pinning
@@ -222,23 +268,51 @@ Only run multiple benchmarks in parallel if you assign each to a unique set of C
 
 ### Command-Line Options Reference
 
+### Automatic .env Loading (New)
+The benchmark runner now automatically loads credentials from a `.env` file in the benchmarks directory. This eliminates the need to manually set environment variables or pass them via CLI.
+
+1. **Create .env file:**
+   ```bash
+   cp .env.example .env
+   ```
+2. **Add credentials:**
+   ```bash
+   AZURE_OPENAI_API_KEY=your_key
+   AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
+   AZURE_OPENAI_API_VERSION=2025-01-01-preview
+   ```
+3. **Run benchmarks:**
+   ```bash
+   python run_benchmark.py --provider azure_openai --model gpt-4o
+   ```
+
+
+### Command-Line Options Reference
+
 | Option          | Description                                                                         | Example                                     |
 | --------------- | ----------------------------------------------------------------------------------- | ------------------------------------------- |
-| `--provider`    | LLM provider: `openai`, `anthropic`, `ollama`, `huggingface`                        | `--provider openai`                         |
-| `--model`       | Model name or ID for the chosen provider                                            | `--model gpt-4o-mini`                       |
+| `--provider`    | LLM provider: `openai`, `anthropic`, `ollama`, `azure_openai`                       | `--provider azure_openai`                   |
+| `--model`       | Model name or ID for the chosen provider (Default: `gpt-4o`)                        | `--model gpt-5`                             |
 | `--frameworks`  | Comma-separated frameworks to benchmark (defaults to all)                           | `--frameworks graphbit,langchain`           |
 | `--scenarios`   | Comma-separated benchmark scenarios to run (defaults to all)                        | `--scenarios simple_task,parallel_pipeline` |
 | `--concurrency` | Number of tasks to run in parallel (defaults to CPU core count)                     | `--concurrency 8`                           |
 | `--cpu-cores`   | Comma-separated list of CPU cores to pin the process to                             | `--cpu-cores 0,1,2,3`                       |
 | `--membind`     | Bind memory allocations to a specific NUMA node                                     | `--membind 0`                               |
 | `--num-runs`    | Number of times to repeat each scenario (results averaged, default: 1)              | `--num-runs 20`                             |
-| `--temperature` | Temperature parameter for LLM (default: 0.7)                                        | `--temperature 0.5`                         |
+| `--temperature` | Temperature parameter for LLM (default: 0.1)                                        | `--temperature 0.5`                         |
 | `--max-tokens`  | Maximum tokens for LLM responses (default: 2000)                                    | `--max-tokens 1000`                         |
-| `--api-key`     | API key for the LLM provider (overrides environment variable)                       | `--api-key sk-...`                          |
+| `--api-key`     | API key for the LLM provider (overrides .env)                                       | `--api-key sk-...`                          |
 | `--base-url`    | Base URL for custom endpoints (e.g., Ollama)                                        | `--base-url http://localhost:11434`         |
 | `--output`      | Path to save benchmark results JSON file                                            | `--output results.json`                     |
 | `--verbose`     | Enable detailed logging                                                             | `--verbose`                                 |
-| `--list-models` | List available models for the selected provider and exit                            | `--list-models`                             |
+| `--list-models` | List all supported models (includes 2025/2026 releases)                             | `--list-models`                             |
+
+**Supported Models:**
+The benchmark suite supports the latest models as of Jan 2026, including:
+- **OpenAI**: `gpt-5`, `gpt-4.5`, `gpt-4o`, `o3-mini`, `o1-series`
+- **Anthropic**: `claude-4.5-opus`, `claude-4.5-sonnet`, `claude-3-5-sonnet`
+- **Ollama**: `llama3.3`, `phi4`, `deepseek-r1`
+- **Azure**: Deployment names for all above models
 
 
 ### Quick Start Cheatsheet
