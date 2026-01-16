@@ -1,10 +1,16 @@
-# Build artifacts
-target/
-*.egg-info/
+# Byte-compiled / optimized / DLL files
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Distribution / packaging
 .Python
 build/
 develop-eggs/
@@ -18,51 +24,45 @@ parts/
 sdist/
 var/
 wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
-# Virtual environments
-.venv/
-.env/
-venv/
-ENV/
-env/
+# Testing
+.pytest_cache/
+.coverage
+.tox/
+htmlcov/
 
-# IDE and editor files
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# OS files
+# Logs
+*.log
+logs/
+
+# Results
+results/
+*.png
+*.json
+*.txt
+*.md
+
+# Backup files
+*.backup
+*.backup_*
+
+# OS
 .DS_Store
 Thumbs.db
 
-# Git
-.git/
-.gitignore
+# Poetry
+poetry.lock
 
-# Documentation
-docs/
-*.md
-README*
-
-# Test artifacts
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
-coverage.xml
-
-# Results and logs (these will be mounted)
-results/
-logs/
-
-# Cache directories
-.cache/
-.mypy_cache/
-.ruff_cache/
-
-# Secrets and config
-.env
-.secrets.baseline
-*.log
+# UV
+.uv/
+uv.lock
