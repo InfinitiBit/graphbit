@@ -6,8 +6,11 @@ use crate::llm::{
     FinishReason, LlmMessage, LlmRequest, LlmResponse, LlmRole, LlmTool, LlmToolCall, LlmUsage,
 };
 use async_trait::async_trait;
+use futures::stream::{Stream, StreamExt};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
+use std::time::Duration;
+use tokio::time::timeout;
 
 /// `Anthropic` `Claude` API provider
 pub struct AnthropicProvider {
@@ -213,6 +216,280 @@ impl LlmProviderTrait for AnthropicProvider {
             _ => None,
         }
     }
+
+    async fn stream(
+        &self,
+        request: LlmRequest,
+    ) -> GraphBitResult<Box<dyn Stream<Item = GraphBitResult<LlmResponse>> + Unpin + Send>> {
+        let url = format!("{}/messages", self.base_url);
+
+        let (system_prompt, messages) = Self::convert_messages(&request.messages);
+
+        // Convert tools to `Anthropic` format
+        let tools: Option<Vec<AnthropicTool>> = if request.tools.is_empty() {
+            None
+        } else {
+            Some(request.tools.iter().map(Self::convert_tool).collect())
+        };
+
+        let body = AnthropicStreamRequest {
+            model: self.model.clone(),
+            max_tokens: request.max_tokens.unwrap_or(4096),
+            messages,
+            system: system_prompt,
+            temperature: request.temperature,
+            top_p: request.top_p,
+            tools,
+            stream: true, // Enable streaming
+        };
+
+        // Timeout constants for different phases of the request
+        const CONNECTION_TIMEOUT: Duration = Duration::from_secs(60);
+        const ERROR_BODY_TIMEOUT: Duration = Duration::from_secs(10);
+        const CHUNK_TIMEOUT: Duration = Duration::from_secs(30);
+
+        // Apply timeout to initial connection
+        let response = timeout(
+            CONNECTION_TIMEOUT,
+            self.client
+                .post(&url)
+                .header("x-api-key", &self.api_key)
+                .header("Content-Type", "application/json")
+                .header("anthropic-version", "2023-06-01")
+                .json(&body)
+                .send(),
+        )
+        .await
+        .map_err(|_| {
+            GraphBitError::llm_provider(
+                "anthropic",
+                format!(
+                    "Connection timeout after {:?} - Anthropic did not respond. \
+                     Check network connectivity and Anthropic status.",
+                    CONNECTION_TIMEOUT
+                ),
+            )
+        })?
+        .map_err(|e| GraphBitError::llm_provider("anthropic", format!("Request failed: {e}")))?;
+
+        if !response.status().is_success() {
+            let error_text = timeout(ERROR_BODY_TIMEOUT, response.text())
+                .await
+                .unwrap_or_else(|_| {
+                    Ok(format!(
+                        "Error body read timeout after {:?}",
+                        ERROR_BODY_TIMEOUT
+                    ))
+                })
+                .unwrap_or_else(|_| "Unknown error (failed to read body)".to_string());
+
+            return Err(GraphBitError::llm_provider(
+                "anthropic",
+                format!("API error: {error_text}"),
+            ));
+        }
+
+        // Parse SSE stream with proper line buffering and per-chunk timeout
+        let model = self.model.clone();
+        let byte_stream = response.bytes_stream();
+
+        // State: (byte_stream, buffer, timeout_occurred, consecutive_parse_errors, total_parse_errors)
+        const MAX_CONSECUTIVE_PARSE_ERRORS: u32 = 5;
+
+        let stream = futures::stream::unfold(
+            (byte_stream, String::new(), false, 0u32, 0u32),
+            move |(
+                mut byte_stream,
+                mut buffer,
+                timeout_occurred,
+                mut consecutive_parse_errors,
+                mut total_parse_errors,
+            )| {
+                let model = model.clone();
+                async move {
+                    // If we already had a timeout, don't continue
+                    if timeout_occurred {
+                        return None;
+                    }
+
+                    loop {
+                        // Apply timeout to each chunk read
+                        let chunk_result = match timeout(CHUNK_TIMEOUT, byte_stream.next()).await {
+                            Ok(Some(result)) => result,
+                            Ok(None) => {
+                                // Stream naturally ended
+                                if total_parse_errors > 0 {
+                                    tracing::warn!(
+                                        "Stream ended with {} total parse errors. Some data may have been lost.",
+                                        total_parse_errors
+                                    );
+                                }
+                                return None;
+                            }
+                            Err(_) => {
+                                // Timeout occurred
+                                tracing::warn!(
+                                    "Stream chunk timeout after {:?} - Anthropic stopped responding. \
+                                     Response may be incomplete.",
+                                    CHUNK_TIMEOUT
+                                );
+                                return Some((
+                                    Err(GraphBitError::llm_provider(
+                                        "anthropic",
+                                        format!(
+                                            "Stream timeout after {:?} - response may be incomplete",
+                                            CHUNK_TIMEOUT
+                                        ),
+                                    )),
+                                    (byte_stream, buffer, true, consecutive_parse_errors, total_parse_errors),
+                                ));
+                            }
+                        };
+
+                        let chunk = match chunk_result {
+                            Ok(c) => c,
+                            Err(e) => {
+                                return Some((
+                                    Err(GraphBitError::llm_provider(
+                                        "anthropic",
+                                        format!("Stream error: {e}"),
+                                    )),
+                                    (
+                                        byte_stream,
+                                        buffer,
+                                        false,
+                                        consecutive_parse_errors,
+                                        total_parse_errors,
+                                    ),
+                                ));
+                            }
+                        };
+
+                        // Append new data to buffer
+                        buffer.push_str(&String::from_utf8_lossy(&chunk));
+
+                        // Process complete lines
+                        while let Some(newline_pos) = buffer.find('\n') {
+                            let line: String = buffer.drain(..=newline_pos).collect();
+                            let line = line.trim();
+
+                            // Skip empty lines
+                            if line.is_empty() {
+                                continue;
+                            }
+
+                            // Anthropic SSE format: "event: <event_type>" followed by "data: <json>"
+                            // We primarily care about content_block_delta events with text deltas
+                            if let Some(data) = line.strip_prefix("data: ") {
+                                // Parse the JSON data
+                                match serde_json::from_str::<AnthropicStreamEvent>(data) {
+                                    Ok(event) => {
+                                        consecutive_parse_errors = 0;
+
+                                        match event.r#type.as_str() {
+                                            "content_block_delta" => {
+                                                // Extract text from delta
+                                                if let Some(delta) = &event.delta {
+                                                    if delta.r#type == "text_delta" {
+                                                        if let Some(text) = &delta.text {
+                                                            if !text.is_empty() {
+                                                                let response = LlmResponse::new(
+                                                                    text.clone(),
+                                                                    &model,
+                                                                );
+                                                                return Some((
+                                                                    Ok(response),
+                                                                    (
+                                                                        byte_stream,
+                                                                        buffer,
+                                                                        false,
+                                                                        consecutive_parse_errors,
+                                                                        total_parse_errors,
+                                                                    ),
+                                                                ));
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            "message_stop" => {
+                                                // End of message
+                                                if total_parse_errors > 0 {
+                                                    tracing::warn!(
+                                                        "Stream completed with {} total parse errors.",
+                                                        total_parse_errors
+                                                    );
+                                                }
+                                                return None;
+                                            }
+                                            "error" => {
+                                                // Handle error event
+                                                let error_msg = event
+                                                    .error
+                                                    .as_ref()
+                                                    .map(|e| e.message.clone())
+                                                    .unwrap_or_else(|| "Unknown error".to_string());
+                                                return Some((
+                                                    Err(GraphBitError::llm_provider(
+                                                        "anthropic",
+                                                        format!("Stream error: {}", error_msg),
+                                                    )),
+                                                    (
+                                                        byte_stream,
+                                                        buffer,
+                                                        true,
+                                                        consecutive_parse_errors,
+                                                        total_parse_errors,
+                                                    ),
+                                                ));
+                                            }
+                                            // message_start, content_block_start, content_block_stop,
+                                            // message_delta, ping - ignore these
+                                            _ => {}
+                                        }
+                                    }
+                                    Err(e) => {
+                                        consecutive_parse_errors += 1;
+                                        total_parse_errors += 1;
+
+                                        tracing::warn!(
+                                            "Failed to parse Anthropic stream chunk (consecutive: {}, total: {}): {}, data: {}",
+                                            consecutive_parse_errors,
+                                            total_parse_errors,
+                                            e,
+                                            if data.len() > 200 { &data[..200] } else { data }
+                                        );
+
+                                        if consecutive_parse_errors >= MAX_CONSECUTIVE_PARSE_ERRORS
+                                        {
+                                            return Some((
+                                                Err(GraphBitError::llm_provider(
+                                                    "anthropic",
+                                                    format!(
+                                                        "Stream corrupted: {} consecutive parse errors. \
+                                                         Last error: {}. Data may be incomplete.",
+                                                        consecutive_parse_errors,
+                                                        e
+                                                    ),
+                                                )),
+                                                (byte_stream, buffer, true, consecutive_parse_errors, total_parse_errors),
+                                            ));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+        );
+
+        Ok(Box::new(Box::pin(stream)))
+    }
+
+    fn supports_streaming(&self) -> bool {
+        true // Anthropic supports streaming
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -265,4 +542,56 @@ struct ContentBlock {
 struct AnthropicUsage {
     input_tokens: u32,
     output_tokens: u32,
+}
+
+// Streaming-specific types
+
+/// Request body for streaming API calls (includes stream: true)
+#[derive(Debug, Serialize)]
+struct AnthropicStreamRequest {
+    model: String,
+    max_tokens: u32,
+    messages: Vec<AnthropicMessage>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    system: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    temperature: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    top_p: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tools: Option<Vec<AnthropicTool>>,
+    stream: bool,
+}
+
+/// Represents an event in the Anthropic SSE stream
+/// Anthropic sends various event types: message_start, content_block_start,
+/// content_block_delta, content_block_stop, message_delta, message_stop, ping, error
+#[derive(Debug, Deserialize)]
+struct AnthropicStreamEvent {
+    #[serde(rename = "type")]
+    r#type: String,
+    /// Present in content_block_delta events
+    #[serde(default)]
+    delta: Option<StreamDelta>,
+    /// Present in error events
+    #[serde(default)]
+    error: Option<StreamError>,
+}
+
+/// Delta content in a content_block_delta event
+#[derive(Debug, Deserialize)]
+struct StreamDelta {
+    #[serde(rename = "type")]
+    r#type: String, // "text_delta", "input_json_delta", etc.
+    /// Text content (present when type == "text_delta")
+    #[serde(default)]
+    text: Option<String>,
+}
+
+/// Error information in an error event
+#[derive(Debug, Deserialize)]
+struct StreamError {
+    #[serde(rename = "type")]
+    r#type: String,
+    message: String,
 }
