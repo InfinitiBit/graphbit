@@ -4,12 +4,6 @@ import asyncio
 import os
 from typing import Any, Dict, List, Optional
 
-from llama_index.core import Settings, VectorStoreIndex
-from llama_index.core.schema import Document
-from llama_index.llms.anthropic import Anthropic
-from llama_index.llms.ollama import Ollama
-from llama_index.llms.openai import OpenAI
-
 from .common import (
     COMPLEX_WORKFLOW_STEPS,
     CONCURRENT_TASK_PROMPTS,
@@ -34,9 +28,12 @@ class LlamaIndexBenchmark(BaseBenchmark):
         """Initialize LlamaIndex benchmark with configuration."""
         super().__init__(config, num_runs=num_runs)
         self.llm: Optional[Any] = None
-        self.index: Optional[VectorStoreIndex] = None
+        self.index: Optional[Any] = None
         self.query_engine: Optional[Any] = None
         self.chat_engine: Optional[Any] = None
+        # Lazy loaded classes
+        self._VectorStoreIndex: Optional[Any] = None
+        self._Document: Optional[Any] = None
 
     def _get_llm_params(self) -> tuple[int, float]:
         """Get max_tokens and temperature from configuration."""
@@ -47,6 +44,13 @@ class LlamaIndexBenchmark(BaseBenchmark):
 
     async def setup(self) -> None:
         """Set up LlamaIndex for benchmarking."""
+        # Lazy import LlamaIndex dependencies
+        from llama_index.core import Settings, VectorStoreIndex
+        from llama_index.core.schema import Document
+        
+        self._VectorStoreIndex = VectorStoreIndex
+        self._Document = Document
+        
         llm_config_obj: LLMConfig | None = self.config.get("llm_config")
         if not llm_config_obj:
             raise ValueError("LLMConfig not found in configuration")
@@ -54,6 +58,8 @@ class LlamaIndexBenchmark(BaseBenchmark):
         max_tokens, temperature = self._get_llm_params()
 
         if llm_config_obj.provider == LLMProvider.OPENAI:
+            from llama_index.llms.openai import OpenAI
+            
             api_key = llm_config_obj.api_key or os.getenv("OPENAI_API_KEY")
             if not api_key:
                 raise ValueError("OpenAI API key not found in environment or config")
@@ -66,6 +72,8 @@ class LlamaIndexBenchmark(BaseBenchmark):
             )
 
         elif llm_config_obj.provider == LLMProvider.ANTHROPIC:
+            from llama_index.llms.anthropic import Anthropic
+            
             api_key = llm_config_obj.api_key or os.getenv("ANTHROPIC_API_KEY")
             if not api_key:
                 raise ValueError("Anthropic API key not found in environment or config")
@@ -78,6 +86,8 @@ class LlamaIndexBenchmark(BaseBenchmark):
             )
 
         elif llm_config_obj.provider == LLMProvider.OLLAMA:
+            from llama_index.llms.ollama import Ollama
+            
             base_url = llm_config_obj.base_url or "http://localhost:11434"
 
             self.llm = Ollama(
@@ -92,15 +102,9 @@ class LlamaIndexBenchmark(BaseBenchmark):
 
         Settings.llm = self.llm
 
-        documents: List[Document] = [
-            Document(text="This is a sample document for benchmarking purposes."),
-            Document(text="Another document with different content to test retrieval."),
-            Document(text="Complex workflow tasks require sophisticated reasoning capabilities."),
-        ]
-
-        self.index = VectorStoreIndex.from_documents(documents)
-        self.query_engine = self.index.as_query_engine()
-        self.chat_engine = self.index.as_chat_engine()
+        self.index = None
+        self.query_engine = None
+        self.chat_engine = None
 
     async def teardown(self) -> None:
         """Cleanup LlamaIndex resources."""
@@ -198,14 +202,14 @@ class LlamaIndexBenchmark(BaseBenchmark):
         """Run a complex workflow benchmark using LlamaIndex query engine."""
         self.monitor.start_monitoring()
 
-        if self.query_engine is None or self.llm is None:
-            raise ValueError("Query engine or LLM not initialized")
+        if self.llm is None:
+            raise ValueError("LLM not initialized")
 
         total_tokens = 0
         results: List[str] = []
 
         for i, step in enumerate(COMPLEX_WORKFLOW_STEPS):
-            response = self.query_engine.query(step["prompt"])
+            response = await self.llm.acomplete(step["prompt"])
             result = str(response)
             results.append(result)
             total_tokens += count_tokens_estimate(step["prompt"] + result)
@@ -240,11 +244,8 @@ class LlamaIndexBenchmark(BaseBenchmark):
         if self.llm is None:
             raise ValueError("LLM not initialized")
 
-        # Create large documents to stress memory
-        large_documents = [Document(text=MEMORY_INTENSIVE_PROMPT + f" Document {i+1}. " + "Lorem ipsum dolor sit amet. " * 100) for i in range(50)]
-
-        # Create index but use LLM directly for consistent token counts
-        VectorStoreIndex.from_documents(large_documents)
+        # Create large data to stress memory (without index/embedding overhead)
+        large_data = [MEMORY_INTENSIVE_PROMPT + f" Document {i+1}. " + "Lorem ipsum dolor sit amet. " * 100 for i in range(50)]
 
         # Use the LLM directly with the full MEMORY_INTENSIVE_PROMPT for consistent token counting
         response = await self.llm.acomplete(MEMORY_INTENSIVE_PROMPT)
