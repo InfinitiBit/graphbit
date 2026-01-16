@@ -1,21 +1,26 @@
 services:
   graphbit-benchmark:
     build:
-      context: ..
-      dockerfile: benchmarks/Dockerfile
+      # Build context is benchmarks directory only (not parent)
+      context: .
+      dockerfile: Dockerfile
     container_name: graphbit-benchmark
     environment:
-    - OPENAI_API_KEY=${OPENAI_API_KEY}
-    - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-    - HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY}
-    - PYTHONUNBUFFERED=1
-    - RUST_LOG=info
+      # LLM Provider API Keys
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      # Python configuration
+      - PYTHONUNBUFFERED=1
+      - PYTHONUTF8=1
+      # Logging
+      - RUST_LOG=${RUST_LOG:-info}
     volumes:
-    - /home/ubuntu/logs:/app/logs
-    - /home/ubuntu/results:/app/results
-      # Optional: Mount source code read-only
+      # Results and logs with relative paths
+      - ./logs:/app/benchmarks/logs
+      - ./results:/app/benchmarks/results
+      # Optional: Mount source code for development (read-only)
       # - ./:/app/benchmarks:ro
-    working_dir: /app
+    working_dir: /app/benchmarks
     command: [run_benchmark.py, --help]
     deploy:
       resources:
@@ -25,3 +30,16 @@ services:
         reservations:
           memory: 1G
           cpus: '0.5'
+    # Optional: Add network for isolation
+    # networks:
+    #   - benchmark-network
+
+# Optional: Named volumes for persistence
+# volumes:
+#   benchmark-logs:
+#   benchmark-results:
+
+# Optional: Network isolation
+# networks:
+#   benchmark-network:
+#     driver: bridge
