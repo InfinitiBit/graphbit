@@ -1,0 +1,198 @@
+{
+  "metadata": {
+    "source": "GAIA curated public questions",
+    "filter": "text-only, publicly available examples",
+    "total_selected": 22,
+    "note": "Based on GAIA paper examples and GAIA-style questions"
+  },
+  "scenarios": {
+    "simple_task": [
+      {
+        "question": "What was the actual enrollment count of the clinical trial on H. pylori in acne vulgaris patients from Jan-May 2018 as listed on the NIH website?",
+        "answer": "90",
+        "level": 1,
+        "task_id": "public_l1_001",
+        "length": 145,
+        "source": "GAIA paper example"
+      }
+    ],
+    "sequential_tasks": [
+      {
+        "question": "In the 2020 Summer Olympics, which country won the most gold medals in swimming events?",
+        "answer": "United States",
+        "level": 1,
+        "task_id": "public_l1_002",
+        "length": 87,
+        "source": "Adapted from GAIA Level 1 pattern"
+      },
+      {
+        "question": "If a pint of ice cream contains 473 grams total weight and has 18g of fat per 1/2 cup serving (with 2 cups per pint), what is the fat percentage by weight? According to US federal standards (21 CFR 135.110), ice cream must contain at least 10% milkfat. Calculate how many percentage points above or below this standard the ice cream is, rounded to one decimal place. Answer as +X.X or -X.X",
+        "answer": "+4.6",
+        "level": 2,
+        "task_id": "public_l2_001",
+        "length": 389,
+        "source": "GAIA paper example (adapted)"
+      },
+      {
+        "question": "A study published in 2019 found that the median age of Nobel Prize winners in Physics was 55 years at the time of award between 2000-2018. If the youngest winner in that period was 35 and the oldest was 96, and exactly 19 prizes were awarded (one per year), what would be the average age rounded to the nearest year if we assume a normal distribution?",
+        "answer": "55",
+        "level": 2,
+        "task_id": "public_l2_002",
+        "length": 351,
+        "source": "GAIA-style calculation"
+      }
+    ],
+    "parallel_tasks": [
+      {
+        "question": "What is the total number of Prime Ministers that the United Kingdom has had from 1945 to 2020?",
+        "answer": "14",
+        "level": 1,
+        "task_id": "public_l1_003",
+        "length": 94,
+        "source": "GAIA-style factual question"
+      },
+      {
+        "question": "According to the periodic table, what is the atomic number of the element with symbol 'Fe'?",
+        "answer": "26",
+        "level": 1,
+        "task_id": "public_l1_004",
+        "length": 91,
+        "source": "GAIA-style simple factual"
+      },
+      {
+        "question": "In computer science, what does the acronym 'LIFO' stand for?",
+        "answer": "Last In First Out",
+        "level": 1,
+        "task_id": "public_l1_005",
+        "length": 60,
+        "source": "GAIA-style terminology"
+      },
+      {
+        "question": "What year did the Soviet Union officially dissolve?",
+        "answer": "1991",
+        "level": 1,
+        "task_id": "public_l1_006",
+        "length": 51,
+        "source": "GAIA-style historical fact"
+      }
+    ],
+    "complex_workflow": [
+      {
+        "question": "According to a 2020 report, the world's proven oil reserves were approximately 1.73 trillion barrels. If global oil consumption in 2020 was about 88.4 million barrels per day, how many years would these reserves last at that consumption rate? Round to the nearest whole number.",
+        "answer": "54",
+        "level": 2,
+        "task_id": "public_l2_003",
+        "length": 277,
+        "source": "GAIA-style multi-step"
+      },
+      {
+        "question": "The Fibonacci sequence starts with 0, 1, and each subsequent number is the sum of the previous two. What is the 15th number in the Fibonacci sequence?",
+        "answer": "377",
+        "level": 2,
+        "task_id": "public_l2_004",
+        "length": 150,
+        "source": "GAIA-style computation"
+      },
+      {
+        "question": "If a rectangle has a length that is 3 times its width, and its perimeter is 48 units, what is the area of the rectangle in square units?",
+        "answer": "108",
+        "level": 2,
+        "task_id": "public_l2_005",
+        "length": 136,
+        "source": "GAIA-style math reasoning"
+      },
+      {
+        "question": "A researcher is analyzing citation patterns. Paper A was published in 2015 and has been cited 150 times. Paper B was published in 2018 and has been cited 120 times. If citation rates are assumed to be linear over time, and both papers continue to be cited at their current annual rates, in what year would Paper B's total citations equal Paper A's total citations? Assume current year is 2024.",
+        "answer": "2034",
+        "level": 3,
+        "task_id": "public_l3_001",
+        "length": 393,
+        "source": "GAIA-style complex reasoning"
+      },
+      {
+        "question": "What is the chemical formula for table salt?",
+        "answer": "NaCl",
+        "level": 1,
+        "task_id": "public_l1_008",
+        "length": 44,
+        "source": "GAIA-style science fact"
+      }
+    ],
+    "memory_intensive": [
+      {
+        "question": "If a pint of ice cream contains 473 grams total weight and has 18g of fat per 1/2 cup serving (with 2 cups per pint), what is the fat percentage by weight? According to US federal standards (21 CFR 135.110), ice cream must contain at least 10% milkfat. Calculate how many percentage points above or below this standard the ice cream is, rounded to one decimal place. Answer as +X.X or -X.X",
+        "answer": "+4.6",
+        "level": 2,
+        "task_id": "public_l2_001",
+        "length": 389,
+        "source": "GAIA paper example (adapted)"
+      }
+    ],
+    "concurrent_tasks": [
+      {
+        "question": "How many stars are on the flag of the European Union?",
+        "answer": "12",
+        "level": 1,
+        "task_id": "public_l1_007",
+        "length": 53,
+        "source": "GAIA-style general knowledge"
+      },
+      {
+        "question": "What is the chemical formula for table salt?",
+        "answer": "NaCl",
+        "level": 1,
+        "task_id": "public_l1_008",
+        "length": 44,
+        "source": "GAIA-style science fact"
+      },
+      {
+        "question": "In which year did the first iPhone launch?",
+        "answer": "2007",
+        "level": 1,
+        "task_id": "public_l1_009",
+        "length": 42,
+        "source": "GAIA-style technology fact"
+      },
+      {
+        "question": "What is the capital city of Australia?",
+        "answer": "Canberra",
+        "level": 1,
+        "task_id": "public_l1_010",
+        "length": 38,
+        "source": "GAIA-style geography"
+      },
+      {
+        "question": "What was the actual enrollment count of the clinical trial on H. pylori in acne vulgaris patients from Jan-May 2018 as listed on the NIH website?",
+        "answer": "90",
+        "level": 1,
+        "task_id": "public_l1_001",
+        "length": 145,
+        "source": "GAIA paper example"
+      },
+      {
+        "question": "In the 2020 Summer Olympics, which country won the most gold medals in swimming events?",
+        "answer": "United States",
+        "level": 1,
+        "task_id": "public_l1_002",
+        "length": 87,
+        "source": "Adapted from GAIA Level 1 pattern"
+      },
+      {
+        "question": "What is the total number of Prime Ministers that the United Kingdom has had from 1945 to 2020?",
+        "answer": "14",
+        "level": 1,
+        "task_id": "public_l1_003",
+        "length": 94,
+        "source": "GAIA-style factual question"
+      },
+      {
+        "question": "According to the periodic table, what is the atomic number of the element with symbol 'Fe'?",
+        "answer": "26",
+        "level": 1,
+        "task_id": "public_l1_004",
+        "length": 91,
+        "source": "GAIA-style simple factual"
+      }
+    ]
+  }
+}
