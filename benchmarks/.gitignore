@@ -1,23 +1,127 @@
-# Generated benchmark results
+# ============================================================================
+# Benchmark Generated Outputs
+# ============================================================================
+# Results and logs directories
 results/
 logs/
 *.log
 
-# Environment variables with sensitive data
-.env
+# Benchmark result files (timestamped outputs in root)
+benchmark_results_*.txt
+benchmark_results_*.md
 
-# Docker volumes and temporary files
+# Analysis and report outputs (temporary)
+*_report.txt
+*_audit*.txt
+verify_fix.txt
+test_output.md
 test_output.log
 
-# Python cache
+# ============================================================================
+# Python Virtual Environments
+# ============================================================================
+.venv/
+venv/
+ENV/
+env/
+.Python
+
+# ============================================================================
+# Python Build & Distribution
+# ============================================================================
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+*.whl
+
+# ============================================================================
+# Python Cache & Compiled Files
+# ============================================================================
 __pycache__/
+*.py[cod]
+*$py.class
+*.so
 *.pyc
 *.pyo
 
-# System files
-.DS_Store
-Thumbs.db
+# ============================================================================
+# Testing & Coverage
+# ============================================================================
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
 
-# IDE files
+# ============================================================================
+# Package Managers
+# ============================================================================
+# UV lock file (similar to poetry.lock - can be regenerated)
+uv.lock
+.uv/
+
+# Poetry (if used)
+poetry.lock
+
+# pip
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ============================================================================
+# Environment Variables & Secrets
+# ============================================================================
+.env
+.env.local
+.env.*.local
+
+# ============================================================================
+# Backup Files
+# ============================================================================
+*.backup
+*.backup_*
+*.bak
+*~
+
+# ============================================================================
+# IDE & Editor Files
+# ============================================================================
 .vscode/
 .idea/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+
+# ============================================================================
+# Operating System Files
+# ============================================================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ============================================================================
+# Docker (optional - if not using .dockerignore)
+# ============================================================================
+# Uncomment if you want git to also ignore these
+# docker-compose.override.yml
+# .dockerignore
