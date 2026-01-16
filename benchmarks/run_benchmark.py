@@ -23,9 +23,19 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import click
-import matplotlib.pyplot as plt
-import numpy as np
-import seaborn as sns
+
+# Visualization imports are optional - loaded lazily when needed
+try:
+    import matplotlib.pyplot as plt
+    import numpy as np
+    import seaborn as sns
+    HAS_VISUALIZATION = True
+except ImportError:
+    plt = None  # type: ignore
+    np = None  # type: ignore
+    sns = None  # type: ignore
+    HAS_VISUALIZATION = False
+
 from frameworks.common import (
     DEFAULT_MAX_TOKENS,
     DEFAULT_MODEL,
@@ -39,15 +49,11 @@ from frameworks.common import (
     create_llm_config_from_args,
     get_provider_models,
     parse_core_list,
-    set_memory_binding,
     set_process_affinity,
 )
-from frameworks.crewai_benchmark import CrewAIBenchmark
-from frameworks.graphbit_benchmark import GraphBitBenchmark
-from frameworks.langchain_benchmark import LangChainBenchmark
-from frameworks.langgraph_benchmark import LangGraphBenchmark
-from frameworks.llamaindex_benchmark import LlamaIndexBenchmark
-from frameworks.pydantic_ai_benchmark import PydanticAIBenchmark
+
+# Framework benchmarks are loaded lazily to avoid requiring all dependencies
+# When a specific framework is requested, only that framework's module is imported
 
 if sys.platform == "win32" or sys.platform == "darwin":
 
@@ -75,6 +81,55 @@ DEFAULT_CONCURRENCY = _default_concurrency()
 # ``--help`` even when optional dependencies are missing.
 
 
+# Framework metadata (colors, names) - doesn't require imports
+FRAMEWORK_METADATA: Dict[FrameworkType, Dict[str, str]] = {
+    FrameworkType.GRAPHBIT: {"name": "GraphBit", "color": "#2E86AB"},
+    FrameworkType.LANGCHAIN: {"name": "LangChain", "color": "#A23B72"},
+    FrameworkType.LANGGRAPH: {"name": "LangGraph", "color": "#062505"},
+    FrameworkType.CREWAI: {"name": "CrewAI", "color": "#592E83"},
+    FrameworkType.PYDANTIC_AI: {"name": "PydanticAI", "color": "#F18F01"},
+    FrameworkType.LLAMAINDEX: {"name": "LlamaIndex", "color": "#C73E1D"},
+}
+
+
+def load_framework_benchmark(
+    framework_type: FrameworkType,
+    config: Dict[str, Any],
+    num_runs: int,
+) -> Optional[BaseBenchmark]:
+    """Lazily load a single framework benchmark class.
+    
+    Returns the instantiated benchmark or None if the framework is not available.
+    """
+    try:
+        if framework_type == FrameworkType.GRAPHBIT:
+            from frameworks.graphbit_benchmark import GraphBitBenchmark
+            return GraphBitBenchmark(config, num_runs=num_runs)
+        elif framework_type == FrameworkType.LANGCHAIN:
+            from frameworks.langchain_benchmark import LangChainBenchmark
+            return LangChainBenchmark(config, num_runs=num_runs)
+        elif framework_type == FrameworkType.LANGGRAPH:
+            from frameworks.langgraph_benchmark import LangGraphBenchmark
+            return LangGraphBenchmark(config, num_runs=num_runs)
+        elif framework_type == FrameworkType.CREWAI:
+            from frameworks.crewai_benchmark import CrewAIBenchmark
+            return CrewAIBenchmark(config, num_runs=num_runs)
+        elif framework_type == FrameworkType.PYDANTIC_AI:
+            from frameworks.pydantic_ai_benchmark import PydanticAIBenchmark
+            return PydanticAIBenchmark(config, num_runs=num_runs)
+        elif framework_type == FrameworkType.LLAMAINDEX:
+            from frameworks.llamaindex_benchmark import LlamaIndexBenchmark
+            return LlamaIndexBenchmark(config, num_runs=num_runs)
+        else:
+            return None
+    except ImportError as e:
+        click.echo(
+            click.style(f"⚠ {FRAMEWORK_METADATA[framework_type]['name']} not available: {e}", fg="yellow"),
+            err=True,
+        )
+        return None
+
+
 class ComprehensiveBenchmarkRunner:
     """Runner for comprehensive framework benchmarks."""
 
@@ -85,8 +140,18 @@ class ComprehensiveBenchmarkRunner:
         concurrency: int = DEFAULT_CONCURRENCY,
         cpu_cores: Optional[List[int]] = None,
         num_runs: Optional[int] = None,
+        selected_frameworks: Optional[List[FrameworkType]] = None,
     ):
-        """Initialize the benchmark runner with configuration."""
+        """Initialize the benchmark runner with configuration.
+        
+        Args:
+            llm_config: LLM configuration for benchmarks
+            verbose: Enable verbose output
+            concurrency: Maximum concurrent tasks
+            cpu_cores: Optional CPU cores to pin to
+            num_runs: Number of runs per scenario (averaged)
+            selected_frameworks: List of frameworks to benchmark (None = all available)
+        """
         self.verbose = verbose
         self.llm_config = llm_config
         self.concurrency = concurrency
@@ -121,55 +186,27 @@ class ComprehensiveBenchmarkRunner:
         Path(log_dir).mkdir(exist_ok=True)
         Path(results_dir).mkdir(exist_ok=True)
 
-        # Set up plotting style using visualization libraries
-        plt.style.use("seaborn-v0_8-darkgrid")
-        sns.set_palette("husl")
+        # Set up plotting style using visualization libraries (if available)
+        if HAS_VISUALIZATION and plt is not None and sns is not None:
+            plt.style.use("seaborn-v0_8-darkgrid")
+            sns.set_palette("husl")
 
-        # Initialize framework benchmarks
-        self.frameworks: Dict[FrameworkType, Dict[str, Any]] = {
-            FrameworkType.GRAPHBIT: {
-                "name": "GraphBit",
-                "benchmark": GraphBitBenchmark(self.config, num_runs=self.num_runs),
-                "results": {},
-                "errors": {},
-                "color": "#2E86AB",
-            },
-            FrameworkType.LANGCHAIN: {
-                "name": "LangChain",
-                "benchmark": LangChainBenchmark(self.config, num_runs=self.num_runs),
-                "results": {},
-                "errors": {},
-                "color": "#A23B72",
-            },
-            FrameworkType.LANGGRAPH: {
-                "name": "LangGraph",
-                "benchmark": LangGraphBenchmark(self.config, num_runs=self.num_runs),
-                "results": {},
-                "errors": {},
-                "color": "#062505",
-            },
-            FrameworkType.CREWAI: {
-                "name": "CrewAI",
-                "benchmark": CrewAIBenchmark(self.config, num_runs=self.num_runs),
-                "results": {},
-                "errors": {},
-                "color": "#592E83",
-            },
-            FrameworkType.PYDANTIC_AI: {
-                "name": "PydanticAI",
-                "benchmark": PydanticAIBenchmark(self.config, num_runs=self.num_runs),
-                "results": {},
-                "errors": {},
-                "color": "#F18F01",
-            },
-            FrameworkType.LLAMAINDEX: {
-                "name": "LlamaIndex",
-                "benchmark": LlamaIndexBenchmark(self.config, num_runs=self.num_runs),
-                "results": {},
-                "errors": {},
-                "color": "#C73E1D",
-            },
-        }
+        # Determine which frameworks to load
+        frameworks_to_load = selected_frameworks or list(FrameworkType)
+        
+        # Initialize framework benchmarks using lazy loading
+        self.frameworks: Dict[FrameworkType, Dict[str, Any]] = {}
+        for fw_type in frameworks_to_load:
+            benchmark = load_framework_benchmark(fw_type, self.config, self.num_runs)
+            if benchmark is not None:
+                metadata = FRAMEWORK_METADATA[fw_type]
+                self.frameworks[fw_type] = {
+                    "name": metadata["name"],
+                    "benchmark": benchmark,
+                    "results": {},
+                    "errors": {},
+                    "color": metadata["color"],
+                }
 
         # Define scenarios to run
         self.scenarios = [
@@ -348,6 +385,7 @@ class ComprehensiveBenchmarkRunner:
 
                 if results:
                     scenario_count = len(results)
+                    # avg_time now includes setup overhead automatically (total scenario cost)
                     avg_time = sum(m.execution_time_ms for m in results.values()) / scenario_count
                     avg_memory = sum(m.memory_usage_mb for m in results.values()) / scenario_count
                     avg_cpu = sum(m.cpu_usage_percent for m in results.values()) / scenario_count
@@ -591,7 +629,6 @@ class ComprehensiveBenchmarkRunner:
 @click.option("--base-url", type=str, help="Base URL for custom endpoints (e.g., Ollama)")
 @click.option("--concurrency", type=int, default=DEFAULT_CONCURRENCY, show_default=True, help="Maximum number of concurrent tasks")
 @click.option("--cpu-cores", type=str, help="Comma-separated cores or 'auto:N' to select least busy cores")
-@click.option("--membind", type=int, help="Bind memory allocations to the specified NUMA node")
 @click.option("--frameworks", type=str, help="Comma-separated list of frameworks to test (e.g., 'graphbit,langchain')")
 @click.option("--scenarios", type=str, help="Comma-separated list of scenarios to run (e.g., 'simple_task,parallel_pipeline')")
 @click.option("--num-runs", type=int, default=NUM_RUNS, show_default=True, help="Number of times to repeat each scenario (results are averaged)")
@@ -606,7 +643,6 @@ def main(
     base_url: Optional[str],
     concurrency: int,
     cpu_cores: Optional[str],
-    membind: Optional[int],
     frameworks: Optional[str],
     scenarios: Optional[str],
     verbose: bool,
@@ -618,8 +654,7 @@ def main(
     This tool benchmarks GraphBit against other popular AI frameworks
     using configurable LLM providers and models. Use ``--cpu-cores`` to
     pin the benchmark process to specific cores (e.g., ``"0,1"`` or
-    ``"auto:4"``) for more consistent results. ``--membind`` can be used to
-    bind process memory allocations to a specific NUMA node.
+    ``"auto:4"``) for more consistent results.
     """
     if list_models:
         available_models = get_provider_models(provider)
@@ -657,10 +692,6 @@ def main(
     selected_cores = parse_core_list(cpu_cores)
     if selected_cores:
         click.echo(f"Using CPU cores: {', '.join(str(c) for c in selected_cores)}")
-
-    if membind is not None:
-        click.echo(f"Binding memory to NUMA node: {membind}")
-        set_memory_binding(membind)
 
     available_models = get_provider_models(provider)
     if available_models and model not in available_models:
@@ -721,11 +752,8 @@ def main(
             concurrency=concurrency,
             cpu_cores=selected_cores,
             num_runs=num_runs,
+            selected_frameworks=selected_frameworks,
         )
-
-        if selected_frameworks:
-            original_frameworks = runner.frameworks.copy()
-            runner.frameworks = {fw_type: fw_info for fw_type, fw_info in original_frameworks.items() if fw_type in selected_frameworks}
 
         if selected_scenarios:
             original_scenarios = runner.scenarios.copy()
