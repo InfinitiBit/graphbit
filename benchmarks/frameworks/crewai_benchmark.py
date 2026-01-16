@@ -4,8 +4,6 @@ import asyncio
 import os
 from typing import Any, Dict, List, Optional
 
-from crewai import LLM, Agent, Crew, Task
-
 from .common import (
     COMPLEX_WORKFLOW_STEPS,
     CONCURRENT_TASK_PROMPTS,
@@ -29,9 +27,13 @@ class CrewAIBenchmark(BaseBenchmark):
     def __init__(self, config: Dict[str, Any], num_runs: Optional[int] = None):
         """Initialize CrewAI benchmark with configuration."""
         super().__init__(config, num_runs=num_runs)
-        self.llm: Optional[LLM] = None
-        self.agents: Dict[str, Agent] = {}
-        self.crews: Dict[str, Crew] = {}
+        self.llm: Optional[Any] = None
+        self.agents: Dict[str, Any] = {}
+        self.crews: Dict[str, Any] = {}
+        # Lazy loaded classes
+        self._Agent: Optional[Any] = None
+        self._Crew: Optional[Any] = None
+        self._Task: Optional[Any] = None
 
     def _get_llm_params(self) -> tuple[int, float]:
         """Get max_tokens and temperature from configuration."""
@@ -42,6 +44,13 @@ class CrewAIBenchmark(BaseBenchmark):
 
     async def setup(self) -> None:
         """Set up CrewAI for benchmarking."""
+        # Lazy import CrewAI dependencies
+        from crewai import LLM, Agent, Crew, Task
+        
+        self._Agent = Agent
+        self._Crew = Crew
+        self._Task = Task
+        
         llm_config_obj: LLMConfig | None = self.config.get("llm_config")
         if not llm_config_obj:
             raise ValueError("LLMConfig not found in configuration")
@@ -90,8 +99,11 @@ class CrewAIBenchmark(BaseBenchmark):
     def _setup_agents(self) -> None:
         """Set up common CrewAI agents."""
         assert self.llm is not None, "LLM must be initialized before setting up agents."
+        assert self._Agent is not None, "Agent class not loaded"
+        
+        Agent = self._Agent
 
-        def create_agent(role: str, goal: str, backstory: str) -> Agent:
+        def create_agent(role: str, goal: str, backstory: str) -> Any:
             return Agent(
                 role=role,
                 goal=goal,
@@ -104,25 +116,25 @@ class CrewAIBenchmark(BaseBenchmark):
         self.agents["general"] = create_agent(
             "General Assistant",
             "Complete assigned tasks efficiently and accurately",
-            "You are an experienced assistant capable of handling various tasks.",
+            "",
         )
 
-        self.agents["analyst"] = create_agent(
+        self.agents["researcher"] = create_agent(
             "Data Analyst",
             "Analyze data and provide insights",
-            "You are a skilled data analyst with expertise in pattern recognition.",
+            "",
         )
 
-        self.agents["creator"] = create_agent(
+        self.agents["writer"] = create_agent(
             "Content Creator",
-            "Create engaging and informative content",
-            "You are a creative writer with expertise in marketing and communication.",
+            "Create engaging content",
+            "",
         )
 
-        self.agents["technical"] = create_agent(
+        self.agents["expert"] = create_agent(
             "Technical Expert",
-            "Provide technical solutions and explanations",
-            "You are a technical expert with deep knowledge across various domains.",
+            "Solve complex technical problems",
+            "",
         )
 
     async def teardown(self) -> None:
@@ -135,29 +147,16 @@ class CrewAIBenchmark(BaseBenchmark):
         """Run a simple task benchmark using CrewAI with retry mechanism."""
         self.monitor.start_monitoring()
 
-        max_retries = 3  # Max retries for each task
-        retry_delay = 2  # Delay between retries in seconds
-
         try:
-            task = Task(
+            task = self._Task(
                 description=SIMPLE_TASK_PROMPT,
                 agent=self.agents["general"],
-                expected_output="A comprehensive analysis and summary",
+                expected_output="A comprehensive summary of the text."
             )
-            crew = Crew(agents=[self.agents["general"]], tasks=[task], verbose=False)
+            crew = self._Crew(agents=[self.agents["general"]], tasks=[task], verbose=False)
 
-            # Retry mechanism
-            for attempt in range(max_retries):
-                try:
-                    result = await asyncio.get_event_loop().run_in_executor(None, crew.kickoff)
-                    break  # If the task succeeds, exit the retry loop
-                except Exception as e:
-                    if attempt < max_retries - 1:  # Retry if we haven't reached the max attempts
-                        self.logger.error(f"Error in simple task on attempt {attempt + 1}: {e}. Retrying...")
-                        await asyncio.sleep(retry_delay)  # Retry delay
-                    else:
-                        self.logger.error(f"Error in simple task after {max_retries} attempts: {e}")
-                        raise e  # If max retries are reached, raise the error
+            # Direct execution without retry
+            result = await asyncio.get_event_loop().run_in_executor(None, crew.kickoff)
 
             # Log the output
             self.log_output(
@@ -190,19 +189,19 @@ class CrewAIBenchmark(BaseBenchmark):
             results: List[str] = []
 
             for i, task_desc in enumerate(SEQUENTIAL_TASKS):
-                agent = self.agents["creator"] if "product" in task_desc or "marketing" in task_desc else self.agents["analyst"]
+                agent = self.agents["writer"] if "product" in task_desc or "marketing" in task_desc else self.agents["researcher"]
 
                 # For fair token comparison, use original task description
                 # but still pass context for functional accuracy
                 context = f"Previous results: {' | '.join(results)}\n\n" if results else ""
                 full_prompt = f"{context}Task {i+1}: {task_desc}"
 
-                task = Task(
+                task = self._Task(
                     description=full_prompt,
                     agent=agent,
-                    expected_output="Detailed response addressing the task requirements",
+                    expected_output="Completion of the sequential task."
                 )
-                crew = Crew(agents=[agent], tasks=[task], verbose=False)
+                crew = self._Crew(agents=[agent], tasks=[task], verbose=False)
                 result = await asyncio.get_event_loop().run_in_executor(None, crew.kickoff)
                 result_str = str(result)
                 results.append(result_str)
@@ -235,16 +234,16 @@ class CrewAIBenchmark(BaseBenchmark):
             # Optimize task execution using asyncio.gather to run tasks concurrently
             async def execute_task(task_desc: str, agent_key: str) -> str:
                 agent = self.agents[agent_key]
-                task = Task(
+                task = self._Task(
                     description=task_desc,
                     agent=agent,
-                    expected_output="Clear and concise response",
+                    expected_output="Completion of the assigned task."
                 )
-                crew = Crew(agents=[agent], tasks=[task], verbose=False)
+                crew = self._Crew(agents=[agent], tasks=[task], verbose=False)
                 return await asyncio.get_event_loop().run_in_executor(None, crew.kickoff)
 
             # Create tasks for execution
-            agent_keys = ["general", "technical", "creator", "analyst"]
+            agent_keys = ["general", "expert", "writer", "researcher"]
             concurrency: int = int(self.config.get("concurrency", len(PARALLEL_TASKS)))
             sem = asyncio.Semaphore(concurrency)
 
@@ -294,13 +293,13 @@ class CrewAIBenchmark(BaseBenchmark):
                 context = " | ".join(context_parts) if context_parts else "None"
                 full_prompt = f"Context: {context}\n\nTask: {step['prompt']}"
 
-                agent_key = "analyst" if "analysis" in step["task"] else "technical"
-                task = Task(
+                agent_key = "researcher" if "analysis" in step["task"] else "expert"
+                task = self._Task(
                     description=full_prompt,
                     agent=self.agents[agent_key],
-                    expected_output="Comprehensive analysis and recommendations",
+                    expected_output="Completion of the complex workflow step."
                 )
-                crew = Crew(agents=[self.agents[agent_key]], tasks=[task], verbose=False)
+                crew = self._Crew(agents=[self.agents[agent_key]], tasks=[task], verbose=False)
 
                 # Execute task and ensure proper result handling
                 result = await asyncio.get_event_loop().run_in_executor(None, crew.kickoff)
@@ -322,25 +321,49 @@ class CrewAIBenchmark(BaseBenchmark):
                         raise e
 
             # Identify dependent and independent steps
-            steps_to_execute = []
+            pending_tasks: List[Tuple[Dict[str, Any], Any]] = []
+
             for step in COMPLEX_WORKFLOW_STEPS:
-                # If the step has no dependencies or all dependencies are already in results, we can run it in parallel
-                if not step["depends_on"] or all(dep in results for dep in step["depends_on"]):
-                    steps_to_execute.append(execute_step(step))
+                # Check if dependencies are satisfied by CURRENT results
+                satisfied = not step["depends_on"] or all(dep in results for dep in step["depends_on"])
+                
+                if satisfied:
+                    # Dependencies are met (or none): queue for parallel execution
+                    pending_tasks.append((step, execute_step(step)))
                 else:
-                    # For steps that are dependent, execute sequentially
-                    result = await execute_step(step)
-                    results[step["task"]] = result
-                    total_tokens += count_tokens_estimate(step["prompt"] + result)
+                    # Dependencies not met: flush pending tasks to see if they resolve it
+                    if pending_tasks:
+                        tasks = [t[1] for t in pending_tasks]
+                        step_outputs = await asyncio.gather(*tasks)
+                        
+                        # Store results from flushed tasks
+                        for i, output in enumerate(step_outputs):
+                            completed_step = pending_tasks[i][0]
+                            results[completed_step["task"]] = output
+                            total_tokens += count_tokens_estimate(completed_step["prompt"] + str(output))
+                        
+                        pending_tasks = []
 
-            # Execute all steps concurrently when dependencies are satisfied
-            step_results = await asyncio.gather(*steps_to_execute)
+                    # Now check dependencies again
+                    if all(dep in results for dep in step["depends_on"]):
+                        # Dependencies resolved! Queue this step
+                        pending_tasks.append((step, execute_step(step)))
+                    else:
+                        # Dependencies still missing (should not happen in valid DAG).
+                        # Run sequentially as fallback
+                        result = await execute_step(step)
+                        results[step["task"]] = result
+                        total_tokens += count_tokens_estimate(step["prompt"] + str(result))
 
-            # Add results to the workflow
-            for i, result in enumerate(step_results):
-                step = COMPLEX_WORKFLOW_STEPS[i]
-                results[step["task"]] = result
-                total_tokens += count_tokens_estimate(step["prompt"] + result)
+            # Flush any remaining pending tasks
+            if pending_tasks:
+                tasks = [t[1] for t in pending_tasks]
+                step_outputs = await asyncio.gather(*tasks)
+                
+                for i, output in enumerate(step_outputs):
+                    completed_step = pending_tasks[i][0]
+                    results[completed_step["task"]] = output
+                    total_tokens += count_tokens_estimate(completed_step["prompt"] + str(output))
 
             # Log the output and calculate metrics
             for task_name, result in results.items():
@@ -370,12 +393,12 @@ class CrewAIBenchmark(BaseBenchmark):
             # Simulate memory-intensive task
             large_data = ["data" * 1000] * 1000  # ~4MB of string data
 
-            task = Task(
+            task = self._Task(
                 description=MEMORY_INTENSIVE_PROMPT,
-                agent=self.agents["analyst"],
-                expected_output="Detailed data analysis with insights and recommendations",
+                agent=self.agents["researcher"],
+                expected_output="A processed result of the large data task."
             )
-            crew = Crew(agents=[self.agents["analyst"]], tasks=[task], verbose=False)
+            crew = self._Crew(agents=[self.agents["researcher"]], tasks=[task], verbose=False)
 
             # Run the task asynchronously
             result = await asyncio.get_event_loop().run_in_executor(None, crew.kickoff)
@@ -415,39 +438,25 @@ class CrewAIBenchmark(BaseBenchmark):
         await asyncio.sleep(1)  # Simulate async cleanup
 
     async def run_concurrent_tasks(self) -> BenchmarkMetrics:
-        """Run concurrent tasks benchmark using CrewAI with retry mechanism."""
+        """Run concurrent tasks benchmark using CrewAI."""
         self.monitor.start_monitoring()
-
-        max_retries = 3  # Max retries for each task
-        retry_delay = 2  # Delay between retries in seconds
 
         try:
             # Optimize task execution using asyncio.gather to run tasks concurrently
             async def execute_concurrent_task(task_desc: str, agent_key: str) -> str:
                 agent = self.agents[agent_key]
-                task = Task(
+                task = self._Task(
                     description=task_desc,
                     agent=agent,
-                    expected_output="Clear and informative response",
+                    expected_output="Completion of the concurrent task."
                 )
-                crew = Crew(agents=[agent], tasks=[task], verbose=False)
+                crew = self._Crew(agents=[agent], tasks=[task], verbose=False)
 
-                # Retry mechanism
-                for attempt in range(max_retries):
-                    try:
-                        return await asyncio.get_event_loop().run_in_executor(None, crew.kickoff)
-                    except Exception as e:
-                        if attempt < max_retries - 1:  # Retry if we haven't reached the max attempts
-                            self.logger.error(f"Error in task '{task_desc}' on attempt {attempt + 1}: {e}. Retrying...")
-                            await asyncio.sleep(retry_delay)  # Exponential backoff could be added here
-                        else:
-                            self.logger.error(f"Error in task '{task_desc}' after {max_retries} attempts: {e}")
-                            raise e  # If max retries are reached, raise the error
-
-                raise RuntimeError(f"Unexpected end of retry loop for task: {task_desc}")
+                # Direct execution without retry
+                return await asyncio.get_event_loop().run_in_executor(None, crew.kickoff)
 
             # Create tasks for execution
-            agent_keys = ["general", "technical", "creator", "analyst"]
+            agent_keys = ["general", "expert", "writer", "researcher"]
             concurrency: int = int(self.config.get("concurrency", len(CONCURRENT_TASK_PROMPTS)))
             sem = asyncio.Semaphore(concurrency)
 
