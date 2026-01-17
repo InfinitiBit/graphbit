@@ -102,7 +102,7 @@ class CrewAIBenchmark(BaseBenchmark):
                 raise ValueError("Azure OpenAI endpoint not found in environment or config")
 
             self.llm = LLM(
-                model=f"azure/{llm_config_obj.model}",  # CrewAI uses azure/ prefix
+                model=f"azure/{llm_config_obj.model}",
                 api_key=api_key,
                 base_url=azure_endpoint,
                 api_version=api_version,
