@@ -23,7 +23,9 @@ dependencies = [
   "openai>=1.83.0",
   "click>=8.1.0",
   "datasets>=2.14.0",
-  "python-dotenv>=1.0.0"
+  "python-dotenv>=1.0.0",
+  "azure-ai-inference>=1.0.0b1",
+  "crewai[azure-ai-inference]>=1.6.1",
 ]
 description = "Benchmarking package for GraphBit framework"
 name = "graphbit-benchmarks"
@@ -53,7 +55,7 @@ llama-index-llms-anthropic = ">=0.10.5"
 llama-index-llms-ollama = ">=0.9.1"
 matplotlib = ">=3.9.0"
 # Core dependencies with pinned versions for Python 3.10–3.13
-numpy = ">=1.26.2,<2.0.0"  # compatible with Python 3.10–3.13
+numpy = ">=1.26.2"  # compatible with Python 3.10–3.13
 openai = ">=1.83.0"
 psutil = ">=7.2.1"
 pydantic-ai = {version = ">=1.22.0", python = ">=3.10"}
