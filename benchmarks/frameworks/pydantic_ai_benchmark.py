@@ -86,12 +86,46 @@ class PydanticAIBenchmark(BaseBenchmark):
             if not azure_endpoint:
                 raise ValueError("Azure OpenAI endpoint not found in environment or config")
 
-            # PydanticAI uses OpenAIModel with Azure parameters
-            self.model = OpenAIModel(
-                model_name=llm_config_obj.model,  # deployment name
-                base_url=f"{azure_endpoint}/openai/deployments/{llm_config_obj.model}",
+            # PydanticAI uses OpenAIModel. To support Azure correctly,
+            # we instantiate the AsyncOpenAI client manually and pass it as the 'provider'.
+            from openai import AsyncOpenAI
+            
+            # Construct Azure-specific client
+            # AsyncOpenAI native client supports Azure params if configured correctly or using azure-specific class
+            # However, standard AsyncOpenAI needs base_url logic.
+            # Ideally we'd use AzureOpenAI, but PydanticAI expects a standard provider interface or client.
+            # Passing the client instance as 'provider' is supported.
+            
+            client = AsyncOpenAI(
                 api_key=api_key,
-                openai_client_params={"default_headers": {"api-version": api_version}},
+                base_url=f"{azure_endpoint}/openai/deployments/{llm_config_obj.model}",
+                default_query={"api-version": api_version}, # api-version must be a query param
+            )
+            
+            # PydanticAI expects the provider to have 'client', 'name', 'model_profile' and other client attributes (base_url, etc.)
+            # We use a proxy wrapper to delegate everything to the client while exposing the 'client' attribute it demands.
+            class ClientWrapper:
+                def __init__(self, c):
+                    self._c = c
+                
+                @property
+                def client(self):
+                    return self._c
+                
+                @property
+                def name(self):
+                    return "openai"
+
+                @property
+                def model_profile(self):
+                    return None
+                
+                def __getattr__(self, name):
+                    return getattr(self._c, name)
+
+            self.model = OpenAIModel(
+                model_name=llm_config_obj.model,
+                provider=ClientWrapper(client),
             )
 
         else:
