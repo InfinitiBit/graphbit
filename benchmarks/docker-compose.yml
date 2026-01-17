@@ -26,18 +26,11 @@ services:
       # - ./:/app/benchmarks:ro
     working_dir: /app/benchmarks
     command: [run_benchmark.py, --help]
-    deploy:
-      resources:
-        limits:
-          memory: 4G
-          cpus: '2.0'
-        reservations:
-          memory: 1G
-          cpus: '0.5'
+    # No resource limits - use full host resources (28 CPUs, 15GB RAM)
+    # Note: deploy: section is ignored in standalone Docker Compose mode anyway
     # Optional: Add network for isolation
     # networks:
     #   - benchmark-network
-
 # Optional: Named volumes for persistence
 # volumes:
 #   benchmark-logs:
