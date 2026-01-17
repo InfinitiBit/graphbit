@@ -402,13 +402,20 @@ docker-compose run --rm graphbit-benchmark run_benchmark.py --scenarios "simple_
 docker-compose run --rm graphbit-benchmark run_benchmark.py --verbose
 
 # Run with custom configuration
-docker-compose run --rm graphbit-benchmark run_benchmark.py \
-  --provider anthropic \
-  --model claude-3-5-sonnet-20241022 \
-  --temperature 0.2 \
-  --max-tokens 1000 \
   --frameworks "graphbit,pydantic_ai" \
   --verbose
+
+# Run with Azure OpenAI (using .env variables)
+docker-compose run --rm graphbit-benchmark run_benchmark.py \
+  --provider azure_openai \
+  --model gpt-4o
+
+# Run with Azure OpenAI (explicit arguments)
+docker-compose run --rm -e AZURE_OPENAI_API_KEY="your_key" graphbit-benchmark run_benchmark.py \
+  --provider azure_openai \
+  --model your-deployment-name \
+  --base-url https://your-resource.openai.azure.com/ \
+  --api-key your_key
 ```
 
 ---
