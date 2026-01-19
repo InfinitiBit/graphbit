@@ -3,10 +3,30 @@
 //! The core library provides the foundational types, traits, and algorithms
 //! for building and executing agentic workflows in `GraphBit`.
 
-// Use jemalloc as the global allocator for better performance
-// Disable for Python bindings to avoid TLS block allocation issues
-// Also disable on Windows where jemalloc support is problematic
-#[cfg(all(not(feature = "python"), unix))]
+// Memory allocator configuration - optimized per platform
+// Disabled for Python bindings to avoid TLS block allocation issues
+
+// Linux: jemalloc
+#[cfg(all(not(feature = "python"), target_os = "linux"))]
+#[global_allocator]
+static GLOBAL: jemallocator::Jemalloc = jemallocator::Jemalloc;
+
+// macOS: mimalloc
+#[cfg(all(not(feature = "python"), target_os = "macos"))]
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
+// Windows: mimalloc
+#[cfg(all(not(feature = "python"), target_os = "windows"))]
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
+// Other Unix systems: jemalloc (broad compatibility)
+#[cfg(all(
+    not(feature = "python"),
+    unix,
+    not(any(target_os = "linux", target_os = "macos"))
+))]
 #[global_allocator]
 static GLOBAL: jemallocator::Jemalloc = jemallocator::Jemalloc;
 
