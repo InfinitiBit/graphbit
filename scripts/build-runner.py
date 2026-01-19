@@ -150,6 +150,12 @@ class BuildRunner:
                 for item in self.dist_dir.iterdir():
                     if item.suffix == ".whl":
                         artifacts.append(str(item))
+                
+                # SHow license notice
+                try:
+                    subprocess.run([python_path, "build_notice.py"], cwd=python_dir, check=False)
+                except Exception as e:
+                    print(f"Warning: Failed to show license notice: {e}")
 
             return result.returncode == 0, artifacts, result.stdout, result.stderr if result.returncode != 0 else None
 
@@ -177,6 +183,12 @@ class BuildRunner:
                 for item in self.dist_dir.iterdir():
                     if item.suffix == ".whl":
                         artifacts.append(str(item))
+
+                # Show license notice
+                try:
+                    subprocess.run([sys.executable, "build_notice.py"], cwd=python_dir, check=False)
+                except Exception as e:
+                    print(f"Warning: Failed to show license notice: {e}")
 
             return result.returncode == 0, artifacts, result.stdout, result.stderr if result.returncode != 0 else None
 

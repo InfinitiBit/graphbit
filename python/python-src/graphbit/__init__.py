@@ -1,6 +1,10 @@
 # Re-export all Rust bindings at the top level
 # This allows: from graphbit import LlmConfig, Executor, Workflow, Node, etc.
 
+# IMPORTANT: Display license notice on first import
+# This must be imported before anything else to ensure users see the license terms
+from . import _license_notice  # noqa: F401
+
 # Core functions
 from .graphbit import (
     init,
