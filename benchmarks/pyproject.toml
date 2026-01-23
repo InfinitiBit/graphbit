@@ -28,6 +28,7 @@ version = "0.1.0"
 authors = ["InfinitiBit Team"]
 description = "Benchmarking package for GraphBit framework"
 name = "graphbit-benchmarks"
+package-mode = false
 readme = "README.md"
 version = "0.1.0"
 

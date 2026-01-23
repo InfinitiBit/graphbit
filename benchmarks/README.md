@@ -68,7 +68,7 @@ source .venv/bin/activate # .venv\bin\activate for windows
 `poetry` reads dependencies from the `[tool.poetry]` section in `pyproject.toml`.
 
 ```bash
-poetry install --no-root
+poetry install
 poetry env activate
 ```
 
