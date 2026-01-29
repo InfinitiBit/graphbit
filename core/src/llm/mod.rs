@@ -5,7 +5,7 @@
 
 pub mod ai21;
 pub mod anthropic;
-pub mod azure_openai;
+pub mod azurellm;
 pub mod bytedance;
 pub mod deepseek;
 pub mod fireworks;
@@ -258,13 +258,13 @@ impl LlmProviderFactory {
             LlmConfig::Anthropic { api_key, model, .. } => {
                 Ok(Box::new(anthropic::AnthropicProvider::new(api_key, model)?))
             }
-            LlmConfig::AzureOpenAI {
+            LlmConfig::AzureLlm {
                 api_key,
                 deployment_name,
                 endpoint,
                 api_version,
                 ..
-            } => Ok(Box::new(azure_openai::AzureOpenAiProvider::new(
+            } => Ok(Box::new(azurellm::AzureLlmProvider::new(
                 api_key,
                 deployment_name,
                 endpoint,

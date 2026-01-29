@@ -5,7 +5,7 @@
 //! and end-to-end scenarios.
 
 pub mod agent_tests;
-pub mod azure_openai_integration_tests;
+pub mod azurellm_integration_tests;
 pub mod concurrency_tests;
 pub mod doc_processing_tests;
 /// Integration tests for document loading functionality
@@ -50,11 +50,11 @@ pub fn has_mistralai_api_key() -> bool {
         .unwrap_or(false)
 }
 
-/// Check if valid Azure OpenAI credentials are available
-pub fn has_azure_openai_credentials() -> bool {
-    let api_key = std::env::var("AZURE_OPENAI_API_KEY").unwrap_or_default();
-    let endpoint = std::env::var("AZURE_OPENAI_ENDPOINT").unwrap_or_default();
-    let deployment = std::env::var("AZURE_OPENAI_DEPLOYMENT").unwrap_or_default();
+/// Check if valid Azure LLM credentials are available
+pub fn has_azurellm_credentials() -> bool {
+    let api_key = std::env::var("AZURELLM_API_KEY").unwrap_or_default();
+    let endpoint = std::env::var("AZURELLM_ENDPOINT").unwrap_or_default();
+    let deployment = std::env::var("AZURELLM_DEPLOYMENT").unwrap_or_default();
 
     !api_key.is_empty()
         && !endpoint.is_empty()
@@ -118,20 +118,20 @@ pub fn get_mistralai_api_key_or_skip() -> String {
     }
 }
 
-/// Get Azure OpenAI credentials or skip test if not available
-pub fn get_azure_openai_credentials_or_skip() -> (String, String, String, String) {
-    let api_key = std::env::var("AZURE_OPENAI_API_KEY").unwrap_or_default();
-    let endpoint = std::env::var("AZURE_OPENAI_ENDPOINT").unwrap_or_default();
-    let deployment = std::env::var("AZURE_OPENAI_DEPLOYMENT").unwrap_or_default();
+/// Get Azure LLM credentials or skip test if not available
+pub fn get_azurellm_credentials_or_skip() -> (String, String, String, String) {
+    let api_key = std::env::var("AZURELLM_API_KEY").unwrap_or_default();
+    let endpoint = std::env::var("AZURELLM_ENDPOINT").unwrap_or_default();
+    let deployment = std::env::var("AZURELLM_DEPLOYMENT").unwrap_or_default();
     let api_version =
-        std::env::var("AZURE_OPENAI_API_VERSION").unwrap_or_else(|_| "2024-10-21".to_string());
+        std::env::var("AZURELLM_API_VERSION").unwrap_or_else(|_| "2024-10-21".to_string());
 
     if api_key.is_empty()
         || endpoint.is_empty()
         || deployment.is_empty()
         || api_key == "test-api-key-placeholder"
     {
-        println!("Skipping test - no valid Azure OpenAI credentials found");
+        println!("Skipping test - no valid Azure LLM credentials found");
         panic!("TEST_SKIP");
     }
 
@@ -180,9 +180,9 @@ macro_rules! skip_if_no_api {
             return;
         }
     };
-    (azure_openai) => {
-        if !$crate::has_azure_openai_credentials() {
-            println!("Skipping test - no valid Azure OpenAI credentials found");
+    (azurellm) => {
+        if !$crate::has_azurellm_credentials() {
+            println!("Skipping test - no valid Azure LLM credentials found");
             return;
         }
     };

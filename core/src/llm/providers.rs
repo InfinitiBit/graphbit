@@ -61,13 +61,13 @@ pub enum LlmConfig {
         /// Optional custom base URL
         base_url: Option<String>,
     },
-    /// `Azure OpenAI` LLM provider configuration
-    AzureOpenAI {
+    /// `Azure LLM` provider configuration for Azure-deployed models
+    AzureLlm {
         /// API key for authentication
         api_key: String,
         /// Deployment name to use
         deployment_name: String,
-        /// `Azure OpenAI` endpoint URL
+        /// `Azure LLM` endpoint URL
         endpoint: String,
         /// API version to use
         api_version: String,
@@ -232,14 +232,14 @@ impl LlmConfig {
         }
     }
 
-    /// Create `Azure OpenAI` configuration
-    pub fn azure_openai(
+    /// Create `Azure LLM` configuration
+    pub fn azurellm(
         api_key: impl Into<String>,
         deployment_name: impl Into<String>,
         endpoint: impl Into<String>,
         api_version: impl Into<String>,
     ) -> Self {
-        Self::AzureOpenAI {
+        Self::AzureLlm {
             api_key: api_key.into(),
             deployment_name: deployment_name.into(),
             endpoint: endpoint.into(),
@@ -247,13 +247,13 @@ impl LlmConfig {
         }
     }
 
-    /// Create `Azure OpenAI` configuration with default API version
-    pub fn azure_openai_with_defaults(
+    /// Create `Azure LLM` configuration with default API version
+    pub fn azurellm_with_defaults(
         api_key: impl Into<String>,
         deployment_name: impl Into<String>,
         endpoint: impl Into<String>,
     ) -> Self {
-        Self::AzureOpenAI {
+        Self::AzureLlm {
             api_key: api_key.into(),
             deployment_name: deployment_name.into(),
             endpoint: endpoint.into(),
@@ -442,7 +442,7 @@ impl LlmConfig {
         match self {
             Self::OpenAI { .. } => "openai",
             Self::Anthropic { .. } => "anthropic",
-            Self::AzureOpenAI { .. } => "azure_openai",
+            Self::AzureLlm { .. } => "azurellm",
             Self::ByteDance { .. } => "bytedance",
             Self::DeepSeek { .. } => "deepseek",
             Self::HuggingFace { .. } => "huggingface",
@@ -467,7 +467,7 @@ impl LlmConfig {
         match self {
             Self::OpenAI { model, .. } => model,
             Self::Anthropic { model, .. } => model,
-            Self::AzureOpenAI {
+            Self::AzureLlm {
                 deployment_name, ..
             } => deployment_name,
             Self::ByteDance { model, .. } => model,
