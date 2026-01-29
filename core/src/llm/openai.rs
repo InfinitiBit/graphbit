@@ -8,6 +8,7 @@ use crate::llm::{
 use async_trait::async_trait;
 use reqwest::Client;
 use serde::{Deserialize, Deserializer, Serialize};
+use std::collections::HashMap;
 
 /// `OpenAI` API provider
 pub struct OpenAiProvider {
@@ -21,16 +22,7 @@ pub struct OpenAiProvider {
 impl OpenAiProvider {
     /// Create a new `OpenAI` provider
     pub fn new(api_key: String, model: String) -> GraphBitResult<Self> {
-        // Optimized client with connection pooling for better performance
-        let client = Client::builder()
-            .timeout(std::time::Duration::from_secs(60))
-            .pool_max_idle_per_host(10) // Increased connection pool size
-            .pool_idle_timeout(std::time::Duration::from_secs(30))
-            .tcp_keepalive(std::time::Duration::from_secs(60))
-            .build()
-            .map_err(|e| {
-                GraphBitError::llm_provider("openai", format!("Failed to create HTTP client: {e}"))
-            })?;
+        let client = build_client()?;
         let base_url = "https://api.openai.com/v1".to_string();
 
         Ok(Self {
@@ -44,16 +36,7 @@ impl OpenAiProvider {
 
     /// Create a new `OpenAI` provider with custom base URL
     pub fn with_base_url(api_key: String, model: String, base_url: String) -> GraphBitResult<Self> {
-        // Use same optimized client settings
-        let client = Client::builder()
-            .timeout(std::time::Duration::from_secs(60))
-            .pool_max_idle_per_host(10)
-            .pool_idle_timeout(std::time::Duration::from_secs(30))
-            .tcp_keepalive(std::time::Duration::from_secs(60))
-            .build()
-            .map_err(|e| {
-                GraphBitError::llm_provider("openai", format!("Failed to create HTTP client: {e}"))
-            })?;
+        let client = build_client()?;
 
         Ok(Self {
             client,
@@ -68,6 +51,12 @@ impl OpenAiProvider {
     pub fn with_organization(mut self, organization: String) -> Self {
         self.organization = Some(organization);
         self
+    }
+
+    /// Check if the model is a reasoning model (o-series)
+    fn is_reasoning_model(&self) -> bool {
+        let m = self.model.as_str();
+        m.starts_with("o1") || m.starts_with("o3") || m.starts_with("o4")
     }
 
     /// Convert `GraphBit` message to `OpenAI` message format
@@ -98,6 +87,7 @@ impl OpenAiProvider {
                         .collect(),
                 )
             },
+            tool_call_id: message.tool_call_id.clone(),
         }
     }
 
@@ -150,7 +140,6 @@ impl OpenAiProvider {
                                 tc.function.name,
                                 tc.function.arguments
                             );
-                            // Try to create a simple object with the raw arguments
                             serde_json::json!({ "raw_arguments": tc.function.arguments })
                         }
                     }
@@ -178,11 +167,30 @@ impl OpenAiProvider {
             response.usage.completion_tokens,
         );
 
-        Ok(LlmResponse::new(content, &self.model)
+        let mut resp = LlmResponse::new(content, &self.model)
             .with_tool_calls(tool_calls)
             .with_usage(usage)
             .with_finish_reason(finish_reason)
-            .with_id(response.id))
+            .with_id(response.id);
+
+        if let Some(fp) = response.system_fingerprint {
+            resp = resp.with_metadata("system_fingerprint".to_string(), serde_json::Value::String(fp));
+        }
+        if let Some(tier) = response.service_tier {
+            resp = resp.with_metadata("service_tier".to_string(), serde_json::Value::String(tier));
+        }
+        if let Some(details) = response.usage.completion_tokens_details {
+            if let Ok(val) = serde_json::to_value(&details) {
+                resp = resp.with_metadata("completion_tokens_details".to_string(), val);
+            }
+        }
+        if let Some(details) = response.usage.prompt_tokens_details {
+            if let Ok(val) = serde_json::to_value(&details) {
+                resp = resp.with_metadata("prompt_tokens_details".to_string(), val);
+            }
+        }
+
+        Ok(resp)
     }
 }
 
@@ -208,24 +216,81 @@ impl LlmProviderTrait for OpenAiProvider {
             Some(request.tools.iter().map(Self::convert_tool).collect())
         };
 
+        // Extract typed OpenAI parameters from extra_params
+        let mut extra = request.extra_params;
+
+        let frequency_penalty = extract_f32(&mut extra, "frequency_penalty");
+        let presence_penalty = extract_f32(&mut extra, "presence_penalty");
+        let n = extract_u32(&mut extra, "n");
+        let stop = extra.remove("stop");
+        let seed = extra.remove("seed").and_then(|v| v.as_i64());
+        let logit_bias = extra.remove("logit_bias");
+        let response_format = extra.remove("response_format");
+        let parallel_tool_calls = extra.remove("parallel_tool_calls").and_then(|v| v.as_bool());
+        let logprobs = extra.remove("logprobs").and_then(|v| v.as_bool());
+        let top_logprobs = extract_u32(&mut extra, "top_logprobs");
+        let user = extract_string(&mut extra, "user");
+        let service_tier = extract_string(&mut extra, "service_tier");
+        let store = extra.remove("store").and_then(|v| v.as_bool());
+        let request_metadata = extra.remove("metadata");
+        let reasoning_effort = extract_string(&mut extra, "reasoning_effort");
+        let max_completion_tokens_param = extract_u32(&mut extra, "max_completion_tokens");
+        let tool_choice_override = extra.remove("tool_choice");
+        let modalities = extra.remove("modalities");
+        let audio = extra.remove("audio");
+
+        // For o-series reasoning models, use max_completion_tokens instead of max_tokens
+        let (max_tokens, max_completion_tokens) = if let Some(mct) = max_completion_tokens_param {
+            // Explicit max_completion_tokens takes priority
+            (None, Some(mct))
+        } else if self.is_reasoning_model() {
+            // Reasoning models require max_completion_tokens
+            (None, request.max_tokens)
+        } else {
+            (request.max_tokens, None)
+        };
+
+        // Determine tool_choice: explicit override > auto when tools present > None
+        let tool_choice = if let Some(override_val) = tool_choice_override {
+            Some(override_val)
+        } else if tools.is_some() {
+            Some(serde_json::Value::String("auto".to_string()))
+        } else {
+            None
+        };
+
         let body = OpenAiRequest {
             model: self.model.clone(),
             messages,
-            max_tokens: request.max_tokens,
+            frequency_penalty,
+            logit_bias,
+            logprobs,
+            top_logprobs,
+            max_tokens,
+            max_completion_tokens,
+            n,
+            presence_penalty,
+            response_format,
+            seed,
+            service_tier,
+            stop,
+            store,
             temperature: request.temperature,
             top_p: request.top_p,
             tools: tools.clone(),
-            tool_choice: if tools.is_some() {
-                Some("auto".to_string())
-            } else {
-                None
-            },
+            tool_choice,
+            parallel_tool_calls,
+            user,
+            reasoning_effort,
+            request_metadata,
+            modalities,
+            audio,
         };
 
-        // Add extra parameters
+        // Serialize and merge any remaining extra parameters
         let mut request_json = serde_json::to_value(&body)?;
         if let serde_json::Value::Object(ref mut map) = request_json {
-            for (key, value) in request.extra_params {
+            for (key, value) in extra {
                 map.insert(key, value);
             }
         }
@@ -265,57 +330,249 @@ impl LlmProviderTrait for OpenAiProvider {
     }
 
     fn supports_function_calling(&self) -> bool {
-        // Most `OpenAI` models support function calling
-        matches!(
-            self.model.as_str(),
-            "gpt-4" | "gpt-4-turbo" | "gpt-3.5-turbo" | "gpt-4o" | "gpt-4o-mini"
-        ) || self.model.starts_with("gpt-4")
-            || self.model.starts_with("gpt-3.5-turbo")
+        let m = self.model.as_str();
+        // o1-preview and o1-mini do not support function calling
+        if m == "o1-preview" || m == "o1-mini" || m.starts_with("o1-preview-") || m.starts_with("o1-mini-") {
+            return false;
+        }
+        // All GPT and o-series models support function calling
+        m.starts_with("gpt-")
+            || m.starts_with("o1")
+            || m.starts_with("o3")
+            || m.starts_with("o4")
+            || m.starts_with("chatgpt-")
     }
 
     fn max_context_length(&self) -> Option<u32> {
-        match self.model.as_str() {
-            "gpt-4" => Some(8192),
-            "gpt-4-32k" => Some(32_768),
-            "gpt-4-turbo" => Some(128_000),
-            "gpt-4o" => Some(128_000),
-            "gpt-4o-mini" => Some(128_000),
-            "gpt-3.5-turbo" => Some(4096),
-            "gpt-3.5-turbo-16k" => Some(16_384),
-            _ => None,
+        let m = self.model.as_str();
+        // GPT-4.1 series: 1M tokens
+        if m.starts_with("gpt-4.1") {
+            Some(1_000_000)
+        }
+        // O-series reasoning models: 200K tokens
+        else if m.starts_with("o1") || m.starts_with("o3") || m.starts_with("o4") {
+            Some(200_000)
+        }
+        // GPT-4o series: 128K tokens
+        else if m.starts_with("gpt-4o") {
+            Some(128_000)
+        }
+        // GPT-4.5 preview: 128K tokens
+        else if m.starts_with("gpt-4.5") {
+            Some(128_000)
+        }
+        // GPT-4 Turbo: 128K tokens
+        else if m == "gpt-4-turbo" || m.starts_with("gpt-4-turbo-") {
+            Some(128_000)
+        }
+        // GPT-4 32K
+        else if m == "gpt-4-32k" || m.starts_with("gpt-4-32k-") {
+            Some(32_768)
+        }
+        // GPT-4 base: 8K tokens
+        else if m == "gpt-4" || m.starts_with("gpt-4-0") {
+            Some(8_192)
+        }
+        // GPT-3.5 Turbo: 16K tokens
+        else if m.starts_with("gpt-3.5-turbo") {
+            Some(16_384)
+        }
+        // ChatGPT models
+        else if m.starts_with("chatgpt-") {
+            Some(128_000)
+        }
+        else {
+            None
         }
     }
 
     fn cost_per_token(&self) -> Option<(f64, f64)> {
-        // Cost per token in USD (input, output) as of late 2023
-        match self.model.as_str() {
-            "gpt-4" => Some((0.000_03, 0.000_06)),
-            "gpt-4-32k" => Some((0.000_06, 0.000_12)),
-            "gpt-4-turbo" => Some((0.000_01, 0.000_03)),
-            "gpt-4o" => Some((0.000_005, 0.000_015)),
-            "gpt-4o-mini" => Some((0.000_000_15, 0.000_000_6)),
-            "gpt-3.5-turbo" => Some((0.000_001_5, 0.000_002)),
-            "gpt-3.5-turbo-16k" => Some((0.000_003, 0.000_004)),
-            _ => None,
+        let m = self.model.as_str();
+        // GPT-4.1 nano: $0.10/$0.40 per 1M tokens
+        if m.starts_with("gpt-4.1-nano") {
+            Some((0.000_000_1, 0.000_000_4))
+        }
+        // GPT-4.1 mini: $0.40/$1.60 per 1M tokens
+        else if m.starts_with("gpt-4.1-mini") {
+            Some((0.000_000_4, 0.000_001_6))
+        }
+        // GPT-4.1: $2.00/$8.00 per 1M tokens
+        else if m.starts_with("gpt-4.1") {
+            Some((0.000_002, 0.000_008))
+        }
+        // GPT-4o mini: $0.15/$0.60 per 1M tokens
+        else if m.starts_with("gpt-4o-mini") {
+            Some((0.000_000_15, 0.000_000_6))
+        }
+        // GPT-4o: $2.50/$10.00 per 1M tokens
+        else if m.starts_with("gpt-4o") {
+            Some((0.000_002_5, 0.000_01))
+        }
+        // GPT-4.5 preview: $75.00/$150.00 per 1M tokens
+        else if m.starts_with("gpt-4.5") {
+            Some((0.000_075, 0.000_15))
+        }
+        // GPT-4 Turbo: $10.00/$30.00 per 1M tokens
+        else if m == "gpt-4-turbo" || m.starts_with("gpt-4-turbo-") {
+            Some((0.000_01, 0.000_03))
+        }
+        // GPT-4 32K: $60.00/$120.00 per 1M tokens
+        else if m == "gpt-4-32k" || m.starts_with("gpt-4-32k-") {
+            Some((0.000_06, 0.000_12))
+        }
+        // GPT-4 base: $30.00/$60.00 per 1M tokens
+        else if m == "gpt-4" || m.starts_with("gpt-4-0") {
+            Some((0.000_03, 0.000_06))
+        }
+        // GPT-3.5 Turbo: $0.50/$1.50 per 1M tokens
+        else if m.starts_with("gpt-3.5-turbo") {
+            Some((0.000_000_5, 0.000_001_5))
+        }
+        // o4-mini: $1.10/$4.40 per 1M tokens
+        else if m.starts_with("o4-mini") {
+            Some((0.000_001_1, 0.000_004_4))
+        }
+        // o3-pro: $20.00/$80.00 per 1M tokens
+        else if m.starts_with("o3-pro") {
+            Some((0.000_02, 0.000_08))
+        }
+        // o3-mini: $1.10/$4.40 per 1M tokens
+        else if m.starts_with("o3-mini") {
+            Some((0.000_001_1, 0.000_004_4))
+        }
+        // o3: $10.00/$40.00 per 1M tokens
+        else if m.starts_with("o3") {
+            Some((0.000_01, 0.000_04))
+        }
+        // o1-mini: $3.00/$12.00 per 1M tokens
+        else if m == "o1-mini" || m.starts_with("o1-mini-") {
+            Some((0.000_003, 0.000_012))
+        }
+        // o1-preview: $15.00/$60.00 per 1M tokens
+        else if m == "o1-preview" || m.starts_with("o1-preview-") {
+            Some((0.000_015, 0.000_06))
+        }
+        // o1: $15.00/$60.00 per 1M tokens
+        else if m.starts_with("o1") {
+            Some((0.000_015, 0.000_06))
+        }
+        else {
+            None
         }
     }
 }
 
-// `OpenAI` API types
+// --- Helper functions ---
+
+/// Build an optimized HTTP client with connection pooling
+fn build_client() -> GraphBitResult<Client> {
+    Client::builder()
+        .timeout(std::time::Duration::from_secs(120))
+        .pool_max_idle_per_host(10)
+        .pool_idle_timeout(std::time::Duration::from_secs(30))
+        .tcp_keepalive(std::time::Duration::from_secs(60))
+        .build()
+        .map_err(|e| {
+            GraphBitError::llm_provider("openai", format!("Failed to create HTTP client: {e}"))
+        })
+}
+
+/// Extract an f32 value from extra_params
+fn extract_f32(extra: &mut HashMap<String, serde_json::Value>, key: &str) -> Option<f32> {
+    extra.remove(key).and_then(|v| v.as_f64().map(|f| f as f32))
+}
+
+/// Extract a u32 value from extra_params
+fn extract_u32(extra: &mut HashMap<String, serde_json::Value>, key: &str) -> Option<u32> {
+    extra.remove(key).and_then(|v| v.as_u64().map(|n| n as u32))
+}
+
+/// Extract a String value from extra_params
+fn extract_string(extra: &mut HashMap<String, serde_json::Value>, key: &str) -> Option<String> {
+    extra.remove(key).and_then(|v| match v {
+        serde_json::Value::String(s) => Some(s),
+        _ => None,
+    })
+}
+
+// --- OpenAI API types ---
+
+/// Request body for the OpenAI Chat Completions API
 #[derive(Debug, Serialize)]
 struct OpenAiRequest {
+    /// ID of the model to use
     model: String,
+    /// Messages comprising the conversation
     messages: Vec<OpenAiMessage>,
+    /// Penalize new tokens based on their frequency in the text so far (-2.0 to 2.0)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    frequency_penalty: Option<f32>,
+    /// Modify the likelihood of specified tokens appearing (token ID to bias -100 to 100)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    logit_bias: Option<serde_json::Value>,
+    /// Whether to return log probabilities of the output tokens
+    #[serde(skip_serializing_if = "Option::is_none")]
+    logprobs: Option<bool>,
+    /// Number of most likely tokens to return at each position (0-20, requires logprobs)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    top_logprobs: Option<u32>,
+    /// Maximum number of tokens to generate (legacy, use max_completion_tokens for o-series)
     #[serde(skip_serializing_if = "Option::is_none")]
     max_tokens: Option<u32>,
+    /// Upper bound for tokens including visible output and reasoning tokens
+    #[serde(skip_serializing_if = "Option::is_none")]
+    max_completion_tokens: Option<u32>,
+    /// How many chat completion choices to generate for each input message
+    #[serde(skip_serializing_if = "Option::is_none")]
+    n: Option<u32>,
+    /// Penalize new tokens based on whether they appear in the text so far (-2.0 to 2.0)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    presence_penalty: Option<f32>,
+    /// Output format control (ResponseFormatText, ResponseFormatJSONSchema, ResponseFormatJSONObject)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    response_format: Option<serde_json::Value>,
+    /// Seed for deterministic sampling (best effort)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    seed: Option<i64>,
+    /// Processing type: "auto", "default", "flex", or "priority"
+    #[serde(skip_serializing_if = "Option::is_none")]
+    service_tier: Option<String>,
+    /// Up to 4 sequences where the API will stop generating further tokens
+    #[serde(skip_serializing_if = "Option::is_none")]
+    stop: Option<serde_json::Value>,
+    /// Whether to store the output for model distillation or evals
+    #[serde(skip_serializing_if = "Option::is_none")]
+    store: Option<bool>,
+    /// Sampling temperature (0 to 2)
     #[serde(skip_serializing_if = "Option::is_none")]
     temperature: Option<f32>,
+    /// Nucleus sampling parameter
     #[serde(skip_serializing_if = "Option::is_none")]
     top_p: Option<f32>,
+    /// List of tools (functions) the model may call
     #[serde(skip_serializing_if = "Option::is_none")]
     tools: Option<Vec<OpenAiTool>>,
+    /// Controls which function is called: "none", "auto", "required", or specific function
     #[serde(skip_serializing_if = "Option::is_none")]
-    tool_choice: Option<String>,
+    tool_choice: Option<serde_json::Value>,
+    /// Whether to enable parallel function calling during tool use
+    #[serde(skip_serializing_if = "Option::is_none")]
+    parallel_tool_calls: Option<bool>,
+    /// End-user identifier for abuse detection and caching
+    #[serde(skip_serializing_if = "Option::is_none")]
+    user: Option<String>,
+    /// Reasoning effort for o-series models: "low", "medium", "high"
+    #[serde(skip_serializing_if = "Option::is_none")]
+    reasoning_effort: Option<String>,
+    /// Key-value metadata to attach to the request
+    #[serde(rename = "metadata", skip_serializing_if = "Option::is_none")]
+    request_metadata: Option<serde_json::Value>,
+    /// Output types, e.g. ["text", "audio"] for audio-capable models
+    #[serde(skip_serializing_if = "Option::is_none")]
+    modalities: Option<serde_json::Value>,
+    /// Audio output parameters (format, voice) when audio modality is enabled
+    #[serde(skip_serializing_if = "Option::is_none")]
+    audio: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -325,6 +582,8 @@ struct OpenAiMessage {
     content: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     tool_calls: Option<Vec<OpenAiToolCall>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tool_call_id: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -358,6 +617,10 @@ struct OpenAiResponse {
     id: String,
     choices: Vec<OpenAiChoice>,
     usage: OpenAiUsage,
+    #[serde(default)]
+    system_fingerprint: Option<String>,
+    #[serde(default)]
+    service_tier: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -370,6 +633,28 @@ struct OpenAiChoice {
 struct OpenAiUsage {
     prompt_tokens: u32,
     completion_tokens: u32,
+    #[serde(default)]
+    completion_tokens_details: Option<OpenAiCompletionTokensDetails>,
+    #[serde(default)]
+    prompt_tokens_details: Option<OpenAiPromptTokensDetails>,
+}
+
+/// Detailed breakdown of completion token usage (includes reasoning tokens for o-series)
+#[derive(Debug, Serialize, Deserialize)]
+struct OpenAiCompletionTokensDetails {
+    #[serde(default)]
+    reasoning_tokens: Option<u32>,
+    #[serde(default)]
+    accepted_prediction_tokens: Option<u32>,
+    #[serde(default)]
+    rejected_prediction_tokens: Option<u32>,
+}
+
+/// Detailed breakdown of prompt token usage
+#[derive(Debug, Serialize, Deserialize)]
+struct OpenAiPromptTokensDetails {
+    #[serde(default)]
+    cached_tokens: Option<u32>,
 }
 
 /// Custom deserializer for nullable content field

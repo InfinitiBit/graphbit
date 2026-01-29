@@ -380,6 +380,7 @@ mod tests {
             role: LlmRole::User,
             content: "Hello, world!".to_string(),
             tool_calls: Vec::new(),
+            tool_call_id: None,
         };
 
         let bytedance_message = ByteDanceProvider::convert_message(&message);
@@ -394,6 +395,7 @@ mod tests {
             role: LlmRole::Assistant,
             content: "Hello! How can I help you?".to_string(),
             tool_calls: Vec::new(),
+            tool_call_id: None,
         };
 
         let bytedance_message = ByteDanceProvider::convert_message(&message);
@@ -408,6 +410,7 @@ mod tests {
             role: LlmRole::System,
             content: "You are a helpful assistant.".to_string(),
             tool_calls: Vec::new(),
+            tool_call_id: None,
         };
 
         let bytedance_message = ByteDanceProvider::convert_message(&message);

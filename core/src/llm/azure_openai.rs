@@ -385,6 +385,7 @@ mod tests {
             role: LlmRole::User,
             content: "Hello, world!".to_string(),
             tool_calls: Vec::new(),
+            tool_call_id: None,
         };
 
         let azure_message = AzureOpenAiProvider::convert_message(&message);

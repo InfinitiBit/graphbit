@@ -5,7 +5,7 @@ GraphBit supports multiple Large Language Model providers through a unified clie
 ## Supported Providers
 
 GraphBit supports these LLM providers:
-- **OpenAI** - GPT models including GPT-4o, GPT-4o-mini
+- **OpenAI** - GPT-4.1, GPT-4o, o3, o4-mini, and other models with full Chat Completions API support
 - **Azure OpenAI** - GPT models hosted on Microsoft Azure with enterprise features
 - **Anthropic** - Claude models including Claude-4-Sonnet
 - **MistralAI** - Mistral models including Mistral Large, Mistral Medium, and Mistral Small with function calling support
@@ -43,23 +43,157 @@ print(f"Model: {config.model()}")        # "gpt-4o-mini"
 
 #### Available OpenAI Models
 
-| Model | Best For | Context Length | Performance |
-|-------|----------|----------------|-------------|
-| `gpt-4o` | Complex reasoning, latest features | 128K | High quality, slower |
-| `gpt-4o-mini` | Balanced performance and cost | 128K | Good quality, faster |
+**GPT-4.1 Series (Latest)**
+
+| Model | Best For | Context Length | Cost (per 1M tokens) |
+|-------|----------|----------------|----------------------|
+| `gpt-4.1` | Instruction following, coding, long context | 1M | $2.00 / $8.00 |
+| `gpt-4.1-mini` | Balanced performance and cost | 1M | $0.40 / $1.60 |
+| `gpt-4.1-nano` | Fast, cost-efficient tasks | 1M | $0.10 / $0.40 |
+
+**GPT-4o Series**
+
+| Model | Best For | Context Length | Cost (per 1M tokens) |
+|-------|----------|----------------|----------------------|
+| `gpt-4o` | Complex reasoning, multimodal | 128K | $2.50 / $10.00 |
+| `gpt-4o-mini` | Balanced performance and cost | 128K | $0.15 / $0.60 |
+
+**O-Series Reasoning Models**
+
+| Model | Best For | Context Length | Cost (per 1M tokens) |
+|-------|----------|----------------|----------------------|
+| `o3` | Complex reasoning, multi-step problems | 200K | $10.00 / $40.00 |
+| `o3-mini` | Fast reasoning, science, math, coding | 200K | $1.10 / $4.40 |
+| `o3-pro` | Highest reliability reasoning | 200K | $20.00 / $80.00 |
+| `o4-mini` | Fast reasoning, coding, visual tasks | 200K | $1.10 / $4.40 |
+| `o1` | Advanced reasoning and analysis | 200K | $15.00 / $60.00 |
+
+**Legacy Models**
+
+| Model | Best For | Context Length | Cost (per 1M tokens) |
+|-------|----------|----------------|----------------------|
+| `gpt-4-turbo` | Advanced tasks, function calling | 128K | $10.00 / $30.00 |
+| `gpt-4` | Complex analysis | 8K | $30.00 / $60.00 |
+| `gpt-3.5-turbo` | General tasks, cost-effective | 16K | $0.50 / $1.50 |
 
 ```python
 # Model selection examples
-creative_config = LlmConfig.openai(
+
+# Latest GPT-4.1 for instruction-following and long context
+config_41 = LlmConfig.openai(
     api_key=os.getenv("OPENAI_API_KEY"),
-    model="gpt-4o"  # For creative and complex tasks
+    model="gpt-4.1"
 )
 
+# Cost-efficient GPT-4.1 nano
+config_nano = LlmConfig.openai(
+    api_key=os.getenv("OPENAI_API_KEY"),
+    model="gpt-4.1-nano"
+)
+
+# Reasoning model for complex multi-step tasks
+config_reasoning = LlmConfig.openai(
+    api_key=os.getenv("OPENAI_API_KEY"),
+    model="o3"
+)
+
+# Fast reasoning model
+config_fast_reasoning = LlmConfig.openai(
+    api_key=os.getenv("OPENAI_API_KEY"),
+    model="o4-mini"
+)
+
+# Balanced for production
 production_config = LlmConfig.openai(
     api_key=os.getenv("OPENAI_API_KEY"),
-    model="gpt-4o-mini"  # Balanced for production
+    model="gpt-4o-mini"
 )
+```
 
+#### Supported OpenAI Chat Completions API Parameters
+
+All parameters from the OpenAI Chat Completions API are supported. Common parameters (`max_tokens`, `temperature`, `top_p`) are set directly on the request. All other parameters are passed via `extra_params`:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `temperature` | float | Sampling temperature (0 to 2). Set directly on the request. |
+| `top_p` | float | Nucleus sampling parameter. Set directly on the request. |
+| `max_tokens` | int | Maximum tokens to generate. Set directly on the request. Automatically mapped to `max_completion_tokens` for o-series models. |
+| `max_completion_tokens` | int | Upper bound for output + reasoning tokens. Required for o-series. Pass via `extra_params`. |
+| `frequency_penalty` | float | Penalize tokens by frequency (-2.0 to 2.0). Pass via `extra_params`. |
+| `presence_penalty` | float | Penalize tokens by presence (-2.0 to 2.0). Pass via `extra_params`. |
+| `stop` | string/array | Up to 4 stop sequences. Pass via `extra_params`. |
+| `seed` | int | Seed for deterministic sampling. Pass via `extra_params`. |
+| `n` | int | Number of completions to generate. Pass via `extra_params`. |
+| `logprobs` | bool | Return log probabilities. Pass via `extra_params`. |
+| `top_logprobs` | int | Number of most likely tokens (0-20). Pass via `extra_params`. |
+| `logit_bias` | object | Modify token likelihoods. Pass via `extra_params`. |
+| `response_format` | object | Control output structure (JSON mode, JSON schema). Pass via `extra_params`. |
+| `tool_choice` | string/object | Control tool calling: `"none"`, `"auto"`, `"required"`, or specific function. Pass via `extra_params`. |
+| `parallel_tool_calls` | bool | Enable parallel function calling. Pass via `extra_params`. |
+| `reasoning_effort` | string | Reasoning depth for o-series: `"low"`, `"medium"`, `"high"`. Pass via `extra_params`. |
+| `service_tier` | string | Processing type: `"auto"`, `"default"`, `"flex"`, `"priority"`. Pass via `extra_params`. |
+| `store` | bool | Store output for distillation or evals. Pass via `extra_params`. |
+| `metadata` | object | Key-value metadata for the request. Pass via `extra_params`. |
+| `user` | string | End-user identifier for abuse detection. Pass via `extra_params`. |
+| `modalities` | array | Output types, e.g. `["text", "audio"]`. Pass via `extra_params`. |
+| `audio` | object | Audio output parameters (format, voice). Pass via `extra_params`. |
+
+**Rust usage with extra_params:**
+
+```rust
+use graphbit_core::llm::{LlmConfig, LlmRequest, LlmProviderFactory};
+
+let config = LlmConfig::openai("your-api-key", "gpt-4.1");
+let provider = LlmProviderFactory::create_provider(config)?;
+
+let request = LlmRequest::new("Explain quantum computing")
+    .with_max_tokens(500)
+    .with_temperature(0.7)
+    // OpenAI-specific parameters via extra_params
+    .with_extra_param("frequency_penalty".into(), serde_json::json!(0.5))
+    .with_extra_param("seed".into(), serde_json::json!(42))
+    .with_extra_param("response_format".into(), serde_json::json!({"type": "json_object"}));
+
+let response = provider.complete(request).await?;
+```
+
+**Using reasoning models with reasoning_effort:**
+
+```rust
+let config = LlmConfig::openai("your-api-key", "o3");
+let provider = LlmProviderFactory::create_provider(config)?;
+
+// max_tokens is automatically mapped to max_completion_tokens for o-series models
+let request = LlmRequest::new("Solve this complex math problem: ...")
+    .with_max_tokens(4096)
+    .with_extra_param("reasoning_effort".into(), serde_json::json!("high"));
+
+let response = provider.complete(request).await?;
+// Access reasoning token details from response metadata
+if let Some(details) = response.metadata.get("completion_tokens_details") {
+    println!("Reasoning tokens used: {}", details);
+}
+```
+
+#### OpenAI Response Metadata
+
+The OpenAI provider returns additional metadata in the response:
+
+| Metadata Key | Description |
+|-------------|-------------|
+| `system_fingerprint` | Backend configuration fingerprint for determinism tracking |
+| `service_tier` | The service tier used for the request |
+| `completion_tokens_details` | Breakdown including `reasoning_tokens`, `accepted_prediction_tokens`, `rejected_prediction_tokens` |
+| `prompt_tokens_details` | Breakdown including `cached_tokens` |
+
+```rust
+let response = provider.complete(request).await?;
+
+// Access metadata
+if let Some(fp) = response.metadata.get("system_fingerprint") {
+    println!("System fingerprint: {}", fp);
+}
 ```
 
 ### Azure OpenAI Configuration
@@ -1075,34 +1209,84 @@ import os
 from graphbit import LlmConfig, Workflow, Node, Executor
 
 def create_openai_workflow():
-    """Create workflow using OpenAI"""
-    
-    # Configure OpenAI
+    """Create workflow using OpenAI GPT-4.1"""
+
+    # Configure OpenAI with GPT-4.1
     config = LlmConfig.openai(
         api_key=os.getenv("OPENAI_API_KEY"),
-        model="gpt-4o-mini"
+        model="gpt-4.1-mini"
     )
-    
+
     # Create workflow
     workflow = Workflow("OpenAI Analysis Pipeline")
-    
+
     # Create analyzer node
     analyzer = Node.agent(
         name="GPT Content Analyzer",
         prompt=f"Analyze the following content for sentiment, key themes, and quality:\n\n{input}",
         agent_id="gpt_analyzer"
     )
-    
+
     # Add to workflow
     analyzer_id = workflow.add_node(analyzer)
     workflow.validate()
-    
+
     # Create executor and run
     executor = Executor(config, timeout_seconds=60)
     return workflow, executor
 
 # Usage
 workflow, executor = create_openai_workflow()
+result = executor.execute(workflow)
+```
+
+### OpenAI Reasoning Model Workflow Example
+
+```python
+import os
+
+from graphbit import LlmConfig, Workflow, Node, Executor
+
+def create_reasoning_workflow():
+    """Create workflow using OpenAI o-series reasoning models"""
+
+    # Configure with o4-mini for fast reasoning
+    config = LlmConfig.openai(
+        api_key=os.getenv("OPENAI_API_KEY"),
+        model="o4-mini"
+    )
+
+    # Create workflow
+    workflow = Workflow("Reasoning Analysis Pipeline")
+
+    # Create a reasoning node for complex analysis
+    reasoner = Node.agent(
+        name="Deep Reasoner",
+        prompt=f"Think step by step and solve this problem:\n\n{input}",
+        agent_id="reasoner"
+    )
+
+    # Create a summarizer using a faster model
+    summarizer = Node.agent(
+        name="Result Summarizer",
+        prompt=f"Summarize this analysis concisely:\n\n{input}",
+        agent_id="summarizer",
+        llm_config=LlmConfig.openai(
+            api_key=os.getenv("OPENAI_API_KEY"),
+            model="gpt-4.1-nano"  # Fast, cheap model for summarization
+        )
+    )
+
+    id1 = workflow.add_node(reasoner)
+    id2 = workflow.add_node(summarizer)
+    workflow.connect(id1, id2)
+    workflow.validate()
+
+    executor = Executor(config, timeout_seconds=120)
+    return workflow, executor
+
+# Usage
+workflow, executor = create_reasoning_workflow()
 result = executor.execute(workflow)
 ```
 
@@ -1544,7 +1728,7 @@ def build_multi_provider_workflow():
 
     openai_config = LlmConfig.openai(
         api_key=os.getenv("OPENAI_API_KEY"),
-        model="gpt-4o-mini"
+        model="gpt-4.1-mini"
     )
 
     ollama_config = LlmConfig.ollama(
@@ -1590,7 +1774,7 @@ def build_multi_provider_workflow():
     # Executor config serves as fallback for any nodes without llm_config
     default_config = LlmConfig.openai(
         api_key=os.getenv("OPENAI_API_KEY"),
-        model="gpt-4o-mini"
+        model="gpt-4.1-mini"
     )
 
     executor = Executor(default_config, timeout_seconds=300)
@@ -1613,7 +1797,12 @@ def get_optimal_config(use_case):
     if use_case == "creative":
         return LlmConfig.openai(
             api_key=os.getenv("OPENAI_API_KEY"),
-            model="gpt-4o"
+            model="gpt-4.1"
+        )
+    elif use_case == "reasoning":
+        return LlmConfig.openai(
+            api_key=os.getenv("OPENAI_API_KEY"),
+            model="o3"  # Or o4-mini for faster, cheaper reasoning
         )
     elif use_case == "analytical":
         return LlmConfig.anthropic(
@@ -1629,11 +1818,6 @@ def get_optimal_config(use_case):
         return LlmConfig.deepseek(
             api_key=os.getenv("DEEPSEEK_API_KEY"),
             model="deepseek-coder"
-        )
-    elif use_case == "reasoning":
-        return LlmConfig.deepseek(
-            api_key=os.getenv("DEEPSEEK_API_KEY"),
-            model="deepseek-reasoner"
         )
     elif use_case == "multi_model":
         return LlmConfig.openrouter(
@@ -1655,7 +1839,7 @@ def get_optimal_config(use_case):
     else:
         return LlmConfig.openai(
             api_key=os.getenv("OPENAI_API_KEY"),
-            model="gpt-4o-mini"
+            model="gpt-4.1-mini"
         )
 ```
 
