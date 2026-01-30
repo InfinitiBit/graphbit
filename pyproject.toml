@@ -32,10 +32,6 @@ dependencies = [
   "huggingface_hub>=0.33.4",
   "numpy>=1.24.0",
   "litellm>=1.80.5"
-  "autogen-agentchat==0.5.7",
-  "autogen-core==0.5.7",
-  "autogen-ext==0.5.7",
-  "autogenstudio==0.4.2.2"
 ]
 description = "GraphBit - Advanced workflow automation and AI agent orchestration library"
 keywords = ["ai", "agents", "workflow", "automation", "rust", "python", "llm", "orchestration"]
