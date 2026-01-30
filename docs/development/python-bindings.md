@@ -13,6 +13,7 @@ GraphBit's Python bindings provide a production-grade, high-performance Python A
 - **Resource Management**: Proper cleanup and memory management
 
 ## Architecture
+The architecture is based on the following principles:
 
 ### Module Structure
 
