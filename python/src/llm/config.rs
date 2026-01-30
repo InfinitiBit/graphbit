@@ -1,8 +1,10 @@
 //! LLM configuration for GraphBit Python bindings
 
 use crate::validation::validate_api_key;
+use graphbit_core::llm::providers::register_python_instance;
 use graphbit_core::llm::LlmConfig as CoreLlmConfig;
 use pyo3::prelude::*;
+use uuid::Uuid;
 
 /// Configuration for LLM providers and models
 #[pyclass]
@@ -41,16 +43,16 @@ impl LlmConfig {
 
     #[staticmethod]
     #[pyo3(signature = (api_key, deployment_name, endpoint, api_version=None))]
-    fn azure_openai(
+    fn azurellm(
         api_key: String,
         deployment_name: String,
         endpoint: String,
         api_version: Option<String>,
     ) -> PyResult<Self> {
-        validate_api_key(&api_key, "Azure OpenAI")?;
+        validate_api_key(&api_key, "Azure LLM")?;
 
         Ok(Self {
-            inner: CoreLlmConfig::azure_openai(
+            inner: CoreLlmConfig::azurellm(
                 api_key,
                 deployment_name,
                 endpoint,
@@ -270,9 +272,62 @@ impl LlmConfig {
                 ))
             })?;
 
+            let py_object: PyObject = hf_instance.into();
+            let instance_arc = std::sync::Arc::new(py_object);
+            let instance_id = Uuid::new_v4().to_string();
+
+            // Register the instance globally
+            register_python_instance(instance_id.clone(), instance_arc.clone());
+
             let config = CoreLlmConfig::PythonBridge {
-                python_instance: std::sync::Arc::new(hf_instance.into()),
+                python_instance: Some(instance_arc),
                 model: model.unwrap_or_else(|| "microsoft/DialoGPT-medium".to_string()),
+                instance_id: Some(instance_id),
+            };
+
+            Ok(Self { inner: config })
+        })
+    }
+
+    #[staticmethod]
+    #[pyo3(signature = (api_key=None, model=None))]
+    fn litellm(api_key: Option<String>, model: Option<String>) -> PyResult<Self> {
+        // API key is optional for LiteLLM as it can use environment variables
+        if let Some(ref key) = api_key {
+            validate_api_key(key, "LiteLLM")?;
+        }
+
+        Python::with_gil(|py| {
+            // Import the Python LiteLLM class
+            let litellm_module = py.import("graphbit.providers.litellm.llm").map_err(|e| {
+                pyo3::exceptions::PyImportError::new_err(format!(
+                    "Failed to import LiteLLM module: {e}"
+                ))
+            })?;
+            let litellm_class = litellm_module.getattr("LiteLLMLLM").map_err(|e| {
+                pyo3::exceptions::PyAttributeError::new_err(format!(
+                    "Failed to get LiteLLMLLM class: {e}"
+                ))
+            })?;
+
+            // Create instance with optional API key
+            let litellm_instance = if let Some(key) = api_key {
+                litellm_class.call1((key,)).map_err(|e| {
+                    pyo3::exceptions::PyRuntimeError::new_err(format!(
+                        "Failed to create LiteLLMLLM instance: {e}"
+                    ))
+                })?
+            } else {
+                litellm_class.call0().map_err(|e| {
+                    pyo3::exceptions::PyRuntimeError::new_err(format!(
+                        "Failed to create LiteLLMLLM instance: {e}"
+                    ))
+                })?
+            };
+
+            let config = CoreLlmConfig::PythonBridge {
+                python_instance: std::sync::Arc::new(litellm_instance.into()),
+                model: model.unwrap_or_else(|| "gpt-3.5-turbo".to_string()),
             };
 
             Ok(Self { inner: config })

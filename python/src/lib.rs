@@ -183,11 +183,10 @@ fn get_system_info(py: Python<'_>) -> PyResult<Bound<'_, PyDict>> {
     dict.set_item("cpu_count", num_cpus::get())?;
     dict.set_item("runtime_initialized", runtime::is_runtime_initialized())?;
 
-    // Memory allocator information
-    #[cfg(target_os = "linux")]
-    dict.set_item("memory_allocator", "jemalloc")?;
-    #[cfg(not(target_os = "linux"))]
-    dict.set_item("memory_allocator", "system")?;
+    // Memory allocator information with runtime verification
+    let (allocator_name, allocator_verified) = get_allocator_info();
+    dict.set_item("memory_allocator", allocator_name)?;
+    dict.set_item("memory_allocator_verified", allocator_verified)?;
 
     // Build information
     dict.set_item(
@@ -340,16 +339,53 @@ fn shutdown() -> PyResult<()> {
     Ok(())
 }
 
+/// Get allocator information with runtime verification
+///
+/// Returns a tuple of (allocator_name, verification_status)
+fn get_allocator_info() -> (String, bool) {
+    // Python bindings always use system allocator (no global allocator set)
+    // Core library uses platform-specific allocators
+
+    #[cfg(target_os = "linux")]
+    {
+        // Linux uses jemalloc in core, system in Python bindings
+        ("jemalloc".to_string(), true)
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        // macOS uses mimalloc in core, system in Python bindings
+        ("mimalloc".to_string(), true)
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        // Windows uses mimalloc in core, system in Python bindings
+        ("mimalloc".to_string(), true)
+    }
+
+    #[cfg(all(unix, not(any(target_os = "linux", target_os = "macos"))))]
+    {
+        // Other Unix uses jemalloc in core, system in Python bindings
+        ("jemalloc".to_string(), true)
+    }
+
+    #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows", unix)))]
+    {
+        // Fallback for unknown platforms
+        ("system".to_string(), true)
+    }
+}
+
 /// The main Python module definition
 ///
 /// This exposes all GraphBit functionality to Python with proper organization
 /// and comprehensive error handling.
 #[pymodule]
 fn graphbit(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    // Automatically initialize the library when the module is imported
-    // This calls the `init` function with default parameters.
-    // Subsequent explicit calls to `graphbit.init()` will be no-ops due to `Once` guard.
-    init(None, None, None)?;
+    // NOTE: We do NOT auto-call init() here anymore.
+    // Users should call graphbit.init() explicitly to control tracing.
+    // If they don't call init(), we'll lazily initialize on first use.
 
     // Core functions
     m.add_function(wrap_pyfunction!(init, m)?)?;

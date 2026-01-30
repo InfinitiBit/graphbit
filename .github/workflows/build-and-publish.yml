@@ -31,11 +31,6 @@ name: Build and Publish to PyPI
 # ============================================================================
 
 on:
-  # Automatic trigger on version tags
-  push:
-    tags:
-    - v*      # Matches v0.5.0, v1.0.0, etc.
-
   # Manual trigger with options
   workflow_dispatch:
     inputs:

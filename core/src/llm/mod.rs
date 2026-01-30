@@ -5,7 +5,7 @@
 
 pub mod ai21;
 pub mod anthropic;
-pub mod azure_openai;
+pub mod azurellm;
 pub mod bytedance;
 pub mod deepseek;
 pub mod fireworks;
@@ -54,7 +54,7 @@ impl LlmRequest {
             max_tokens: None,
             temperature: None,
             top_p: None,
-            tools: Vec::with_capacity(4), // Pre-allocate small capacity
+            tools: Vec::with_capacity(4), //# Pre-allocate small capacity
             extra_params: HashMap::with_capacity(4), // Pre-allocate small capacity
         }
     }
@@ -258,13 +258,13 @@ impl LlmProviderFactory {
             LlmConfig::Anthropic { api_key, model, .. } => {
                 Ok(Box::new(anthropic::AnthropicProvider::new(api_key, model)?))
             }
-            LlmConfig::AzureOpenAI {
+            LlmConfig::AzureLlm {
                 api_key,
                 deployment_name,
                 endpoint,
                 api_version,
                 ..
-            } => Ok(Box::new(azure_openai::AzureOpenAiProvider::new(
+            } => Ok(Box::new(azurellm::AzureLlmProvider::new(
                 api_key,
                 deployment_name,
                 endpoint,
@@ -458,10 +458,29 @@ impl LlmProviderFactory {
             LlmConfig::PythonBridge {
                 python_instance,
                 model,
-            } => Ok(Box::new(python_bridge::PythonBridgeProvider::new(
-                python_instance,
-                model,
-            )?)),
+                instance_id,
+            } => {
+                let instance = if let Some(inst) = python_instance {
+                    inst
+                } else if let Some(id) = instance_id {
+                    // Try to look up in registry
+                    if let Some(inst) = providers::get_python_instance(&id) {
+                        inst
+                    } else {
+                        return Err(GraphBitError::config(format!(
+                            "Python instance not found for ID: {id}"
+                        )));
+                    }
+                } else {
+                    return Err(GraphBitError::config(
+                        "PythonBridge config requires either python_instance or instance_id",
+                    ));
+                };
+
+                Ok(Box::new(python_bridge::PythonBridgeProvider::new(
+                    instance, model,
+                )?))
+            }
             LlmConfig::Custom { provider_type, .. } => Err(GraphBitError::config(format!(
                 "Unsupported custom provider: {provider_type}",
             ))),
