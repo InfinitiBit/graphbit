@@ -48,6 +48,7 @@ from frameworks.langchain_benchmark import LangChainBenchmark
 from frameworks.langgraph_benchmark import LangGraphBenchmark
 from frameworks.llamaindex_benchmark import LlamaIndexBenchmark
 from frameworks.pydantic_ai_benchmark import PydanticAIBenchmark
+from frameworks.autogen_benchmark import AutogenBenchmark
 
 if sys.platform == "win32" or sys.platform == "darwin":
 
@@ -168,6 +169,13 @@ class ComprehensiveBenchmarkRunner:
                 "results": {},
                 "errors": {},
                 "color": "#C73E1D",
+            },
+            FrameworkType.AUTOGEN: {
+                "name": "AutoGen",
+                "benchmark": AutogenBenchmark(self.config, num_runs=self.num_runs),
+                "results": {},
+                "errors": {},
+                "color": "#C73E1F",
             },
         }
 
@@ -690,6 +698,8 @@ def main(
                     "llama_index": FrameworkType.LLAMAINDEX,
                     "crewai": FrameworkType.CREWAI,
                     "crew_ai": FrameworkType.CREWAI,
+                    "auto_gen": FrameworkType.AUTOGEN,
+                    "autogen": FrameworkType.AUTOGEN,
                 }
                 if name in name_mapping:
                     selected_frameworks.append(name_mapping[name])
