@@ -3,7 +3,7 @@
 # GraphBit - 고성능 에이전트 프레임워크 (한국어)
 
 <p align="center">
-    <img src="assets/GraphBit_Final_GB_Github_GIF.gif" style="max-width: 100%; height: auto;" alt="Logo" />
+    <img src="../assets/GraphBit_Final_GB_Github_GIF.gif" style="max-width: 600px; height: auto;" alt="Logo" />
 </p>
 <p align="center">
     <img alt="GraphBit - Developer-first, enterprise-grade LLM framework. | Product Hunt" loading="lazy" width="250" height="54" decoding="async" data-nimg="1" class="w-auto h-[54px] max-w-[250px]" style="color:transparent" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1004951&amp;theme=light&amp;t=1757340621693"> <img alt="GraphBit - Developer-first, enterprise-grade LLM framework. | Product Hunt" loading="lazy" width="250" height="54" decoding="async" data-nimg="1" class="w-auto h-[54px] max-w-[250px]" style="color:transparent" src="https://api.producthunt.com/widgets/embed-image/v1/top-post-badge.svg?post_id=1004951&amp;theme=light&amp;period=daily&amp;t=1757933101511">
@@ -12,8 +12,16 @@
 <p align="center">
     <a href="https://graphbit.ai/">Website</a> |
     <a href="https://docs.graphbit.ai/">Docs</a> |
-    <a href="https://discord.com/invite/huVJwkyu">Discord</a>
+    <a href="https://discord.com/invite/FMhgB3paMD">Discord</a>
     <br /><br />
+</p>
+
+</p>
+
+<p align="center">
+    <a href="https://trendshift.io/repositories/14884" target="_blank"><img src="https://trendshift.io/api/badge/repositories/14884" alt="InfinitiBit%2Fgraphbit | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
+    <br>
+    <a href="https://pepy.tech/projects/graphbit"><img src="https://static.pepy.tech/personalized-badge/graphbit?period=total&units=INTERNATIONAL_SYSTEM&left_color=GREY&right_color=GREEN&left_text=Downloads" alt="PyPI Downloads"/></a>
 </p>
 
 <p align="center">
@@ -23,14 +31,14 @@
     <a href="https://github.com/InfinitiBit/graphbit/blob/main/CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome"></a>
     <br>
     <a href="https://www.rust-lang.org"><img src="https://img.shields.io/badge/rust-1.70+-orange.svg?logo=rust" alt="Rust Version"></a>
-    <a href="https://www.python.org"><img src="https://img.shields.io/badge/python-3.10--3.13-blue.svg?logo=python&logoColor=white" alt="Python Version"></a>
+    <a href="https://www.python.org"><img src="https://img.shields.io/badge/python-3.9--3.13-blue.svg?logo=python&logoColor=white" alt="Python Version"></a>
     <a href="https://github.com/InfinitiBit/graphbit/blob/main/LICENSE.md"><img src="https://img.shields.io/badge/license-Custom-lightgrey.svg" alt="License"></a>
 
 </p>
 <p align="center">
     <a href="https://www.youtube.com/@graphbitAI"><img src="https://img.shields.io/badge/YouTube-FF0000?logo=youtube&logoColor=white" alt="YouTube"></a>
     <a href="https://x.com/graphbit_ai"><img src="https://img.shields.io/badge/X-000000?logo=x&logoColor=white" alt="X"></a>
-    <a href="https://discord.com/invite/huVJwkyu"><img src="https://img.shields.io/badge/Discord-7289da?logo=discord&logoColor=white" alt="Discord"></a>
+    <a href="https://discord.com/invite/FMhgB3paMD"><img src="https://img.shields.io/badge/Discord-7289da?logo=discord&logoColor=white" alt="Discord"></a>
     <a href="https://www.linkedin.com/showcase/graphbitai/"><img src="https://img.shields.io/badge/LinkedIn-0077B5?logo=linkedin&logoColor=white" alt="LinkedIn"></a>
 </p>
 
@@ -42,7 +50,7 @@
 
 🚧 **번역 진행 중** - 이 문서는 영어에서 번역 중입니다.
 
-📖 **[Read in English](README.md)** | **[영어로 읽기](README.md)**
+📖 **[Read in English](../README.md)** | **[영어로 읽기](../README.md)**
 
 ---
 
@@ -52,7 +60,7 @@
 
 ## GraphBit 소개
 
-GraphBit은 결정론적이고 동시적이며 낮은 오버헤드 실행이 필요한 개발자를 위한 오픈 소스 에이전트 AI 프레임워크입니다.
+GraphBit은 결정론적이고 동시적이며 낮은 오버헤드 실행이 필요한 개발자를 위한 소스 사용 가능 에이전트 AI 프레임워크입니다.
 
 ## 왜 GraphBit인가?
 
@@ -90,7 +98,7 @@ GraphBit은 LLM 호출, 도구 호출 및 다중 에이전트 체인 전반에 �
 
 <div align="center">
   <a href="https://www.youtube.com/watch?v=MaCl5oENeAY">
-    <img src="https://img.youtube.com/vi/MaCl5oENeAY/maxresdefault.jpg" alt="GraphBit Benchmark Demo" style="max-width: 100%; height: auto;">
+    <img src="https://img.youtube.com/vi/MaCl5oENeAY/maxresdefault.jpg" alt="GraphBit Benchmark Demo" style="max-width: 600px; height: auto;">
   </a>
   <p><em>GraphBit 벤치마크 데모 보기</em></p>
 </div>
@@ -120,7 +128,7 @@ pip install graphbit
 
 <div align="center">
   <a href="https://youtu.be/ti0wbHFKKFM?si=hnxi-1W823z5I_zs">
-    <img src="https://img.youtube.com/vi/ti0wbHFKKFM/maxresdefault.jpg" alt="GraphBit Quick Start Tutorial" style="max-width: 100%; height: auto;">
+    <img src="https://img.youtube.com/vi/ti0wbHFKKFM/maxresdefault.jpg" alt="GraphBit Quick Start Tutorial" style="max-width: 600px; height: auto;">
   </a>
   <p><em>PyPI를 통한 GraphBit 설치 | 전체 예제 및 실행 가이드 튜토리얼 보기</em></p>
 </div>
@@ -199,7 +207,7 @@ GraphBit Tracer는 최소한의 구성으로 LLM 호출 및 AI 워크플로우�
 
 <div align="center">
   <a href="https://www.youtube.com/watch?v=nzwrxSiRl2U">
-    <img src="https://img.youtube.com/vi/nzwrxSiRl2U/maxresdefault.jpg" alt="GraphBit Observability & Tracing" style="max-width: 100%; height: auto;">
+    <img src="https://img.youtube.com/vi/nzwrxSiRl2U/maxresdefault.jpg" alt="GraphBit Observability & Tracing" style="max-width: 600px; height: auto;">
   </a>
   <p><em>GraphBit 관찰성 및 추적 튜토리얼 보기</em></p>
 </div>
@@ -207,7 +215,7 @@ GraphBit Tracer는 최소한의 구성으로 LLM 호출 및 AI 워크플로우�
 ## 고수준 아키텍처
 
 <p align="center">
-  <img src="assets/architecture.svg" height="250" alt="GraphBit Architecture">
+  <img src="../assets/architecture.svg" height="250" alt="GraphBit Architecture">
 </p>
 
 신뢰성과 성능을 위한 3계층 설계:
@@ -252,7 +260,7 @@ GraphBit의 모듈식 아키텍처는 외부 통합을 지원합니다:
 확장 기능은 커뮤니티에서 개발하고 유지 관리합니다.
 
 <p align="center">
-  <img src="assets/Ecosystem.png" alt="GraphBit Ecosystem - Stop Choosing, Start Orchestrating" style="max-width: 100%; height: auto;">
+  <img src="../assets/Ecosystem.png" alt="GraphBit Ecosystem - Stop Choosing, Start Orchestrating" style="max-width: 100%; height: auto;">
 </p>
 
 
@@ -260,7 +268,7 @@ GraphBit의 모듈식 아키텍처는 외부 통합을 지원합니다:
 
 <div align="center">
   <a href="https://www.youtube.com/watch?v=gKvkMc2qZcA">
-    <img src="https://img.youtube.com/vi/gKvkMc2qZcA/maxresdefault.jpg" alt="Making Agent Workflow by GraphBit" style="max-width: 100%; height: auto;">
+    <img src="https://img.youtube.com/vi/gKvkMc2qZcA/maxresdefault.jpg" alt="Making Agent Workflow by GraphBit" style="max-width: 600px; height: auto;">
   </a>
   <p><em>GraphBit으로 에이전트 워크플로우 만들기 튜토리얼 보기</em></p>
 </div>
@@ -287,7 +295,7 @@ GraphBit은 3단계 모델로 라이선스가 부여됩니다: **모델 A(무료
 
 전체 이용 약관은 [Full License](LICENSE.md)를 참조하세요.
 
-Copyright © 2023–2025 InfinitiBit GmbH. All rights reserved.
+Copyright © 2023–2026 InfinitiBit GmbH. All rights reserved.
 
 ---
 

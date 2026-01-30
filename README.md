@@ -3,7 +3,7 @@
 # GraphBit - High Performance Agentic Framework
 
 <p align="center">
-    <img src="assets/GraphBit_Final_GB_Github_GIF.gif" style="max-width: 100%; height: auto;" alt="Logo" />
+    <img src="assets/GraphBit_Final_GB_Github_GIF.gif" style="max-width: 600px; height: auto;" alt="Logo" />
 </p>
 <p align="center">
     <img alt="GraphBit - Developer-first, enterprise-grade LLM framework. | Product Hunt" loading="lazy" width="250" height="54" decoding="async" data-nimg="1" class="w-auto h-[54px] max-w-[250px]" style="color:transparent" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1004951&amp;theme=light&amp;t=1757340621693"> <img alt="GraphBit - Developer-first, enterprise-grade LLM framework. | Product Hunt" loading="lazy" width="250" height="54" decoding="async" data-nimg="1" class="w-auto h-[54px] max-w-[250px]" style="color:transparent" src="https://api.producthunt.com/widgets/embed-image/v1/top-post-badge.svg?post_id=1004951&amp;theme=light&amp;period=daily&amp;t=1757933101511">
@@ -13,25 +13,31 @@
 <p align="center">
     <a href="https://graphbit.ai/">Website</a> |
     <a href="https://docs.graphbit.ai/">Docs</a> |
-    <a href="https://discord.com/invite/huVJwkyu">Discord</a>
+    <a href="https://discord.com/invite/FMhgB3paMD">Discord</a>
     <br /><br />
 </p>
 
 <p align="center">
+    <a href="https://trendshift.io/repositories/14884" target="_blank"><img src="https://trendshift.io/api/badge/repositories/14884" alt="InfinitiBit%2Fgraphbit | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
+    <br>
+    <a href="https://pepy.tech/projects/graphbit"><img src="https://static.pepy.tech/personalized-badge/graphbit?period=total&units=INTERNATIONAL_SYSTEM&left_color=GREY&right_color=GREEN&left_text=Downloads" alt="PyPI Downloads"/></a>
+</p>
+
+<p align="center">
     <a href="https://pypi.org/project/graphbit/"><img src="https://img.shields.io/pypi/v/graphbit?color=blue&label=PyPI" alt="PyPI"></a>
-    <a href="https://pypi.org/project/graphbit/"><img src="https://img.shields.io/pypi/dm/graphbit?color=blue&label=Downloads" alt="PyPI Downloads"></a>
+    <!-- <a href="https://pypi.org/project/graphbit/"><img src="https://img.shields.io/pypi/dm/graphbit?color=blue&label=Downloads" alt="PyPI Downloads"></a> -->
     <a href="https://github.com/InfinitiBit/graphbit/actions/workflows/update-docs.yml"><img src="https://img.shields.io/github/actions/workflow/status/InfinitiBit/graphbit/update-docs.yml?branch=main&label=Build" alt="Build Status"></a>
     <a href="https://github.com/InfinitiBit/graphbit/blob/main/CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome"></a>
     <br>
     <a href="https://www.rust-lang.org"><img src="https://img.shields.io/badge/rust-1.70+-orange.svg?logo=rust" alt="Rust Version"></a>
-    <a href="https://www.python.org"><img src="https://img.shields.io/badge/python-3.10--3.13-blue.svg?logo=python&logoColor=white" alt="Python Version"></a>
+    <a href="https://www.python.org"><img src="https://img.shields.io/badge/python-3.9--3.13-blue.svg?logo=python&logoColor=white" alt="Python Version"></a>
     <a href="https://github.com/InfinitiBit/graphbit/blob/main/LICENSE.md"><img src="https://img.shields.io/badge/license-Custom-lightgrey.svg" alt="License"></a>
 
 </p>
 <p align="center">
     <a href="https://www.youtube.com/@graphbitAI"><img src="https://img.shields.io/badge/YouTube-FF0000?logo=youtube&logoColor=white" alt="YouTube"></a>
     <a href="https://x.com/graphbit_ai"><img src="https://img.shields.io/badge/X-000000?logo=x&logoColor=white" alt="X"></a>
-    <a href="https://discord.com/invite/huVJwkyu"><img src="https://img.shields.io/badge/Discord-7289da?logo=discord&logoColor=white" alt="Discord"></a>
+    <a href="https://discord.com/invite/FMhgB3paMD"><img src="https://img.shields.io/badge/Discord-7289da?logo=discord&logoColor=white" alt="Discord"></a>
     <a href="https://www.linkedin.com/showcase/graphbitai/"><img src="https://img.shields.io/badge/LinkedIn-0077B5?logo=linkedin&logoColor=white" alt="LinkedIn"></a>
 </p>
 
@@ -41,11 +47,11 @@
 
 ---
 
-**Read this in other languages**: [🇨🇳 简体中文](README.zh-CN.md) | [🇨🇳 繁體中文](README.zh-TW.md) | [🇪🇸 Español](README.es.md) | [🇫🇷 Français](README.fr.md) | [🇩🇪 Deutsch](README.de.md) | [🇯🇵 日本語](README.ja.md) | [🇰🇷 한국어](README.ko.md) | [🇮🇳 हिन्दी](README.hi.md) | [🇸🇦 العربية](README.ar.md) | [🇮🇹 Italiano](README.it.md) | [🇧🇷 Português](README.pt-BR.md) | [🇷🇺 Русский](README.ru.md) | [🇧🇩 বাংলা](README.bn.md)
+**Read this in other languages**: [🇨🇳 简体中文](README_Multi_Lingual_i18n_Files/README.zh-CN.md) | [🇨🇳 繁體中文](README_Multi_Lingual_i18n_Files/README.zh-TW.md) | [🇪🇸 Español](README_Multi_Lingual_i18n_Files/README.es.md) | [🇫🇷 Français](README_Multi_Lingual_i18n_Files/README.fr.md) | [🇩🇪 Deutsch](README_Multi_Lingual_i18n_Files/README.de.md) | [🇯🇵 日本語](README_Multi_Lingual_i18n_Files/README.ja.md) | [🇰🇷 한국어](README_Multi_Lingual_i18n_Files/README.ko.md) | [🇮🇳 हिन्दी](README_Multi_Lingual_i18n_Files/README.hi.md) | [🇸🇦 العربية](README_Multi_Lingual_i18n_Files/README.ar.md) | [🇮🇹 Italiano](README_Multi_Lingual_i18n_Files/README.it.md) | [🇧🇷 Português](README_Multi_Lingual_i18n_Files/README.pt-BR.md) | [🇷🇺 Русский](README_Multi_Lingual_i18n_Files/README.ru.md) | [🇧🇩 বাংলা](README_Multi_Lingual_i18n_Files/README.bn.md)
 
 ---
 
-GraphBit is an open-source agentic AI framework for developers who need deterministic, concurrent, and low-overhead execution.
+GraphBit is a source-available agentic AI framework for developers who need deterministic, concurrent, and low-overhead execution.
 
 ## Why GraphBit?
 Efficiency decides who scales, GraphBit is built for developers who need deterministic, concurrent, and ultra-efficient AI execution without the overhead.
@@ -84,7 +90,7 @@ GraphBit consistently delivers production-grade efficiency across LLM calls, too
 
 <div align="center">
   <a href="https://www.youtube.com/watch?v=MaCl5oENeAY">
-    <img src="https://img.youtube.com/vi/MaCl5oENeAY/maxresdefault.jpg" alt="GraphBit Benchmark Demo" style="max-width: 100%; height: auto;">
+    <img src="https://img.youtube.com/vi/MaCl5oENeAY/maxresdefault.jpg" alt="GraphBit Benchmark Demo" style="max-width: 600px; height: auto;">
   </a>
   <p><em>Watch the GraphBit Benchmark Demo</em></p>
 </div>
@@ -114,7 +120,7 @@ pip install graphbit
 
 <div align="center">
   <a href="https://youtu.be/ti0wbHFKKFM?si=hnxi-1W823z5I_zs">
-    <img src="https://img.youtube.com/vi/ti0wbHFKKFM/maxresdefault.jpg" alt="GraphBit Quick Start Tutorial" style="max-width: 100%; height: auto;">
+    <img src="https://img.youtube.com/vi/ti0wbHFKKFM/maxresdefault.jpg" alt="GraphBit Quick Start Tutorial" style="max-width: 600px; height: auto;">
   </a>
   <p><em>Watch the Install GraphBit via PyPI | Full Example & Run Guide
  tutorial</em></p>
@@ -191,7 +197,7 @@ print("\nData Processor Output: \n", result.get_node_output("Data Processor"))
 
 <div align="center">
   <a href="https://www.youtube.com/watch?v=gKvkMc2qZcA">
-    <img src="https://img.youtube.com/vi/gKvkMc2qZcA/maxresdefault.jpg" alt="Making Agent Workflow by GraphBit" style="max-width: 100%; height: auto;">
+    <img src="https://img.youtube.com/vi/gKvkMc2qZcA/maxresdefault.jpg" alt="Making Agent Workflow by GraphBit" style="max-width: 600px; height: auto;">
   </a>
   <p><em>Watch the Making Agent Workflow by GraphBit tutorial</em></p>
 </div>
@@ -202,7 +208,7 @@ GraphBit Tracer captures and monitors LLM calls and AI workflows with minimal co
 
 <div align="center">
   <a href="https://www.youtube.com/watch?v=nzwrxSiRl2U">
-    <img src="https://img.youtube.com/vi/nzwrxSiRl2U/maxresdefault.jpg" alt="GraphBit Observability & Tracing" style="max-width: 100%; height: auto;">
+    <img src="https://img.youtube.com/vi/nzwrxSiRl2U/maxresdefault.jpg" alt="GraphBit Observability & Tracing" style="max-width: 600px; height: auto;">
   </a>
   <p><em>Watch the GraphBit Observability & Tracing tutorial</em></p>
 </div>
@@ -272,8 +278,8 @@ For detailed reporting procedures and response timelines, see our [Security Poli
 
 ## License
 
-GraphBit is licensed under a three-tier model: **Model A (Free Use)** for individuals, academic institutions, and small teams (up to 10 employees/users), **Model B (Free Trial)** for 30-day evaluation, and **Model C (Enterprise)** for commercial/production use. Redistribution is prohibited under all models without an explicit Enterprise License.
+GraphBit project is licensed under the Apache License, Version 2.0.
 
 For complete terms and conditions, see the [Full License](LICENSE.md).
 
-Copyright © 2023–2025 InfinitiBit GmbH. All rights reserved.
+Copyright © 2023–2026 InfinitiBit GmbH. All rights reserved.

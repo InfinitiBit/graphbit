@@ -7,12 +7,34 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[cfg(feature = "python")]
-fn default_python_instance() -> std::sync::Arc<pyo3::PyObject> {
-    // This is a placeholder that should never be used
-    // The python_instance should always be set when creating a PythonBridge config
-    panic!(
-        "PythonBridge config cannot be deserialized - python_instance must be set programmatically"
-    )
+#[cfg(feature = "python")]
+lazy_static::lazy_static! {
+    static ref PYTHON_INSTANCE_REGISTRY: std::sync::Mutex<HashMap<String, std::sync::Arc<pyo3::PyObject>>> = std::sync::Mutex::new(HashMap::new());
+}
+
+/// Register a Python LLM instance in the global registry
+///
+/// This function stores a Python object instance (wrapped in an `Arc`) with a unique ID,
+/// allowing the Rust code to reference and retrieve the Python object later during serialization
+/// and deserialization of `LlmConfig::PythonBridge`.
+#[cfg(feature = "python")]
+pub fn register_python_instance(id: String, instance: std::sync::Arc<pyo3::PyObject>) {
+    if let Ok(mut registry) = PYTHON_INSTANCE_REGISTRY.lock() {
+        registry.insert(id, instance);
+    }
+}
+
+/// Retrieve a Python LLM instance from the global registry
+///
+/// Returns the Python object instance associated with the given ID, or `None` if not found
+/// or if the registry lock cannot be acquired.
+#[cfg(feature = "python")]
+pub fn get_python_instance(id: &str) -> Option<std::sync::Arc<pyo3::PyObject>> {
+    if let Ok(registry) = PYTHON_INSTANCE_REGISTRY.lock() {
+        registry.get(id).cloned()
+    } else {
+        None
+    }
 }
 
 /// Configuration for different LLM providers
@@ -39,13 +61,13 @@ pub enum LlmConfig {
         /// Optional custom base URL
         base_url: Option<String>,
     },
-    /// `Azure OpenAI` LLM provider configuration
-    AzureOpenAI {
+    /// `Azure LLM` provider configuration for Azure-deployed models
+    AzureLlm {
         /// API key for authentication
         api_key: String,
         /// Deployment name to use
         deployment_name: String,
-        /// `Azure OpenAI` endpoint URL
+        /// `Azure LLM` endpoint URL
         endpoint: String,
         /// API version to use
         api_version: String,
@@ -168,10 +190,13 @@ pub enum LlmConfig {
     #[cfg(feature = "python")]
     PythonBridge {
         /// Python object instance that implements the LLM interface
-        #[serde(skip, default = "default_python_instance")]
-        python_instance: std::sync::Arc<pyo3::PyObject>,
+        #[serde(skip)]
+        python_instance: Option<std::sync::Arc<pyo3::PyObject>>,
         /// Model name to use
         model: String,
+        /// Unique instance ID for serialization persistence
+        #[serde(default)]
+        instance_id: Option<String>,
     },
     /// Custom LLM provider configuration
     Custom {
@@ -207,14 +232,14 @@ impl LlmConfig {
         }
     }
 
-    /// Create `Azure OpenAI` configuration
-    pub fn azure_openai(
+    /// Create `Azure LLM` configuration
+    pub fn azurellm(
         api_key: impl Into<String>,
         deployment_name: impl Into<String>,
         endpoint: impl Into<String>,
         api_version: impl Into<String>,
     ) -> Self {
-        Self::AzureOpenAI {
+        Self::AzureLlm {
             api_key: api_key.into(),
             deployment_name: deployment_name.into(),
             endpoint: endpoint.into(),
@@ -222,13 +247,13 @@ impl LlmConfig {
         }
     }
 
-    /// Create `Azure OpenAI` configuration with default API version
-    pub fn azure_openai_with_defaults(
+    /// Create `Azure LLM` configuration with default API version
+    pub fn azurellm_with_defaults(
         api_key: impl Into<String>,
         deployment_name: impl Into<String>,
         endpoint: impl Into<String>,
     ) -> Self {
-        Self::AzureOpenAI {
+        Self::AzureLlm {
             api_key: api_key.into(),
             deployment_name: deployment_name.into(),
             endpoint: endpoint.into(),
@@ -417,7 +442,7 @@ impl LlmConfig {
         match self {
             Self::OpenAI { .. } => "openai",
             Self::Anthropic { .. } => "anthropic",
-            Self::AzureOpenAI { .. } => "azure_openai",
+            Self::AzureLlm { .. } => "azurellm",
             Self::ByteDance { .. } => "bytedance",
             Self::DeepSeek { .. } => "deepseek",
             Self::HuggingFace { .. } => "huggingface",
@@ -442,7 +467,7 @@ impl LlmConfig {
         match self {
             Self::OpenAI { model, .. } => model,
             Self::Anthropic { model, .. } => model,
-            Self::AzureOpenAI {
+            Self::AzureLlm {
                 deployment_name, ..
             } => deployment_name,
             Self::ByteDance { model, .. } => model,
