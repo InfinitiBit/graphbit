@@ -1,13 +1,13 @@
-//! Azure OpenAI Provider Unit Tests
+//! Azure LLM Provider Unit Tests
 //!
-//! Comprehensive unit tests for Azure OpenAI provider that mirror OpenAI test coverage.
+//! Comprehensive unit tests for Azure LLM provider that mirror OpenAI test coverage.
 
 use graphbit_core::llm::{LlmConfig, LlmMessage, LlmProviderFactory, LlmRequest, LlmRole, LlmTool};
 use serde_json::json;
 
 #[tokio::test]
-async fn test_azure_openai_provider_creation() {
-    let provider = LlmProviderFactory::create_provider(LlmConfig::AzureOpenAI {
+async fn test_azurellm_provider_creation() {
+    let provider = LlmProviderFactory::create_provider(LlmConfig::AzureLlm {
         api_key: "test-key".to_string(),
         deployment_name: "gpt-4o-mini".to_string(),
         endpoint: "https://test.openai.azure.com".to_string(),
@@ -15,29 +15,29 @@ async fn test_azure_openai_provider_creation() {
     })
     .unwrap();
 
-    assert_eq!(provider.provider_name(), "azure_openai");
+    assert_eq!(provider.provider_name(), "azurellm");
     assert_eq!(provider.model_name(), "gpt-4o-mini");
     assert!(provider.supports_function_calling());
     assert_eq!(provider.max_context_length(), Some(128_000));
 }
 
 #[tokio::test]
-async fn test_azure_openai_provider_with_defaults() {
-    let config = LlmConfig::azure_openai_with_defaults(
+async fn test_azurellm_provider_with_defaults() {
+    let config = LlmConfig::azurellm_with_defaults(
         "test-key".to_string(),
         "gpt-4o".to_string(),
         "https://test.openai.azure.com".to_string(),
     );
 
     let provider = LlmProviderFactory::create_provider(config).unwrap();
-    assert_eq!(provider.provider_name(), "azure_openai");
+    assert_eq!(provider.provider_name(), "azurellm");
     assert_eq!(provider.model_name(), "gpt-4o");
 }
 
 #[tokio::test]
-async fn test_azure_openai_config_helpers() {
+async fn test_azurellm_config_helpers() {
     // Test basic config
-    let config = LlmConfig::azure_openai(
+    let config = LlmConfig::azurellm(
         "test-key".to_string(),
         "gpt-4o-mini".to_string(),
         "https://test.openai.azure.com".to_string(),
@@ -45,7 +45,7 @@ async fn test_azure_openai_config_helpers() {
     );
 
     match config {
-        LlmConfig::AzureOpenAI {
+        LlmConfig::AzureLlm {
             api_key,
             deployment_name,
             endpoint,
@@ -56,18 +56,18 @@ async fn test_azure_openai_config_helpers() {
             assert_eq!(endpoint, "https://test.openai.azure.com");
             assert_eq!(api_version, "2024-10-21");
         }
-        _ => panic!("Expected AzureOpenAI config"),
+        _ => panic!("Expected AzureLlm config"),
     }
 
     // Test config with defaults
-    let config_defaults = LlmConfig::azure_openai_with_defaults(
+    let config_defaults = LlmConfig::azurellm_with_defaults(
         "test-key".to_string(),
         "gpt-4o".to_string(),
         "https://test.openai.azure.com".to_string(),
     );
 
     match config_defaults {
-        LlmConfig::AzureOpenAI {
+        LlmConfig::AzureLlm {
             api_key,
             deployment_name,
             endpoint,
@@ -78,13 +78,13 @@ async fn test_azure_openai_config_helpers() {
             assert_eq!(endpoint, "https://test.openai.azure.com");
             assert_eq!(api_version, "2024-10-21"); // Default version
         }
-        _ => panic!("Expected AzureOpenAI config"),
+        _ => panic!("Expected AzureLlm config"),
     }
 }
 
 #[tokio::test]
-async fn test_azure_openai_message_formatting() {
-    let _provider = LlmProviderFactory::create_provider(LlmConfig::AzureOpenAI {
+async fn test_azurellm_message_formatting() {
+    let _provider = LlmProviderFactory::create_provider(LlmConfig::AzureLlm {
         api_key: "test-key".to_string(),
         deployment_name: "gpt-4o-mini".to_string(),
         endpoint: "https://test.openai.azure.com".to_string(),
@@ -119,8 +119,8 @@ async fn test_azure_openai_message_formatting() {
 }
 
 #[tokio::test]
-async fn test_azure_openai_with_tools() {
-    let _provider = LlmProviderFactory::create_provider(LlmConfig::AzureOpenAI {
+async fn test_azurellm_with_tools() {
+    let _provider = LlmProviderFactory::create_provider(LlmConfig::AzureLlm {
         api_key: "test-key".to_string(),
         deployment_name: "gpt-4o".to_string(),
         endpoint: "https://test.openai.azure.com".to_string(),
@@ -175,11 +175,11 @@ async fn test_azure_openai_with_tools() {
 }
 
 #[tokio::test]
-async fn test_azure_openai_different_api_versions() {
+async fn test_azurellm_different_api_versions() {
     let versions = vec!["2024-10-21", "2024-06-01", "2023-12-01-preview"];
 
     for version in versions {
-        let provider = LlmProviderFactory::create_provider(LlmConfig::AzureOpenAI {
+        let provider = LlmProviderFactory::create_provider(LlmConfig::AzureLlm {
             api_key: "test-key".to_string(),
             deployment_name: "gpt-4o-mini".to_string(),
             endpoint: "https://test.openai.azure.com".to_string(),
@@ -187,13 +187,13 @@ async fn test_azure_openai_different_api_versions() {
         })
         .unwrap();
 
-        assert_eq!(provider.provider_name(), "azure_openai");
+        assert_eq!(provider.provider_name(), "azurellm");
         assert_eq!(provider.model_name(), "gpt-4o-mini");
     }
 }
 
 #[tokio::test]
-async fn test_azure_openai_different_deployments() {
+async fn test_azurellm_different_deployments() {
     let deployments = vec![
         ("gpt-4o", Some(128_000)),
         ("gpt-4o-mini", Some(128_000)),
@@ -204,7 +204,7 @@ async fn test_azure_openai_different_deployments() {
     ];
 
     for (deployment, expected_context) in deployments {
-        let provider = LlmProviderFactory::create_provider(LlmConfig::AzureOpenAI {
+        let provider = LlmProviderFactory::create_provider(LlmConfig::AzureLlm {
             api_key: "test-key".to_string(),
             deployment_name: deployment.to_string(),
             endpoint: "https://test.openai.azure.com".to_string(),
@@ -218,21 +218,21 @@ async fn test_azure_openai_different_deployments() {
 }
 
 #[tokio::test]
-async fn test_azure_openai_config_provider_detection() {
-    let config = LlmConfig::azure_openai(
+async fn test_azurellm_config_provider_detection() {
+    let config = LlmConfig::azurellm(
         "test-key".to_string(),
         "gpt-4o".to_string(),
         "https://test.openai.azure.com".to_string(),
         "2024-10-21".to_string(),
     );
 
-    assert_eq!(config.provider_name(), "azure_openai");
+    assert_eq!(config.provider_name(), "azurellm");
     assert_eq!(config.model_name(), "gpt-4o");
 }
 
 #[tokio::test]
-async fn test_azure_openai_provider_capabilities() {
-    let config = LlmConfig::AzureOpenAI {
+async fn test_azurellm_provider_capabilities() {
+    let config = LlmConfig::AzureLlm {
         api_key: "test-key".to_string(),
         deployment_name: "gpt-4o-mini".to_string(),
         endpoint: "https://test.openai.azure.com".to_string(),
@@ -241,7 +241,7 @@ async fn test_azure_openai_provider_capabilities() {
 
     let provider = LlmProviderFactory::create_provider(config).unwrap();
 
-    // Azure OpenAI should support function calling
+    // Azure LLM should support function calling
     assert!(provider.supports_function_calling());
 
     // Should have context length information
@@ -250,8 +250,8 @@ async fn test_azure_openai_provider_capabilities() {
 }
 
 #[tokio::test]
-async fn test_azure_openai_error_handling() {
-    let provider = LlmProviderFactory::create_provider(LlmConfig::AzureOpenAI {
+async fn test_azurellm_error_handling() {
+    let provider = LlmProviderFactory::create_provider(LlmConfig::AzureLlm {
         api_key: "test-key".to_string(),
         deployment_name: "gpt-4o-mini".to_string(),
         endpoint: "https://test.openai.azure.com".to_string(),
@@ -275,22 +275,22 @@ async fn test_azure_openai_error_handling() {
 }
 
 #[tokio::test]
-async fn test_azure_openai_request_building() {
-    let request = LlmRequest::new("Hello, Azure OpenAI!")
+async fn test_azurellm_request_building() {
+    let request = LlmRequest::new("Hello, Azure LLM!")
         .with_max_tokens(100)
         .with_temperature(0.7)
         .with_top_p(0.9);
 
     assert_eq!(request.messages.len(), 1);
-    assert_eq!(request.messages[0].content, "Hello, Azure OpenAI!");
+    assert_eq!(request.messages[0].content, "Hello, Azure LLM!");
     assert_eq!(request.max_tokens, Some(100));
     assert_eq!(request.temperature, Some(0.7));
     assert_eq!(request.top_p, Some(0.9));
 }
 
 #[test]
-fn test_azure_openai_token_estimation() {
-    let request = LlmRequest::new("This is a test message for Azure OpenAI token estimation");
+fn test_azurellm_token_estimation() {
+    let request = LlmRequest::new("This is a test message for Azure LLM token estimation");
     let estimated_tokens = request.estimated_token_count();
 
     // Rough estimation: should be non-zero for non-empty content

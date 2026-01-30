@@ -1,32 +1,32 @@
-//! Azure OpenAI Provider Integration Tests
+//! Azure LLM Provider Integration Tests
 //!
-//! Integration tests for Azure OpenAI provider that mirror OpenAI test coverage.
-//! These tests require actual Azure OpenAI credentials and should be run with:
-//! AZURE_OPENAI_API_KEY=your_key AZURE_OPENAI_ENDPOINT=your_endpoint AZURE_OPENAI_DEPLOYMENT=your_deployment cargo test azure_openai_integration -- --ignored
+//! Integration tests for Azure LLM provider that mirror OpenAI test coverage.
+//! These tests require actual Azure LLM credentials and should be run with:
+//! AZURELLM_API_KEY=your_key AZURELLM_ENDPOINT=your_endpoint AZURELLM_DEPLOYMENT=your_deployment cargo test azurellm_integration -- --ignored
 
 use graphbit_core::llm::*;
 use serde_json::json;
 use std::env;
 
-fn get_azure_openai_config() -> Option<(String, String, String, String)> {
-    let api_key = env::var("AZURE_OPENAI_API_KEY").ok()?;
-    let endpoint = env::var("AZURE_OPENAI_ENDPOINT").ok()?;
-    let deployment = env::var("AZURE_OPENAI_DEPLOYMENT").ok()?;
+fn get_azurellm_config() -> Option<(String, String, String, String)> {
+    let api_key = env::var("AZURELLM_API_KEY").ok()?;
+    let endpoint = env::var("AZURELLM_ENDPOINT").ok()?;
+    let deployment = env::var("AZURELLM_DEPLOYMENT").ok()?;
     let api_version =
-        env::var("AZURE_OPENAI_API_VERSION").unwrap_or_else(|_| "2024-02-15-preview".to_string());
+        env::var("AZURELLM_API_VERSION").unwrap_or_else(|_| "2024-02-15-preview".to_string());
 
     Some((api_key, endpoint, deployment, api_version))
 }
 
-fn has_azure_openai_credentials() -> bool {
-    get_azure_openai_config().is_some()
+fn has_azurellm_credentials() -> bool {
+    get_azurellm_config().is_some()
 }
 
 #[tokio::test]
-async fn test_azure_openai_provider_creation() {
+async fn test_azurellm_provider_creation() {
     graphbit_core::init().expect("Failed to initialize GraphBit");
 
-    let config = LlmConfig::azure_openai(
+    let config = LlmConfig::azurellm(
         "test-key".to_string(),
         "gpt-4o-mini".to_string(),
         "https://test.openai.azure.com".to_string(),
@@ -37,23 +37,23 @@ async fn test_azure_openai_provider_creation() {
     assert!(provider_result.is_ok());
 
     let provider = provider_result.unwrap();
-    assert_eq!(provider.provider_name(), "azure_openai");
+    assert_eq!(provider.provider_name(), "azurellm");
     assert_eq!(provider.model_name(), "gpt-4o-mini");
 }
 
 #[tokio::test]
-#[ignore] // Requires real Azure OpenAI API credentials
-async fn test_azure_openai_real_api_call() {
+#[ignore] // Requires real Azure LLM API credentials
+async fn test_azurellm_real_api_call() {
     graphbit_core::init().expect("Failed to initialize GraphBit");
 
     // Skip if no real API credentials are provided
-    if !has_azure_openai_credentials() {
-        println!("Skipping real Azure OpenAI API test - no valid credentials");
+    if !has_azurellm_credentials() {
+        println!("Skipping real Azure LLM API test - no valid credentials");
         return;
     }
 
-    let (api_key, endpoint, deployment, api_version) = get_azure_openai_config().unwrap();
-    let config = LlmConfig::azure_openai(api_key, deployment.clone(), endpoint, api_version);
+    let (api_key, endpoint, deployment, api_version) = get_azurellm_config().unwrap();
+    let config = LlmConfig::azurellm(api_key, deployment.clone(), endpoint, api_version);
     let provider = LlmProviderFactory::create_provider(config).unwrap();
 
     let request = LlmRequest::new("Say 'Hello' in one word only.")
@@ -67,30 +67,30 @@ async fn test_azure_openai_real_api_call() {
             assert_eq!(response.model, deployment);
             assert!(response.usage.total_tokens > 0);
             println!(
-                "Azure OpenAI real API call successful: {content}",
+                "Azure LLM real API call successful: {content}",
                 content = response.content
             );
         }
         Err(e) => {
-            println!("Azure OpenAI API call failed: {e:?}");
-            panic!("Azure OpenAI API call should succeed with valid credentials");
+            println!("Azure LLM API call failed: {e:?}");
+            panic!("Azure LLM API call should succeed with valid credentials");
         }
     }
 }
 
 #[tokio::test]
-#[ignore] // Requires real Azure OpenAI API credentials
-async fn test_azure_openai_real_api_with_tools() {
+#[ignore] // Requires real Azure LLM API credentials
+async fn test_azurellm_real_api_with_tools() {
     graphbit_core::init().expect("Failed to initialize GraphBit");
 
     // Skip if no real API credentials are provided
-    if !has_azure_openai_credentials() {
-        println!("Skipping real Azure OpenAI API with tools test - no valid credentials");
+    if !has_azurellm_credentials() {
+        println!("Skipping real Azure LLM API with tools test - no valid credentials");
         return;
     }
 
-    let (api_key, endpoint, deployment, api_version) = get_azure_openai_config().unwrap();
-    let config = LlmConfig::azure_openai(api_key, deployment, endpoint, api_version);
+    let (api_key, endpoint, deployment, api_version) = get_azurellm_config().unwrap();
+    let config = LlmConfig::azurellm(api_key, deployment, endpoint, api_version);
     let provider = LlmProviderFactory::create_provider(config).unwrap();
 
     let weather_tool = LlmTool::new(
@@ -116,9 +116,9 @@ async fn test_azure_openai_real_api_with_tools() {
     let result = provider.complete(request).await;
     match result {
         Ok(response) => {
-            println!("Azure OpenAI response content: '{}'", response.content);
+            println!("Azure LLM response content: '{}'", response.content);
             println!(
-                "Azure OpenAI response finish_reason: {:?}",
+                "Azure LLM response finish_reason: {:?}",
                 response.finish_reason
             );
 
@@ -138,35 +138,35 @@ async fn test_azure_openai_real_api_with_tools() {
                     response.content
                 );
             }
-            println!("Azure OpenAI real API call with tools successful");
+            println!("Azure LLM real API call with tools successful");
         }
         Err(e) => {
-            println!("Azure OpenAI API call with tools failed: {e:?}");
+            println!("Azure LLM API call with tools failed: {e:?}");
             // Tool responses can have parsing issues with null values - this is known
             if e.to_string().contains("null, expected a string") {
                 println!(
-                    "Known issue with Azure OpenAI tool response parsing - null value in response"
+                    "Known issue with Azure LLM tool response parsing - null value in response"
                 );
             } else {
-                panic!("Azure OpenAI API call with tools should succeed with valid credentials");
+                panic!("Azure LLM API call with tools should succeed with valid credentials");
             }
         }
     }
 }
 
 #[tokio::test]
-#[ignore] // Requires real Azure OpenAI API credentials
-async fn test_azure_openai_with_system_message() {
+#[ignore] // Requires real Azure LLM API credentials
+async fn test_azurellm_with_system_message() {
     graphbit_core::init().expect("Failed to initialize GraphBit");
 
     // Skip if no real API credentials are provided
-    if !has_azure_openai_credentials() {
-        println!("Skipping Azure OpenAI system message test - no valid credentials");
+    if !has_azurellm_credentials() {
+        println!("Skipping Azure LLM system message test - no valid credentials");
         return;
     }
 
-    let (api_key, endpoint, deployment, api_version) = get_azure_openai_config().unwrap();
-    let config = LlmConfig::azure_openai(api_key, deployment, endpoint, api_version);
+    let (api_key, endpoint, deployment, api_version) = get_azurellm_config().unwrap();
+    let config = LlmConfig::azurellm(api_key, deployment, endpoint, api_version);
     let provider = LlmProviderFactory::create_provider(config).unwrap();
 
     let messages = vec![
@@ -182,28 +182,28 @@ async fn test_azure_openai_with_system_message() {
     match result {
         Ok(response) => {
             assert!(!response.content.is_empty());
-            println!("Azure OpenAI system message response: {}", response.content);
+            println!("Azure LLM system message response: {}", response.content);
         }
         Err(e) => {
-            println!("Azure OpenAI system message test failed: {e:?}");
-            panic!("Azure OpenAI system message test should succeed with valid credentials");
+            println!("Azure LLM system message test failed: {e:?}");
+            panic!("Azure LLM system message test should succeed with valid credentials");
         }
     }
 }
 
 #[tokio::test]
-#[ignore] // Requires real Azure OpenAI API credentials
-async fn test_azure_openai_conversation() {
+#[ignore] // Requires real Azure LLM API credentials
+async fn test_azurellm_conversation() {
     graphbit_core::init().expect("Failed to initialize GraphBit");
 
     // Skip if no real API credentials are provided
-    if !has_azure_openai_credentials() {
-        println!("Skipping Azure OpenAI conversation test - no valid credentials");
+    if !has_azurellm_credentials() {
+        println!("Skipping Azure LLM conversation test - no valid credentials");
         return;
     }
 
-    let (api_key, endpoint, deployment, api_version) = get_azure_openai_config().unwrap();
-    let config = LlmConfig::azure_openai(api_key, deployment, endpoint, api_version);
+    let (api_key, endpoint, deployment, api_version) = get_azurellm_config().unwrap();
+    let config = LlmConfig::azurellm(api_key, deployment, endpoint, api_version);
     let provider = LlmProviderFactory::create_provider(config).unwrap();
 
     let messages = vec![
@@ -228,21 +228,21 @@ async fn test_azure_openai_conversation() {
                 response.content
             );
 
-            println!("Azure OpenAI conversation response: {}", response.content);
+            println!("Azure LLM conversation response: {}", response.content);
         }
         Err(e) => {
-            println!("Azure OpenAI conversation test failed: {e:?}");
-            panic!("Azure OpenAI conversation test should succeed with valid credentials");
+            println!("Azure LLM conversation test failed: {e:?}");
+            panic!("Azure LLM conversation test should succeed with valid credentials");
         }
     }
 }
 
 #[tokio::test]
-async fn test_azure_openai_error_handling() {
+async fn test_azurellm_error_handling() {
     graphbit_core::init().expect("Failed to initialize GraphBit");
 
     // Test with invalid API key
-    let config = LlmConfig::azure_openai(
+    let config = LlmConfig::azurellm(
         "invalid-api-key".to_string(),
         "gpt-4o-mini".to_string(),
         "https://test.openai.azure.com".to_string(),
@@ -251,7 +251,7 @@ async fn test_azure_openai_error_handling() {
 
     let provider = LlmProviderFactory::create_provider(config).unwrap();
 
-    let request = LlmRequest::new("Hello, Azure OpenAI!").with_max_tokens(50);
+    let request = LlmRequest::new("Hello, Azure LLM!").with_max_tokens(50);
 
     let result = provider.complete(request).await;
     assert!(result.is_err(), "Request with invalid API key should fail");
@@ -261,18 +261,18 @@ async fn test_azure_openai_error_handling() {
 }
 
 #[tokio::test]
-#[ignore] // Requires real Azure OpenAI API credentials
-async fn test_azure_openai_different_temperatures() {
+#[ignore] // Requires real Azure LLM API credentials
+async fn test_azurellm_different_temperatures() {
     graphbit_core::init().expect("Failed to initialize GraphBit");
 
     // Skip if no real API credentials are provided
-    if !has_azure_openai_credentials() {
-        println!("Skipping Azure OpenAI temperature test - no valid credentials");
+    if !has_azurellm_credentials() {
+        println!("Skipping Azure LLM temperature test - no valid credentials");
         return;
     }
 
-    let (api_key, endpoint, deployment, api_version) = get_azure_openai_config().unwrap();
-    let config = LlmConfig::azure_openai(api_key, deployment, endpoint, api_version);
+    let (api_key, endpoint, deployment, api_version) = get_azurellm_config().unwrap();
+    let config = LlmConfig::azurellm(api_key, deployment, endpoint, api_version);
     let provider = LlmProviderFactory::create_provider(config).unwrap();
 
     // Test with low temperature (more deterministic)
@@ -302,21 +302,21 @@ async fn test_azure_openai_different_temperatures() {
 }
 
 #[tokio::test]
-#[ignore] // Requires real Azure OpenAI API credentials
-async fn test_azure_openai_provider_comparison() {
+#[ignore] // Requires real Azure LLM API credentials
+async fn test_azurellm_provider_comparison() {
     graphbit_core::init().expect("Failed to initialize GraphBit");
 
     // Skip if no real API credentials are provided
-    if !has_azure_openai_credentials() {
-        println!("Skipping Azure OpenAI provider comparison test - no valid credentials");
+    if !has_azurellm_credentials() {
+        println!("Skipping Azure LLM provider comparison test - no valid credentials");
         return;
     }
 
-    let (api_key, endpoint, deployment, api_version) = get_azure_openai_config().unwrap();
+    let (api_key, endpoint, deployment, api_version) = get_azurellm_config().unwrap();
     let test_prompt = "Explain AI in exactly 10 words.";
 
-    // Test Azure OpenAI
-    let azure_config = LlmConfig::azure_openai(api_key, deployment, endpoint, api_version);
+    // Test Azure LLM
+    let azure_config = LlmConfig::azurellm(api_key, deployment, endpoint, api_version);
     let azure_provider = LlmProviderFactory::create_provider(azure_config).unwrap();
 
     let request = LlmRequest::new(test_prompt)
@@ -324,7 +324,7 @@ async fn test_azure_openai_provider_comparison() {
         .with_temperature(0.0);
 
     if let Ok(response) = azure_provider.complete(request).await {
-        println!("Azure OpenAI response: {}", response.content);
+        println!("Azure LLM response: {}", response.content);
         assert!(!response.content.is_empty());
     }
 }

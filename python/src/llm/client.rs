@@ -189,7 +189,7 @@ impl LlmClient {
             }
             graphbit_core::llm::providers::LlmConfig::OpenAI { .. }
             | graphbit_core::llm::providers::LlmConfig::Anthropic { .. }
-            | graphbit_core::llm::providers::LlmConfig::AzureOpenAI { .. }
+            | graphbit_core::llm::providers::LlmConfig::AzureLlm { .. }
             | graphbit_core::llm::providers::LlmConfig::Perplexity { .. }
             | graphbit_core::llm::providers::LlmConfig::Fireworks { .. }
             | graphbit_core::llm::providers::LlmConfig::ByteDance { .. }

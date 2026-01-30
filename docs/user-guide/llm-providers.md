@@ -6,7 +6,7 @@ GraphBit supports multiple Large Language Model providers through a unified clie
 
 GraphBit supports these LLM providers:
 - **OpenAI** - GPT models including GPT-4o, GPT-4o-mini
-- **Azure OpenAI** - GPT models hosted on Microsoft Azure with enterprise features
+- **Azure LLM** - AI models hosted on Microsoft Azure with enterprise features (including OpenAI models)
 - **Anthropic** - Claude models including Claude-4-Sonnet
 - **MistralAI** - Mistral models including Mistral Large, Mistral Medium, and Mistral Small with function calling support
 - **ByteDance ModelArk** - ByteDance Seed and other models with OpenAI-compatible API
@@ -62,69 +62,70 @@ production_config = LlmConfig.openai(
 
 ```
 
-### Azure OpenAI Configuration
+### Azure LLM Configuration
 
-Azure OpenAI provides enterprise-grade access to OpenAI models through Microsoft Azure, offering enhanced security, compliance, and regional availability.
+Azure LLM provides enterprise-grade access to AI models (including OpenAI models) through Microsoft Azure, offering enhanced security, compliance, and regional availability.
 
 ```python
 import os
 
 from graphbit import LlmConfig
 
-# Basic Azure OpenAI configuration
-config = LlmConfig.azure_openai(
-    api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+# Basic Azure LLM configuration
+config = LlmConfig.azurellm(
+    api_key=os.getenv("AZURELLM_API_KEY"),
     deployment_name="gpt-4o-mini",  # Your Azure deployment name
-    endpoint="https://your-resource.openai.azure.com"  # Your Azure OpenAI endpoint
+    endpoint="https://your-resource.openai.azure.com"  # Your Azure LLM endpoint
 )
 
-print(f"Provider: {config.provider()}")  # "azure_openai"
+print(f"Provider: {config.provider()}")  # "azurellm"
 print(f"Model: {config.model()}")        # "gpt-4o-mini"
 ```
+```
 
-#### Azure OpenAI with Custom API Version
+#### Azure LLM with Custom API Version
 
 ```python
 # Configuration with specific API version
-config = LlmConfig.azure_openai(
-    api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+config = LlmConfig.azurellm(
+    api_key=os.getenv("AZURELLM_API_KEY"),
     deployment_name="gpt-4o",
     endpoint="https://your-resource.openai.azure.com",
     api_version="2024-10-21"  # Optional - defaults to "2024-10-21"
 )
 ```
 
-#### Azure OpenAI Setup Requirements
+#### Azure LLM Setup Requirements
 
-To use Azure OpenAI, you need:
+To use Azure LLM, you need:
 
-1. **Azure OpenAI Resource**: Create an Azure OpenAI resource in the Azure portal
+1. **Azure AI Resource**: Create an Azure AI resource in the Azure portal
 2. **Model Deployment**: Deploy a model (e.g., GPT-4o, GPT-4o-mini) in your resource
 3. **API Key**: Get your API key from the Azure portal
 4. **Endpoint URL**: Your resource endpoint (format: `https://{resource-name}.openai.azure.com`)
 
 #### Environment Variables
 
-Set these environment variables for Azure OpenAI:
+Set these environment variables for Azure LLM:
 
 ```bash
-export AZURE_OPENAI_API_KEY="your-azure-openai-api-key"
-export AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com"
-export AZURE_OPENAI_DEPLOYMENT="your-deployment-name"
-export AZURE_OPENAI_API_VERSION="2024-10-21"  # Optional
+export AZURELLM_API_KEY="your-azure-llm-api-key"
+export AZURELLM_ENDPOINT="https://your-resource.openai.azure.com"
+export AZURELLM_DEPLOYMENT="your-deployment-name"
+export AZURELLM_API_VERSION="2024-10-21"  # Optional
 ```
 
 ```python
 # Using environment variables
-config = LlmConfig.azure_openai(
-    api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-    deployment_name=os.getenv("AZURE_OPENAI_DEPLOYMENT"),
-    endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-    api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-10-21")
+config = LlmConfig.azurellm(
+    api_key=os.getenv("AZURELLM_API_KEY"),
+    deployment_name=os.getenv("AZURELLM_DEPLOYMENT"),
+    endpoint=os.getenv("AZURELLM_ENDPOINT"),
+    api_version=os.getenv("AZURELLM_API_VERSION", "2024-10-21")
 )
 ```
 
-#### Available Azure OpenAI Models
+#### Available Azure LLM Models
 
 | Model | Best For | Context Length | Performance |
 |-------|----------|----------------|-------------|
@@ -135,23 +136,23 @@ config = LlmConfig.azure_openai(
 | `gpt-3.5-turbo` | General tasks, cost-effective | 16K | Good quality, fast |
 
 ```python
-# Model selection examples for Azure OpenAI
-premium_config = LlmConfig.azure_openai(
-    api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+# Model selection examples for Azure LLM
+premium_config = LlmConfig.azurellm(
+    api_key=os.getenv("AZURELLM_API_KEY"),
     deployment_name="gpt-4o",  # For complex reasoning and latest features
-    endpoint=os.getenv("AZURE_OPENAI_ENDPOINT")
+    endpoint=os.getenv("AZURELLM_ENDPOINT")
 )
 
-balanced_config = LlmConfig.azure_openai(
-    api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+balanced_config = LlmConfig.azurellm(
+    api_key=os.getenv("AZURELLM_API_KEY"),
     deployment_name="gpt-4o-mini",  # Balanced performance and cost
-    endpoint=os.getenv("AZURE_OPENAI_ENDPOINT")
+    endpoint=os.getenv("AZURELLM_ENDPOINT")
 )
 
-cost_effective_config = LlmConfig.azure_openai(
-    api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+cost_effective_config = LlmConfig.azurellm(
+    api_key=os.getenv("AZURELLM_API_KEY"),
     deployment_name="gpt-3.5-turbo",  # Cost-effective for general tasks
-    endpoint=os.getenv("AZURE_OPENAI_ENDPOINT")
+    endpoint=os.getenv("AZURELLM_ENDPOINT")
 )
 ```
 
@@ -1671,7 +1672,7 @@ def get_api_key(provider):
     """Securely retrieve API keys"""
     key_mapping = {
         "openai": "OPENAI_API_KEY",
-        "azure_openai": "AZURE_OPENAI_API_KEY",
+        "azurellm": "AZURELLM_API_KEY",
         "anthropic": "ANTHROPIC_API_KEY",
         "bytedance": "BYTEDANCE_API_KEY",
         "openrouter": "OPENROUTER_API_KEY",

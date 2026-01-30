@@ -42,7 +42,7 @@ core/
 │       ├── openai.rs
 │       ├── anthropic.rs
 │       ├── ollama.rs
-│       ├── azure_openai.rs
+│       ├── azurellm.rs
 │       ├── mistralai.rs
 │       ├── deepseek.rs
 │       ├── fireworks.rs
@@ -224,9 +224,9 @@ let ollama_config = LlmConfig::Ollama {
     base_url: Some("http://localhost:11434".to_string()),
 };
 
-// Azure OpenAI configuration
-let azure_config = LlmConfig::AzureOpenAI {
-    api_key: std::env::var("AZURE_OPENAI_API_KEY")?,
+// Azure LLM configuration
+let azure_config = LlmConfig::AzureLlm {
+    api_key: std::env::var("AZURELLM_API_KEY")?,
     deployment_name: "gpt-4".to_string(),
     endpoint: "https://your-resource.openai.azure.com".to_string(),
     api_version: "2024-02-15-preview".to_string(),
@@ -489,7 +489,7 @@ pub enum LlmConfig {
     OpenAI { api_key: String, model: String, base_url: Option<String>, organization: Option<String> },
     Anthropic { api_key: String, model: String, base_url: Option<String> },
     Ollama { model: String, base_url: Option<String> },
-    AzureOpenAI { api_key: String, deployment_name: String, endpoint: String, api_version: String },
+    AzureLlm { api_key: String, deployment_name: String, endpoint: String, api_version: String },
     MistralAI { api_key: String, model: String, base_url: Option<String> },
     DeepSeek { api_key: String, model: String, base_url: Option<String> },
     // ... and more providers
@@ -526,7 +526,7 @@ GraphBit Core supports the following LLM providers:
 
 - **OpenAI** - GPT-4, GPT-3.5, and other OpenAI models
 - **Anthropic** - Claude 3.5 Sonnet, Claude 3 Opus, and other Claude models
-- **Azure OpenAI** - Azure-hosted OpenAI models
+- **Azure LLM** - Azure-hosted models (OpenAI and other Azure AI models)
 - **Ollama** - Local LLM execution
 - **Mistral AI** - Mistral and Mixtral models
 - **DeepSeek** - DeepSeek models

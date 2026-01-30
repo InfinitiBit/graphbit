@@ -43,16 +43,16 @@ impl LlmConfig {
 
     #[staticmethod]
     #[pyo3(signature = (api_key, deployment_name, endpoint, api_version=None))]
-    fn azure_openai(
+    fn azurellm(
         api_key: String,
         deployment_name: String,
         endpoint: String,
         api_version: Option<String>,
     ) -> PyResult<Self> {
-        validate_api_key(&api_key, "Azure OpenAI")?;
+        validate_api_key(&api_key, "Azure LLM")?;
 
         Ok(Self {
-            inner: CoreLlmConfig::azure_openai(
+            inner: CoreLlmConfig::azurellm(
                 api_key,
                 deployment_name,
                 endpoint,
