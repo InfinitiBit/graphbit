@@ -60,6 +60,15 @@ Built with a Rust core and a minimal Python layer, GraphBit delivers up to 68× 
  
 It powers multi-agent workflows that run in parallel, persist memory across steps, self-recover from failures, and ensure 100% task reliability. GraphBit is built for production workloads, from enterprise AI systems to low-resource edge deployments.
 
+## Used in Production
+
+<div align="center">
+  <a href="https://www.grantthornton.de/">
+    <img src="assets/Grant Thornton_idgV8Wo5Id_1.svg" alt="Grant Thornton Logo" height="80">
+  </a>
+  <br><br>
+  <strong>Grant Thornton Germany</strong> adopted GraphBit to move AI from "permanent pilot" to production without regulatory risk as a core component of their tech stack.
+</div>
 
 ##  Key Features
 
@@ -93,10 +102,6 @@ GraphBit consistently delivers production-grade efficiency across LLM calls, too
   </a>
   <p><em>Watch the GraphBit Benchmark Demo</em></p>
 </div>
-
-## Used in Production
- 
-**Grant Thornton Germany** adopted GraphBit to move AI from "permanent pilot" to production without regulatory risk as a core component of their tech stack.
 
 ## When to Use GraphBit
 
