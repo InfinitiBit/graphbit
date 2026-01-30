@@ -54,7 +54,7 @@ impl LlmRequest {
             max_tokens: None,
             temperature: None,
             top_p: None,
-            tools: Vec::with_capacity(4), // Pre-allocate small capacity
+            tools: Vec::with_capacity(4), //# Pre-allocate small capacity
             extra_params: HashMap::with_capacity(4), // Pre-allocate small capacity
         }
     }

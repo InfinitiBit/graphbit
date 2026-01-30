@@ -2,7 +2,7 @@
 //!
 //! `Azure LLM` provides various models through Microsoft `Azure` infrastructure.
 //! It uses a different endpoint structure and authentication method compared to `OpenAI`.
-//! This provider supports all Azure-deployed models, not just OpenAI models.
+//! This provider supports all Azure-deployed models,not just OpenAI models.
 
 use crate::errors::{GraphBitError, GraphBitResult};
 use crate::llm::providers::LlmProviderTrait;
