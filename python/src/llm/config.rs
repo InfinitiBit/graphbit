@@ -326,53 +326,9 @@ impl LlmConfig {
             };
 
             let config = CoreLlmConfig::PythonBridge {
-                python_instance: std::sync::Arc::new(litellm_instance.into()),
+                python_instance: Some(std::sync::Arc::new(litellm_instance.into())),
                 model: model.unwrap_or_else(|| "gpt-3.5-turbo".to_string()),
-            };
-
-            Ok(Self { inner: config })
-        })
-    }
-
-    #[staticmethod]
-    #[pyo3(signature = (api_key=None, model=None))]
-    fn litellm(api_key: Option<String>, model: Option<String>) -> PyResult<Self> {
-        // API key is optional for LiteLLM as it can use environment variables
-        if let Some(ref key) = api_key {
-            validate_api_key(key, "LiteLLM")?;
-        }
-
-        Python::with_gil(|py| {
-            // Import the Python LiteLLM class
-            let litellm_module = py.import("graphbit.providers.litellm.llm").map_err(|e| {
-                pyo3::exceptions::PyImportError::new_err(format!(
-                    "Failed to import LiteLLM module: {e}"
-                ))
-            })?;
-            let litellm_class = litellm_module.getattr("LiteLLMLLM").map_err(|e| {
-                pyo3::exceptions::PyAttributeError::new_err(format!(
-                    "Failed to get LiteLLMLLM class: {e}"
-                ))
-            })?;
-
-            // Create instance with optional API key
-            let litellm_instance = if let Some(key) = api_key {
-                litellm_class.call1((key,)).map_err(|e| {
-                    pyo3::exceptions::PyRuntimeError::new_err(format!(
-                        "Failed to create LiteLLMLLM instance: {e}"
-                    ))
-                })?
-            } else {
-                litellm_class.call0().map_err(|e| {
-                    pyo3::exceptions::PyRuntimeError::new_err(format!(
-                        "Failed to create LiteLLMLLM instance: {e}"
-                    ))
-                })?
-            };
-
-            let config = CoreLlmConfig::PythonBridge {
-                python_instance: std::sync::Arc::new(litellm_instance.into()),
-                model: model.unwrap_or_else(|| "gpt-3.5-turbo".to_string()),
+                instance_id: Some(Uuid::new_v4().to_string()),
             };
 
             Ok(Self { inner: config })
@@ -434,5 +390,5 @@ impl LlmConfig {
     ) -> bool {
         self.cleanup();
         false
-    }    
+    }
 }
