@@ -1,7 +1,7 @@
 //! LLM configuration for GraphBit Python bindings
 
 use crate::validation::validate_api_key;
-use graphbit_core::llm::providers::register_python_instance;
+use graphbit_core::llm::providers::{register_python_instance, unregister_python_instance};
 use graphbit_core::llm::LlmConfig as CoreLlmConfig;
 use pyo3::prelude::*;
 use uuid::Uuid;
@@ -386,4 +386,53 @@ impl LlmConfig {
     fn model(&self) -> String {
         self.inner.model_name().to_string()
     }
+
+    /// Cleanup the Python instance from the global registry
+    ///
+    /// Call this method when you're done using a HuggingFace or other PythonBridge
+    /// configuration to free memory and Python resources.
+    ///
+    /// Returns True if an instance was removed, False otherwise.
+    ///
+    /// Example:
+    ///     config = LlmConfig.huggingface(api_key="...", model="...")
+    ///     # ... use config ...
+    ///     config.cleanup()  # Frees resources
+    fn cleanup(&self) -> bool {
+        if let CoreLlmConfig::PythonBridge {
+            instance_id: Some(ref id),
+            ..
+        } = self.inner
+        {
+            unregister_python_instance(id)
+        } else {
+            false
+        }
+    }
+    /// Context manager entry point
+    ///
+    /// Enables `with` statement usage for automatic resource cleanup:
+    ///
+    /// Example:
+    ///     with LlmConfig.huggingface(api_key="...", model="...") as config:
+    ///         # use config
+    ///     # cleanup() called automatically
+    fn __enter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
+        slf
+    }
+
+    /// Context manager exit point
+    ///
+    /// Automatically calls `cleanup()` when exiting the `with` block.
+    /// Returns False to not suppress any exceptions.
+    #[pyo3(signature = (_exc_type=None, _exc_val=None, _exc_tb=None))]
+    fn __exit__(
+        &self,
+        _exc_type: Option<PyObject>,
+        _exc_val: Option<PyObject>,
+        _exc_tb: Option<PyObject>,
+    ) -> bool {
+        self.cleanup();
+        false
+    }    
 }

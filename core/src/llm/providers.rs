@@ -37,6 +37,19 @@ pub fn get_python_instance(id: &str) -> Option<std::sync::Arc<pyo3::PyObject>> {
     }
 }
 
+/// Remove a Python instance from the registry
+///
+/// Returns `true` if the instance was found and removed, `false` otherwise.
+/// This should be called when the `LlmConfig` is no longer needed to free resources.
+#[cfg(feature = "python")]
+pub fn unregister_python_instance(id: &str) -> bool {
+    if let Ok(mut registry) = PYTHON_INSTANCE_REGISTRY.lock() {
+        registry.remove(id).is_some()
+    } else {
+        false
+    }
+}
+
 /// Configuration for different LLM providers
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "provider")]
