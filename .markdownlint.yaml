@@ -40,17 +40,17 @@ MD033:
   # Inline HTML - allow for necessary HTML elements
   # allowed_elements: [br, sub, sup, img, a, details, summary, div, p, h1]
   allowed_elements:
-    - br
-    - sub
-    - sup
-    - img
-    - a
-    - details
-    - summary
-    - div
-    - p
-    - h1
-    - b
+  - br
+  - sub
+  - sup
+  - img
+  - a
+  - details
+  - summary
+  - div
+  - p
+  - h1
+  - b
 
 
 MD034: false
