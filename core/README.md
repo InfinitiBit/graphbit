@@ -5,6 +5,7 @@ The Rust core library for GraphBit - a declarative agentic workflow automation f
 ## Overview
 
 GraphBit Core is the foundational Rust library that provides:
+
 - **Workflow Engine**: Graph-based workflow execution with dependency management and parallel processing
 - **Agent System**: LLM-backed intelligent agents with tool calling support
 - **LLM Providers**: Multi-provider support (OpenAI, Anthropic, Ollama, Azure, Mistral, and more)
@@ -14,6 +15,12 @@ GraphBit Core is the foundational Rust library that provides:
 - **Validation System**: Type validation with JSON schema support
 - **Type System**: Strong typing with UUID-based identifiers
 - **Error Handling**: Comprehensive error types with retry logic and circuit breakers
+
+## Documentation
+
+- **Contributor guide to the core crate**: [`rust-core.md`](rust-core.md)
+- **System architecture (3-tier)**: [`docs/development/architecture.md`](../docs/development/architecture.md)
+- **Python bindings architecture**: [`docs/development/python-bindings.md`](../docs/development/python-bindings.md)
 
 ## Architecture
 
@@ -51,10 +58,10 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-graphbit-core = "0.5.1"
+graphbit-core = "0.6.1"
 
-# Optional features
-graphbit-core = { version = "0.5.1", features = ["python-bindings"] }
+# Optional: enable Python bridge support (PyO3 integration points)
+# graphbit-core = { version = "0.6.1", features = ["python"] }
 ```
 
 The library uses async/await with Tokio runtime and includes serialization support via Serde.
@@ -78,7 +85,11 @@ async fn main() -> GraphBitResult<()> {
     let mut workflow = Workflow::new("Hello World", "A simple greeting workflow");
 
     // Add an agent node
-    let agent_id = AgentId::from_string("greeter")?;
+    //
+    // Deterministic IDs are useful for stable workflows.
+    // `from_string` returns a `uuid::Error`, so we map it into `GraphBitError` for `GraphBitResult`.
+    let agent_id =
+        AgentId::from_string("greeter").map_err(|e| GraphBitError::config(e.to_string()))?;
     let node = WorkflowNode::new(
         "greeter",
         "Greet the user",
@@ -113,7 +124,8 @@ use graphbit_core::*;
 let mut graph = WorkflowGraph::new();
 
 // Create nodes
-let analyzer_agent_id = AgentId::from_string("analyzer")?;
+let analyzer_agent_id =
+    AgentId::from_string("analyzer").map_err(|e| GraphBitError::config(e.to_string()))?;
 let node1 = WorkflowNode::new(
     "analyzer",
     "Analyze data",
@@ -123,7 +135,8 @@ let node1 = WorkflowNode::new(
     },
 );
 
-let formatter_agent_id = AgentId::from_string("formatter")?;
+let formatter_agent_id =
+    AgentId::from_string("formatter").map_err(|e| GraphBitError::config(e.to_string()))?;
 let node2 = WorkflowNode::new(
     "formatter",
     "Format output",
