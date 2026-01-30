@@ -3,7 +3,7 @@
 # GraphBit - উচ্চ কর্মক্ষমতা এজেন্টিক ফ্রেমওয়ার্ক (বাংলা)
 
 <p align="center">
-    <img src="assets/GraphBit_Final_GB_Github_GIF.gif" style="max-width: 100%; height: auto;" alt="Logo" />
+    <img src="../assets/GraphBit_Final_GB_Github_GIF.gif" style="max-width: 600px; height: auto;" alt="Logo" />
 </p>
 <p align="center">
     <img alt="GraphBit - Developer-first, enterprise-grade LLM framework. | Product Hunt" loading="lazy" width="250" height="54" decoding="async" data-nimg="1" class="w-auto h-[54px] max-w-[250px]" style="color:transparent" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1004951&amp;theme=light&amp;t=1757340621693"> <img alt="GraphBit - Developer-first, enterprise-grade LLM framework. | Product Hunt" loading="lazy" width="250" height="54" decoding="async" data-nimg="1" class="w-auto h-[54px] max-w-[250px]" style="color:transparent" src="https://api.producthunt.com/widgets/embed-image/v1/top-post-badge.svg?post_id=1004951&amp;theme=light&amp;period=daily&amp;t=1757933101511">
@@ -12,8 +12,14 @@
 <p align="center">
     <a href="https://graphbit.ai/">Website</a> |
     <a href="https://docs.graphbit.ai/">Docs</a> |
-    <a href="https://discord.com/invite/huVJwkyu">Discord</a>
+    <a href="https://discord.com/invite/FMhgB3paMD">Discord</a>
     <br /><br />
+</p>
+
+<p align="center">
+    <a href="https://trendshift.io/repositories/14884" target="_blank"><img src="https://trendshift.io/api/badge/repositories/14884" alt="InfinitiBit%2Fgraphbit | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
+    <br>
+    <a href="https://pepy.tech/projects/graphbit"><img src="https://static.pepy.tech/personalized-badge/graphbit?period=total&units=INTERNATIONAL_SYSTEM&left_color=GREY&right_color=GREEN&left_text=Downloads" alt="PyPI Downloads"/></a>
 </p>
 
 <p align="center">
@@ -23,14 +29,14 @@
     <a href="https://github.com/InfinitiBit/graphbit/blob/main/CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome"></a>
     <br>
     <a href="https://www.rust-lang.org"><img src="https://img.shields.io/badge/rust-1.70+-orange.svg?logo=rust" alt="Rust Version"></a>
-    <a href="https://www.python.org"><img src="https://img.shields.io/badge/python-3.10--3.13-blue.svg?logo=python&logoColor=white" alt="Python Version"></a>
+    <a href="https://www.python.org"><img src="https://img.shields.io/badge/python-3.9--3.13-blue.svg?logo=python&logoColor=white" alt="Python Version"></a>
     <a href="https://github.com/InfinitiBit/graphbit/blob/main/LICENSE.md"><img src="https://img.shields.io/badge/license-Custom-lightgrey.svg" alt="License"></a>
 
 </p>
 <p align="center">
     <a href="https://www.youtube.com/@graphbitAI"><img src="https://img.shields.io/badge/YouTube-FF0000?logo=youtube&logoColor=white" alt="YouTube"></a>
     <a href="https://x.com/graphbit_ai"><img src="https://img.shields.io/badge/X-000000?logo=x&logoColor=white" alt="X"></a>
-    <a href="https://discord.com/invite/huVJwkyu"><img src="https://img.shields.io/badge/Discord-7289da?logo=discord&logoColor=white" alt="Discord"></a>
+    <a href="https://discord.com/invite/FMhgB3paMD"><img src="https://img.shields.io/badge/Discord-7289da?logo=discord&logoColor=white" alt="Discord"></a>
     <a href="https://www.linkedin.com/showcase/graphbitai/"><img src="https://img.shields.io/badge/LinkedIn-0077B5?logo=linkedin&logoColor=white" alt="LinkedIn"></a>
 </p>
 
@@ -42,7 +48,7 @@
 
 🚧 **অনুবাদ চলছে** - এই নথিটি ইংরেজি থেকে অনুবাদ করা হচ্ছে।
 
-📖 **[Read in English](README.md)** | **[ইংরেজিতে পড়ুন](README.md)**
+📖 **[Read in English](../README.md)** | **[ইংরেজিতে পড়ুন](../README.md)**
 
 ---
 
@@ -52,7 +58,7 @@
 
 ## GraphBit সম্পর্কে
 
-GraphBit হল একটি ওপেন-সোর্স এজেন্টিক AI ফ্রেমওয়ার্ক যা ডেভেলপারদের জন্য যাদের নির্ধারণমূলক, সমসাময়িক এবং কম ওভারহেড এক্সিকিউশন প্রয়োজন।
+GraphBit হল একটি উৎস উপলব্ধ এজেন্টিক AI ফ্রেমওয়ার্ক যা ডেভেলপারদের জন্য যাদের নির্ধারণমূলক, সমসাময়িক এবং কম ওভারহেড এক্সিকিউশন প্রয়োজন।
 
 ## কেন GraphBit?
 
@@ -90,7 +96,7 @@ GraphBit ধারাবাহিকভাবে LLM কল, টুল ইনভ
 
 <div align="center">
   <a href="https://www.youtube.com/watch?v=MaCl5oENeAY">
-    <img src="https://img.youtube.com/vi/MaCl5oENeAY/maxresdefault.jpg" alt="GraphBit Benchmark Demo" style="max-width: 100%; height: auto;">
+    <img src="https://img.youtube.com/vi/MaCl5oENeAY/maxresdefault.jpg" alt="GraphBit Benchmark Demo" style="max-width: 600px; height: auto;">
   </a>
   <p><em>GraphBit বেঞ্চমার্ক ডেমো দেখুন</em></p>
 </div>
@@ -120,7 +126,7 @@ pip install graphbit
 
 <div align="center">
   <a href="https://youtu.be/ti0wbHFKKFM?si=hnxi-1W823z5I_zs">
-    <img src="https://img.youtube.com/vi/ti0wbHFKKFM/maxresdefault.jpg" alt="GraphBit Quick Start Tutorial" style="max-width: 100%; height: auto;">
+    <img src="https://img.youtube.com/vi/ti0wbHFKKFM/maxresdefault.jpg" alt="GraphBit Quick Start Tutorial" style="max-width: 600px; height: auto;">
   </a>
   <p><em>PyPI এর মাধ্যমে GraphBit ইনস্টল করুন | সম্পূর্ণ উদাহরণ এবং রান গাইড টিউটোরিয়াল দেখুন</em></p>
 </div>
@@ -199,7 +205,7 @@ GraphBit Tracer ন্যূনতম কনফিগারেশনের স�
 
 <div align="center">
   <a href="https://www.youtube.com/watch?v=nzwrxSiRl2U">
-    <img src="https://img.youtube.com/vi/nzwrxSiRl2U/maxresdefault.jpg" alt="GraphBit Observability & Tracing" style="max-width: 100%; height: auto;">
+    <img src="https://img.youtube.com/vi/nzwrxSiRl2U/maxresdefault.jpg" alt="GraphBit Observability & Tracing" style="max-width: 600px; height: auto;">
   </a>
   <p><em>GraphBit পর্যবেক্ষণযোগ্যতা এবং ট্র্যাকিং টিউটোরিয়াল দেখুন</em></p>
 </div>
@@ -207,7 +213,7 @@ GraphBit Tracer ন্যূনতম কনফিগারেশনের স�
 ## উচ্চ-স্তরের আর্কিটেকচার
 
 <p align="center">
-  <img src="assets/architecture.svg" height="250" alt="GraphBit Architecture">
+  <img src="../assets/architecture.svg" height="250" alt="GraphBit Architecture">
 </p>
 
 নির্ভরযোগ্যতা এবং কর্মক্ষমতার জন্য তিন-স্তরের ডিজাইন:
@@ -252,7 +258,7 @@ GraphBit এর মডুলার আর্কিটেকচার বাহ�
 এক্সটেনশনগুলি কমিউনিটি দ্বারা বিকশিত এবং রক্ষণাবেক্ষণ করা হয়।
 
 <p align="center">
-  <img src="assets/Ecosystem.png" alt="GraphBit Ecosystem - Stop Choosing, Start Orchestrating" style="max-width: 100%; height: auto;">
+  <img src="../assets/Ecosystem.png" alt="GraphBit Ecosystem - Stop Choosing, Start Orchestrating" style="max-width: 100%; height: auto;">
 </p>
 
 
@@ -260,7 +266,7 @@ GraphBit এর মডুলার আর্কিটেকচার বাহ�
 
 <div align="center">
   <a href="https://www.youtube.com/watch?v=gKvkMc2qZcA">
-    <img src="https://img.youtube.com/vi/gKvkMc2qZcA/maxresdefault.jpg" alt="Making Agent Workflow by GraphBit" style="max-width: 100%; height: auto;">
+    <img src="https://img.youtube.com/vi/gKvkMc2qZcA/maxresdefault.jpg" alt="Making Agent Workflow by GraphBit" style="max-width: 600px; height: auto;">
   </a>
   <p><em>GraphBit দিয়ে এজেন্ট ওয়ার্কফ্লো তৈরির টিউটোরিয়াল দেখুন</em></p>
 </div>
@@ -287,7 +293,7 @@ GraphBit তিন-স্তরের মডেলের অধীনে লা�
 
 সম্পূর্ণ শর্তাবলীর জন্য, [Full License](LICENSE.md) দেখুন।
 
-Copyright © 2023–2025 InfinitiBit GmbH. All rights reserved.
+Copyright © 2023–2026 InfinitiBit GmbH. All rights reserved.
 
 ---
 

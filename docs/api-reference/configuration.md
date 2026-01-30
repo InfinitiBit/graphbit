@@ -76,21 +76,21 @@ llm_config = LlmConfig.anthropic(
 llm_config = LlmConfig.anthropic("your-anthropic-key")
 ```
 
-### Azure OpenAI Configuration
+### Azure LLM Configuration
 
 ```python
 from graphbit import LlmConfig
 
-# Basic Azure OpenAI configuration
-llm_config = LlmConfig.azure_openai(
-    api_key="your-azure-openai-key",
+# Basic Azure LLM configuration
+llm_config = LlmConfig.azurellm(
+    api_key="your-azure-llm-key",
     deployment_name="gpt-4o-mini",  # Your Azure deployment name
-    endpoint="https://your-resource.openai.azure.com"  # Your Azure OpenAI endpoint
+    endpoint="https://your-resource.openai.azure.com"  # Your Azure LLM endpoint
 )
 
 # With custom API version
-llm_config = LlmConfig.azure_openai(
-    api_key="your-azure-openai-key",
+llm_config = LlmConfig.azurellm(
+    api_key="your-azure-llm-key",
     deployment_name="gpt-4o",
     endpoint="https://your-resource.openai.azure.com",
     api_version="2024-10-21"  # Optional, defaults to "2024-10-21"
@@ -169,7 +169,7 @@ llm_config = LlmConfig.ollama()
 
 ```python
 # Access configuration properties
-provider = llm_config.provider()  # "openai", "azure_openai", "anthropic", "mistralai", "perplexity", "deepseek", "ollama"
+provider = llm_config.provider()  # "openai", "azurellm", "anthropic", "mistralai", "perplexity", "deepseek", "ollama"
 model = llm_config.model()        # Model name
 ```
 

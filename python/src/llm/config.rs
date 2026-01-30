@@ -1,8 +1,10 @@
 //! LLM configuration for GraphBit Python bindings
 
 use crate::validation::validate_api_key;
+use graphbit_core::llm::providers::register_python_instance;
 use graphbit_core::llm::LlmConfig as CoreLlmConfig;
 use pyo3::prelude::*;
+use uuid::Uuid;
 
 /// Configuration for LLM providers and models
 #[pyclass]
@@ -41,16 +43,16 @@ impl LlmConfig {
 
     #[staticmethod]
     #[pyo3(signature = (api_key, deployment_name, endpoint, api_version=None))]
-    fn azure_openai(
+    fn azurellm(
         api_key: String,
         deployment_name: String,
         endpoint: String,
         api_version: Option<String>,
     ) -> PyResult<Self> {
-        validate_api_key(&api_key, "Azure OpenAI")?;
+        validate_api_key(&api_key, "Azure LLM")?;
 
         Ok(Self {
-            inner: CoreLlmConfig::azure_openai(
+            inner: CoreLlmConfig::azurellm(
                 api_key,
                 deployment_name,
                 endpoint,
@@ -270,9 +272,17 @@ impl LlmConfig {
                 ))
             })?;
 
+            let py_object: PyObject = hf_instance.into();
+            let instance_arc = std::sync::Arc::new(py_object);
+            let instance_id = Uuid::new_v4().to_string();
+
+            // Register the instance globally
+            register_python_instance(instance_id.clone(), instance_arc.clone());
+
             let config = CoreLlmConfig::PythonBridge {
-                python_instance: std::sync::Arc::new(hf_instance.into()),
+                python_instance: Some(instance_arc),
                 model: model.unwrap_or_else(|| "microsoft/DialoGPT-medium".to_string()),
+                instance_id: Some(instance_id),
             };
 
             Ok(Self { inner: config })

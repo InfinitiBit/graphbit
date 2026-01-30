@@ -1,7 +1,8 @@
-//! `Azure OpenAI` LLM provider implementation
+//! `Azure LLM` provider implementation
 //!
-//! `Azure OpenAI` provides `OpenAI` models through Microsoft `Azure` infrastructure.
+//! `Azure LLM` provides various models through Microsoft `Azure` infrastructure.
 //! It uses a different endpoint structure and authentication method compared to `OpenAI`.
+//! This provider supports all Azure-deployed models,not just OpenAI models.
 
 use crate::errors::{GraphBitError, GraphBitResult};
 use crate::llm::providers::LlmProviderTrait;
@@ -12,8 +13,8 @@ use async_trait::async_trait;
 use reqwest::Client;
 use serde::{Deserialize, Deserializer, Serialize};
 
-/// `Azure OpenAI` API provider
-pub struct AzureOpenAiProvider {
+/// `Azure LLM` API provider
+pub struct AzureLlmProvider {
     client: Client,
     api_key: String,
     deployment_name: String,
@@ -21,8 +22,8 @@ pub struct AzureOpenAiProvider {
     api_version: String,
 }
 
-impl AzureOpenAiProvider {
-    /// Create a new `Azure OpenAI` provider
+impl AzureLlmProvider {
+    /// Create a new `Azure LLM` provider
     pub fn new(
         api_key: String,
         deployment_name: String,
@@ -31,14 +32,14 @@ impl AzureOpenAiProvider {
     ) -> GraphBitResult<Self> {
         // Optimized client with connection pooling for better performance
         let client = Client::builder()
-            .timeout(std::time::Duration::from_secs(120)) // Increased timeout for Azure OpenAI
+            .timeout(std::time::Duration::from_secs(120)) // Increased timeout for Azure LLM
             .pool_max_idle_per_host(10) // Increased connection pool size
             .pool_idle_timeout(std::time::Duration::from_secs(30))
             .tcp_keepalive(std::time::Duration::from_secs(60))
             .build()
             .map_err(|e| {
                 GraphBitError::llm_provider(
-                    "azure_openai",
+                    "azurellm",
                     format!("Failed to create HTTP client: {e}"),
                 )
             })?;
@@ -52,7 +53,7 @@ impl AzureOpenAiProvider {
         })
     }
 
-    /// Create a new `Azure OpenAI` provider with default API version
+    /// Create a new `Azure LLM` provider with default API version
     pub fn with_defaults(
         api_key: String,
         deployment_name: String,
@@ -61,9 +62,9 @@ impl AzureOpenAiProvider {
         Self::new(api_key, deployment_name, endpoint, "2024-10-21".to_string())
     }
 
-    /// Convert `GraphBit` message to `Azure OpenAI` message format
-    fn convert_message(message: &LlmMessage) -> AzureOpenAiMessage {
-        AzureOpenAiMessage {
+    /// Convert `GraphBit` message to `Azure LLM` message format
+    fn convert_message(message: &LlmMessage) -> AzureLlmMessage {
+        AzureLlmMessage {
             role: match message.role {
                 LlmRole::System => "system".to_string(),
                 LlmRole::User => "user".to_string(),
@@ -78,10 +79,10 @@ impl AzureOpenAiProvider {
                     message
                         .tool_calls
                         .iter()
-                        .map(|tc| AzureOpenAiToolCall {
+                        .map(|tc| AzureLlmToolCall {
                             id: tc.id.clone(),
                             r#type: "function".to_string(),
-                            function: AzureOpenAiFunction {
+                            function: AzureLlmFunction {
                                 name: tc.name.clone(),
                                 arguments: tc.parameters.to_string(),
                             },
@@ -92,11 +93,11 @@ impl AzureOpenAiProvider {
         }
     }
 
-    /// Convert `GraphBit` tool to `Azure OpenAI` tool format
-    fn convert_tool(tool: &LlmTool) -> AzureOpenAiTool {
-        AzureOpenAiTool {
+    /// Convert `GraphBit` tool to `Azure LLM` tool format
+    fn convert_tool(tool: &LlmTool) -> AzureLlmTool {
+        AzureLlmTool {
             r#type: "function".to_string(),
-            function: AzureOpenAiFunctionDef {
+            function: AzureLlmFunctionDef {
                 name: tool.name.clone(),
                 description: tool.description.clone(),
                 parameters: tool.parameters.clone(),
@@ -104,12 +105,13 @@ impl AzureOpenAiProvider {
         }
     }
 
-    /// Parse `Azure OpenAI` response to `GraphBit` response
-    fn parse_response(&self, response: AzureOpenAiResponse) -> GraphBitResult<LlmResponse> {
-        let choice =
-            response.choices.into_iter().next().ok_or_else(|| {
-                GraphBitError::llm_provider("azure_openai", "No choices in response")
-            })?;
+    /// Parse `Azure LLM` response to `GraphBit` response
+    fn parse_response(&self, response: AzureLlmResponse) -> GraphBitResult<LlmResponse> {
+        let choice = response
+            .choices
+            .into_iter()
+            .next()
+            .ok_or_else(|| GraphBitError::llm_provider("azurellm", "No choices in response"))?;
 
         let finish_reason = match choice.finish_reason.as_str() {
             "stop" => FinishReason::Stop,
@@ -148,9 +150,9 @@ impl AzureOpenAiProvider {
 }
 
 #[async_trait]
-impl LlmProviderTrait for AzureOpenAiProvider {
+impl LlmProviderTrait for AzureLlmProvider {
     fn provider_name(&self) -> &str {
-        "azure_openai"
+        "azurellm"
     }
 
     fn model_name(&self) -> &str {
@@ -165,16 +167,16 @@ impl LlmProviderTrait for AzureOpenAiProvider {
             endpoint, self.deployment_name, self.api_version
         );
 
-        let messages: Vec<AzureOpenAiMessage> =
+        let messages: Vec<AzureLlmMessage> =
             request.messages.iter().map(Self::convert_message).collect();
 
-        let tools: Option<Vec<AzureOpenAiTool>> = if request.tools.is_empty() {
+        let tools: Option<Vec<AzureLlmTool>> = if request.tools.is_empty() {
             None
         } else {
             Some(request.tools.iter().map(Self::convert_tool).collect())
         };
 
-        let body = AzureOpenAiRequest {
+        let body = AzureLlmRequest {
             messages,
             max_tokens: request.max_tokens,
             temperature: request.temperature,
@@ -203,9 +205,7 @@ impl LlmProviderTrait for AzureOpenAiProvider {
             .json(&request_json)
             .send()
             .await
-            .map_err(|e| {
-                GraphBitError::llm_provider("azure_openai", format!("Request failed: {e}"))
-            })?;
+            .map_err(|e| GraphBitError::llm_provider("azurellm", format!("Request failed: {e}")))?;
 
         if !response.status().is_success() {
             let error_text = response
@@ -213,42 +213,42 @@ impl LlmProviderTrait for AzureOpenAiProvider {
                 .await
                 .unwrap_or_else(|_| "Unknown error".to_string());
             return Err(GraphBitError::llm_provider(
-                "azure_openai",
+                "azurellm",
                 format!("API error: {error_text}"),
             ));
         }
 
-        let azure_response: AzureOpenAiResponse = response.json().await.map_err(|e| {
-            GraphBitError::llm_provider("azure_openai", format!("Failed to parse response: {e}"))
+        let azure_response: AzureLlmResponse = response.json().await.map_err(|e| {
+            GraphBitError::llm_provider("azurellm", format!("Failed to parse response: {e}"))
         })?;
 
         self.parse_response(azure_response)
     }
 
     fn supports_function_calling(&self) -> bool {
-        // Most Azure OpenAI deployments support function calling
+        // Most Azure LLM deployments support function calling
         // This could be made more specific based on the deployment model
         true
     }
 
     fn max_context_length(&self) -> Option<u32> {
         // Context length depends on the underlying model deployed
-        // Common Azure OpenAI models and their context lengths
+        // Common Azure LLM models and their context lengths
         // This is a simplified mapping - in practice, you'd want to query the deployment info
         Some(128_000) // Default to a common large context size
     }
 
     fn cost_per_token(&self) -> Option<(f64, f64)> {
-        // Azure OpenAI pricing varies by region and model
+        // Azure LLM pricing varies by region and model
         // This would need to be configured based on the specific deployment
         None
     }
 }
 
-// Request/Response structures for Azure OpenAI API
+// Request/Response structures for Azure LLM API
 #[derive(Debug, Serialize)]
-struct AzureOpenAiRequest {
-    messages: Vec<AzureOpenAiMessage>,
+struct AzureLlmRequest {
+    messages: Vec<AzureLlmMessage>,
     #[serde(skip_serializing_if = "Option::is_none")]
     max_tokens: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -256,67 +256,67 @@ struct AzureOpenAiRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     top_p: Option<f32>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    tools: Option<Vec<AzureOpenAiTool>>,
+    tools: Option<Vec<AzureLlmTool>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     tool_choice: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct AzureOpenAiMessage {
+struct AzureLlmMessage {
     role: String,
     #[serde(deserialize_with = "deserialize_nullable_content")]
     content: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    tool_calls: Option<Vec<AzureOpenAiToolCall>>,
+    tool_calls: Option<Vec<AzureLlmToolCall>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct AzureOpenAiToolCall {
+struct AzureLlmToolCall {
     id: String,
     r#type: String,
-    function: AzureOpenAiFunction,
+    function: AzureLlmFunction,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct AzureOpenAiFunction {
+struct AzureLlmFunction {
     name: String,
     arguments: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
-struct AzureOpenAiTool {
+struct AzureLlmTool {
     r#type: String,
-    function: AzureOpenAiFunctionDef,
+    function: AzureLlmFunctionDef,
 }
 
 #[derive(Debug, Clone, Serialize)]
-struct AzureOpenAiFunctionDef {
+struct AzureLlmFunctionDef {
     name: String,
     description: String,
     parameters: serde_json::Value,
 }
 
 #[derive(Debug, Deserialize)]
-struct AzureOpenAiResponse {
+struct AzureLlmResponse {
     id: String,
-    choices: Vec<AzureOpenAiChoice>,
-    usage: AzureOpenAiUsage,
+    choices: Vec<AzureLlmChoice>,
+    usage: AzureLlmUsage,
 }
 
 #[derive(Debug, Deserialize)]
-struct AzureOpenAiChoice {
-    message: AzureOpenAiResponseMessage,
+struct AzureLlmChoice {
+    message: AzureLlmResponseMessage,
     finish_reason: String,
 }
 
 #[derive(Debug, Deserialize)]
-struct AzureOpenAiResponseMessage {
+struct AzureLlmResponseMessage {
     content: Option<String>,
-    tool_calls: Option<Vec<AzureOpenAiToolCall>>,
+    tool_calls: Option<Vec<AzureLlmToolCall>>,
 }
 
 #[derive(Debug, Deserialize)]
-struct AzureOpenAiUsage {
+struct AzureLlmUsage {
     prompt_tokens: u32,
     completion_tokens: u32,
     total_tokens: u32,
@@ -338,8 +338,8 @@ mod tests {
     use serde_json::json;
 
     #[test]
-    fn test_azure_openai_provider_creation() {
-        let provider = AzureOpenAiProvider::new(
+    fn test_azurellm_provider_creation() {
+        let provider = AzureLlmProvider::new(
             "test-api-key".to_string(),
             "test-deployment".to_string(),
             "https://test.openai.azure.com".to_string(),
@@ -348,13 +348,13 @@ mod tests {
 
         assert!(provider.is_ok());
         let provider = provider.unwrap();
-        assert_eq!(provider.provider_name(), "azure_openai");
+        assert_eq!(provider.provider_name(), "azurellm");
         assert_eq!(provider.model_name(), "test-deployment");
     }
 
     #[test]
-    fn test_azure_openai_provider_with_defaults() {
-        let provider = AzureOpenAiProvider::with_defaults(
+    fn test_azurellm_provider_with_defaults() {
+        let provider = AzureLlmProvider::with_defaults(
             "test-api-key".to_string(),
             "test-deployment".to_string(),
             "https://test.openai.azure.com".to_string(),
@@ -362,13 +362,13 @@ mod tests {
 
         assert!(provider.is_ok());
         let provider = provider.unwrap();
-        assert_eq!(provider.provider_name(), "azure_openai");
+        assert_eq!(provider.provider_name(), "azurellm");
         assert_eq!(provider.model_name(), "test-deployment");
     }
 
     #[test]
-    fn test_azure_openai_supports_function_calling() {
-        let provider = AzureOpenAiProvider::new(
+    fn test_azurellm_supports_function_calling() {
+        let provider = AzureLlmProvider::new(
             "test-api-key".to_string(),
             "test-deployment".to_string(),
             "https://test.openai.azure.com".to_string(),
@@ -387,7 +387,7 @@ mod tests {
             tool_calls: Vec::new(),
         };
 
-        let azure_message = AzureOpenAiProvider::convert_message(&message);
+        let azure_message = AzureLlmProvider::convert_message(&message);
         assert_eq!(azure_message.role, "user");
         assert_eq!(azure_message.content, "Hello, world!");
         assert!(azure_message.tool_calls.is_none());
@@ -410,7 +410,7 @@ mod tests {
             }),
         };
 
-        let azure_tool = AzureOpenAiProvider::convert_tool(&tool);
+        let azure_tool = AzureLlmProvider::convert_tool(&tool);
         assert_eq!(azure_tool.r#type, "function");
         assert_eq!(azure_tool.function.name, "get_weather");
         assert_eq!(azure_tool.function.description, "Get the current weather");

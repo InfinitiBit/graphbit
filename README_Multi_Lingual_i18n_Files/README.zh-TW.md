@@ -3,7 +3,7 @@
 # GraphBit - 高效能智慧體框架 (繁體中文)
 
 <p align="center">
-    <img src="assets/GraphBit_Final_GB_Github_GIF.gif" style="max-width: 100%; height: auto;" alt="Logo" />
+    <img src="../assets/GraphBit_Final_GB_Github_GIF.gif" style="max-width: 600px; height: auto;" alt="Logo" />
 </p>
 <p align="center">
     <img alt="GraphBit - Developer-first, enterprise-grade LLM framework. | Product Hunt" loading="lazy" width="250" height="54" decoding="async" data-nimg="1" class="w-auto h-[54px] max-w-[250px]" style="color:transparent" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1004951&amp;theme=light&amp;t=1757340621693"> <img alt="GraphBit - Developer-first, enterprise-grade LLM framework. | Product Hunt" loading="lazy" width="250" height="54" decoding="async" data-nimg="1" class="w-auto h-[54px] max-w-[250px]" style="color:transparent" src="https://api.producthunt.com/widgets/embed-image/v1/top-post-badge.svg?post_id=1004951&amp;theme=light&amp;period=daily&amp;t=1757933101511">
@@ -12,8 +12,16 @@
 <p align="center">
     <a href="https://graphbit.ai/">Website</a> |
     <a href="https://docs.graphbit.ai/">Docs</a> |
-    <a href="https://discord.com/invite/huVJwkyu">Discord</a>
+    <a href="https://discord.com/invite/FMhgB3paMD">Discord</a>
     <br /><br />
+</p>
+
+</p>
+
+<p align="center">
+    <a href="https://trendshift.io/repositories/14884" target="_blank"><img src="https://trendshift.io/api/badge/repositories/14884" alt="InfinitiBit%2Fgraphbit | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
+    <br>
+    <a href="https://pepy.tech/projects/graphbit"><img src="https://static.pepy.tech/personalized-badge/graphbit?period=total&units=INTERNATIONAL_SYSTEM&left_color=GREY&right_color=GREEN&left_text=Downloads" alt="PyPI Downloads"/></a>
 </p>
 
 <p align="center">
@@ -23,14 +31,14 @@
     <a href="https://github.com/InfinitiBit/graphbit/blob/main/CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome"></a>
     <br>
     <a href="https://www.rust-lang.org"><img src="https://img.shields.io/badge/rust-1.70+-orange.svg?logo=rust" alt="Rust Version"></a>
-    <a href="https://www.python.org"><img src="https://img.shields.io/badge/python-3.10--3.13-blue.svg?logo=python&logoColor=white" alt="Python Version"></a>
+    <a href="https://www.python.org"><img src="https://img.shields.io/badge/python-3.9--3.13-blue.svg?logo=python&logoColor=white" alt="Python Version"></a>
     <a href="https://github.com/InfinitiBit/graphbit/blob/main/LICENSE.md"><img src="https://img.shields.io/badge/license-Custom-lightgrey.svg" alt="License"></a>
 
 </p>
 <p align="center">
     <a href="https://www.youtube.com/@graphbitAI"><img src="https://img.shields.io/badge/YouTube-FF0000?logo=youtube&logoColor=white" alt="YouTube"></a>
     <a href="https://x.com/graphbit_ai"><img src="https://img.shields.io/badge/X-000000?logo=x&logoColor=white" alt="X"></a>
-    <a href="https://discord.com/invite/huVJwkyu"><img src="https://img.shields.io/badge/Discord-7289da?logo=discord&logoColor=white" alt="Discord"></a>
+    <a href="https://discord.com/invite/FMhgB3paMD"><img src="https://img.shields.io/badge/Discord-7289da?logo=discord&logoColor=white" alt="Discord"></a>
     <a href="https://www.linkedin.com/showcase/graphbitai/"><img src="https://img.shields.io/badge/LinkedIn-0077B5?logo=linkedin&logoColor=white" alt="LinkedIn"></a>
 </p>
 
@@ -42,7 +50,7 @@
 
 🚧 **翻譯進行中** - 本文件正在從英文翻譯中。
 
-📖 **[Read in English](README.md)** | **[閱讀英文版](README.md)**
+📖 **[Read in English](../README.md)** | **[閱讀英文版](../README.md)**
 
 ---
 
@@ -52,7 +60,7 @@
 
 ## 關於 GraphBit
 
-GraphBit 是一個開源的智慧體 AI 框架，專為需要確定性、並行和低開銷執行的開發者設計。
+GraphBit 是一個原始碼可用的智慧體 AI 框架，專為需要確定性、並行和低開銷執行的開發者設計。
 
 ## 為什麼選擇 GraphBit？
 
@@ -90,7 +98,7 @@ GraphBit 在 LLM 呼叫、工具呼叫和多智慧體鏈中始終提供生產級
 
 <div align="center">
   <a href="https://www.youtube.com/watch?v=MaCl5oENeAY">
-    <img src="https://img.youtube.com/vi/MaCl5oENeAY/maxresdefault.jpg" alt="GraphBit Benchmark Demo" style="max-width: 100%; height: auto;">
+    <img src="https://img.youtube.com/vi/MaCl5oENeAY/maxresdefault.jpg" alt="GraphBit Benchmark Demo" style="max-width: 600px; height: auto;">
   </a>
   <p><em>觀看 GraphBit 基準測試演示</em></p>
 </div>
@@ -120,7 +128,7 @@ pip install graphbit
 
 <div align="center">
   <a href="https://youtu.be/ti0wbHFKKFM?si=hnxi-1W823z5I_zs">
-    <img src="https://img.youtube.com/vi/ti0wbHFKKFM/maxresdefault.jpg" alt="GraphBit Quick Start Tutorial" style="max-width: 100%; height: auto;">
+    <img src="https://img.youtube.com/vi/ti0wbHFKKFM/maxresdefault.jpg" alt="GraphBit Quick Start Tutorial" style="max-width: 600px; height: auto;">
   </a>
   <p><em>觀看透過 PyPI 安裝 GraphBit | 完整範例和執行指南教學</em></p>
 </div>
@@ -199,7 +207,7 @@ GraphBit Tracer 以最小配置捕獲和監控 LLM 呼叫和 AI 工作流程。�
 
 <div align="center">
   <a href="https://www.youtube.com/watch?v=nzwrxSiRl2U">
-    <img src="https://img.youtube.com/vi/nzwrxSiRl2U/maxresdefault.jpg" alt="GraphBit Observability & Tracing" style="max-width: 100%; height: auto;">
+    <img src="https://img.youtube.com/vi/nzwrxSiRl2U/maxresdefault.jpg" alt="GraphBit Observability & Tracing" style="max-width: 600px; height: auto;">
   </a>
   <p><em>觀看 GraphBit 可觀測性與追蹤教學</em></p>
 </div>
@@ -207,7 +215,7 @@ GraphBit Tracer 以最小配置捕獲和監控 LLM 呼叫和 AI 工作流程。�
 ## 高層架構
 
 <p align="center">
-  <img src="assets/architecture.svg" height="250" alt="GraphBit Architecture">
+  <img src="../assets/architecture.svg" height="250" alt="GraphBit Architecture">
 </p>
 
 三層設計確保可靠性和效能：
@@ -252,7 +260,7 @@ GraphBit 的模組化架構支援外部整合：
 擴展由社群開發和維護。
 
 <p align="center">
-  <img src="assets/Ecosystem.png" alt="GraphBit Ecosystem - Stop Choosing, Start Orchestrating" style="max-width: 100%; height: auto;">
+  <img src="../assets/Ecosystem.png" alt="GraphBit Ecosystem - Stop Choosing, Start Orchestrating" style="max-width: 100%; height: auto;">
 </p>
 
 
@@ -260,7 +268,7 @@ GraphBit 的模組化架構支援外部整合：
 
 <div align="center">
   <a href="https://www.youtube.com/watch?v=gKvkMc2qZcA">
-    <img src="https://img.youtube.com/vi/gKvkMc2qZcA/maxresdefault.jpg" alt="Making Agent Workflow by GraphBit" style="max-width: 100%; height: auto;">
+    <img src="https://img.youtube.com/vi/gKvkMc2qZcA/maxresdefault.jpg" alt="Making Agent Workflow by GraphBit" style="max-width: 600px; height: auto;">
   </a>
   <p><em>觀看使用 GraphBit 建立智慧體工作流程教學</em></p>
 </div>
@@ -287,7 +295,7 @@ GraphBit 採用三層授權模式：**模式 A（免費使用）** 適用於個�
 
 完整條款和條件，請參閱 [Full License](LICENSE.md)。
 
-Copyright © 2023–2025 InfinitiBit GmbH. All rights reserved.
+Copyright © 2023–2026 InfinitiBit GmbH. All rights reserved.
 
 ---
 
