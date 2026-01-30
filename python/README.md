@@ -255,15 +255,7 @@ For detailed reporting procedures and response timelines, see our [Security Poli
 
 ## License
 
-GraphBit is licensed under a **three-tier model**:
-
-| Model | Users | Terms |
-|:------|:------|:------|
-| **Model A** (Free Use) | Individuals, academic institutions, small teams (≤10 users) | Free for non-commercial use |
-| **Model B** (Free Trial) | Enterprise evaluation | 30-day free trial |
-| **Model C** (Enterprise) | Commercial/production use | Paid license required |
-
-> **Note**: Redistribution is prohibited under all models without an explicit Enterprise License.
+GraphBit package is licensed under the Apache License, Version 2.0.
 
 For complete terms and conditions, see the [Full License](https://github.com/InfinitiBit/graphbit/blob/main/LICENSE.md).
 
