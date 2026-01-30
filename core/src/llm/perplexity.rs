@@ -304,6 +304,13 @@ impl LlmProviderTrait for PerplexityProvider {
         }
 
         // Timeout constants for different phases of the request
+        // These values balance responsiveness with network variability:
+        // - CONNECTION_TIMEOUT: Generous time for initial TLS handshake and HTTP connection
+        //   (Perplexity API can be slow to establish connections under load)
+        // - ERROR_BODY_TIMEOUT: Short timeout since error responses are typically small JSON
+        //   (don't want to wait long if API is unresponsive)
+        // - CHUNK_TIMEOUT: Moderate timeout for each SSE chunk; Perplexity streams can have
+        //   pauses between tokens but should not hang indefinitely
         const CONNECTION_TIMEOUT: Duration = Duration::from_secs(60);
         const ERROR_BODY_TIMEOUT: Duration = Duration::from_secs(10);
         const CHUNK_TIMEOUT: Duration = Duration::from_secs(30);
@@ -352,8 +359,18 @@ impl LlmProviderTrait for PerplexityProvider {
         let model = self.model.clone();
         let byte_stream = response.bytes_stream();
 
-        // State: (byte_stream, buffer, timeout_occurred, consecutive_parse_errors, total_parse_errors)
+        // State tuple for stream processing (unfold accumulator):
+        // 0. byte_stream: The HTTP response body stream from reqwest
+        // 1. buffer: String buffer for incomplete SSE lines (SSE events are newline-delimited)
+        // 2. timeout_occurred: Circuit breaker flag - true if any timeout happened, stops further processing
+        // 3. consecutive_parse_errors: Counter for back-to-back JSON parse failures (circuit breaker at MAX)
+        // 4. total_parse_errors: Running count of all parse errors (for end-of-stream warning logs)
         const MAX_CONSECUTIVE_PARSE_ERRORS: u32 = 5;
+        // Threshold of 5 consecutive errors chosen because:
+        // - 1-2 errors could be transient network glitches
+        // - 3-4 errors suggest potential format issues but may recover
+        // - 5+ errors strongly indicates stream corruption or API malfunction
+        // After this threshold, we abort to prevent infinite loops on corrupted streams
 
         let stream = futures::stream::unfold(
             (byte_stream, String::new(), false, 0u32, 0u32),
@@ -424,43 +441,59 @@ impl LlmProviderTrait for PerplexityProvider {
                             }
                         };
 
-                        // Append new data to buffer
+                        // SSE (Server-Sent Events) buffering strategy:
+                        // HTTP chunks may split SSE events mid-line, so we buffer until complete lines are received.
+                        // SSE format: each event is a line starting with "data: " and ending with \n\n (double newline)
+                        // We use `drain()` to efficiently remove processed lines from the buffer front
                         buffer.push_str(&String::from_utf8_lossy(&chunk));
 
-                        // Process complete lines using drain()
+                        // Process all complete lines (those ending with newline)
+                        // drain() is used to remove processed characters from the front of the buffer,
+                        // preserving any incomplete line data for the next chunk
                         while let Some(newline_pos) = buffer.find('\n') {
                             let line: String = buffer.drain(..=newline_pos).collect();
                             let line = line.trim();
 
-                            // Skip empty lines and comments
+                            // SSE protocol: skip empty lines (event separators) and comment lines (start with ':')
+                            // Comments are often used for keep-alive heartbeats
                             if line.is_empty() || line.starts_with(':') {
                                 continue;
                             }
 
-                            // Check for data: prefix (OpenAI-compatible SSE format)
+                            // Parse SSE data field format: "data: <json_content>"
+                            // Perplexity uses OpenAI-compatible SSE streaming format
                             if let Some(data) = line.strip_prefix("data: ") {
-                                // Check for [DONE] marker
+                                // [DONE] is the standard SSE termination marker in OpenAI-compatible APIs
+                                // It indicates the stream has ended successfully (not an error)
                                 if data.trim() == "[DONE]" {
+                                    // Warn if we had parse errors during the stream - data may be incomplete
                                     if total_parse_errors > 0 {
                                         tracing::warn!(
                                             "Stream completed with {} total parse errors. Some data may have been lost.",
                                             total_parse_errors
                                         );
                                     }
-                                    return None; // End of stream
+                                    return None; // Signal stream completion to unfold
                                 }
 
-                                // Parse JSON chunk
+                                // Parse the JSON payload containing the streaming response chunk
+                                // PerplexityStreamChunk follows OpenAI's streaming response format:
+                                // { "id": "...", "choices": [{ "delta": { "content": "..." } }] }
                                 match serde_json::from_str::<PerplexityStreamChunk>(data) {
                                     Ok(stream_chunk) => {
+                                        // Reset consecutive error counter on successful parse
                                         consecutive_parse_errors = 0;
 
+                                        // Extract content from the first choice's delta
+                                        // (Perplexity typically returns only one choice per chunk)
                                         if let Some(choice) = stream_chunk.choices.first() {
                                             if let Some(content) = &choice.delta.content {
+                                                // Only yield non-empty content to reduce noise
                                                 if !content.is_empty() {
                                                     let response =
                                                         LlmResponse::new(content.clone(), &model)
                                                             .with_id(stream_chunk.id);
+                                                    // Return this chunk and continue streaming
                                                     return Some((
                                                         Ok(response),
                                                         (
@@ -476,9 +509,12 @@ impl LlmProviderTrait for PerplexityProvider {
                                         }
                                     }
                                     Err(e) => {
+                                        // Increment both error counters for circuit breaker logic
                                         consecutive_parse_errors += 1;
                                         total_parse_errors += 1;
 
+                                        // Log truncated data (first 200 chars) for debugging
+                                        // while preventing log spam from huge malformed payloads
                                         tracing::warn!(
                                             "Failed to parse Perplexity stream chunk (consecutive: {}, total: {}): {}, data: {}",
                                             consecutive_parse_errors,
@@ -487,6 +523,8 @@ impl LlmProviderTrait for PerplexityProvider {
                                             if data.len() > 200 { &data[..200] } else { data }
                                         );
 
+                                        // Circuit breaker: abort stream after too many consecutive errors
+                                        // Prevents infinite loops on corrupted or malformed streams
                                         if consecutive_parse_errors >= MAX_CONSECUTIVE_PARSE_ERRORS
                                         {
                                             return Some((
