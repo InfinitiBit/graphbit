@@ -54,7 +54,14 @@
 GraphBit is an open-source agentic AI framework for deterministic, concurrent, low-overhead execution.
 
 ## Why GraphBit?
-Efficiency decides who scales. GraphBit is built in Munich, Germany 🇩🇪 for developers who need deterministic, concurrent, and ultra-efficient AI execution without the overhead.
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Built_in-Munich-000000?style=for-the-badge" alt="Built in Munich">
+  <img src="https://img.shields.io/badge/-Germany-DD0000?style=for-the-badge" alt="Germany">
+  <img src="https://img.shields.io/badge/-🇩🇪-FFCE00?style=for-the-badge" alt="German Flag">
+</p>
+
+Efficiency decides who scales. GraphBit is built for developers who need deterministic, concurrent, and ultra-efficient AI execution without the overhead.
  
 Built with a Rust core and a minimal Python layer, GraphBit delivers up to 68× lower CPU usage and 140× lower memory footprint than other frameworks, while maintaining equal or greater throughput.
  
