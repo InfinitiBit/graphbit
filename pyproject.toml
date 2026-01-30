@@ -31,6 +31,7 @@ dependencies = [
   "typer>=0.9.0",
   "huggingface_hub>=0.33.4",
   "numpy>=1.24.0",
+  "litellm>=1.80.5"
   "autogen-agentchat==0.5.7",
   "autogen-core==0.5.7",
   "autogen-ext==0.5.7",

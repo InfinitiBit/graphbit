@@ -75,4 +75,47 @@ impl EmbeddingConfig {
             })
         })
     }
+
+    #[staticmethod]
+    #[pyo3(signature = (api_key, model=None))]
+    fn litellm(api_key: String, model: Option<String>) -> PyResult<Self> {
+        validate_api_key(&api_key, "LiteLLM")?;
+
+        Python::with_gil(|py| {
+            // Import the Python LiteLLM embeddings class
+            let litellm_module =
+                py.import("graphbit.providers.litellm.embeddings")
+                    .map_err(|e| {
+                        pyo3::exceptions::PyImportError::new_err(format!(
+                            "Failed to import LiteLLM embeddings module: {e}"
+                        ))
+                    })?;
+
+            let litellm_class = litellm_module.getattr("LiteLLMEmbeddings").map_err(|e| {
+                pyo3::exceptions::PyAttributeError::new_err(format!(
+                    "Failed to get LiteLLMEmbeddings class: {e}"
+                ))
+            })?;
+
+            // Create instance with API key
+            let litellm_instance = litellm_class.call1((api_key.clone(),)).map_err(|e| {
+                pyo3::exceptions::PyRuntimeError::new_err(format!(
+                    "Failed to create LiteLLMEmbeddings instance: {e}"
+                ))
+            })?;
+
+            Ok(Self {
+                inner: CoreEmbeddingConfig {
+                    provider: EmbeddingProvider::PythonBridge,
+                    api_key,
+                    model: model.unwrap_or_else(|| "text-embedding-3-small".to_string()),
+                    base_url: None,
+                    timeout_seconds: None,
+                    max_batch_size: None,
+                    extra_params: HashMap::new(),
+                    python_instance: Some(std::sync::Arc::new(litellm_instance.into())),
+                },
+            })
+        })
+    }
 }

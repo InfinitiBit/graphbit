@@ -1,4 +1,4 @@
-from litellm import embedding
+from litellm import aembedding, embedding
 from typing import List, Optional, Union
 import os
 
@@ -51,12 +51,6 @@ class LiteLLMEmbeddings:
             ...     text="Hello world"
             ... )
         """
-        # Set API key if provided
-        if self.api_key:
-            # LiteLLM uses environment variables for authentication
-            if "OPENAI_API_KEY" not in os.environ:
-                os.environ["OPENAI_API_KEY"] = self.api_key
-
         # Normalize input to list format
         input_texts = [text] if isinstance(text, str) else text
 
@@ -91,7 +85,7 @@ class LiteLLMEmbeddings:
         except Exception as e:
             raise Exception(f"LiteLLM embedding failed: {str(e)}")
 
-    def embed_batch(
+    def embed_many(
         self,
         model: str,
         texts: List[str],
@@ -131,6 +125,63 @@ class LiteLLMEmbeddings:
         )
         # embed() returns List[List[float]] for list input
         return result
+
+    async def aembed(
+        self,
+        model: str,
+        text: Union[str, List[str]],
+        dimensions: Optional[int] = None,
+        encoding_format: Optional[str] = None,
+        input_type: Optional[str] = None,
+        **kwargs
+    ) -> Union[List[float], List[List[float]]]:
+        """
+        Asynchronously generate embeddings for the given text.
+
+        Args:
+            model: Model identifier (e.g., "text-embedding-ada-002", "embed-english-v3.0")
+            text: Text string or list of text strings to embed
+            dimensions: Number of dimensions for the output embeddings (optional)
+            encoding_format: Format to return embeddings ("float" or "base64")
+            input_type: Type of input for certain models (e.g., "search_document", "search_query")
+            **kwargs: Additional provider-specific parameters
+
+        Returns:
+            List of embeddings (single list for one text, list of lists for multiple texts)
+        """
+        # Normalize input to list format
+        input_texts = [text] if isinstance(text, str) else text
+
+        # Build embedding parameters
+        embedding_params = {
+            "model": model,
+            "input": input_texts,
+        }
+
+        # Add optional parameters if provided
+        if dimensions is not None:
+            embedding_params["dimensions"] = dimensions
+        if encoding_format is not None:
+            embedding_params["encoding_format"] = encoding_format
+        if input_type is not None:
+            embedding_params["input_type"] = input_type
+
+        # Merge with any additional kwargs
+        embedding_params.update(kwargs)
+
+        try:
+            response = await aembedding(**embedding_params)
+
+            # Extract embeddings from response
+            embeddings = [item["embedding"] for item in response.data]
+
+            # Return single embedding if input was a single string
+            if isinstance(text, str):
+                return embeddings[0]
+            return embeddings
+
+        except Exception as e:
+            raise Exception(f"LiteLLM async embedding failed: {str(e)}")
 
     def get_embedding_dimension(self, model: str, sample_text: str = "test") -> int:
         """
