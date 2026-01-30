@@ -96,7 +96,7 @@ GraphBit consistently delivers production-grade efficiency across LLM calls, too
 
 ## Used in Production
  
-**Grand Thourton** - Production use for deterministic, concurrent agent workflows under strict reliability and resource constraints.
+**Grant Thornton Germany** adopted GraphBit to move AI from "permanent pilot" to production without regulatory risk as a core component of their tech stack.
 
 ## When to Use GraphBit
 
