@@ -56,9 +56,7 @@ GraphBit is an open-source agentic AI framework for deterministic, concurrent, l
 ## Why GraphBit?
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Built_in-Munich-000000?style=for-the-badge" alt="Built in Munich">
-  <img src="https://img.shields.io/badge/-Germany-DD0000?style=for-the-badge" alt="Germany">
-  <img src="https://img.shields.io/badge/-🇩🇪-FFCE00?style=for-the-badge" alt="German Flag">
+  <img src="https://img.shields.io/badge/Built_in-555555?style=for-the-badge" alt="Built in"><img src="https://img.shields.io/badge/-Munich-000000?style=for-the-badge" alt="Munich"><img src="https://img.shields.io/badge/-Germany-DD0000?style=for-the-badge" alt="Germany"><img src="https://img.shields.io/badge/-🇩🇪-FFCE00?style=for-the-badge" alt="DE">
 </p>
 
 Efficiency decides who scales. GraphBit is built for developers who need deterministic, concurrent, and ultra-efficient AI execution without the overhead.
