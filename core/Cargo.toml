@@ -2,6 +2,7 @@
 pyo3 = {workspace = true, optional = true}
 anyhow.workspace = true
 async-trait.workspace = true
+calamine.workspace = true
 chrono.workspace = true
 csv.workspace = true
 docx-rs.workspace = true
