@@ -81,7 +81,7 @@ impl DocumentLoader {
         document_type: &str,
     ) -> GraphBitResult<DocumentContent> {
         // Validate document type
-        let supported_types = ["pdf", "txt", "docx", "json", "csv", "xml", "html", "xlsb"];
+        let supported_types = ["pdf", "txt", "docx", "json", "csv", "xml", "html", "xlsb", "xlsx"];
         if !supported_types.contains(&document_type.to_lowercase().as_str()) {
             return Err(GraphBitError::validation(
                 "document_loader",
@@ -151,7 +151,7 @@ impl DocumentLoader {
             "csv" => Self::extract_csv_content(file_path).await?,
             "xml" => Self::extract_xml_content(file_path).await?,
             "html" => Self::extract_html_content(file_path).await?,
-            "xlsb" => Self::extract_xlsb_content(file_path).await?,
+            "xlsb" | "xlsx" => Self::extract_excel_content(file_path).await?,
             _ => {
                 return Err(GraphBitError::validation(
                     "document_loader",
@@ -749,19 +749,19 @@ impl DocumentLoader {
         Ok(text_content.trim().to_string())
     }
 
-    /// Extract content from XLSB (Excel Binary) files
-    async fn extract_xlsb_content(file_path: &str) -> GraphBitResult<String> {
-        use calamine::{open_workbook, Reader, Xlsb};
+    /// Extract content from Excel (XLSB, XLSX, etc.) files
+    async fn extract_excel_content(file_path: &str) -> GraphBitResult<String> {
+        use calamine::{open_workbook_auto, Reader};
 
-        let mut workbook: Xlsb<_> = open_workbook(file_path).map_err(|e| {
+        let mut workbook = open_workbook_auto(file_path).map_err(|e| {
             GraphBitError::validation(
                 "document_loader",
-                format!("Failed to open XLSB file {}: {}", file_path, e),
+                format!("Failed to open Excel file {}: {}", file_path, e),
             )
         })?;
 
         let mut result = String::new();
-        result.push_str("Excel Binary (XLSB) Document Content:\n\n");
+        result.push_str("Excel Document Content:\n\n");
 
         let sheet_names = workbook.sheet_names().to_vec();
         for sheet_name in sheet_names {
@@ -797,7 +797,7 @@ impl DocumentLoader {
         if result.trim().is_empty() {
             return Err(GraphBitError::validation(
                 "document_loader",
-                "No content could be extracted from the XLSB file",
+                "No content could be extracted from the Excel file",
             ));
         }
 
@@ -806,7 +806,7 @@ impl DocumentLoader {
 
     /// Get supported document types
     pub fn supported_types() -> Vec<&'static str> {
-        vec!["txt", "pdf", "docx", "json", "csv", "xml", "html", "xlsb"]
+        vec!["txt", "pdf", "docx", "json", "csv", "xml", "html", "xlsb", "xlsx"]
     }
 }
 
