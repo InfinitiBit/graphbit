@@ -34,6 +34,46 @@ impl EmbeddingConfig {
     }
 
     #[staticmethod]
+    #[pyo3(signature = (api_key, deployment_name, endpoint, model=None, api_version=None))]
+    fn azure(
+        api_key: String,
+        deployment_name: String,
+        endpoint: String,
+        model: Option<String>,
+        api_version: Option<String>,
+    ) -> PyResult<Self> {
+        validate_api_key(&api_key, "Azure")?;
+
+        let mut extra_params = HashMap::new();
+        extra_params.insert(
+            "deployment_name".to_string(),
+            serde_json::Value::String(deployment_name),
+        );
+        extra_params.insert(
+            "endpoint".to_string(),
+            serde_json::Value::String(endpoint),
+        );
+        extra_params.insert(
+            "api_version".to_string(),
+            serde_json::Value::String(api_version.unwrap_or_else(|| "2024-02-01".to_string())),
+        );
+
+        Ok(Self {
+            inner: CoreEmbeddingConfig {
+                provider: EmbeddingProvider::Azure,
+                api_key,
+                model: model.unwrap_or_else(|| "text-embedding-3-small".to_string()),
+                base_url: None,
+                timeout_seconds: None,
+                max_batch_size: None,
+                extra_params,
+                python_instance: None,
+            },
+        })
+    }
+
+
+    #[staticmethod]
     #[pyo3(signature = (api_key, model=None))]
     fn huggingface(api_key: String, model: Option<String>) -> PyResult<Self> {
         validate_api_key(&api_key, "HuggingFace")?;
