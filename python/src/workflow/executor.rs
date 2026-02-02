@@ -620,7 +620,7 @@ impl Executor {
                                     })?;
 
                                 // Execute tools in Python context
-                                let tool_results = Python::with_gil(|py| {
+                                let tool_results_json = Python::with_gil(|py| {
                                     execute_production_tool_calls(py, tool_calls_json, node_tools)
                                 })
                                 .map_err(|e| {
@@ -629,10 +629,36 @@ impl Executor {
                                     )
                                 })?;
 
-                                // Create final prompt with tool results
+                                // Parse tool results to reconstruct the summary text and for metadata
+                                let tool_execution_results: Vec<serde_json::Value> = serde_json::from_str(&tool_results_json)
+                                    .unwrap_or_else(|_| Vec::new());
+                                
+                                // Reconstruct summary string for LLM prompt
+                                let mut summary_lines = Vec::new();
+                                for res in &tool_execution_results {
+                                    if let (Some(name), Some(success)) = (
+                                        res.get("tool_name").and_then(|v| v.as_str()),
+                                        res.get("success").and_then(|v| v.as_bool())
+                                    ) {
+                                        if success {
+                                            let output = res.get("output").and_then(|v| v.as_str()).unwrap_or("");
+                                            summary_lines.push(format!("{}: {}", name, output));
+                                        } else {
+                                            let error = res.get("error").and_then(|v| v.as_str()).unwrap_or("Unknown error");
+                                            summary_lines.push(format!("{}: Error - {}", name, error));
+                                        }
+                                    }
+                                }
+                                let tool_results_summary = if summary_lines.is_empty() {
+                                    "No tool results available".to_string()
+                                } else {
+                                    summary_lines.join("\n")
+                                };
+
+                                // Create final prompt with tool results summary
                                 let final_prompt = format!(
                                     "{}\n\nTool execution results:\n{}\n\nPlease provide a comprehensive response based on the tool results.",
-                                    original_prompt, tool_results
+                                    original_prompt, tool_results_summary
                                 );
 
                                 // Get LLM provider from node configuration and make final call
@@ -692,7 +718,41 @@ impl Executor {
                                                         // The final_response.tool_calls will be empty since tools were already executed
                                                         // We need to preserve the original tool calls for observability
                                                         if let Some(response_obj) = response_metadata.as_object_mut() {
-                                                            response_obj.insert("tool_calls".to_string(), tool_calls.clone());
+                                                            // Enrich tool_calls with their execution results
+                                                            let mut enriched_tool_calls = tool_calls.clone();
+                                                            if let Some(calls_array) = enriched_tool_calls.as_array_mut() {
+                                                                for (i, call) in calls_array.iter_mut().enumerate() {
+                                                                    if let Some(result) = tool_execution_results.get(i) {
+                                                                        if let Some(call_obj) = call.as_object_mut() {
+                                                                            let mut result_clone = result.clone();
+                                                                            
+                                                                            // Extract timing details and add to tool call object
+                                                                            if let Some(start_time) = result_clone.get("start_time") {
+                                                                                call_obj.insert("start_time".to_string(), start_time.clone());
+                                                                            }
+                                                                            if let Some(end_time) = result_clone.get("end_time") {
+                                                                                call_obj.insert("end_time".to_string(), end_time.clone());
+                                                                            }
+                                                                            if let Some(latency) = result_clone.get("latency_ms") {
+                                                                                call_obj.insert("latency_ms".to_string(), latency.clone());
+                                                                            }
+
+                                                                            // Remove timing fields and redundant tool name from the output object to avoid duplication
+                                                                            if let Some(result_obj) = result_clone.as_object_mut() {
+                                                                                result_obj.remove("start_time");
+                                                                                result_obj.remove("end_time");
+                                                                                result_obj.remove("latency_ms");
+                                                                                result_obj.remove("tool_name");
+                                                                            }
+
+                                                                            // Insert the cleaned result object as "output"
+                                                                            call_obj.insert("output".to_string(), result_clone);
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                            
+                                                            response_obj.insert("tool_calls".to_string(), enriched_tool_calls);
                                                         }
 
                                                         // Store by node ID
@@ -759,7 +819,7 @@ impl Executor {
                                                     context.set_node_output(
                                                         &node.id,
                                                         serde_json::Value::String(
-                                                            tool_results.clone(),
+                                                            tool_results_summary.clone(),
                                                         ),
                                                     );
                                                 }
@@ -770,7 +830,7 @@ impl Executor {
                                             // Keep the tool results as the output
                                             context.set_node_output(
                                                 &node.id,
-                                                serde_json::Value::String(tool_results.clone()),
+                                                serde_json::Value::String(tool_results_summary.clone()),
                                             );
                                         }
                                     }
@@ -779,7 +839,7 @@ impl Executor {
                                         tracing::warn!("No LLM configuration found in context metadata for final response. Using tool results only.");
                                         context.set_node_output(
                                             &node.id,
-                                            serde_json::Value::String(tool_results.clone()),
+                                            serde_json::Value::String(tool_results_summary.clone()),
                                         );
                                     }
                                 }
