@@ -5,7 +5,7 @@ GraphBit provides vector embedding capabilities for semantic search, similarity 
 ## Overview
 
 GraphBit's embedding system supports:
-- **Provider** - OpenAI embedding models
+- **Provider** - OpenAI, Huggingface, Litellm, Azure embeddings
 - **Unified Interface** - Consistent API across all providers
 - **Batch Processing** - Efficient processing of multiple texts
 - **Similarity Calculations** - Built-in cosine similarity functions
@@ -34,40 +34,23 @@ print(f"Provider: OpenAI")
 print(f"Model: {openai_embedding_config.model}")
 ```
 
-#### Single Text Embedding
+### Huggingface Configuration
 
-Generate embeddings for individual texts:
-
-```python
-# Embed single text
-text = "GraphBit is a powerful framework for AI agent workflows"
-vector = embedding_client.embed(text)
-
-print(f"Text: {text}")
-print(f"Vector dimension: {len(vector)}")
-print(f"First 5 values: {vector[:5]}")
-```
-
-#### Batch Text Embeddings
-
-Process multiple texts efficiently:
+Configure Huggingface embedding provider:
 
 ```python
-# Embed multiple texts
-texts = [
-    "Machine learning is transforming industries",
-    "Natural language processing enables computers to understand text", 
-    "Deep learning models require large datasets",
-    "AI ethics is becoming increasingly important",
-    "Transformer architectures revolutionized NLP"
-]
+import os
 
-vectors = embedding_client.embed_many(texts)
+from graphbit import EmbeddingConfig, EmbeddingClient
 
-print(f"Generated {len(vectors)} embeddings")
-for i, (text, vector) in enumerate(zip(texts, vectors)):
-    print(f"Text {i+1}: {text[:50]}...")
-    print(f"Vector dimension: {len(vector)}")
+# Basic Huggingface configuration
+huggingface_embedding_config = EmbeddingConfig.huggingface(
+    api_key=os.getenv("HUGGINGFACE_API_KEY"),
+    model="sentence-transformers/all-MiniLM-L6-v2"
+)
+
+# Create embedding client
+huggingface_embedding_client = EmbeddingClient(huggingface_embedding_config)
 ```
 
 ### Litellm Configuration
@@ -97,28 +80,43 @@ openai_embedding_client = EmbeddingClient(openai_embedding_config)
 mistral_embedding_client = EmbeddingClient(mistral_embedding_config)
 ```
 
-#### Single Text Embedding
+### Azure Configuration
+
+Configure Azure embedding provider:
+
+```python
+import os
+
+from graphbit import EmbeddingConfig, EmbeddingClient
+
+# Azure configuration
+azure_embedding_config = EmbeddingConfig.azure(
+    api_key=os.getenv("AZURE_API_KEY"),
+    deployment="text-embedding-3-small",
+    endpoint=os.getenv("AZURE_ENDPOINT")
+)
+
+# Create embedding clients
+azure_embedding_client = EmbeddingClient(azure_embedding_config)
+```
+
+## Embedding Client
+
+### Single Text Embedding
 
 Generate embeddings for individual texts:
 
 ```python
 # Embed single text
 text = "GraphBit is a powerful framework for AI agent workflows"
-
-# Openai embedding
-openai_embedding = openai_embedding_client.embed(text)
-
-# Mistral embedding
-mistral_embedding = mistral_embedding_client.embed(text)
+vector = embedding_client.embed(text)
 
 print(f"Text: {text}")
-print(f"Openai Embedding dimension: {len(openai_embedding)}")
-print(f"Openai Embedding first 5 values: {openai_embedding[:5]}")
-print(f"Mistral Embedding dimension: {len(mistral_embedding)}")
-print(f"Mistral Embedding first 5 values: {mistral_embedding[:5]}")
+print(f"Vector dimension: {len(vector)}")
+print(f"First 5 values: {vector[:5]}")
 ```
 
-#### Batch Text Embeddings
+### Batch Text Embeddings
 
 Process multiple texts efficiently:
 
@@ -132,24 +130,13 @@ texts = [
     "Transformer architectures revolutionized NLP"
 ]
 
-# Openai Embeddings
-openai_embeddings = openai_embedding_client.embed_many(texts)
+vectors = embedding_client.embed_many(texts)
 
-# Mistral Embeddings
-mistral_embeddings = mistral_embedding_client.embed_many(texts)
-
-print(f"Openai generated {len(openai_embeddings)} embeddings")
-for i, (text, openai_embedding) in enumerate(zip(texts, openai_embeddings)):
+print(f"Generated {len(vectors)} embeddings")
+for i, (text, vector) in enumerate(zip(texts, vectors)):
     print(f"Text {i+1}: {text[:50]}...")
-    print(f"Openai embedding dimension: {len(openai_embedding)}")
-
-print(f"Mistral generated {len(mistral_embeddings)} embeddings")
-for i, (text, mistral_embedding) in enumerate(zip(texts, mistral_embeddings)):
-    print(f"Text {i+1}: {text[:50]}...")
-    print(f"Mistral embedding dimension: {len(mistral_embedding)}")
+    print(f"Vector dimension: {len(vector)}")
 ```
-
-## Similarity Calculations
 
 ### Cosine Similarity
 
