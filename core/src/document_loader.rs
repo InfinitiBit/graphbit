@@ -81,7 +81,7 @@ impl DocumentLoader {
         document_type: &str,
     ) -> GraphBitResult<DocumentContent> {
         // Validate document type
-        let supported_types = ["pdf", "txt", "docx", "json", "csv", "xml", "html", "xlsb", "xlsx"];
+        let supported_types = ["pdf", "txt", "docx", "json", "csv", "xml", "html", "xlsb", "xlsx", "xls"];
         if !supported_types.contains(&document_type.to_lowercase().as_str()) {
             return Err(GraphBitError::validation(
                 "document_loader",
@@ -151,7 +151,7 @@ impl DocumentLoader {
             "csv" => Self::extract_csv_content(file_path).await?,
             "xml" => Self::extract_xml_content(file_path).await?,
             "html" => Self::extract_html_content(file_path).await?,
-            "xlsb" | "xlsx" => Self::extract_excel_content(file_path).await?,
+            "xlsb" | "xlsx" | "xls" => Self::extract_excel_content(file_path).await?,
             _ => {
                 return Err(GraphBitError::validation(
                     "document_loader",
@@ -749,7 +749,7 @@ impl DocumentLoader {
         Ok(text_content.trim().to_string())
     }
 
-    /// Extract content from Excel (XLSB, XLSX, etc.) files
+    /// Extract content from Excel (XLSB, XLSX, XLS,etc.) files
     async fn extract_excel_content(file_path: &str) -> GraphBitResult<String> {
         use calamine::{open_workbook_auto, Reader};
 
@@ -806,7 +806,7 @@ impl DocumentLoader {
 
     /// Get supported document types
     pub fn supported_types() -> Vec<&'static str> {
-        vec!["txt", "pdf", "docx", "json", "csv", "xml", "html", "xlsb", "xlsx"]
+        vec!["txt", "pdf", "docx", "json", "csv", "xml", "html", "xlsb", "xlsx", "xls"]
     }
 }
 
