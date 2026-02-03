@@ -619,8 +619,6 @@ impl Executor {
                                         )
                                     })?;
 
-
-
                                 // Execute tools in Python context
                                 let tool_results_json = Python::with_gil(|py| {
                                     execute_production_tool_calls(py, tool_calls_json, node_tools)
@@ -632,22 +630,30 @@ impl Executor {
                                 })?;
 
                                 // Parse tool results to reconstruct the summary text and for metadata
-                                let tool_execution_results: Vec<serde_json::Value> = serde_json::from_str(&tool_results_json)
-                                    .unwrap_or_else(|_| Vec::new());
-                                
+                                let tool_execution_results: Vec<serde_json::Value> =
+                                    serde_json::from_str(&tool_results_json)
+                                        .unwrap_or_else(|_| Vec::new());
+
                                 // Reconstruct summary string for LLM prompt
                                 let mut summary_lines = Vec::new();
                                 for res in &tool_execution_results {
                                     if let (Some(name), Some(success)) = (
                                         res.get("tool_name").and_then(|v| v.as_str()),
-                                        res.get("success").and_then(|v| v.as_bool())
+                                        res.get("success").and_then(|v| v.as_bool()),
                                     ) {
                                         if success {
-                                            let output = res.get("output").and_then(|v| v.as_str()).unwrap_or("");
+                                            let output = res
+                                                .get("output")
+                                                .and_then(|v| v.as_str())
+                                                .unwrap_or("");
                                             summary_lines.push(format!("{}: {}", name, output));
                                         } else {
-                                            let error = res.get("error").and_then(|v| v.as_str()).unwrap_or("Unknown error");
-                                            summary_lines.push(format!("{}: Error - {}", name, error));
+                                            let error = res
+                                                .get("error")
+                                                .and_then(|v| v.as_str())
+                                                .unwrap_or("Unknown error");
+                                            summary_lines
+                                                .push(format!("{}: Error - {}", name, error));
                                         }
                                     }
                                 }
@@ -727,7 +733,7 @@ impl Executor {
                                                                     if let Some(result) = tool_execution_results.get(i) {
                                                                         if let Some(call_obj) = call.as_object_mut() {
                                                                             let mut result_clone = result.clone();
-                                                                            
+
                                                                             // Extract timing details and add to tool call object
                                                                             if let Some(start_time) = result_clone.get("start_time") {
                                                                                 call_obj.insert("start_time".to_string(), start_time.clone());
@@ -753,9 +759,9 @@ impl Executor {
                                                                     }
                                                                 }
                                                             }
-                                                            
+
                                                             response_obj.insert("tool_calls".to_string(), enriched_tool_calls);
-                                                            
+
                                                             // 1. Prepare the value (unwrap and make it mutable)
                                                             let mut initial_response_value = existing_metadata_by_id
                                                                 .clone()
@@ -774,7 +780,7 @@ impl Executor {
                                                                 "initial_response".to_string(),
                                                                 initial_response_value
                                                             );
-                                                            
+
                                                             // Add final input
                                                             response_obj.insert("final_input".to_string(), serde_json::Value::String(final_prompt.clone()));
                                                         }

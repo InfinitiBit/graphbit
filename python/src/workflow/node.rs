@@ -1004,12 +1004,14 @@ pub(crate) fn execute_production_tool_calls(
                 match json_to_python_value(value, py) {
                     Ok(py_value) => {
                         if let Err(e) = params_dict.set_item(key, py_value) {
-                             param_conversion_error = Some(format!("Failed to set parameter '{}': {}", key, e));
-                             break;
+                            param_conversion_error =
+                                Some(format!("Failed to set parameter '{}': {}", key, e));
+                            break;
                         }
                     }
                     Err(e) => {
-                        param_conversion_error = Some(format!("Failed to convert parameter '{}': {}", key, e));
+                        param_conversion_error =
+                            Some(format!("Failed to convert parameter '{}': {}", key, e));
                         break;
                     }
                 }
