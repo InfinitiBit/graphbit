@@ -481,9 +481,7 @@ impl EmbeddingProviderTrait for AzureEmbeddingProvider {
                 .text()
                 .await
                 .unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(GraphBitError::llm(format!(
-                "Azure API error: {error_text}"
-            )));
+            return Err(GraphBitError::llm(format!("Azure API error: {error_text}")));
         }
 
         let response_json: serde_json::Value = response
@@ -564,7 +562,6 @@ impl EmbeddingProviderTrait for AzureEmbeddingProvider {
         2048 // Azure's current limit (same as OpenAI)
     }
 }
-
 
 /// `HuggingFace` embedding provider
 #[derive(Debug, Clone)]

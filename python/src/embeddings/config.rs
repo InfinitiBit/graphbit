@@ -49,10 +49,7 @@ impl EmbeddingConfig {
             "deployment_name".to_string(),
             serde_json::Value::String(deployment_name),
         );
-        extra_params.insert(
-            "endpoint".to_string(),
-            serde_json::Value::String(endpoint),
-        );
+        extra_params.insert("endpoint".to_string(), serde_json::Value::String(endpoint));
         extra_params.insert(
             "api_version".to_string(),
             serde_json::Value::String(api_version.unwrap_or_else(|| "2024-02-01".to_string())),
@@ -71,7 +68,6 @@ impl EmbeddingConfig {
             },
         })
     }
-
 
     #[staticmethod]
     #[pyo3(signature = (api_key, model=None))]
