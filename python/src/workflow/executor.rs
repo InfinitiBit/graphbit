@@ -619,6 +619,8 @@ impl Executor {
                                         )
                                     })?;
 
+
+
                                 // Execute tools in Python context
                                 let tool_results_json = Python::with_gil(|py| {
                                     execute_production_tool_calls(py, tool_calls_json, node_tools)
@@ -683,7 +685,7 @@ impl Executor {
                                         Ok(provider_trait) => {
                                             let llm_provider =
                                                 LlmProvider::new(provider_trait, llm_config);
-                                            let final_request = LlmRequest::new(final_prompt);
+                                            let final_request = LlmRequest::new(final_prompt.clone());
 
                                             match llm_provider.complete(final_request).await {
                                                 Ok(final_response) => {
@@ -699,7 +701,7 @@ impl Executor {
                                                         let existing_metadata_by_id = context.metadata.get(&format!("node_response_{}", node.id)).cloned();
 
                                                         // Merge existing metadata fields into new metadata
-                                                        if let (Some(existing), Some(response_obj)) = (existing_metadata_by_id, response_metadata.as_object_mut()) {
+                                                        if let (Some(existing), Some(response_obj)) = (existing_metadata_by_id.as_ref(), response_metadata.as_object_mut()) {
                                                             if let Some(existing_obj) = existing.as_object() {
                                                                 // Preserve these critical fields from the initial LLM call
                                                                 if let Some(prompt) = existing_obj.get("prompt") {
@@ -753,6 +755,28 @@ impl Executor {
                                                             }
                                                             
                                                             response_obj.insert("tool_calls".to_string(), enriched_tool_calls);
+                                                            
+                                                            // 1. Prepare the value (unwrap and make it mutable)
+                                                            let mut initial_response_value = existing_metadata_by_id
+                                                                .clone()
+                                                                .unwrap_or(serde_json::Value::Null);
+
+                                                            // 2. If the value is a JSON Object, remove the unwanted fields
+                                                            if let Some(obj) = initial_response_value.as_object_mut() {
+                                                                obj.remove("content");
+                                                                obj.remove("duration_ms");
+                                                                obj.remove("execution_timestamp");
+                                                                obj.remove("metadata");
+                                                            }
+
+                                                            // 3. Insert the cleaned object into your response_obj
+                                                            response_obj.insert(
+                                                                "initial_response".to_string(),
+                                                                initial_response_value
+                                                            );
+                                                            
+                                                            // Add final input
+                                                            response_obj.insert("final_input".to_string(), serde_json::Value::String(final_prompt.clone()));
                                                         }
 
                                                         // Store by node ID
