@@ -26,7 +26,7 @@ async function main() {
         );
 
         console.log('Loaded from text:');
-        console.log('  Content:', content.content);
+        console.log('  Content:', content?.content);
         console.log('  Source:', content.source);
         console.log('  Type:', content.documentType);
 
