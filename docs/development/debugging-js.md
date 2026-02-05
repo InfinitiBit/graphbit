@@ -282,26 +282,17 @@ async function debugTools() {
   try {
     console.log('Registering tool...');
     
-    await registry.register({
-      name: 'test_tool',
-      description: 'A test tool',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          input: { type: 'string' }
-        },
-        required: ['input']
-      },
-      handler: async (params) => {
-        console.log('Tool handler called with:', params);
-        return { result: 'success' };
-      }
+    registry.register('test_tool', 'A test tool', {
+      input: { type: 'string' }
+    }, (args) => {
+      console.log('Tool handler called with:', args);
+      return { result: 'success' };
     });
 
     console.log('Tool registered successfully');
 
     // List tools
-    const tools = await registry.listTools();
+    const tools = registry.getRegisteredTools();
     console.log('Available tools:', tools);
   } catch (error) {
     console.error('Tool registration failed:', error);
@@ -319,22 +310,14 @@ async function debugToolExecution() {
 
   const registry = new ToolRegistry();
 
-  await registry.register({
-    name: 'divide',
-    description: 'Divide two numbers',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        numerator: { type: 'number' },
-        denominator: { type: 'number' }
-      }
-    },
-    handler: async (params) => {
-      if (params.denominator === 0) {
-        throw new Error('Division by zero');
-      }
-      return params.numerator / params.denominator;
+  registry.register('divide', 'Divide two numbers', {
+    numerator: { type: 'number' },
+    denominator: { type: 'number' }
+  }, (args) => {
+    if (args.denominator === 0) {
+      throw new Error('Division by zero');
     }
+    return args.numerator / args.denominator;
   });
 
   try {
