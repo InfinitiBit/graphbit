@@ -30,25 +30,30 @@ const agent = Node.agent(
 ### Agent Node with Tools
 
 ```typescript
-import { Node, ToolRegistry } from '@infinitibit_gmbh/graphbit';
+import { Node, ToolRegistry, registerAsync } from '@infinitibit_gmbh/graphbit';
 
 const toolRegistry = new ToolRegistry();
 
 // Register a tool
-await toolRegistry.register({
-  name: 'get_weather',
-  description: 'Get weather forecast for a location',
-  inputSchema: {
+// Note: This example uses the object-based register API with async handlers.
+// For the simpler register(name, description, params, callback) API,
+// use registerAsync() from async-helpers for async callbacks.
+// Register a tool
+registerAsync(
+  toolRegistry,
+  'get_weather',
+  'Get weather forecast for a location',
+  {
     type: 'object',
     properties: {
       location: { type: 'string', description: 'City name' }
     },
     required: ['location']
   },
-  handler: async (params: any) => {
+  async (params: any) => {
     return { temperature: 72, condition: 'sunny' };
   }
-});
+);
 
 const agent = Node.agent(
   'Weather Agent',
