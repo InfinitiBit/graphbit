@@ -49,72 +49,87 @@ init();
 ### OpenAI Configuration
 
 ```typescript
+import 'dotenv/config';
 import { LlmConfig } from '@infinitibit_gmbh/graphbit';
 
 // Basic OpenAI configuration
-const llmConfig = LlmConfig.openai({
-  apiKey: 'your-api-key',
+const openaiConfig = LlmConfig.openai({
+  apiKey: process.env.OPENAI_API_KEY || '',
   model: 'gpt-4o-mini'        // Optional, defaults to gpt-4o-mini
 });
 
 // With default model
-const llmConfig = LlmConfig.openai({ apiKey: 'your-api-key' });
+const openaiConfigAlt = LlmConfig.openai({ 
+  apiKey: process.env.OPENAI_API_KEY || '' 
+});
 ```
 
 ### Anthropic Configuration
 
 ```typescript
+import 'dotenv/config';
 import { LlmConfig } from '@infinitibit_gmbh/graphbit';
 
 // Basic Anthropic configuration
-const llmConfig = LlmConfig.anthropic({
-  apiKey: 'your-anthropic-key',
+const anthropicConfig = LlmConfig.anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY || '',
   model: 'claude-sonnet-4-20250514'  // Optional, defaults to claude-sonnet-4-20250514
 });
 
 // With default model
-const llmConfig = LlmConfig.anthropic({ apiKey: 'your-anthropic-key' });
+const anthropicConfigAlt = LlmConfig.anthropic({ 
+  apiKey: process.env.ANTHROPIC_API_KEY || '' 
+});
 ```
 
 ### Azure OpenAI Configuration
 
 ```typescript
+import 'dotenv/config';
 import { LlmConfig } from '@infinitibit_gmbh/graphbit';
 
 // Basic Azure OpenAI configuration
-const llmConfig = LlmConfig.azureOpenai({
-  apiKey: 'your-azure-openai-key',
+const azureConfig = LlmConfig.azureOpenai({
+  apiKey: process.env.AZURE_OPENAI_API_KEY || '',
   deploymentName: 'gpt-4o-mini',  // Your Azure deployment name
-  endpoint: 'https://your-resource.openai.azure.com'  // Your Azure OpenAI endpoint
+  endpoint: process.env.AZURE_OPENAI_ENDPOINT || ''  // Your Azure OpenAI endpoint
 });
 
 // With custom API version
-const llmConfig = LlmConfig.azureOpenai({
-  apiKey: 'your-azure-openai-key',
+const azureConfigCustom = LlmConfig.azureOpenai({
+  apiKey: process.env.AZURE_OPENAI_API_KEY || '',
   deploymentName: 'gpt-4o',
-  endpoint: 'https://your-resource.openai.azure.com',
+  endpoint: process.env.AZURE_OPENAI_ENDPOINT || '',
   apiVersion: '2024-10-21'  // Optional, defaults to '2024-10-21'
 });
 ```
 
 ### Perplexity Configuration
 
+> [!IMPORTANT]
+> The `model` parameter is **required** for Perplexity.
+
 ```typescript
+import 'dotenv/config';
 import { LlmConfig } from '@infinitibit_gmbh/graphbit';
 
-// Basic Perplexity configuration
-const llmConfig = LlmConfig.perplexity({
-  apiKey: 'your-perplexity-key',
-  model: 'sonar'             // Optional, defaults to sonar
+// Perplexity configuration
+const perplexityConfig = LlmConfig.perplexity({
+  apiKey: process.env.PERPLEXITY_API_KEY || '',
+  model: 'llama-3.1-sonar-small-128k-online'  // Required
 });
 
-// With default model
-const llmConfig = LlmConfig.perplexity({ apiKey: 'your-perplexity-key' });
+// Different models for specific use cases
+const researchConfig = LlmConfig.perplexity({
+  apiKey: process.env.PERPLEXITY_API_KEY || '',
+  model: 'llama-3.1-sonar-large-128k-online'
+});
 ```
 
 ### DeepSeek Configuration
 
 ```typescript
+import 'dotenv/config';
 import { LlmConfig } from '@infinitibit_gmbh/graphbit';
 
 // Basic DeepSeek configuration
@@ -133,41 +148,65 @@ const reasoningConfig = LlmConfig.deepseek({ apiKey: 'your-deepseek-key', model:
 
 ### MistralAI Configuration
 
+> [!IMPORTANT]
+> The `model` parameter is **required** for MistralAI.
+
 ```typescript
+import 'dotenv/config';
 import { LlmConfig } from '@infinitibit_gmbh/graphbit';
 
-// Basic MistralAI configuration
-const llmConfig = LlmConfig.mistralai({
-  apiKey: 'your-mistralai-key',
-  model: 'mistral-large-latest'  // Optional, defaults to mistral-large-latest
+// MistralAI configuration
+const mistralConfig = LlmConfig.mistralai({
+  apiKey: process.env.MISTRALAI_API_KEY || '',
+  model: 'mistral-large-latest'  // Required
 });
 
-// With default model
-const llmConfig = LlmConfig.mistralai({ apiKey: 'your-mistralai-key' });
-
 // Different models for specific use cases
-const largeConfig = LlmConfig.mistralai({ apiKey: 'your-mistralai-key', model: 'mistral-large-latest' });
-const mediumConfig = LlmConfig.mistralai({ apiKey: 'your-mistralai-key', model: 'mistral-medium-latest' });
-const smallConfig = LlmConfig.mistralai({ apiKey: 'your-mistralai-key', model: 'mistral-small-latest' });
+const largeConfig = LlmConfig.mistralai({
+  apiKey: process.env.MISTRALAI_API_KEY || '',
+  model: 'mistral-large-latest'  // Most capable
+});
+
+const mediumConfig = LlmConfig.mistralai({
+  apiKey: process.env.MISTRALAI_API_KEY || '',
+  model: 'mistral-medium-latest'  // Balanced
+});
+
+const smallConfig = LlmConfig.mistralai({
+  apiKey: process.env.MISTRALAI_API_KEY || '',
+  model: 'mistral-small-latest'  // Fastest
+});
 ```
 
 ### Ollama Configuration
 
+> [!IMPORTANT]
+> The `model` parameter is **required** for Ollama. Make sure the model is pulled locally with `ollama pull <model-name>` before use.
+
 ```typescript
+import 'dotenv/config';
 import { LlmConfig } from '@infinitibit_gmbh/graphbit';
 
 // Local Ollama configuration
-const llmConfig = LlmConfig.ollama({
-  model: 'llama3.2'          // Optional, defaults to llama3.2
+const ollamaConfig = LlmConfig.ollama({
+  model: 'llama3.2'  // Required
 });
 
-// With default model
-const llmConfig = LlmConfig.ollama();
+// With custom Ollama server
+const ollamaCustomConfig = LlmConfig.ollama({
+  model: 'llama3.2',
+  baseUrl: 'http://localhost:11434'  // Optional, defaults to http://localhost:11434
+});
+
+// Different models
+const codingConfig = LlmConfig.ollama({ model: 'codellama' });
+const chatConfig = LlmConfig.ollama({ model: 'mistral' });
 ```
 
 ### OpenRouter Configuration
 
 ```typescript
+import 'dotenv/config';
 import { LlmConfig } from '@infinitibit_gmbh/graphbit';
 
 // OpenRouter configuration
