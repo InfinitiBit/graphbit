@@ -21,7 +21,7 @@ This example demonstrates a complete **Retrieval-Augmented Generation (RAG)** sy
 ### 1. Install GraphBit
 
 ```bash
-npm install graphbit
+npm install @infinitibit_gmbh/graphbit
 ```
 
 ### 2. Set Environment Variables
@@ -50,7 +50,7 @@ const {
   EmbeddingClient,
   AgentBuilder,
   LlmConfig
-} = require('graphbit');
+} = require('@infinitibit_gmbh/graphbit');
 require('dotenv').config();
 
 /**
@@ -390,7 +390,8 @@ Create sample text files in a `docs/` directory:
 
 ```bash
 mkdir docs
-echo "GraphBit is installed via npm install graphbit" > docs/guide.txt
+echo "GraphBit is installed via npm install @infinitibit_gmbh/graphbit" > docs/guide.txt
+
 echo "Main features include agents, workflows, and embeddings" > docs/faq.txt
 echo "Create agents with AgentBuilder class" > docs/api.txt
 ```
@@ -438,16 +439,16 @@ node rag-pipeline-example.js
 
   1. Score: 0.9234
      Source: ./docs/guide.txt
-     Text: GraphBit is installed via npm install graphbit
+     Text: GraphBit is installed via npm install @infinitibit_gmbh/graphbit
 
 🤖 Generating answer with AI...
 
 💬 Answer:
-  GraphBit is installed using npm with the command: npm install graphbit
+  GraphBit is installed using npm with the command: npm install @infinitibit_gmbh/graphbit
 
 ==================================================
 Question: How do I install GraphBit?
-Answer: GraphBit is installed using npm with the command: npm install graphbit
+Answer: GraphBit is installed using npm with the command: npm install @infinitibit_gmbh/graphbit
 
 Sources:
   1. ./docs/guide.txt (score: 0.9234)
