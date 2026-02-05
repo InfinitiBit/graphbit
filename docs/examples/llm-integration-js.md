@@ -241,10 +241,11 @@ class AdvancedLLMSystem {
     await workflow.addNode(analyzer);
     await workflow.addNode(summarizer);
 
-    await workflow.connect('researcher', 'analyzer');
-    await workflow.connect('analyzer', 'summarizer');
+    await workflow.addEdge('researcher', 'analyzer', { fromNode: 'researcher', toNode: 'analyzer' });
+    await workflow.addEdge('analyzer', 'summarizer', { fromNode: 'analyzer', toNode: 'summarizer' });
 
-    await workflow.validate();
+    const isValid = await workflow.validate();
+    if (!isValid) throw new Error('Validation failed');
 
     const start = Date.now();
     try {
