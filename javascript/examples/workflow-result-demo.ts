@@ -73,7 +73,7 @@ async function main() {
   console.log('const stats = result.getStats();');
   console.log('if (stats) {');
   console.log('  console.log(`📈 Nodes: ${stats.successfulNodes}/${stats.totalNodes}`);');
-  console.log('  console.log(`⏱️  Avg time per node: ${stats.avgExecutionTimeMs}ms`);');
+  console.log('  console.log(`⏱️  Avg time per node: ${stats.avg_execution_time_ms}ms`);');
   console.log('  console.log(`🔀 Max concurrent: ${stats.maxConcurrentNodes}`);');
   console.log('}');
   console.log();
