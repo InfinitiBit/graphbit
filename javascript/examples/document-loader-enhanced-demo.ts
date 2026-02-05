@@ -72,7 +72,7 @@ async function main() {
   console.log();
   console.log('// Usage:');
   console.log('const doc = await smartLoad("report.pdf");');
-  console.log('console.log(doc.content);');
+  console.log('console.log(doc?.content);');
   console.log();
 
   // Example 4: Batch Validation
