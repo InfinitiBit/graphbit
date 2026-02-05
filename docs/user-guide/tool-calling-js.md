@@ -33,39 +33,21 @@ const executor = new Executor(config);
 const registry = new ToolRegistry();
 
 // Register tools
-await registry.register({
-  name: 'get_weather',
-  description: 'Get current weather information for any city',
-  inputSchema: {
-    type: 'object',
-    properties: {
-      location: { type: 'string', description: 'City name' }
-    },
-    required: ['location']
-  },
-  handler: async (params) => {
-    return {
-      location: params.location,
-      temperature: 72,
-      condition: 'sunny'
-    };
-  }
+registry.register('get_weather', 'Get current weather information for any city', {
+  location: { type: 'string' }
+}, (args) => {
+  return {
+    location: args.location,
+    temperature: 72,
+    condition: 'sunny'
+  };
 });
 
-await registry.register({
-  name: 'add',
-  description: 'Add two numbers together',
-  inputSchema: {
-    type: 'object',
-    properties: {
-      a: { type: 'number' },
-      b: { type: 'number' }
-    },
-    required: ['a', 'b']
-  },
-  handler: async (params) => {
-    return params.a + params.b;
-  }
+registry.register('add', 'Add two numbers together', {
+  a: { type: 'number' },
+  b: { type: 'number' }
+}, (args) => {
+  return args.a + args.b;
 });
 
 // Create workflow with tool-enabled agent
@@ -106,114 +88,76 @@ if (result.isSuccess()) {
 ```typescript
 const registry = new ToolRegistry();
 
-await registry.register({
-  name: 'add',
-  description: 'Add two numbers together',
-  inputSchema: {
-    type: 'object',
-    properties: {
-      a: { type: 'number', description: 'First number' },
-      b: { type: 'number', description: 'Second number' }
-    },
-    required: ['a', 'b']
-  },
-  handler: async (params) => {
-    return params.a + params.b;
-  }
+registry.register('add', 'Add two numbers together', {
+  a: { type: 'number' },
+  b: { type: 'number' }
+}, (args) => {
+  return args.a + args.b;
 });
 ```
 
 ### Advanced Tool with Complex Parameters
 
 ```typescript
-await registry.register({
-  name: 'search_data',
-  description: 'Search and filter data with advanced options',
-  inputSchema: {
-    type: 'object',
-    properties: {
-      query: { 
-        type: 'string', 
-        description: 'Search query' 
-      },
-      filters: {
-        type: 'object',
-        properties: {
-          category: { type: 'string' },
-          minPrice: { type: 'number' },
-          maxPrice: { type: 'number' }
-        }
-      },
-      sortBy: {
-        type: 'string',
-        enum: ['price', 'date', 'relevance'],
-        default: 'relevance'
-      },
-      limit: {
-        type: 'integer',
-        minimum: 1,
-        maximum: 100,
-        default: 10
-      }
-    },
-    required: ['query']
-  },
-  handler: async (params) => {
-    const { query, filters = {}, sortBy = 'relevance', limit = 10 } = params;
-    
-    // Simulate search logic
-    const results = [
-      { id: 1, title: 'Item 1', category: 'A', price: 10 },
-      { id: 2, title: 'Item 2', category: 'B', price: 20 }
-    ];
-    
-    return {
-      query,
-      results: results.slice(0, limit),
-      total: results.length,
-      sortBy
-    };
-  }
+registry.register('search_data', 'Search and filter data with advanced options', {
+  query: { type: 'string' },
+  filters: { type: 'object' },
+  sortBy: { type: 'string' },
+  limit: { type: 'integer' }
+}, (args) => {
+  const { query, filters = {}, sortBy = 'relevance', limit = 10 } = args;
+  
+  // Simulate search logic
+  const results = [
+    { id: 1, title: 'Item 1', category: 'A', price: 10 },
+    { id: 2, title: 'Item 2', category: 'B', price: 20 }
+  ];
+  
+  return {
+    query,
+    results: results.slice(0, limit),
+    total: results.length,
+    sortBy
+  };
 });
 ```
 
-### Tool with External API Integration
+### Tool with External API Integration (Async)
+
+For proper async support with correct timing tracking, use `registerAsync` from `async-helpers`:
 
 ```typescript
 import fetch from 'node-fetch';
+import { ToolRegistry, registerAsync } from './async-helpers';
 
-await registry.register({
-  name: 'fetch_github_user',
-  description: 'Fetch GitHub user information by username',
-  inputSchema: {
-    type: 'object',
-    properties: {
-      username: { type: 'string', description: 'GitHub username' }
-    },
-    required: ['username']
-  },
-  handler: async (params) => {
-    try {
-      const response = await fetch(`https://api.github.com/users/${params.username}`);
-      
-      if (!response.ok) {
-        return { error: `User ${params.username} not found` };
-      }
-      
-      const data = await response.json();
-      return {
-        username: data.login,
-        name: data.name,
-        bio: data.bio,
-        publicRepos: data.public_repos,
-        followers: data.followers
-      };
-    } catch (error) {
-      return { error: error.message };
-    }
+const registry = new ToolRegistry();
+
+// ✅ CORRECT: Use registerAsync for async operations
+registerAsync(registry, 'fetch_github_user', 'Fetch GitHub user information by username', {
+  username: { type: 'string' }
+}, async (args) => {
+  const response = await fetch(`https://api.github.com/users/${args.username}`);
+  
+  if (!response.ok) {
+    throw new Error(`User ${args.username} not found`);
   }
+  
+  const data = await response.json();
+  return {
+    username: data.login,
+    name: data.name,
+    bio: data.bio,
+    publicRepos: data.public_repos,
+    followers: data.followers
+  };
 });
+
+// Execute - timing includes full API call duration
+const result = await registry.execute('fetch_github_user', { username: 'torvalds' });
+console.log(result.executionTimeMs); // Actual API call time
 ```
+
+> **Important:** Always use `registerAsync` for async operations. Using `registry.register` with a Promise directly will result in incorrect timing and the Promise serializing as `{}`.
 
 ## Tool Execution
 
@@ -254,17 +198,9 @@ You can also execute tools directly for testing:
 const registry = new ToolRegistry();
 
 // Register tool
-await registry.register({
-  name: 'double_number',
-  description: 'Double a number',
-  inputSchema: {
-    type: 'object',
-    properties: {
-      value: { type: 'number' }
-    }
-  },
-  handler: async (params) => params.value * 2
-});
+registry.register('double_number', 'Double a number', {
+  value: { type: 'number' }
+}, (args) => args.value * 2);
 
 // Execute manually
 const result = await registry.execute('double_number', { value: 5 });
@@ -276,31 +212,31 @@ console.log('Result:', result); // 10
 ### List All Registered Tools
 
 ```typescript
-const toolNames = await registry.getToolNames();
+const toolNames = registry.getRegisteredTools();
 console.log('Available tools:', toolNames);
 ```
 
 ### Check Tool Registration
 
 ```typescript
-const isRegistered = await registry.isRegistered('get_weather');
+const isRegistered = registry.hasTool('get_weather');
 console.log('Tool registered:', isRegistered); // true or false
 
-const hasTools = await registry.hasTools();
+const hasTools = registry.getToolCount() > 0;
 console.log('Has registered tools:', hasTools); // true or false
 ```
 
 ### Unregister Tool
 
 ```typescript
-await registry.unregister('double_number');
-console.log('Tool removed');
+const removed = registry.unregisterTool('double_number');
+console.log('Tool removed:', removed);
 ```
 
 ### Clear All Tools
 
 ```typescript
-await registry.clearAllTools();
+registry.clearAll();
 console.log('All tools cleared');
 ```
 
@@ -309,11 +245,11 @@ console.log('All tools cleared');
 ### Get Tool Metrics
 
 ```typescript
-const metrics = await registry.getMetrics('get_weather');
+const metadata = registry.getToolMetadata('get_weather');
 console.log('Tool metrics:', {
-  executionCount: metrics.executionCount,
-  averageExecutionTime: metrics.averageExecutionTime,
-  lastExecuted: metrics.lastExecuted
+  callCount: metadata.callCount,
+  avgDurationMs: metadata.avgDurationMs,
+  lastCalledAt: metadata.lastCalledAt
 });
 ```
 
@@ -322,78 +258,146 @@ console.log('Tool metrics:', {
 Always handle errors gracefully:
 
 ```typescript
-await registry.register({
-  name: 'risky_operation',
-  description: 'An operation that might fail',
-  inputSchema: {
-    type: 'object',
-    properties: {
-      value: { type: 'string' }
+registry.register('risky_operation', 'An operation that might fail', {
+  value: { type: 'string' }
+}, (args) => {
+  try {
+    if (!args.value) {
+      throw new Error('Value required');
     }
-  },
-  handler: async (params) => {
-    try {
-      // Risky operation
-      const result = await performRiskyOperation(params.value);
-      return { success: true, result };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
+    // Process the value
+    const result = args.value.toUpperCase();
+    return { success: true, result };
+  } catch (error) {
+    return { success: false, error: error.message };
   }
 });
 ```
 
-### Enable/Disable Tools
 
-Control tool availability without unregistering:
 
-```typescript
-// Disable a tool temporarily
-await registry.disableTool('fetch_github_user');
-console.log('Tool disabled, will not be available to agents');
-
-// Re-enable the tool
-await registry.enableTool('fetch_github_user');
-console.log('Tool re-enabled');
-```
-
-### Update Tool Description
+### Tool Execution with Timeout (Async)
 
 ```typescript
-await registry.setDescription(
-  'get_weather',
-  'Get current weather information with details (updated)'
-);
-```
+import { ToolRegistry, registerAsync } from './async-helpers';
 
-### Tool Execution with Timeout
+const registry = new ToolRegistry();
 
-```typescript
-await registry.register({
-  name: 'slow_operation',
-  description: 'A slow operation with timeout',
-  inputSchema: {
-    type: 'object',
-    properties: {
-      data: { type: 'string' }
-    }
-  },
-  handler: async (params) => {
-    const timeout = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Operation timeout')), 5000)
-    );
+// ✅ Use registerAsync with async/await for timeout handling
+registerAsync(registry, 'slow_operation', 'A slow operation with timeout', {
+  data: { type: 'string' }
+}, async (args) => {
+  const timeout = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error('Operation timeout')), 5000)
+  );
 
-    const operation = performSlowOperation(params.data);
+  const operation = new Promise(resolve => {
+    setTimeout(() => resolve({ processed: args.data }), 1000);
+  });
 
-    try {
-      const result = await Promise.race([operation, timeout]);
-      return { success: true, result };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  }
+  const result = await Promise.race([operation, timeout]);
+  return { success: true, result };
 });
+
+// Error handling is automatic - errors become result.error
+const result = await registry.execute('slow_operation', { data: 'test' });
+if (!result.success) {
+  console.log('Timeout:', result.error);
+}
 ```
+
+## Async Callbacks (Callback ID Pattern)
+
+### Why Use Async Helpers?
+
+Due to NAPI-RS limitations, registering async callbacks directly doesn't work correctly:
+
+```typescript
+// ❌ DON'T: This won't track timing correctly
+registry.register('bad_async', 'Bad async', {}, async (args) => {
+  await new Promise(r => setTimeout(r, 1000));
+  return { done: true };
+});
+// result.executionTimeMs will be ~0, not ~1000!
+```
+
+### Solution: Use registerAsync
+
+```typescript
+import { ToolRegistry, registerAsync, wrapAsync } from './async-helpers';
+
+const registry = new ToolRegistry();
+
+// ✅ DO: Use registerAsync for proper async support
+registerAsync(registry, 'good_async', 'Good async', {}, async (args) => {
+  await new Promise(r => setTimeout(r, 1000));
+  return { done: true };
+});
+// result.executionTimeMs will be ~1000 ✓
+```
+
+### Async Error Handling
+
+Errors in async callbacks are properly captured:
+
+```typescript
+registerAsync(registry, 'may_fail', 'May fail', {}, async (args) => {
+  if (args.shouldFail) {
+    throw new Error('Intentional failure');
+  }
+  return { success: true };
+});
+
+const result = await registry.execute('may_fail', { shouldFail: true });
+console.log(result.success);  // false
+console.log(result.error);    // "Intentional failure"
+```
+
+**Special error cases handled automatically:**
+- `throw null` → error: "null was thrown"
+- `throw undefined` → error: "undefined was thrown"
+- `throw { code: 500 }` → error: serialized JSON
+
+### Value Sanitization
+
+Non-JSON-serializable values are automatically converted:
+
+| Return Value | Becomes |
+|--------------|--------|
+| `Infinity` | `null` |
+| `-Infinity` | `null` |
+| `NaN` | `null` |
+| `undefined` | `null` |
+
+### Concurrent Async Calls
+
+Multiple async calls work correctly in parallel:
+
+```typescript
+registerAsync(registry, 'slow_op', 'Slow', {}, async (args) => {
+  await new Promise(r => setTimeout(r, 100));
+  return { id: args.id };
+});
+
+// All execute concurrently with correct results
+const [r1, r2, r3] = await Promise.all([
+  registry.execute('slow_op', { id: 1 }),
+  registry.execute('slow_op', { id: 2 }),
+  registry.execute('slow_op', { id: 3 }),
+]);
+```
+
+### Importing Async Helpers
+
+```typescript
+// TypeScript/ES Modules
+import { ToolRegistry, registerAsync, wrapAsync } from './async-helpers';
+
+// CommonJS
+const { ToolRegistry, registerAsync, wrapAsync } = require('./async-helpers');
+```
+
+> **Note:** Import from `async-helpers`, not `index`. The `index.js` is auto-generated by NAPI-RS and doesn't include the async helpers.
 
 ### Get Tool Execution Result
 
@@ -415,47 +419,23 @@ if (typeof output === 'object' && output.success === false) {
 const registry = new ToolRegistry();
 
 // Register multiple tools
-await registry.register({
-  name: 'fetch_data',
-  description: 'Fetch data from API',
-  inputSchema: { 
-    type: 'object',
-    properties: {
-      endpoint: { type: 'string' }
-    }
-  },
-  handler: async (params) => {
-    return { data: 'sample data from ' + params.endpoint };
-  }
+registry.register('fetch_data', 'Fetch data from API', {
+  endpoint: { type: 'string' }
+}, (args) => {
+  return { data: 'sample data from ' + args.endpoint };
 });
 
-await registry.register({
-  name: 'process_data',
-  description: 'Process fetched data',
-  inputSchema: {
-    type: 'object',
-    properties: {
-      data: { type: 'string' }
-    }
-  },
-  handler: async (params) => {
-    return { processed: params.data.toUpperCase() };
-  }
+registry.register('process_data', 'Process fetched data', {
+  data: { type: 'string' }
+}, (args) => {
+  return { processed: args.data.toUpperCase() };
 });
 
-await registry.register({
-  name: 'save_results',
-  description: 'Save processed results',
-  inputSchema: {
-    type: 'object',
-    properties: {
-      result: { type: 'string' }
-    }
-  },
-  handler: async (params) => {
-    console.log('Saving:', params.result);
-    return { saved: true };
-  }
+registry.register('save_results', 'Save processed results', {
+  result: { type: 'string' }
+}, (args) => {
+  console.log('Saving:', args.result);
+  return { saved: true };
 });
 
 // Create multi-step workflow
@@ -521,29 +501,11 @@ if (result.isSuccess()) {
 Provide clear, detailed descriptions for both tools and parameters:
 
 ```typescript
-await registry.register({
-  name: 'convert_currency',
-  description: 'Convert amount from one currency to another using current exchange rates',
-  inputSchema: {
-    type: 'object',
-    properties: {
-      amount: { 
-        type: 'number', 
-        description: 'Amount to convert (must be positive)' 
-      },
-      from: { 
-        type: 'string', 
-        description: 'Source currency code (e.g., USD, EUR, GBP)' 
-      },
-      to: { 
-        type: 'string', 
-        description: 'Target currency code (e.g., USD, EUR, GBP)' 
-      }
-    },
-    required: ['amount', 'from', 'to']
-  },
-  handler: async (params) => { /* ... */ }
-});
+registry.register('convert_currency', 'Convert amount from one currency to another using current exchange rates', {
+  amount: { type: 'number' },
+  from: { type: 'string' },
+  to: { type: 'string' }
+}, (args) => { /* ... */ });
 ```
 
 ### 2. Input Validation
@@ -638,7 +600,7 @@ Ensure tools are registered BEFORE creating the workflow:
 
 ```typescript
 // ✅ CORRECT: Register tools first
-await registry.register({ /* tool definition */ });
+registry.register('tool_name', 'Tool description', { /* params */ }, (args) => { /* handler */ });
 
 // Then create workflow with WorkflowBuilder
 const workflow = await new WorkflowBuilder('My Workflow')
@@ -672,7 +634,7 @@ Check if registry is properly configured:
 ```typescript
 // ✅ Global registration (available to all agents)
 const registry = new ToolRegistry();
-await registry.register({ /* tool */ });
+registry.register('tool_name', 'Tool description', { /* params */ }, (args) => { /* handler */ });
 
 // Then use in workflow with AgentBuilder
 const agent = await new AgentBuilder('Agent', config)
