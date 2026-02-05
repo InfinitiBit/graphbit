@@ -28,7 +28,7 @@
     <br>
     <a href="https://www.rust-lang.org"><img src="https://img.shields.io/badge/rust-1.70+-orange.svg?logo=rust" alt="Rust Version"></a>
     <a href="https://nodejs.org"><img src="https://img.shields.io/badge/node->=16.0.0-green.svg?logo=node.js&logoColor=white" alt="Node Version"></a>
-    <a href="https://github.com/InfinitiBit/graphbit/blob/main/LICENSE.md"><img src="https://img.shields.io/badge/license-Custom-lightgrey.svg" alt="License"></a>
+    <a href="https://github.com/InfinitiBit/graphbit/blob/main/LICENSE.md"><img src="https://img.shields.io/badge/license-Apache_2.0-blue.svg" alt="License"></a>
 
 </p>
 <p align="center">
@@ -143,7 +143,7 @@ console.log(result.executionTimeMs); // Includes full async wait time
 
 ## License
 
-See [LICENSE.md](https://github.com/InfinitiBit/graphbit/blob/main/LICENSE.md) for details.
+Apache License, Version 2.0.
 
 ## Links
 
