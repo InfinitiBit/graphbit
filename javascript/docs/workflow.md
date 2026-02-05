@@ -27,7 +27,7 @@ new WorkflowBuilder(name: string)
 ### 🟢 Verified Example
 
 ```javascript
-const { WorkflowBuilder } = require('graphbit');
+const { WorkflowBuilder } = require('@infinitibit_gmbh/graphbit');
 
 const builder = new WorkflowBuilder('Data Processing Pipeline');
 const workflow = builder
@@ -44,7 +44,22 @@ Represents a complete workflow graph with nodes and edges.
 
 ### Methods
 
+#### `id()`
+
+Get the workflow ID.
+
+**Signature:**
+
+```typescript
+async id(): Promise<string>
+```
+
+**Returns:** Promise resolving to the workflow ID
+
+---
+
 #### `name()`
+
 
 Get the workflow name.
 
@@ -64,6 +79,21 @@ console.log(`Workflow: ${name}`); // Workflow: Data Processing Pipeline
 ```
 
 ---
+
+#### `description()`
+
+Get the workflow description.
+
+**Signature:**
+
+```typescript
+async description(): Promise<string>
+```
+
+**Returns:** Promise resolving to the workflow description
+
+---
+
 
 #### `addNode(node)`
 
@@ -89,7 +119,7 @@ async addNode(node: WorkflowNode): Promise<string>
 ### 🟢 Verified Example
 
 ```javascript
-const { WorkflowBuilder, RetryableErrorType } = require('graphbit');
+const { WorkflowBuilder, RetryableErrorType } = require('@infinitibit_gmbh/graphbit');
 
 const workflow = new WorkflowBuilder('My Workflow').build();
 
@@ -197,7 +227,7 @@ try {
 ### 🟢 Verified End-to-End Example
 
 ```javascript
-const { WorkflowBuilder, RetryableErrorType } = require('graphbit');
+const { WorkflowBuilder, RetryableErrorType } = require('@infinitibit_gmbh/graphbit');
 
 async function createWorkflow() {
   // 1. Create workflow
@@ -270,7 +300,7 @@ interface RetryConfig {
 ### `RetryableErrorType` Enum
 
 ```javascript
-const { RetryableErrorType } = require('graphbit');
+const { RetryableErrorType } = require('@infinitibit_gmbh/graphbit');
 
 // Available values:
 RetryableErrorType.NetworkError          // Network connectivity issues
