@@ -34,7 +34,7 @@ const {
   AgentBuilder,
   LlmConfig,
   WorkflowBuilder
-} = require('graphbit');
+} = require('@infinitibit_gmbh/graphbit');
 require('dotenv').config();
 
 /**
