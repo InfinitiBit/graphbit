@@ -99,70 +99,102 @@ llm_config = LlmConfig.azure_openai(
 
 ### Perplexity Configuration
 
+> [!IMPORTANT]
+> The `model` parameter is **required** for Perplexity.
+
 ```python
 from graphbit import LlmConfig
 
-# Basic Perplexity configuration
-llm_config = LlmConfig.perplexity(
+# Perplexity configuration
+perplexity_config = LlmConfig.perplexity(
     api_key="your-perplexity-key",
-    model="sonar"             # Optional, defaults to sonar
+    model="llama-3.1-sonar-small-128k-online"  # Required
 )
 
-# With default model
-llm_config = LlmConfig.perplexity("your-perplexity-key")
+# Different models for specific use cases
+research_config = LlmConfig.perplexity(
+    api_key="your-perplexity-key",
+    model="llama-3.1-sonar-large-128k-online"
+)
 ```
 
 ### DeepSeek Configuration
 
+> [!IMPORTANT]
+> The `model` parameter is **required** for DeepSeek.
+
 ```python
 from graphbit import LlmConfig
 
-# Basic DeepSeek configuration
-llm_config = LlmConfig.deepseek(
+# DeepSeek configuration
+deepseek_config = LlmConfig.deepseek(
     api_key="your-deepseek-key",
-    model="deepseek-chat"        # Optional, defaults to deepseek-chat
+    model="deepseek-chat"  # Required
 )
 
-# With default model
-llm_config = LlmConfig.deepseek("your-deepseek-key")
-
 # Different models for specific use cases
-coding_config = LlmConfig.deepseek("your-deepseek-key", "deepseek-coder")
-reasoning_config = LlmConfig.deepseek("your-deepseek-key", "deepseek-reasoner")
+coding_config = LlmConfig.deepseek(
+    api_key="your-deepseek-key",
+    model="deepseek-coder"  # For coding tasks
+)
+
+reasoning_config = LlmConfig.deepseek(
+    api_key="your-deepseek-key",
+    model="deepseek-reasoner"  # For reasoning tasks
+)
 ```
 
 ### MistralAI Configuration
 
+> [!IMPORTANT]
+> The `model` parameter is **required** for MistralAI.
+
 ```python
 from graphbit import LlmConfig
 
-# Basic MistralAI configuration
-llm_config = LlmConfig.mistralai(
+# MistralAI configuration
+mistral_config = LlmConfig.mistralai(
     api_key="your-mistralai-key",
-    model="mistral-large-latest"  # Optional, defaults to mistral-large-latest
+    model="mistral-large-latest"  # Required
 )
 
-# With default model
-llm_config = LlmConfig.mistralai("your-mistralai-key")
-
 # Different models for specific use cases
-large_config = LlmConfig.mistralai("your-mistralai-key", "mistral-large-latest")
-medium_config = LlmConfig.mistralai("your-mistralai-key", "mistral-medium-latest")
-small_config = LlmConfig.mistralai("your-mistralai-key", "mistral-small-latest")
+large_config = LlmConfig.mistralai(
+    api_key="your-mistralai-key",
+    model="mistral-large-latest"  # Most capable
+)
+
+medium_config = LlmConfig.mistralai(
+    api_key="your-mistralai-key",
+    model="mistral-medium-latest"  # Balanced
+)
+
+small_config = LlmConfig.mistralai(
+    api_key="your-mistralai-key",
+    model="mistral-small-latest"  # Fastest
+)
 ```
 
 ### Ollama Configuration
+
+> [!IMPORTANT]
+> The `model` parameter is **required** for Ollama. Make sure the model is pulled locally with `ollama pull <model-name>` before use.
 
 ```python
 from graphbit import LlmConfig
 
 # Local Ollama configuration
-llm_config = LlmConfig.ollama(
-    model="llama3.2"          # Optional, defaults to llama3.2
+ollama_config = LlmConfig.ollama(model="llama3.2")  # Required
+
+# With custom Ollama server
+ollama_custom_config = LlmConfig.ollama(
+    model="llama3.2",
+    base_url="http://localhost:11434"  # Optional, defaults to http://localhost:11434
 )
 
-# With default model
-llm_config = LlmConfig.ollama()
+# Different models
+coding_config = LlmConfig.ollama(model="codellama")
+chat_config = LlmConfig.ollama(model="mistral")
 ```
 
 ### Configuration Properties
