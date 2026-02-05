@@ -30,7 +30,7 @@ static openai(options: OpenAiOptions): LlmConfig
 ### 🟢 Verified Example
 
 ```javascript
-const { LlmConfig } = require('graphbit');
+const { LlmConfig } = require('@infinitibit_gmbh/graphbit');
 
 const config = LlmConfig.openai({
   apiKey: process.env.OPENAI_API_KEY,
@@ -175,7 +175,7 @@ All providers follow the same pattern. Here are the available factory methods:
 ### Environment Variables
 
 ```javascript
-const { LlmConfig } = require('graphbit');
+const { LlmConfig } = require('@infinitibit_gmbh/graphbit');
 require('dotenv').config();
 
 const config = LlmConfig.openai({
