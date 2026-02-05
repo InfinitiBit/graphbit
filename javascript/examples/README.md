@@ -123,7 +123,7 @@ tsx examples/multi-provider.ts
 
 Each example follows this structure:
 
-1. **Import** - Import required modules from `@graphbit/core`
+1. **Import** - Import required modules from `graphbit`
 2. **Initialize** - Call `init()` to initialize the library
 3. **Configure** - Set up LLM providers, agents, or other components
 4. **Execute** - Run the workflow or operation
@@ -171,7 +171,7 @@ const config = LlmConfig.openai({
 
 ## Troubleshooting
 
-### "Cannot find module '@graphbit/core'"
+### "Cannot find module 'graphbit'"
 
 Make sure you've built the bindings:
 
