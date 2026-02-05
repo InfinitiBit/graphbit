@@ -14,7 +14,7 @@ This guide will help you install GraphBit on your system and set up your develop
 ## Installation
 
 ```bash
-npm install @graphbit/core
+npm install @infinitibit_gmbh/graphbit
 ```
 
 ---
@@ -24,7 +24,7 @@ npm install @graphbit/core
 Test your installation with this simple script:
 
 ```typescript
-import { init, version, versionInfo, LlmConfig } from '@graphbit/core';
+import { init, version, versionInfo, LlmConfig } from '@infinitibit_gmbh/graphbit';
 
 function main() {
   console.log('Testing GraphBit installation...');
