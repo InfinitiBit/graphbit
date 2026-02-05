@@ -68,7 +68,7 @@ Each example includes:
 ### Prerequisites
 
 ```bash
-npm install graphbit
+npm install @infinitibit_gmbh/graphbit
 ```
 
 ### Environment Variables
