@@ -17,17 +17,17 @@
 <p align="center">
     <a href="https://trendshift.io/repositories/14884" target="_blank"><img src="https://trendshift.io/api/badge/repositories/14884" alt="InfinitiBit%2Fgraphbit | Trendshift" width="250" height="55"/></a>
     <br>
-    <a href="https://pepy.tech/projects/graphbit"><img src="https://static.pepy.tech/personalized-badge/graphbit?period=total&units=INTERNATIONAL_SYSTEM&left_color=GREY&right_color=GREEN&left_text=Downloads" alt="PyPI Downloads"/></a>
+    <a href="https://www.npmjs.com/package/@infinitibit_gmbh/graphbit"><img src="https://img.shields.io/npm/dm/@infinitibit_gmbh/graphbit?period=total&units=INTERNATIONAL_SYSTEM&left_color=GREY&right_color=red&left_text=Downloads" alt="NPM Downloads"/></a>
 </p>
 
 <p align="center">
-    <a href="https://pypi.org/project/graphbit/"><img src="https://img.shields.io/pypi/v/graphbit?color=blue&label=PyPI" alt="PyPI"></a>
-    <!-- <a href="https://pypi.org/project/graphbit/"><img src="https://img.shields.io/pypi/dm/graphbit?color=blue&label=Downloads" alt="PyPI Downloads"></a> -->
+    <a href="https://www.npmjs.com/package/@infinitibit_gmbh/graphbit"><img src="https://img.shields.io/npm/v/@infinitibit_gmbh/graphbit?color=red&label=NPM" alt="NPM"></a>
+    <!-- <a href="https://www.npmjs.com/package/@infinitibit_gmbh/graphbit"><img src="https://img.shields.io/npm/dm/@infinitibit_gmbh/graphbit?color=red&label=Downloads" alt="NPM Downloads"></a> -->
     <a href="https://github.com/InfinitiBit/graphbit/actions/workflows/update-docs.yml"><img src="https://img.shields.io/github/actions/workflow/status/InfinitiBit/graphbit/update-docs.yml?branch=main&label=Build" alt="Build Status"></a>
     <a href="https://github.com/InfinitiBit/graphbit/blob/main/CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome"></a>
     <br>
     <a href="https://www.rust-lang.org"><img src="https://img.shields.io/badge/rust-1.70+-orange.svg?logo=rust" alt="Rust Version"></a>
-    <a href="https://www.python.org"><img src="https://img.shields.io/badge/python-3.9--3.13-blue.svg?logo=python&logoColor=white" alt="Python Version"></a>
+    <a href="https://nodejs.org"><img src="https://img.shields.io/badge/node->=16.0.0-green.svg?logo=node.js&logoColor=white" alt="Node Version"></a>
     <a href="https://github.com/InfinitiBit/graphbit/blob/main/LICENSE.md"><img src="https://img.shields.io/badge/license-Custom-lightgrey.svg" alt="License"></a>
 
 </p>
