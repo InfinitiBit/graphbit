@@ -66,7 +66,7 @@ const similarity = EmbeddingClient.similarity(emb1, emb2);
 ### Document Processing
 ```javascript
 const loader = new DocumentLoader();
-const doc = await loader.loadFile('./document.pdf');
+const doc = await loader.loadFile('./document.pdf', 'pdf');
 
 const splitter = TextSplitter.recursive(500, 50);
 const chunks = await splitter.split(doc.content);
