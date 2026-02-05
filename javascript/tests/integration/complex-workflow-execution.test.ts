@@ -39,11 +39,11 @@ describe('Complex Workflow Execution Integration Tests', () => {
       await graph.addNode(mergeNode);
 
       // Create conditional edges
-      await graph.addEdge({ fromNode: inputNode.id, toNode: conditionNode.id });
-      await graph.addEdge({ fromNode: conditionNode.id, toNode: thenNode.id, condition: 'result == true' });
-      await graph.addEdge({ fromNode: conditionNode.id, toNode: elseNode.id, condition: 'result == false' });
-      await graph.addEdge({ fromNode: thenNode.id, toNode: mergeNode.id });
-      await graph.addEdge({ fromNode: elseNode.id, toNode: mergeNode.id });
+      await graph.addEdge({ fromNode: inputNode!.id, toNode: conditionNode.id });
+      await graph.addEdge({ fromNode: conditionNode!.id, toNode: thenNode!.id, condition: 'result == true' });
+      await graph.addEdge({ fromNode: conditionNode!.id, toNode: elseNode!.id, condition: 'result == false' });
+      await graph.addEdge({ fromNode: thenNode!.id, toNode: mergeNode.id });
+      await graph.addEdge({ fromNode: elseNode!.id, toNode: mergeNode.id });
 
       // Validate graph structure
       const nodeCount = await graph.nodeCount();
@@ -51,7 +51,7 @@ describe('Complex Workflow Execution Integration Tests', () => {
 
       expect(nodeCount).toBe(5);
       expect(edgeCount).toBe(5);
-      expect(inputNode.id).toBeDefined();
+      expect(inputNode!.id).toBeDefined();
       expect(conditionNode.nodeType).toBe('Condition');
       expect(mergeNode.nodeType).toBe('Join');
     });
@@ -76,13 +76,13 @@ describe('Complex Workflow Execution Integration Tests', () => {
       await graph.addNode(outputNode);
 
       // Create conditional edges with different conditions
-      await graph.addEdge({ fromNode: inputNode.id, toNode: conditionNode.id });
-      await graph.addEdge({ fromNode: conditionNode.id, toNode: branch1.id, condition: 'priority == "high"' });
-      await graph.addEdge({ fromNode: conditionNode.id, toNode: branch2.id, condition: 'priority == "medium"' });
-      await graph.addEdge({ fromNode: conditionNode.id, toNode: branch3.id, condition: 'priority == "low"' });
-      await graph.addEdge({ fromNode: branch1.id, toNode: outputNode.id });
-      await graph.addEdge({ fromNode: branch2.id, toNode: outputNode.id });
-      await graph.addEdge({ fromNode: branch3.id, toNode: outputNode.id });
+      await graph.addEdge({ fromNode: inputNode!.id, toNode: conditionNode.id });
+      await graph.addEdge({ fromNode: conditionNode!.id, toNode: branch1!.id, condition: 'priority == "high"' });
+      await graph.addEdge({ fromNode: conditionNode!.id, toNode: branch2!.id, condition: 'priority == "medium"' });
+      await graph.addEdge({ fromNode: conditionNode!.id, toNode: branch3!.id, condition: 'priority == "low"' });
+      await graph.addEdge({ fromNode: branch1!.id, toNode: outputNode.id });
+      await graph.addEdge({ fromNode: branch2!.id, toNode: outputNode.id });
+      await graph.addEdge({ fromNode: branch3!.id, toNode: outputNode.id });
 
       // Validate structure
       const nodeCount = await graph.nodeCount();
@@ -114,15 +114,15 @@ describe('Complex Workflow Execution Integration Tests', () => {
       }
 
       // Create nested conditional structure
-      await graph.addEdge({ fromNode: nodes[0].id, toNode: nodes[1].id }); // Input -> OuterCondition
-      await graph.addEdge({ fromNode: nodes[1].id, toNode: nodes[2].id, condition: 'type == "A"' }); // OuterCondition -> InnerCondition1
-      await graph.addEdge({ fromNode: nodes[1].id, toNode: nodes[3].id, condition: 'type == "B"' }); // OuterCondition -> InnerCondition2
-      await graph.addEdge({ fromNode: nodes[2].id, toNode: nodes[4].id, condition: 'subtype == "1"' }); // InnerCondition1 -> Action1
-      await graph.addEdge({ fromNode: nodes[2].id, toNode: nodes[5].id, condition: 'subtype == "2"' }); // InnerCondition1 -> Action2
-      await graph.addEdge({ fromNode: nodes[3].id, toNode: nodes[6].id }); // InnerCondition2 -> Action3
-      await graph.addEdge({ fromNode: nodes[4].id, toNode: nodes[7].id }); // Action1 -> Output
-      await graph.addEdge({ fromNode: nodes[5].id, toNode: nodes[7].id }); // Action2 -> Output
-      await graph.addEdge({ fromNode: nodes[6].id, toNode: nodes[7].id }); // Action3 -> Output
+      await graph.addEdge({ fromNode: nodes[0]!.id, toNode: nodes[1]!.id }); // Input -> OuterCondition
+      await graph.addEdge({ fromNode: nodes[1]!.id, toNode: nodes[2]!.id, condition: 'type == "A"' }); // OuterCondition -> InnerCondition1
+      await graph.addEdge({ fromNode: nodes[1]!.id, toNode: nodes[3]!.id, condition: 'type == "B"' }); // OuterCondition -> InnerCondition2
+      await graph.addEdge({ fromNode: nodes[2]!.id, toNode: nodes[4]!.id, condition: 'subtype == "1"' }); // InnerCondition1 -> Action1
+      await graph.addEdge({ fromNode: nodes[2]!.id, toNode: nodes[5]!.id, condition: 'subtype == "2"' }); // InnerCondition1 -> Action2
+      await graph.addEdge({ fromNode: nodes[3]!.id, toNode: nodes[6]!.id }); // InnerCondition2 -> Action3
+      await graph.addEdge({ fromNode: nodes[4]!.id, toNode: nodes[7]!.id }); // Action1 -> Output
+      await graph.addEdge({ fromNode: nodes[5]!.id, toNode: nodes[7]!.id }); // Action2 -> Output
+      await graph.addEdge({ fromNode: nodes[6]!.id, toNode: nodes[7]!.id }); // Action3 -> Output
 
       // Validate nested structure
       const nodeCount = await graph.nodeCount();
@@ -152,10 +152,10 @@ describe('Complex Workflow Execution Integration Tests', () => {
       }
 
       // Create dynamic routing edges
-      await graph.addEdge({ fromNode: nodes[0].id, toNode: nodes[1].id });
-      await graph.addEdge({ fromNode: nodes[1].id, toNode: nodes[2].id, condition: 'state.route == "A"' });
-      await graph.addEdge({ fromNode: nodes[1].id, toNode: nodes[3].id, condition: 'state.route == "B"' });
-      await graph.addEdge({ fromNode: nodes[1].id, toNode: nodes[4].id, condition: 'state.route == "C"' });
+      await graph.addEdge({ fromNode: nodes[0]!.id, toNode: nodes[1]!.id });
+      await graph.addEdge({ fromNode: nodes[1]!.id, toNode: nodes[2]!.id, condition: 'state.route == "A"' });
+      await graph.addEdge({ fromNode: nodes[1]!.id, toNode: nodes[3]!.id, condition: 'state.route == "B"' });
+      await graph.addEdge({ fromNode: nodes[1]!.id, toNode: nodes[4]!.id, condition: 'state.route == "C"' });
 
       const nodeCount = await graph.nodeCount();
       const edgeCount = await graph.edgeCount();
@@ -180,9 +180,9 @@ describe('Complex Workflow Execution Integration Tests', () => {
         await graph.addNode(node);
       }
 
-      await graph.addEdge({ fromNode: nodes[0].id, toNode: nodes[1].id });
-      await graph.addEdge({ fromNode: nodes[1].id, toNode: nodes[2].id, condition: 'success == true' });
-      await graph.addEdge({ fromNode: nodes[1].id, toNode: nodes[3].id, condition: 'success == false' });
+      await graph.addEdge({ fromNode: nodes[0]!.id, toNode: nodes[1]!.id });
+      await graph.addEdge({ fromNode: nodes[1]!.id, toNode: nodes[2]!.id, condition: 'success == true' });
+      await graph.addEdge({ fromNode: nodes[1]!.id, toNode: nodes[3]!.id, condition: 'success == false' });
 
       // Validate paths exist
       const nodeCount = await graph.nodeCount();
@@ -219,14 +219,14 @@ describe('Complex Workflow Execution Integration Tests', () => {
       await graph.addNode(outputNode);
 
       // Create parallel structure
-      await graph.addEdge({ fromNode: inputNode.id, toNode: splitNode.id });
-      await graph.addEdge({ fromNode: splitNode.id, toNode: parallel1.id });
-      await graph.addEdge({ fromNode: splitNode.id, toNode: parallel2.id });
-      await graph.addEdge({ fromNode: splitNode.id, toNode: parallel3.id });
-      await graph.addEdge({ fromNode: parallel1.id, toNode: joinNode.id });
-      await graph.addEdge({ fromNode: parallel2.id, toNode: joinNode.id });
-      await graph.addEdge({ fromNode: parallel3.id, toNode: joinNode.id });
-      await graph.addEdge({ fromNode: joinNode.id, toNode: outputNode.id });
+      await graph.addEdge({ fromNode: inputNode!.id, toNode: splitNode.id });
+      await graph.addEdge({ fromNode: splitNode!.id, toNode: parallel1.id });
+      await graph.addEdge({ fromNode: splitNode!.id, toNode: parallel2.id });
+      await graph.addEdge({ fromNode: splitNode!.id, toNode: parallel3.id });
+      await graph.addEdge({ fromNode: parallel1!.id, toNode: joinNode.id });
+      await graph.addEdge({ fromNode: parallel2!.id, toNode: joinNode.id });
+      await graph.addEdge({ fromNode: parallel3!.id, toNode: joinNode.id });
+      await graph.addEdge({ fromNode: joinNode!.id, toNode: outputNode.id });
 
       // Validate parallel structure
       const nodeCount = await graph.nodeCount();
@@ -255,12 +255,12 @@ describe('Complex Workflow Execution Integration Tests', () => {
       }
 
       // Create concurrent execution pattern
-      await graph.addEdge({ fromNode: nodes[0].id, toNode: nodes[1].id });
-      await graph.addEdge({ fromNode: nodes[0].id, toNode: nodes[2].id });
-      await graph.addEdge({ fromNode: nodes[0].id, toNode: nodes[3].id });
-      await graph.addEdge({ fromNode: nodes[1].id, toNode: nodes[4].id });
-      await graph.addEdge({ fromNode: nodes[2].id, toNode: nodes[4].id });
-      await graph.addEdge({ fromNode: nodes[3].id, toNode: nodes[4].id });
+      await graph.addEdge({ fromNode: nodes[0]!.id, toNode: nodes[1]!.id });
+      await graph.addEdge({ fromNode: nodes[0]!.id, toNode: nodes[2]!.id });
+      await graph.addEdge({ fromNode: nodes[0]!.id, toNode: nodes[3]!.id });
+      await graph.addEdge({ fromNode: nodes[1]!.id, toNode: nodes[4]!.id });
+      await graph.addEdge({ fromNode: nodes[2]!.id, toNode: nodes[4]!.id });
+      await graph.addEdge({ fromNode: nodes[3]!.id, toNode: nodes[4]!.id });
 
       const nodeCount = await graph.nodeCount();
       const edgeCount = await graph.edgeCount();
@@ -285,10 +285,10 @@ describe('Complex Workflow Execution Integration Tests', () => {
         await graph.addNode(node);
       }
 
-      await graph.addEdge({ fromNode: nodes[0].id, toNode: nodes[1].id });
-      await graph.addEdge({ fromNode: nodes[0].id, toNode: nodes[2].id });
-      await graph.addEdge({ fromNode: nodes[1].id, toNode: nodes[3].id });
-      await graph.addEdge({ fromNode: nodes[2].id, toNode: nodes[3].id });
+      await graph.addEdge({ fromNode: nodes[0]!.id, toNode: nodes[1]!.id });
+      await graph.addEdge({ fromNode: nodes[0]!.id, toNode: nodes[2]!.id });
+      await graph.addEdge({ fromNode: nodes[1]!.id, toNode: nodes[3]!.id });
+      await graph.addEdge({ fromNode: nodes[2]!.id, toNode: nodes[3]!.id });
 
       const nodeCount = await graph.nodeCount();
       const edgeCount = await graph.edgeCount();
@@ -314,11 +314,11 @@ describe('Complex Workflow Execution Integration Tests', () => {
         await graph.addNode(node);
       }
 
-      await graph.addEdge({ fromNode: nodes[0].id, toNode: nodes[1].id });
-      await graph.addEdge({ fromNode: nodes[0].id, toNode: nodes[2].id });
-      await graph.addEdge({ fromNode: nodes[1].id, toNode: nodes[3].id });
-      await graph.addEdge({ fromNode: nodes[2].id, toNode: nodes[3].id });
-      await graph.addEdge({ fromNode: nodes[3].id, toNode: nodes[4].id });
+      await graph.addEdge({ fromNode: nodes[0]!.id, toNode: nodes[1]!.id });
+      await graph.addEdge({ fromNode: nodes[0]!.id, toNode: nodes[2]!.id });
+      await graph.addEdge({ fromNode: nodes[1]!.id, toNode: nodes[3]!.id });
+      await graph.addEdge({ fromNode: nodes[2]!.id, toNode: nodes[3]!.id });
+      await graph.addEdge({ fromNode: nodes[3]!.id, toNode: nodes[4]!.id });
 
       const nodeCount = await graph.nodeCount();
       const edgeCount = await graph.edgeCount();
@@ -345,11 +345,11 @@ describe('Complex Workflow Execution Integration Tests', () => {
         await graph.addNode(node);
       }
 
-      await graph.addEdge({ fromNode: nodes[0].id, toNode: nodes[1].id });
-      await graph.addEdge({ fromNode: nodes[0].id, toNode: nodes[2].id });
-      await graph.addEdge({ fromNode: nodes[1].id, toNode: nodes[3].id });
-      await graph.addEdge({ fromNode: nodes[2].id, toNode: nodes[3].id });
-      await graph.addEdge({ fromNode: nodes[3].id, toNode: nodes[4].id });
+      await graph.addEdge({ fromNode: nodes[0]!.id, toNode: nodes[1]!.id });
+      await graph.addEdge({ fromNode: nodes[0]!.id, toNode: nodes[2]!.id });
+      await graph.addEdge({ fromNode: nodes[1]!.id, toNode: nodes[3]!.id });
+      await graph.addEdge({ fromNode: nodes[2]!.id, toNode: nodes[3]!.id });
+      await graph.addEdge({ fromNode: nodes[3]!.id, toNode: nodes[4]!.id });
 
       const nodeCount = await graph.nodeCount();
       const edgeCount = await graph.edgeCount();
@@ -378,12 +378,12 @@ describe('Complex Workflow Execution Integration Tests', () => {
         await graph.addNode(node);
       }
 
-      await graph.addEdge({ fromNode: nodes[0].id, toNode: nodes[1].id });
-      await graph.addEdge({ fromNode: nodes[1].id, toNode: nodes[2].id });
-      await graph.addEdge({ fromNode: nodes[2].id, toNode: nodes[3].id, condition: 'error != null' });
-      await graph.addEdge({ fromNode: nodes[2].id, toNode: nodes[4].id, condition: 'error == null' });
-      await graph.addEdge({ fromNode: nodes[3].id, toNode: nodes[5].id });
-      await graph.addEdge({ fromNode: nodes[4].id, toNode: nodes[5].id });
+      await graph.addEdge({ fromNode: nodes[0]!.id, toNode: nodes[1]!.id });
+      await graph.addEdge({ fromNode: nodes[1]!.id, toNode: nodes[2]!.id });
+      await graph.addEdge({ fromNode: nodes[2]!.id, toNode: nodes[3]!.id, condition: 'error != null' });
+      await graph.addEdge({ fromNode: nodes[2]!.id, toNode: nodes[4]!.id, condition: 'error == null' });
+      await graph.addEdge({ fromNode: nodes[3]!.id, toNode: nodes[5]!.id });
+      await graph.addEdge({ fromNode: nodes[4]!.id, toNode: nodes[5]!.id });
 
       const nodeCount = await graph.nodeCount();
       const edgeCount = await graph.edgeCount();
@@ -410,11 +410,11 @@ describe('Complex Workflow Execution Integration Tests', () => {
         await graph.addNode(node);
       }
 
-      await graph.addEdge({ fromNode: nodes[0].id, toNode: nodes[1].id });
-      await graph.addEdge({ fromNode: nodes[1].id, toNode: nodes[2].id });
-      await graph.addEdge({ fromNode: nodes[2].id, toNode: nodes[4].id, condition: 'success == true' });
-      await graph.addEdge({ fromNode: nodes[2].id, toNode: nodes[3].id, condition: 'success == false && retries < 3' });
-      await graph.addEdge({ fromNode: nodes[3].id, toNode: nodes[1].id }); // Retry loop
+      await graph.addEdge({ fromNode: nodes[0]!.id, toNode: nodes[1]!.id });
+      await graph.addEdge({ fromNode: nodes[1]!.id, toNode: nodes[2]!.id });
+      await graph.addEdge({ fromNode: nodes[2]!.id, toNode: nodes[4]!.id, condition: 'success == true' });
+      await graph.addEdge({ fromNode: nodes[2]!.id, toNode: nodes[3]!.id, condition: 'success == false && retries < 3' });
+      await graph.addEdge({ fromNode: nodes[3]!.id, toNode: nodes[1]!.id }); // Retry loop
 
       const nodeCount = await graph.nodeCount();
       const edgeCount = await graph.edgeCount();
@@ -440,11 +440,11 @@ describe('Complex Workflow Execution Integration Tests', () => {
         await graph.addNode(node);
       }
 
-      await graph.addEdge({ fromNode: nodes[0].id, toNode: nodes[1].id });
-      await graph.addEdge({ fromNode: nodes[1].id, toNode: nodes[2].id });
-      await graph.addEdge({ fromNode: nodes[2].id, toNode: nodes[4].id, condition: 'success == true' });
-      await graph.addEdge({ fromNode: nodes[2].id, toNode: nodes[3].id, condition: 'success == false' });
-      await graph.addEdge({ fromNode: nodes[3].id, toNode: nodes[4].id });
+      await graph.addEdge({ fromNode: nodes[0]!.id, toNode: nodes[1]!.id });
+      await graph.addEdge({ fromNode: nodes[1]!.id, toNode: nodes[2]!.id });
+      await graph.addEdge({ fromNode: nodes[2]!.id, toNode: nodes[4]!.id, condition: 'success == true' });
+      await graph.addEdge({ fromNode: nodes[2]!.id, toNode: nodes[3]!.id, condition: 'success == false' });
+      await graph.addEdge({ fromNode: nodes[3]!.id, toNode: nodes[4]!.id });
 
       const nodeCount = await graph.nodeCount();
       const edgeCount = await graph.edgeCount();
@@ -469,9 +469,9 @@ describe('Complex Workflow Execution Integration Tests', () => {
         await graph.addNode(node);
       }
 
-      await graph.addEdge({ fromNode: nodes[0].id, toNode: nodes[1].id });
-      await graph.addEdge({ fromNode: nodes[1].id, toNode: nodes[2].id });
-      await graph.addEdge({ fromNode: nodes[2].id, toNode: nodes[3].id, condition: 'error != null' });
+      await graph.addEdge({ fromNode: nodes[0]!.id, toNode: nodes[1]!.id });
+      await graph.addEdge({ fromNode: nodes[1]!.id, toNode: nodes[2]!.id });
+      await graph.addEdge({ fromNode: nodes[2]!.id, toNode: nodes[3]!.id, condition: 'error != null' });
 
       const nodeCount = await graph.nodeCount();
       const edgeCount = await graph.edgeCount();
@@ -498,13 +498,13 @@ describe('Complex Workflow Execution Integration Tests', () => {
         await graph.addNode(node);
       }
 
-      await graph.addEdge({ fromNode: nodes[0].id, toNode: nodes[2].id });
-      await graph.addEdge({ fromNode: nodes[2].id, toNode: nodes[1].id, condition: 'available == "full"' });
-      await graph.addEdge({ fromNode: nodes[2].id, toNode: nodes[3].id, condition: 'available == "partial"' });
-      await graph.addEdge({ fromNode: nodes[2].id, toNode: nodes[4].id, condition: 'available == "minimal"' });
-      await graph.addEdge({ fromNode: nodes[1].id, toNode: nodes[5].id });
-      await graph.addEdge({ fromNode: nodes[3].id, toNode: nodes[5].id });
-      await graph.addEdge({ fromNode: nodes[4].id, toNode: nodes[5].id });
+      await graph.addEdge({ fromNode: nodes[0]!.id, toNode: nodes[2]!.id });
+      await graph.addEdge({ fromNode: nodes[2]!.id, toNode: nodes[1]!.id, condition: 'available == "full"' });
+      await graph.addEdge({ fromNode: nodes[2]!.id, toNode: nodes[3]!.id, condition: 'available == "partial"' });
+      await graph.addEdge({ fromNode: nodes[2]!.id, toNode: nodes[4]!.id, condition: 'available == "minimal"' });
+      await graph.addEdge({ fromNode: nodes[1]!.id, toNode: nodes[5]!.id });
+      await graph.addEdge({ fromNode: nodes[3]!.id, toNode: nodes[5]!.id });
+      await graph.addEdge({ fromNode: nodes[4]!.id, toNode: nodes[5]!.id });
 
       const nodeCount = await graph.nodeCount();
       const edgeCount = await graph.edgeCount();
@@ -560,10 +560,10 @@ describe('Complex Workflow Execution Integration Tests', () => {
         await graph.addNode(node);
       }
 
-      await graph.addEdge({ fromNode: nodes[0].id, toNode: nodes[1].id });
-      await graph.addEdge({ fromNode: nodes[1].id, toNode: nodes[2].id });
-      await graph.addEdge({ fromNode: nodes[2].id, toNode: nodes[3].id });
-      await graph.addEdge({ fromNode: nodes[3].id, toNode: nodes[4].id });
+      await graph.addEdge({ fromNode: nodes[0]!.id, toNode: nodes[1]!.id });
+      await graph.addEdge({ fromNode: nodes[1]!.id, toNode: nodes[2]!.id });
+      await graph.addEdge({ fromNode: nodes[2]!.id, toNode: nodes[3]!.id });
+      await graph.addEdge({ fromNode: nodes[3]!.id, toNode: nodes[4]!.id });
 
       const nodeCount = await graph.nodeCount();
       const edgeCount = await graph.edgeCount();
@@ -590,10 +590,10 @@ describe('Complex Workflow Execution Integration Tests', () => {
         await graph.addNode(node);
       }
 
-      await graph.addEdge({ fromNode: nodes[0].id, toNode: nodes[1].id });
-      await graph.addEdge({ fromNode: nodes[1].id, toNode: nodes[2].id });
-      await graph.addEdge({ fromNode: nodes[2].id, toNode: nodes[3].id, condition: 'timeout == true' });
-      await graph.addEdge({ fromNode: nodes[2].id, toNode: nodes[4].id, condition: 'timeout == false' });
+      await graph.addEdge({ fromNode: nodes[0]!.id, toNode: nodes[1]!.id });
+      await graph.addEdge({ fromNode: nodes[1]!.id, toNode: nodes[2]!.id });
+      await graph.addEdge({ fromNode: nodes[2]!.id, toNode: nodes[3]!.id, condition: 'timeout == true' });
+      await graph.addEdge({ fromNode: nodes[2]!.id, toNode: nodes[4]!.id, condition: 'timeout == false' });
 
       const nodeCount = await graph.nodeCount();
       const edgeCount = await graph.edgeCount();
@@ -620,9 +620,9 @@ describe('Complex Workflow Execution Integration Tests', () => {
         await graph.addNode(node);
       }
 
-      await graph.addEdge({ fromNode: nodes[0].id, toNode: nodes[1].id });
-      await graph.addEdge({ fromNode: nodes[1].id, toNode: nodes[2].id });
-      await graph.addEdge({ fromNode: nodes[2].id, toNode: nodes[3].id });
+      await graph.addEdge({ fromNode: nodes[0]!.id, toNode: nodes[1]!.id });
+      await graph.addEdge({ fromNode: nodes[1]!.id, toNode: nodes[2]!.id });
+      await graph.addEdge({ fromNode: nodes[2]!.id, toNode: nodes[3]!.id });
 
       const nodeCount = await graph.nodeCount();
       const edgeCount = await graph.edgeCount();
@@ -649,10 +649,10 @@ describe('Complex Workflow Execution Integration Tests', () => {
         await graph.addNode(node);
       }
 
-      await graph.addEdge({ fromNode: nodes[0].id, toNode: nodes[1].id });
-      await graph.addEdge({ fromNode: nodes[1].id, toNode: nodes[2].id });
-      await graph.addEdge({ fromNode: nodes[2].id, toNode: nodes[3].id });
-      await graph.addEdge({ fromNode: nodes[3].id, toNode: nodes[4].id });
+      await graph.addEdge({ fromNode: nodes[0]!.id, toNode: nodes[1]!.id });
+      await graph.addEdge({ fromNode: nodes[1]!.id, toNode: nodes[2]!.id });
+      await graph.addEdge({ fromNode: nodes[2]!.id, toNode: nodes[3]!.id });
+      await graph.addEdge({ fromNode: nodes[3]!.id, toNode: nodes[4]!.id });
 
       const nodeCount = await graph.nodeCount();
       const edgeCount = await graph.edgeCount();
@@ -681,11 +681,11 @@ describe('Complex Workflow Execution Integration Tests', () => {
         await graph.addNode(node);
       }
 
-      await graph.addEdge({ fromNode: nodes[0].id, toNode: nodes[1].id });
-      await graph.addEdge({ fromNode: nodes[1].id, toNode: nodes[2].id });
-      await graph.addEdge({ fromNode: nodes[2].id, toNode: nodes[3].id, condition: 'valid == true' });
-      await graph.addEdge({ fromNode: nodes[3].id, toNode: nodes[4].id });
-      await graph.addEdge({ fromNode: nodes[4].id, toNode: nodes[5].id, condition: 'valid == true' });
+      await graph.addEdge({ fromNode: nodes[0]!.id, toNode: nodes[1]!.id });
+      await graph.addEdge({ fromNode: nodes[1]!.id, toNode: nodes[2]!.id });
+      await graph.addEdge({ fromNode: nodes[2]!.id, toNode: nodes[3]!.id, condition: 'valid == true' });
+      await graph.addEdge({ fromNode: nodes[3]!.id, toNode: nodes[4]!.id });
+      await graph.addEdge({ fromNode: nodes[4]!.id, toNode: nodes[5]!.id, condition: 'valid == true' });
 
       const nodeCount = await graph.nodeCount();
       const edgeCount = await graph.edgeCount();
@@ -713,12 +713,12 @@ describe('Complex Workflow Execution Integration Tests', () => {
         await graph.addNode(node);
       }
 
-      await graph.addEdge({ fromNode: nodes[0].id, toNode: nodes[1].id });
-      await graph.addEdge({ fromNode: nodes[1].id, toNode: nodes[2].id, condition: 'state.type == "A"' });
-      await graph.addEdge({ fromNode: nodes[1].id, toNode: nodes[3].id, condition: 'state.type == "B"' });
-      await graph.addEdge({ fromNode: nodes[2].id, toNode: nodes[4].id });
-      await graph.addEdge({ fromNode: nodes[3].id, toNode: nodes[4].id });
-      await graph.addEdge({ fromNode: nodes[4].id, toNode: nodes[5].id });
+      await graph.addEdge({ fromNode: nodes[0]!.id, toNode: nodes[1]!.id });
+      await graph.addEdge({ fromNode: nodes[1]!.id, toNode: nodes[2]!.id, condition: 'state.type == "A"' });
+      await graph.addEdge({ fromNode: nodes[1]!.id, toNode: nodes[3]!.id, condition: 'state.type == "B"' });
+      await graph.addEdge({ fromNode: nodes[2]!.id, toNode: nodes[4]!.id });
+      await graph.addEdge({ fromNode: nodes[3]!.id, toNode: nodes[4]!.id });
+      await graph.addEdge({ fromNode: nodes[4]!.id, toNode: nodes[5]!.id });
 
       const nodeCount = await graph.nodeCount();
       const edgeCount = await graph.edgeCount();
@@ -744,10 +744,10 @@ describe('Complex Workflow Execution Integration Tests', () => {
         await graph.addNode(node);
       }
 
-      await graph.addEdge({ fromNode: nodes[0].id, toNode: nodes[1].id });
-      await graph.addEdge({ fromNode: nodes[1].id, toNode: nodes[2].id });
-      await graph.addEdge({ fromNode: nodes[2].id, toNode: nodes[3].id });
-      await graph.addEdge({ fromNode: nodes[3].id, toNode: nodes[4].id });
+      await graph.addEdge({ fromNode: nodes[0]!.id, toNode: nodes[1]!.id });
+      await graph.addEdge({ fromNode: nodes[1]!.id, toNode: nodes[2]!.id });
+      await graph.addEdge({ fromNode: nodes[2]!.id, toNode: nodes[3]!.id });
+      await graph.addEdge({ fromNode: nodes[3]!.id, toNode: nodes[4]!.id });
 
       const nodeCount = await graph.nodeCount();
       const edgeCount = await graph.edgeCount();

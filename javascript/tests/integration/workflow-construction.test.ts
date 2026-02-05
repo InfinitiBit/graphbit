@@ -26,10 +26,10 @@ describe('Workflow Construction Integration Tests', () => {
       }
 
       // Connect nodes linearly: 0 -> 1 -> 2 -> 3 -> 4
-      await graph.addEdge({ fromNode: nodes[0].id, toNode: nodes[1].id });
-      await graph.addEdge({ fromNode: nodes[1].id, toNode: nodes[2].id });
-      await graph.addEdge({ fromNode: nodes[2].id, toNode: nodes[3].id });
-      await graph.addEdge({ fromNode: nodes[3].id, toNode: nodes[4].id });
+      await graph.addEdge({ fromNode: nodes[0]!.id, toNode: nodes[1]!.id });
+      await graph.addEdge({ fromNode: nodes[1]!.id, toNode: nodes[2]!.id });
+      await graph.addEdge({ fromNode: nodes[2]!.id, toNode: nodes[3]!.id });
+      await graph.addEdge({ fromNode: nodes[3]!.id, toNode: nodes[4]!.id });
 
       // Validate graph structure
       const nodeCount = await graph.nodeCount();
@@ -39,7 +39,7 @@ describe('Workflow Construction Integration Tests', () => {
       expect(edgeCount).toBe(4); // 4 edges for 5 nodes in sequence
 
       // Verify all node IDs are unique
-      const nodeIds = nodes.map(n => n.id);
+      const nodeIds = nodes.map(n => n!.id);
       const uniqueIds = new Set(nodeIds);
       expect(uniqueIds.size).toBe(5);
 
@@ -81,10 +81,10 @@ describe('Workflow Construction Integration Tests', () => {
       }
 
       // Create branching structure: A -> B, A -> C, B -> D, C -> D
-      await graph.addEdge({ fromNode: nodes[0].id, toNode: nodes[1].id });
-      await graph.addEdge({ fromNode: nodes[0].id, toNode: nodes[2].id });
-      await graph.addEdge({ fromNode: nodes[1].id, toNode: nodes[3].id });
-      await graph.addEdge({ fromNode: nodes[2].id, toNode: nodes[3].id });
+      await graph.addEdge({ fromNode: nodes[0]!.id, toNode: nodes[1]!.id });
+      await graph.addEdge({ fromNode: nodes[0]!.id, toNode: nodes[2]!.id });
+      await graph.addEdge({ fromNode: nodes[1]!.id, toNode: nodes[3]!.id });
+      await graph.addEdge({ fromNode: nodes[2]!.id, toNode: nodes[3]!.id });
 
       // Validate graph structure
       const nodeCount = await graph.nodeCount();
@@ -112,13 +112,13 @@ describe('Workflow Construction Integration Tests', () => {
       }
 
       // Create complex branching
-      await graph.addEdge({ fromNode: nodes[0].id, toNode: nodes[1].id });
-      await graph.addEdge({ fromNode: nodes[0].id, toNode: nodes[2].id });
-      await graph.addEdge({ fromNode: nodes[0].id, toNode: nodes[3].id });
-      await graph.addEdge({ fromNode: nodes[1].id, toNode: nodes[4].id });
-      await graph.addEdge({ fromNode: nodes[2].id, toNode: nodes[4].id });
-      await graph.addEdge({ fromNode: nodes[3].id, toNode: nodes[5].id });
-      await graph.addEdge({ fromNode: nodes[4].id, toNode: nodes[5].id });
+      await graph.addEdge({ fromNode: nodes[0]!.id, toNode: nodes[1]!.id });
+      await graph.addEdge({ fromNode: nodes[0]!.id, toNode: nodes[2]!.id });
+      await graph.addEdge({ fromNode: nodes[0]!.id, toNode: nodes[3]!.id });
+      await graph.addEdge({ fromNode: nodes[1]!.id, toNode: nodes[4]!.id });
+      await graph.addEdge({ fromNode: nodes[2]!.id, toNode: nodes[4]!.id });
+      await graph.addEdge({ fromNode: nodes[3]!.id, toNode: nodes[5]!.id });
+      await graph.addEdge({ fromNode: nodes[4]!.id, toNode: nodes[5]!.id });
 
       // Validate structure
       const nodeCount = await graph.nodeCount();
@@ -150,12 +150,12 @@ describe('Workflow Construction Integration Tests', () => {
       }
 
       // Connect path 1
-      await graph.addEdge({ fromNode: nodes[0].id, toNode: nodes[1].id });
-      await graph.addEdge({ fromNode: nodes[1].id, toNode: nodes[2].id });
+      await graph.addEdge({ fromNode: nodes[0]!.id, toNode: nodes[1]!.id });
+      await graph.addEdge({ fromNode: nodes[1]!.id, toNode: nodes[2]!.id });
 
       // Connect path 2
-      await graph.addEdge({ fromNode: nodes[3].id, toNode: nodes[4].id });
-      await graph.addEdge({ fromNode: nodes[4].id, toNode: nodes[5].id });
+      await graph.addEdge({ fromNode: nodes[3]!.id, toNode: nodes[4]!.id });
+      await graph.addEdge({ fromNode: nodes[4]!.id, toNode: nodes[5]!.id });
 
       // Validate structure
       const nodeCount = await graph.nodeCount();
@@ -181,10 +181,10 @@ describe('Workflow Construction Integration Tests', () => {
       }
 
       // Create diamond structure
-      await graph.addEdge({ fromNode: nodes[0].id, toNode: nodes[1].id });
-      await graph.addEdge({ fromNode: nodes[0].id, toNode: nodes[2].id });
-      await graph.addEdge({ fromNode: nodes[1].id, toNode: nodes[3].id });
-      await graph.addEdge({ fromNode: nodes[2].id, toNode: nodes[3].id });
+      await graph.addEdge({ fromNode: nodes[0]!.id, toNode: nodes[1]!.id });
+      await graph.addEdge({ fromNode: nodes[0]!.id, toNode: nodes[2]!.id });
+      await graph.addEdge({ fromNode: nodes[1]!.id, toNode: nodes[3]!.id });
+      await graph.addEdge({ fromNode: nodes[2]!.id, toNode: nodes[3]!.id });
 
       // Validate structure
       const nodeCount = await graph.nodeCount();
@@ -227,8 +227,8 @@ describe('Workflow Construction Integration Tests', () => {
         await graph.addNode(node);
       }
 
-      await graph.addEdge({ fromNode: nodes[0].id, toNode: nodes[1].id });
-      await graph.addEdge({ fromNode: nodes[1].id, toNode: nodes[2].id });
+      await graph.addEdge({ fromNode: nodes[0]!.id, toNode: nodes[1]!.id });
+      await graph.addEdge({ fromNode: nodes[1]!.id, toNode: nodes[2]!.id });
 
       // Query graph structure
       const nodeCount = await graph.nodeCount();
@@ -283,27 +283,27 @@ describe('Workflow Construction Integration Tests', () => {
 
       // Create complex connection pattern
       // Layer 1: nodes[0] -> nodes[1], nodes[2], nodes[3]
-      await graph.addEdge({ fromNode: nodes[0].id, toNode: nodes[1].id });
-      await graph.addEdge({ fromNode: nodes[0].id, toNode: nodes[2].id });
-      await graph.addEdge({ fromNode: nodes[0].id, toNode: nodes[3].id });
+      await graph.addEdge({ fromNode: nodes[0]!.id, toNode: nodes[1]!.id });
+      await graph.addEdge({ fromNode: nodes[0]!.id, toNode: nodes[2]!.id });
+      await graph.addEdge({ fromNode: nodes[0]!.id, toNode: nodes[3]!.id });
 
       // Layer 2: nodes[1,2,3] -> nodes[4,5,6]
-      await graph.addEdge({ fromNode: nodes[1].id, toNode: nodes[4].id });
-      await graph.addEdge({ fromNode: nodes[2].id, toNode: nodes[5].id });
-      await graph.addEdge({ fromNode: nodes[3].id, toNode: nodes[6].id });
+      await graph.addEdge({ fromNode: nodes[1]!.id, toNode: nodes[4]!.id });
+      await graph.addEdge({ fromNode: nodes[2]!.id, toNode: nodes[5]!.id });
+      await graph.addEdge({ fromNode: nodes[3]!.id, toNode: nodes[6]!.id });
 
       // Layer 3: nodes[4,5,6] -> nodes[7,8]
-      await graph.addEdge({ fromNode: nodes[4].id, toNode: nodes[7].id });
-      await graph.addEdge({ fromNode: nodes[5].id, toNode: nodes[7].id });
-      await graph.addEdge({ fromNode: nodes[6].id, toNode: nodes[8].id });
+      await graph.addEdge({ fromNode: nodes[4]!.id, toNode: nodes[7]!.id });
+      await graph.addEdge({ fromNode: nodes[5]!.id, toNode: nodes[7]!.id });
+      await graph.addEdge({ fromNode: nodes[6]!.id, toNode: nodes[8]!.id });
 
       // Layer 4: nodes[7,8] -> nodes[9,10]
-      await graph.addEdge({ fromNode: nodes[7].id, toNode: nodes[9].id });
-      await graph.addEdge({ fromNode: nodes[8].id, toNode: nodes[10].id });
+      await graph.addEdge({ fromNode: nodes[7]!.id, toNode: nodes[9]!.id });
+      await graph.addEdge({ fromNode: nodes[8]!.id, toNode: nodes[10]!.id });
 
       // Final: nodes[9,10] -> nodes[11]
-      await graph.addEdge({ fromNode: nodes[9].id, toNode: nodes[11].id });
-      await graph.addEdge({ fromNode: nodes[10].id, toNode: nodes[11].id });
+      await graph.addEdge({ fromNode: nodes[9]!.id, toNode: nodes[11]!.id });
+      await graph.addEdge({ fromNode: nodes[10]!.id, toNode: nodes[11]!.id });
 
       // Validate structure
       const nodeCount = await graph.nodeCount();
@@ -313,7 +313,7 @@ describe('Workflow Construction Integration Tests', () => {
       expect(edgeCount).toBe(13);
 
       // Verify all nodes are unique
-      const uniqueIds = new Set(nodes.map(n => n.id));
+      const uniqueIds = new Set(nodes.map(n => n!.id));
       expect(uniqueIds.size).toBe(12);
     });
 
@@ -336,14 +336,14 @@ describe('Workflow Construction Integration Tests', () => {
       }
 
       // Connect entries to middle nodes
-      await graph.addEdge({ fromNode: nodes[0].id, toNode: nodes[3].id });
-      await graph.addEdge({ fromNode: nodes[1].id, toNode: nodes[3].id });
-      await graph.addEdge({ fromNode: nodes[2].id, toNode: nodes[4].id });
+      await graph.addEdge({ fromNode: nodes[0]!.id, toNode: nodes[3]!.id });
+      await graph.addEdge({ fromNode: nodes[1]!.id, toNode: nodes[3]!.id });
+      await graph.addEdge({ fromNode: nodes[2]!.id, toNode: nodes[4]!.id });
 
       // Connect middle to exits
-      await graph.addEdge({ fromNode: nodes[3].id, toNode: nodes[5].id });
-      await graph.addEdge({ fromNode: nodes[4].id, toNode: nodes[5].id });
-      await graph.addEdge({ fromNode: nodes[4].id, toNode: nodes[6].id });
+      await graph.addEdge({ fromNode: nodes[3]!.id, toNode: nodes[5]!.id });
+      await graph.addEdge({ fromNode: nodes[4]!.id, toNode: nodes[5]!.id });
+      await graph.addEdge({ fromNode: nodes[4]!.id, toNode: nodes[6]!.id });
 
       // Validate structure
       const nodeCount = await graph.nodeCount();

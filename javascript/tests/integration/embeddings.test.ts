@@ -86,7 +86,7 @@ describe('Embedding Integration Tests', () => {
         expect(typeof response.model).toBe('string');
 
         // Validate embedding dimensions (text-embedding-3-small = 1536 dimensions)
-        const embedding = response.embeddings[0];
+        const embedding = response.embeddings[0]!;
         expect(Array.isArray(embedding)).toBe(true);
         expect(embedding.length).toBe(1536);
         expect(embedding.every(val => typeof val === 'number')).toBe(true);
@@ -104,15 +104,15 @@ describe('Embedding Integration Tests', () => {
         expect(response.embeddings.length).toBe(3);
 
         // Validate each embedding
-        response.embeddings.forEach((embedding, index) => {
+        response.embeddings.forEach((embedding: any, index) => {
           expect(Array.isArray(embedding)).toBe(true);
           expect(embedding.length).toBe(1536);
           expect(embedding.every(val => typeof val === 'number')).toBe(true);
         });
 
         // Validate embeddings are different
-        const sim01 = cosineSimilarity(response.embeddings[0], response.embeddings[1]);
-        const sim02 = cosineSimilarity(response.embeddings[0], response.embeddings[2]);
+        const sim01 = cosineSimilarity(response.embeddings[0]!, response.embeddings[1]!);
+        const sim02 = cosineSimilarity(response.embeddings[0]!, response.embeddings[2]!);
         expect(sim01).toBeLessThan(1.0); // Different texts should have similarity < 1
         expect(sim02).toBeLessThan(1.0);
       });
@@ -125,7 +125,7 @@ describe('Embedding Integration Tests', () => {
 
         expect(response.embeddings).toBeDefined();
         expect(response.embeddings.length).toBe(1);
-        expect(response.embeddings[0].length).toBe(3072);
+        expect(response.embeddings[0]!.length).toBe(3072);
         expect(response.model).toContain('3-large');
       });
 
@@ -137,7 +137,7 @@ describe('Embedding Integration Tests', () => {
 
         expect(response.embeddings).toBeDefined();
         expect(response.embeddings.length).toBe(1);
-        expect(response.embeddings[0].length).toBe(1536);
+        expect(response.embeddings[0]!.length).toBe(1536);
         expect(response.model).toContain('ada-002');
       });
     });
@@ -154,7 +154,7 @@ describe('Embedding Integration Tests', () => {
 
         expect(response.embeddings.length).toBe(2);
 
-        const similarity = cosineSimilarity(response.embeddings[0], response.embeddings[1]);
+        const similarity = cosineSimilarity(response.embeddings[0]!, response.embeddings[1]!);
 
         // Identical texts should have similarity very close to 1.0
         expect(similarity).toBeGreaterThan(0.99);
@@ -171,7 +171,7 @@ describe('Embedding Integration Tests', () => {
         ];
         const response = await client.embed(texts);
 
-        const similarity = cosineSimilarity(response.embeddings[0], response.embeddings[1]);
+        const similarity = cosineSimilarity(response.embeddings[0]!, response.embeddings[1]!);
 
         // Semantically similar texts should have high similarity
         expect(similarity).toBeGreaterThan(0.7);
@@ -188,7 +188,7 @@ describe('Embedding Integration Tests', () => {
         ];
         const response = await client.embed(texts);
 
-        const similarity = cosineSimilarity(response.embeddings[0], response.embeddings[1]);
+        const similarity = cosineSimilarity(response.embeddings[0]!, response.embeddings[1]!);
 
         // Unrelated texts should have lower similarity
         expect(similarity).toBeLessThan(0.7);
@@ -208,7 +208,7 @@ describe('Embedding Integration Tests', () => {
 
         // Validate all embeddings generated
         expect(response.embeddings.length).toBe(10);
-        response.embeddings.forEach((embedding, index) => {
+        response.embeddings.forEach((embedding: any, index) => {
           expect(embedding.length).toBe(1536);
           expect(embedding.every(val => typeof val === 'number')).toBe(true);
         });
@@ -233,8 +233,8 @@ describe('Embedding Integration Tests', () => {
         });
 
         // Validate embeddings are unique (not all the same)
-        const firstEmbedding = response.embeddings[0];
-        const lastEmbedding = response.embeddings[49];
+        const firstEmbedding = response.embeddings[0]!;
+        const lastEmbedding = response.embeddings[49]!;
         const similarity = cosineSimilarity(firstEmbedding, lastEmbedding);
         expect(similarity).toBeLessThan(1.0); // Should be different
       });
@@ -336,7 +336,7 @@ describe('Embedding Integration Tests', () => {
         expect(response.model).toBeDefined();
 
         // Validate embedding dimensions (all-MiniLM-L6-v2 = 384 dimensions)
-        const embedding = response.embeddings[0];
+        const embedding = response.embeddings[0]!;
         expect(Array.isArray(embedding)).toBe(true);
         expect(embedding.length).toBe(384);
         expect(embedding.every(val => typeof val === 'number')).toBe(true);
@@ -357,15 +357,15 @@ describe('Embedding Integration Tests', () => {
         expect(response.embeddings.length).toBe(3);
 
         // Validate each embedding
-        response.embeddings.forEach((embedding, index) => {
+        response.embeddings.forEach((embedding: any, index) => {
           expect(Array.isArray(embedding)).toBe(true);
           expect(embedding.length).toBe(384);
           expect(embedding.every(val => typeof val === 'number')).toBe(true);
         });
 
         // Validate embeddings are different
-        const sim01 = cosineSimilarity(response.embeddings[0], response.embeddings[1]);
-        const sim02 = cosineSimilarity(response.embeddings[0], response.embeddings[2]);
+        const sim01 = cosineSimilarity(response.embeddings[0]!, response.embeddings[1]!);
+        const sim02 = cosineSimilarity(response.embeddings[0]!, response.embeddings[2]!);
         expect(sim01).toBeLessThan(1.0);
         expect(sim02).toBeLessThan(1.0);
       });
@@ -381,7 +381,7 @@ describe('Embedding Integration Tests', () => {
 
         expect(response.embeddings).toBeDefined();
         expect(response.embeddings.length).toBe(1);
-        expect(response.embeddings[0].length).toBe(768);
+        expect(response.embeddings[0]!.length).toBe(768);
       });
     });
 
@@ -421,7 +421,7 @@ describe('Embedding Integration Tests', () => {
       const client = new EmbeddingClient(config);
 
       const response = await client.embed(['Test normalization']);
-      const embedding = response.embeddings[0];
+      const embedding = response.embeddings[0]!;
 
       // Calculate L2 norm
       const norm = Math.sqrt(embedding.reduce((sum, val) => sum + val * val, 0));
@@ -436,7 +436,7 @@ describe('Embedding Integration Tests', () => {
       const client = new EmbeddingClient(config);
 
       const response = await client.embed(['Test vector properties']);
-      const embedding = response.embeddings[0];
+      const embedding = response.embeddings[0]!;
 
       // Validate all values are finite numbers
       expect(embedding.every(val => Number.isFinite(val))).toBe(true);

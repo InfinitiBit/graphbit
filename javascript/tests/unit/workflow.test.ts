@@ -80,7 +80,7 @@ describe('Workflow', () => {
       };
 
       const nodeId = await workflow.addNode(node);
-      expect(nodeId).toBe(node.id);
+      expect(nodeId).toBe(node!.id);
     });
 
     it('should add a Condition node to the workflow', async () => {
@@ -95,7 +95,7 @@ describe('Workflow', () => {
       };
 
       const nodeId = await workflow.addNode(node);
-      expect(nodeId).toBe(node.id);
+      expect(nodeId).toBe(node!.id);
     });
 
     it('should add a Transform node to the workflow', async () => {
@@ -110,7 +110,7 @@ describe('Workflow', () => {
       };
 
       const nodeId = await workflow.addNode(node);
-      expect(nodeId).toBe(node.id);
+      expect(nodeId).toBe(node!.id);
     });
 
     it('should add multiple nodes to the workflow', async () => {
@@ -134,8 +134,8 @@ describe('Workflow', () => {
       const id1 = await workflow.addNode(node1);
       const id2 = await workflow.addNode(node2);
 
-      expect(id1).toBe(node1.id);
-      expect(id2).toBe(node2.id);
+      expect(id1).toBe(node1!.id);
+      expect(id2).toBe(node2!.id);
     });
 
     it('should reject invalid node type', async () => {
@@ -176,12 +176,12 @@ describe('Workflow', () => {
       await workflow.addNode(node2);
 
       const edge = {
-        fromNode: node1.id,
-        toNode: node2.id,
+        fromNode: node1!.id,
+        toNode: node2!.id,
         condition: undefined,
       };
 
-      await expect(workflow.addEdge(node1.id, node2.id, edge)).resolves.not.toThrow();
+      await expect(workflow.addEdge(node1!.id, node2!.id, edge)).resolves.not.toThrow();
     });
 
     it('should add an edge with a condition', async () => {
@@ -206,12 +206,12 @@ describe('Workflow', () => {
       await workflow.addNode(node2);
 
       const edge = {
-        fromNode: node1.id,
-        toNode: node2.id,
+        fromNode: node1!.id,
+        toNode: node2!.id,
         condition: 'result > 0',
       };
 
-      await expect(workflow.addEdge(node1.id, node2.id, edge)).resolves.not.toThrow();
+      await expect(workflow.addEdge(node1!.id, node2!.id, edge)).resolves.not.toThrow();
     });
 
     it('should reject edge with non-existent source node', async () => {
@@ -229,11 +229,11 @@ describe('Workflow', () => {
 
       const edge = {
         fromNode: '550e8400-e29b-41d4-a716-446655440199', // Non-existent
-        toNode: node.id,
+        toNode: node!.id,
         condition: undefined,
       };
 
-      await expect(workflow.addEdge('550e8400-e29b-41d4-a716-446655440199', node.id, edge)).rejects.toThrow();
+      await expect(workflow.addEdge('550e8400-e29b-41d4-a716-446655440199', node!.id, edge)).rejects.toThrow();
     });
 
     it('should reject edge with non-existent target node', async () => {
@@ -250,12 +250,12 @@ describe('Workflow', () => {
       await workflow.addNode(node);
 
       const edge = {
-        fromNode: node.id,
+        fromNode: node!.id,
         toNode: '550e8400-e29b-41d4-a716-446655440199', // Non-existent
         condition: undefined,
       };
 
-      await expect(workflow.addEdge(node.id, '550e8400-e29b-41d4-a716-446655440199', edge)).rejects.toThrow();
+      await expect(workflow.addEdge(node!.id, '550e8400-e29b-41d4-a716-446655440199', edge)).rejects.toThrow();
     });
   });
 
@@ -306,12 +306,12 @@ describe('Workflow', () => {
       await workflow.addNode(node2);
 
       const edge = {
-        fromNode: node1.id,
-        toNode: node2.id,
+        fromNode: node1!.id,
+        toNode: node2!.id,
         condition: undefined,
       };
 
-      await workflow.addEdge(node1.id, node2.id, edge);
+      await workflow.addEdge(node1!.id, node2!.id, edge);
 
       const isValid = await workflow.validate();
       expect(isValid).toBe(true);

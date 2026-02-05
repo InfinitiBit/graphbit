@@ -135,7 +135,7 @@ describe('LlmClient', () => {
       expect(response).toHaveProperty('finishReason');
       expect(response).toHaveProperty('model');
       
-      expect(response.content).toBeTypeOf('string');
+      expect(response?.content).toBeTypeOf('string');
       expect(response.content.length).toBeGreaterThan(0);
       
       expect(response.usage).toHaveProperty('promptTokens');

@@ -182,8 +182,8 @@ describe('Error Handling Integration Tests', () => {
 
       // Add edge
       const edge = {
-        fromNode: nodeA.id,
-        toNode: nodeB.id,
+        fromNode: nodeA!.id,
+        toNode: nodeB!.id,
       };
       await graph.addEdge(edge);
 
@@ -207,8 +207,8 @@ describe('Error Handling Integration Tests', () => {
       }
 
       // Add multiple edges
-      await graph.addEdge({ fromNode: nodes[0].id, toNode: nodes[1].id });
-      await graph.addEdge({ fromNode: nodes[1].id, toNode: nodes[2].id });
+      await graph.addEdge({ fromNode: nodes[0]!.id, toNode: nodes[1]!.id });
+      await graph.addEdge({ fromNode: nodes[1]!.id, toNode: nodes[2]!.id });
 
       // Verify edges were added
       const edgeCount = await graph.edgeCount();

@@ -36,7 +36,7 @@ It also has multiple sentences.`;
         expect(chunk).toHaveProperty('content');
         expect(chunk).toHaveProperty('startIndex');
         expect(chunk).toHaveProperty('endIndex');
-        expect(typeof chunk.content).toBe('string');
+        expect(typeof chunk?.content).toBe('string');
         expect(typeof chunk.startIndex).toBe('number');
         expect(typeof chunk.endIndex).toBe('number');
       });

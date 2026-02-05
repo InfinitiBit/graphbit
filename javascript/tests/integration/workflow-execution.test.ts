@@ -56,7 +56,7 @@ describe('Workflow Execution Integration Tests', () => {
       expect(result).toBeDefined();
 
       // Validate execution state
-      const isCompleted = await result.isCompleted();
+      const isCompleted = await result.isSuccess();
       const isFailed = await result.isFailed();
       expect(isCompleted || isFailed).toBe(true);
 

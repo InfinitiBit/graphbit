@@ -39,7 +39,7 @@ describe('WorkflowGraph', () => {
       };
 
       const nodeId = await graph.addNode(node);
-      expect(nodeId).toBe(node.id);
+      expect(nodeId).toBe(node!.id);
 
       const count = await graph.nodeCount();
       expect(count).toBe(1);
@@ -54,7 +54,7 @@ describe('WorkflowGraph', () => {
       };
 
       const nodeId = await graph.addNode(node);
-      expect(nodeId).toBe(node.id);
+      expect(nodeId).toBe(node!.id);
     });
 
     it('should add a Transform node to the graph', async () => {
@@ -66,7 +66,7 @@ describe('WorkflowGraph', () => {
       };
 
       const nodeId = await graph.addNode(node);
-      expect(nodeId).toBe(node.id);
+      expect(nodeId).toBe(node!.id);
     });
 
     it('should add a Split node to the graph', async () => {
@@ -78,7 +78,7 @@ describe('WorkflowGraph', () => {
       };
 
       const nodeId = await graph.addNode(node);
-      expect(nodeId).toBe(node.id);
+      expect(nodeId).toBe(node!.id);
     });
 
     it('should add a Join node to the graph', async () => {
@@ -90,7 +90,7 @@ describe('WorkflowGraph', () => {
       };
 
       const nodeId = await graph.addNode(node);
-      expect(nodeId).toBe(node.id);
+      expect(nodeId).toBe(node!.id);
     });
 
     it('should add a Delay node to the graph', async () => {
@@ -102,7 +102,7 @@ describe('WorkflowGraph', () => {
       };
 
       const nodeId = await graph.addNode(node);
-      expect(nodeId).toBe(node.id);
+      expect(nodeId).toBe(node!.id);
     });
 
     it('should increment node count when adding nodes', async () => {
@@ -161,8 +161,8 @@ describe('WorkflowGraph', () => {
       await graph.addNode(node2);
 
       const edge = {
-        fromNode: node1.id,
-        toNode: node2.id,
+        fromNode: node1!.id,
+        toNode: node2!.id,
         condition: undefined,
       };
 
@@ -191,8 +191,8 @@ describe('WorkflowGraph', () => {
       await graph.addNode(node2);
 
       const edge = {
-        fromNode: node1.id,
-        toNode: node2.id,
+        fromNode: node1!.id,
+        toNode: node2!.id,
         condition: 'result > 0',
       };
 
@@ -229,14 +229,14 @@ describe('WorkflowGraph', () => {
       await graph.addNode(node3);
 
       const edge1 = {
-        fromNode: node1.id,
-        toNode: node2.id,
+        fromNode: node1!.id,
+        toNode: node2!.id,
         condition: undefined,
       };
 
       const edge2 = {
-        fromNode: node2.id,
-        toNode: node3.id,
+        fromNode: node2!.id,
+        toNode: node3!.id,
         condition: undefined,
       };
 
@@ -261,7 +261,7 @@ describe('WorkflowGraph', () => {
 
       const edge = {
         fromNode: '550e8400-e29b-41d4-a716-446655440099', // Non-existent
-        toNode: node.id,
+        toNode: node!.id,
         condition: undefined,
       };
 
@@ -279,7 +279,7 @@ describe('WorkflowGraph', () => {
       await graph.addNode(node);
 
       const edge = {
-        fromNode: node.id,
+        fromNode: node!.id,
         toNode: '550e8400-e29b-41d4-a716-446655440099', // Non-existent
         condition: undefined,
       };
@@ -336,8 +336,8 @@ describe('WorkflowGraph', () => {
       await graph.addNode(node2);
 
       const edge = {
-        fromNode: node1.id,
-        toNode: node2.id,
+        fromNode: node1!.id,
+        toNode: node2!.id,
         condition: undefined,
       };
 

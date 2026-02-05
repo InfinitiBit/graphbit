@@ -16,7 +16,7 @@ describe('validateJson', () => {
 
       const result = validateJson(data, schema);
       expect(result).toBeDefined();
-      expect(result.valid).toBe(true);
+      expect(result.isValid).toBe(true);
       expect(result.errors).toHaveLength(0);
     });
 
@@ -29,7 +29,7 @@ describe('validateJson', () => {
 
       const result = validateJson(data, schema);
       expect(result).toBeDefined();
-      expect(result.valid).toBe(true);
+      expect(result.isValid).toBe(true);
       expect(result.errors).toHaveLength(0);
     });
 
@@ -55,7 +55,7 @@ describe('validateJson', () => {
 
       const result = validateJson(data, schema);
       expect(result).toBeDefined();
-      expect(result.valid).toBe(true);
+      expect(result.isValid).toBe(true);
       expect(result.errors).toHaveLength(0);
     });
 
@@ -65,7 +65,7 @@ describe('validateJson', () => {
 
       const result = validateJson(data, schema);
       expect(result).toBeDefined();
-      expect(result.valid).toBe(true);
+      expect(result.isValid).toBe(true);
       expect(result.errors).toHaveLength(0);
     });
 
@@ -75,7 +75,7 @@ describe('validateJson', () => {
 
       const result = validateJson(data, schema);
       expect(result).toBeDefined();
-      expect(result.valid).toBe(true);
+      expect(result.isValid).toBe(true);
       expect(result.errors).toHaveLength(0);
     });
 
@@ -85,7 +85,7 @@ describe('validateJson', () => {
 
       const result = validateJson(data, schema);
       expect(result).toBeDefined();
-      expect(result.valid).toBe(true);
+      expect(result.isValid).toBe(true);
       expect(result.errors).toHaveLength(0);
     });
 
@@ -95,7 +95,7 @@ describe('validateJson', () => {
 
       const result = validateJson(data, schema);
       expect(result).toBeDefined();
-      expect(result.valid).toBe(true);
+      expect(result.isValid).toBe(true);
       expect(result.errors).toHaveLength(0);
     });
   });
@@ -114,7 +114,7 @@ describe('validateJson', () => {
 
       const result = validateJson(data, schema);
       expect(result).toBeDefined();
-      expect(result.valid).toBe(false);
+      expect(result.isValid).toBe(false);
       expect(result.errors.length).toBeGreaterThan(0);
     });
 
@@ -131,7 +131,7 @@ describe('validateJson', () => {
 
       const result = validateJson(data, schema);
       expect(result).toBeDefined();
-      expect(result.valid).toBe(false);
+      expect(result.isValid).toBe(false);
       expect(result.errors.length).toBeGreaterThan(0);
     });
 
@@ -144,7 +144,7 @@ describe('validateJson', () => {
 
       const result = validateJson(data, schema);
       expect(result).toBeDefined();
-      expect(result.valid).toBe(false);
+      expect(result.isValid).toBe(false);
       expect(result.errors.length).toBeGreaterThan(0);
     });
 
@@ -154,7 +154,7 @@ describe('validateJson', () => {
 
       const result = validateJson(data, schema);
       expect(result).toBeDefined();
-      expect(result.valid).toBe(false);
+      expect(result.isValid).toBe(false);
       expect(result.errors.length).toBeGreaterThan(0);
     });
   });

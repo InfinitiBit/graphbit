@@ -59,10 +59,10 @@ describe('Multi-Agent Workflow Integration Tests', () => {
       }
 
       // Create collaboration pattern: DataCollector → both Analysts → Synthesizer
-      await graph.addEdge({ fromNode: nodes[0].id, toNode: nodes[1].id });
-      await graph.addEdge({ fromNode: nodes[0].id, toNode: nodes[2].id });
-      await graph.addEdge({ fromNode: nodes[1].id, toNode: nodes[3].id });
-      await graph.addEdge({ fromNode: nodes[2].id, toNode: nodes[3].id });
+      await graph.addEdge({ fromNode: nodes[0]!.id, toNode: nodes[1]!.id });
+      await graph.addEdge({ fromNode: nodes[0]!.id, toNode: nodes[2]!.id });
+      await graph.addEdge({ fromNode: nodes[1]!.id, toNode: nodes[3]!.id });
+      await graph.addEdge({ fromNode: nodes[2]!.id, toNode: nodes[3]!.id });
 
       // Validate graph structure
       const nodeCount = await graph.nodeCount();
@@ -93,12 +93,12 @@ describe('Multi-Agent Workflow Integration Tests', () => {
 
       // Connect coordinator to all workers
       for (const worker of workers) {
-        await graph.addEdge({ fromNode: coordinator.id, toNode: worker.id });
+        await graph.addEdge({ fromNode: coordinator!.id, toNode: worker.id });
       }
 
       // Connect all workers to aggregator
       for (const worker of workers) {
-        await graph.addEdge({ fromNode: worker.id, toNode: aggregator.id });
+        await graph.addEdge({ fromNode: worker!.id, toNode: aggregator.id });
       }
 
       // Validate structure
@@ -157,9 +157,9 @@ describe('Multi-Agent Workflow Integration Tests', () => {
       await graph.addNode(receiver);
 
       // Create message passing chain
-      await graph.addEdge({ fromNode: sender.id, toNode: processor1.id });
-      await graph.addEdge({ fromNode: processor1.id, toNode: processor2.id });
-      await graph.addEdge({ fromNode: processor2.id, toNode: receiver.id });
+      await graph.addEdge({ fromNode: sender!.id, toNode: processor1.id });
+      await graph.addEdge({ fromNode: processor1!.id, toNode: processor2.id });
+      await graph.addEdge({ fromNode: processor2!.id, toNode: receiver.id });
 
       // Validate message passing structure
       const nodeCount = await graph.nodeCount();
@@ -195,7 +195,7 @@ describe('Multi-Agent Workflow Integration Tests', () => {
 
       // Create broadcast pattern
       for (const receiver of receivers) {
-        await graph.addEdge({ fromNode: broadcaster.id, toNode: receiver.id });
+        await graph.addEdge({ fromNode: broadcaster!.id, toNode: receiver.id });
       }
 
       // Validate broadcast structure
@@ -225,7 +225,7 @@ describe('Multi-Agent Workflow Integration Tests', () => {
 
       // Create aggregation pattern
       for (const sender of senders) {
-        await graph.addEdge({ fromNode: sender.id, toNode: aggregator.id });
+        await graph.addEdge({ fromNode: sender!.id, toNode: aggregator.id });
       }
 
       // Validate aggregation structure
@@ -250,10 +250,10 @@ describe('Multi-Agent Workflow Integration Tests', () => {
       await graph.addNode(mediator);
 
       // Create bidirectional flow through mediator
-      await graph.addEdge({ fromNode: agent1.id, toNode: mediator.id });
-      await graph.addEdge({ fromNode: mediator.id, toNode: agent2.id });
-      await graph.addEdge({ fromNode: agent2.id, toNode: mediator.id });
-      await graph.addEdge({ fromNode: mediator.id, toNode: agent1.id });
+      await graph.addEdge({ fromNode: agent1!.id, toNode: mediator.id });
+      await graph.addEdge({ fromNode: mediator!.id, toNode: agent2.id });
+      await graph.addEdge({ fromNode: agent2!.id, toNode: mediator.id });
+      await graph.addEdge({ fromNode: mediator!.id, toNode: agent1.id });
 
       // Validate bidirectional structure
       const nodeCount = await graph.nodeCount();
@@ -279,10 +279,10 @@ describe('Multi-Agent Workflow Integration Tests', () => {
       await graph.addNode(merger);
 
       // Create routing pattern
-      await graph.addEdge({ fromNode: router.id, toNode: pathA.id });
-      await graph.addEdge({ fromNode: router.id, toNode: pathB.id });
-      await graph.addEdge({ fromNode: pathA.id, toNode: merger.id });
-      await graph.addEdge({ fromNode: pathB.id, toNode: merger.id });
+      await graph.addEdge({ fromNode: router!.id, toNode: pathA.id });
+      await graph.addEdge({ fromNode: router!.id, toNode: pathB.id });
+      await graph.addEdge({ fromNode: pathA!.id, toNode: merger.id });
+      await graph.addEdge({ fromNode: pathB!.id, toNode: merger.id });
 
       // Validate routing structure
       const nodeCount = await graph.nodeCount();
@@ -319,7 +319,7 @@ describe('Multi-Agent Workflow Integration Tests', () => {
 
       // Create leader-follower connections
       for (const follower of followers) {
-        await graph.addEdge({ fromNode: leader.id, toNode: follower.id });
+        await graph.addEdge({ fromNode: leader!.id, toNode: follower.id });
       }
 
       // Validate pattern
@@ -389,7 +389,7 @@ describe('Multi-Agent Workflow Integration Tests', () => {
       // Create hierarchical connections
       // Manager -> Supervisors
       for (const supervisor of supervisors) {
-        await graph.addEdge({ fromNode: manager.id, toNode: supervisor.id });
+        await graph.addEdge({ fromNode: manager!.id, toNode: supervisor.id });
       }
       // Supervisor1 -> Workers 1,2
       await graph.addEdge({ fromNode: supervisors[0].id, toNode: workers[0].id });
@@ -427,8 +427,8 @@ describe('Multi-Agent Workflow Integration Tests', () => {
 
       // Create consensus pattern
       for (const reviewer of reviewers) {
-        await graph.addEdge({ fromNode: proposer.id, toNode: reviewer.id });
-        await graph.addEdge({ fromNode: reviewer.id, toNode: decider.id });
+        await graph.addEdge({ fromNode: proposer!.id, toNode: reviewer.id });
+        await graph.addEdge({ fromNode: reviewer!.id, toNode: decider.id });
       }
 
       // Validate consensus pattern
@@ -486,9 +486,9 @@ describe('Multi-Agent Workflow Integration Tests', () => {
       await graph.addNode(finalizer);
 
       // Create data flow chain
-      await graph.addEdge({ fromNode: dataGenerator.id, toNode: transformer.id });
-      await graph.addEdge({ fromNode: transformer.id, toNode: enricher.id });
-      await graph.addEdge({ fromNode: enricher.id, toNode: finalizer.id });
+      await graph.addEdge({ fromNode: dataGenerator!.id, toNode: transformer.id });
+      await graph.addEdge({ fromNode: transformer!.id, toNode: enricher.id });
+      await graph.addEdge({ fromNode: enricher!.id, toNode: finalizer.id });
 
       // Validate data flow structure
       const nodeCount = await graph.nodeCount();
@@ -543,8 +543,8 @@ describe('Multi-Agent Workflow Integration Tests', () => {
 
       // Create parallel structure
       for (const agent of parallelAgents) {
-        await graph.addEdge({ fromNode: splitter.id, toNode: agent.id });
-        await graph.addEdge({ fromNode: agent.id, toNode: joiner.id });
+        await graph.addEdge({ fromNode: splitter!.id, toNode: agent.id });
+        await graph.addEdge({ fromNode: agent!.id, toNode: joiner.id });
       }
 
       // Validate parallel structure
@@ -577,8 +577,8 @@ describe('Multi-Agent Workflow Integration Tests', () => {
 
       // Create distribution and aggregation pattern
       for (const processor of processors) {
-        await graph.addEdge({ fromNode: distributor.id, toNode: processor.id });
-        await graph.addEdge({ fromNode: processor.id, toNode: aggregator.id });
+        await graph.addEdge({ fromNode: distributor!.id, toNode: processor.id });
+        await graph.addEdge({ fromNode: processor!.id, toNode: aggregator.id });
       }
 
       // Validate structure
@@ -615,9 +615,9 @@ describe('Multi-Agent Workflow Integration Tests', () => {
       await graph.addNode(output);
 
       // Create parallel branches
-      await graph.addEdge({ fromNode: input.id, toNode: branch1[0].id });
+      await graph.addEdge({ fromNode: input!.id, toNode: branch1[0].id });
       await graph.addEdge({ fromNode: branch1[0].id, toNode: branch1[1].id });
-      await graph.addEdge({ fromNode: input.id, toNode: branch2[0].id });
+      await graph.addEdge({ fromNode: input!.id, toNode: branch2[0].id });
       await graph.addEdge({ fromNode: branch2[0].id, toNode: branch2[1].id });
       await graph.addEdge({ fromNode: branch1[1].id, toNode: output.id });
       await graph.addEdge({ fromNode: branch2[1].id, toNode: output.id });

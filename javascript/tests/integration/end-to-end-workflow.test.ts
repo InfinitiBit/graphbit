@@ -48,18 +48,18 @@ describe('End-to-End Workflow Integration', () => {
       "knowledge_base"
     );
     
-    expect(doc.content).toBeTruthy();
+    expect(doc?.content).toBeTruthy();
     console.log('✅ Document loaded');
 
     // Step 2: Split text
     const splitter = TextSplitter.character(100, 20);
-    const chunks = splitter.split(doc.content);
+    const chunks = splitter.split(doc?.content);
     
     expect(chunks.length).toBeGreaterThan(0);
     console.log(`✅ Text split into ${chunks.length} chunks`);
 
     // Step 3: Generate embeddings
-    const texts = chunks.map(c => c.content);
+    const texts = chunks.map(c => c?.content);
     const embResponse = await embClient.embed(texts);
     
     expect(embResponse.embeddings.length).toBe(chunks.length);

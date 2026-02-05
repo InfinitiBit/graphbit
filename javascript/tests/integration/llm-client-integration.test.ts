@@ -52,7 +52,7 @@ describe('LlmClient Integration Tests', () => {
         0.7
       );
       
-      expect(response.content).toBeTruthy();
+      expect(response?.content).toBeTruthy();
       expect(response.usage).toBeTruthy();
       expect(response.usage!.totalTokens).toBeGreaterThan(0);
       expect(response.usage!.promptTokens).toBeGreaterThan(0);
@@ -169,7 +169,7 @@ describe('LlmClient Integration Tests', () => {
         100
       );
       
-      expect(response.content).toBeTruthy();
+      expect(response?.content).toBeTruthy();
       expect(response.usage).toBeTruthy();
       expect(response.model).toContain('claude');
     });

@@ -31,7 +31,7 @@ describe('Document Type Integration Tests', () => {
 
       // Validate document was loaded
       expect(document).toBeDefined();
-      expect(document.content).toBeDefined();
+      expect(document?.content).toBeDefined();
       expect(document.content.length).toBeGreaterThan(0);
 
       // Validate document type and source
@@ -39,8 +39,8 @@ describe('Document Type Integration Tests', () => {
       expect(document.source).toBe(filePath);
 
       // Validate HTML content extraction (text should be extracted from tags)
-      expect(document.content).toContain('GraphBit');
-      expect(document.content).toContain('Documentation');
+      expect(document?.content).toContain('GraphBit');
+      expect(document?.content).toContain('Documentation');
     });
 
     it('should handle HTML with various tags and extract structured content', async () => {
@@ -50,11 +50,11 @@ describe('Document Type Integration Tests', () => {
       const document = await loader.loadFile(filePath, 'html');
 
       // Validate content contains text from different HTML elements
-      expect(document.content).toContain('Features');
-      expect(document.content).toContain('Multi-Agent Orchestration');
-      expect(document.content).toContain('Workflow Management');
-      expect(document.content).toContain('Getting Started');
-      expect(document.content).toContain('Conclusion');
+      expect(document?.content).toContain('Features');
+      expect(document?.content).toContain('Multi-Agent Orchestration');
+      expect(document?.content).toContain('Workflow Management');
+      expect(document?.content).toContain('Getting Started');
+      expect(document?.content).toContain('Conclusion');
     });
 
     it('should extract metadata from HTML meta tags', async () => {
@@ -80,7 +80,7 @@ describe('Document Type Integration Tests', () => {
 
       // Should still load and extract content even if HTML is malformed
       expect(document).toBeDefined();
-      expect(document.content).toBeDefined();
+      expect(document?.content).toBeDefined();
       expect(document.content.length).toBeGreaterThan(0);
       expect(document.documentType).toBe('html');
     });
@@ -95,7 +95,7 @@ describe('Document Type Integration Tests', () => {
 
       // Validate document was loaded
       expect(document).toBeDefined();
-      expect(document.content).toBeDefined();
+      expect(document?.content).toBeDefined();
       expect(document.content.length).toBeGreaterThan(0);
 
       // Validate document type and source
@@ -103,9 +103,9 @@ describe('Document Type Integration Tests', () => {
       expect(document.source).toBe(filePath);
 
       // Validate CSV content (structured format)
-      expect(document.content).toContain('CSV Document Content');
-      expect(document.content).toContain('Alice');
-      expect(document.content).toContain('Bob');
+      expect(document?.content).toContain('CSV Document Content');
+      expect(document?.content).toContain('Alice');
+      expect(document?.content).toContain('Bob');
     });
 
     it('should handle CSV with headers correctly', async () => {
@@ -115,15 +115,15 @@ describe('Document Type Integration Tests', () => {
       const document = await loader.loadFile(filePath, 'csv');
 
       // Validate headers are present
-      expect(document.content).toContain('name');
-      expect(document.content).toContain('age');
-      expect(document.content).toContain('city');
-      expect(document.content).toContain('occupation');
+      expect(document?.content).toContain('name');
+      expect(document?.content).toContain('age');
+      expect(document?.content).toContain('city');
+      expect(document?.content).toContain('occupation');
 
       // Validate data rows
-      expect(document.content).toContain('Engineer');
-      expect(document.content).toContain('Designer');
-      expect(document.content).toContain('Manager');
+      expect(document?.content).toContain('Engineer');
+      expect(document?.content).toContain('Designer');
+      expect(document?.content).toContain('Manager');
     });
 
     it('should handle CSV with different delimiters (semicolon)', async () => {
@@ -134,13 +134,13 @@ describe('Document Type Integration Tests', () => {
 
       // Validate document was loaded
       expect(document).toBeDefined();
-      expect(document.content).toBeDefined();
+      expect(document?.content).toBeDefined();
       expect(document.documentType).toBe('csv');
 
       // Validate semicolon-delimited content
-      expect(document.content).toContain('product');
-      expect(document.content).toContain('Laptop');
-      expect(document.content).toContain('999.99');
+      expect(document?.content).toContain('product');
+      expect(document?.content).toContain('Laptop');
+      expect(document?.content).toContain('999.99');
     });
 
     it('should validate CSV metadata and properties', async () => {
@@ -168,7 +168,7 @@ describe('Document Type Integration Tests', () => {
 
       // Validate document was loaded
       expect(document).toBeDefined();
-      expect(document.content).toBeDefined();
+      expect(document?.content).toBeDefined();
       expect(document.content.length).toBeGreaterThan(0);
 
       // Validate document type and source
@@ -176,8 +176,8 @@ describe('Document Type Integration Tests', () => {
       expect(document.source).toBe(filePath);
 
       // Validate XML content
-      expect(document.content).toContain('GraphBit');
-      expect(document.content).toContain('Configuration');
+      expect(document?.content).toContain('GraphBit');
+      expect(document?.content).toContain('Configuration');
     });
 
     it('should handle XML with nested elements', async () => {
@@ -187,11 +187,11 @@ describe('Document Type Integration Tests', () => {
       const document = await loader.loadFile(filePath, 'xml');
 
       // Validate nested content is extracted (structured format)
-      expect(document.content).toContain('Multi-Agent Orchestration');
-      expect(document.content).toContain('Workflow Management');
-      expect(document.content).toContain('LLM Integration');
-      expect(document.content).toContain('Element: graphbit');
-      expect(document.content).toContain('Element: features');
+      expect(document?.content).toContain('Multi-Agent Orchestration');
+      expect(document?.content).toContain('Workflow Management');
+      expect(document?.content).toContain('LLM Integration');
+      expect(document?.content).toContain('Element: graphbit');
+      expect(document?.content).toContain('Element: features');
     });
 
     it('should validate XML metadata and properties', async () => {
@@ -219,13 +219,13 @@ describe('Document Type Integration Tests', () => {
 
       // Validate document was loaded
       expect(document).toBeDefined();
-      expect(document.content).toBeDefined();
+      expect(document?.content).toBeDefined();
       expect(document.documentType).toBe('txt');
 
       // Validate UTF-8 content
-      expect(document.content).toContain('Hello World');
-      expect(document.content).toContain('Hola Mundo');
-      expect(document.content).toContain('Bonjour le Monde');
+      expect(document?.content).toContain('Hello World');
+      expect(document?.content).toContain('Hola Mundo');
+      expect(document?.content).toContain('Bonjour le Monde');
     });
 
     it('should handle special characters and emoji in UTF-8', async () => {
@@ -235,14 +235,14 @@ describe('Document Type Integration Tests', () => {
       const document = await loader.loadFile(filePath, 'txt');
 
       // Validate special characters
-      expect(document.content).toContain('©');
-      expect(document.content).toContain('€');
-      expect(document.content).toContain('™');
+      expect(document?.content).toContain('©');
+      expect(document?.content).toContain('€');
+      expect(document?.content).toContain('™');
 
       // Validate emoji (if supported)
-      expect(document.content).toContain('🌍');
-      expect(document.content).toContain('🚀');
-      expect(document.content).toContain('💻');
+      expect(document?.content).toContain('🌍');
+      expect(document?.content).toContain('🚀');
+      expect(document?.content).toContain('💻');
     });
 
     it('should handle non-Latin scripts in UTF-8', async () => {
@@ -252,10 +252,10 @@ describe('Document Type Integration Tests', () => {
       const document = await loader.loadFile(filePath, 'txt');
 
       // Validate different scripts
-      expect(document.content).toContain('Привет мир'); // Russian
-      expect(document.content).toContain('你好世界'); // Chinese
-      expect(document.content).toContain('こんにちは世界'); // Japanese
-      expect(document.content).toContain('مرحبا بالعالم'); // Arabic
+      expect(document?.content).toContain('Привет мир'); // Russian
+      expect(document?.content).toContain('你好世界'); // Chinese
+      expect(document?.content).toContain('こんにちは世界'); // Japanese
+      expect(document?.content).toContain('مرحبا بالعالم'); // Arabic
     });
   });
 
@@ -268,12 +268,12 @@ describe('Document Type Integration Tests', () => {
 
       // Validate document was loaded
       expect(document).toBeDefined();
-      expect(document.content).toBeDefined();
+      expect(document?.content).toBeDefined();
       expect(document.documentType).toBe('txt');
 
       // Validate markdown structure is preserved
-      expect(document.content).toContain('# GraphBit Documentation');
-      expect(document.content).toContain('## Introduction');
+      expect(document?.content).toContain('# GraphBit Documentation');
+      expect(document?.content).toContain('## Introduction');
     });
 
     it('should preserve Markdown code blocks and formatting', async () => {
@@ -283,8 +283,8 @@ describe('Document Type Integration Tests', () => {
       const document = await loader.loadFile(filePath, 'txt');
 
       // Validate code blocks are preserved
-      expect(document.content).toContain('```typescript');
-      expect(document.content).toContain('### Core Capabilities');
+      expect(document?.content).toContain('```typescript');
+      expect(document?.content).toContain('### Core Capabilities');
 
       // Validate content length
       expect(document.content.length).toBeGreaterThan(100);
@@ -316,7 +316,7 @@ describe('Document Type Integration Tests', () => {
 
       // Should load but have empty content
       expect(document).toBeDefined();
-      expect(document.content).toBe('');
+      expect(document?.content).toBe('');
       expect(document.documentType).toBe('txt');
 
       // Clean up
@@ -367,7 +367,7 @@ describe('Document Type Integration Tests', () => {
       const document = await loader.loadText(textContent, 'test-source');
 
       expect(document).toBeDefined();
-      expect(document.content).toBe(textContent);
+      expect(document?.content).toBe(textContent);
       expect(document.source).toBe('test-source');
       expect(document.documentType).toBe('txt');
     });
@@ -379,7 +379,7 @@ describe('Document Type Integration Tests', () => {
       const document = await loader.loadText(textContent);
 
       expect(document).toBeDefined();
-      expect(document.content).toBe(textContent);
+      expect(document?.content).toBe(textContent);
       expect(document.source).toBe('text');
       expect(document.documentType).toBe('txt');
     });
@@ -394,11 +394,11 @@ describe('Document Type Integration Tests', () => {
 
       // Validate document was loaded
       expect(document).toBeDefined();
-      expect(document.content).toBeDefined();
+      expect(document?.content).toBeDefined();
       expect(document.documentType).toBe('json');
 
       // Validate JSON can be parsed
-      const parsed = JSON.parse(document.content);
+      const parsed = JSON.parse(document?.content);
       expect(parsed).toBeDefined();
       expect(parsed.title).toBe('GraphBit Test Data');
     });
@@ -409,7 +409,7 @@ describe('Document Type Integration Tests', () => {
 
       const document = await loader.loadFile(filePath, 'json');
 
-      const parsed = JSON.parse(document.content);
+      const parsed = JSON.parse(document?.content);
 
       expect(parsed.version).toBe('1.0.0');
       expect(parsed.features).toHaveLength(5);

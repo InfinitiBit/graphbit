@@ -69,8 +69,8 @@ describe('Type Tests', () => {
     const builder = new WorkflowBuilder('test');
     const workflow = builder.build();
 
-    expectTypeOf(workflow.id).toBeFunction();
-    expectTypeOf(workflow.id).returns.resolves.toBeString();
+    expectTypeOf(workflow!.id).toBeFunction();
+    expectTypeOf(workflow!.id).returns.resolves.toBeString();
 
     expectTypeOf(workflow.name).toBeFunction();
     expectTypeOf(workflow.name).returns.resolves.toBeString();

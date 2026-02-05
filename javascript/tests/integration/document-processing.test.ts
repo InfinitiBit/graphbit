@@ -19,7 +19,7 @@ describe('Document Processing Integration Tests', () => {
       const document = await loader.loadFile(filePath, 'txt');
 
       // Validate document content matches file content
-      expect(document.content).toBe(expectedContent);
+      expect(document?.content).toBe(expectedContent);
 
       // Validate document metadata
       expect(document.documentType).toBe('txt');
@@ -37,7 +37,7 @@ describe('Document Processing Integration Tests', () => {
       const document = await loader.loadFile(filePath, 'json');
 
       // Validate content is valid JSON and has expected structure
-      const parsed = JSON.parse(document.content);
+      const parsed = JSON.parse(document?.content);
       expect(parsed.title).toBe('GraphBit Test Data');
       expect(parsed.version).toBe('1.0.0');
       expect(parsed.features).toHaveLength(5);
@@ -65,14 +65,14 @@ describe('Document Processing Integration Tests', () => {
       const document = await loader.loadFile(filePath, 'txt');
 
       // Validate content is preserved exactly
-      expect(document.content).toBe(expectedContent);
+      expect(document?.content).toBe(expectedContent);
       expect(document.documentType).toBe('txt');
 
       // Validate markdown structure is preserved
-      expect(document.content).toContain('# GraphBit Documentation');
-      expect(document.content).toContain('## Introduction');
-      expect(document.content).toContain('```typescript');
-      expect(document.content).toContain('### Core Capabilities');
+      expect(document?.content).toContain('# GraphBit Documentation');
+      expect(document?.content).toContain('## Introduction');
+      expect(document?.content).toContain('```typescript');
+      expect(document?.content).toContain('### Core Capabilities');
 
       // Validate content length
       expect(document.content.length).toBe(expectedContent.length);
@@ -86,14 +86,14 @@ describe('Document Processing Integration Tests', () => {
       const document = await loader.loadFile(filePath, 'txt');
 
       // Validate full content is loaded
-      expect(document.content).toBe(expectedContent);
+      expect(document?.content).toBe(expectedContent);
       expect(document.content.length).toBeGreaterThan(2000); // Long document
 
       // Validate content contains expected paragraphs
-      expect(document.content).toContain('Paragraph 1:');
-      expect(document.content).toContain('Paragraph 10:');
-      expect(document.content).toContain('Lorem ipsum');
-      expect(document.content).toContain('In conclusion');
+      expect(document?.content).toContain('Paragraph 1:');
+      expect(document?.content).toContain('Paragraph 10:');
+      expect(document?.content).toContain('Lorem ipsum');
+      expect(document?.content).toContain('In conclusion');
     });
   });
 
@@ -112,7 +112,7 @@ describe('Document Processing Integration Tests', () => {
       expect(chunks.length).toBeLessThan(content.length / 100); // Sanity check
 
       // Validate each chunk size is within limits
-      chunks.forEach((chunk, index) => {
+      chunks.forEach((chunk: any, index) => {
         expect(chunk.content.length).toBeLessThanOrEqual(500);
         if (index < chunks.length - 1) {
           // All chunks except last should be close to chunk size
@@ -121,7 +121,7 @@ describe('Document Processing Integration Tests', () => {
       });
 
       // Validate chunks cover all content (accounting for overlap)
-      const totalChunkContent = chunks.map(c => c.content).join('');
+      const totalChunkContent = chunks.map(c => c?.content).join('');
       expect(totalChunkContent.length).toBeGreaterThanOrEqual(content.length);
     });
 
@@ -161,13 +161,13 @@ describe('Document Processing Integration Tests', () => {
 
       // Validate chunk metadata
       chunks.forEach((chunk) => {
-        expect(chunk.content).toBeDefined();
+        expect(chunk?.content).toBeDefined();
         expect(chunk.content.length).toBeGreaterThan(0);
         expect(chunk.startIndex).toBeGreaterThanOrEqual(0);
       });
 
       // Validate total content is preserved
-      const allContent = chunks.map(c => c.content).join('');
+      const allContent = chunks.map(c => c?.content).join('');
       expect(allContent.length).toBeGreaterThanOrEqual(content.length * 0.9); // Allow some variance
     });
 
@@ -198,13 +198,13 @@ describe('Document Processing Integration Tests', () => {
 
       // Validate chunk sizes - recursive splitting respects natural boundaries
       // so chunks can vary significantly in size
-      chunks.forEach((chunk, index) => {
+      chunks.forEach((chunk: any, index) => {
         expect(chunk.content.length).toBeGreaterThan(0);
         expect(chunk.content.length).toBeLessThanOrEqual(700); // Allow variance for natural boundaries
       });
 
       // Validate total content is preserved
-      const reconstructed = chunks.map(c => c.content).join('');
+      const reconstructed = chunks.map(c => c?.content).join('');
       expect(reconstructed.length).toBeGreaterThan(0);
 
       // Validate content is split at natural boundaries (paragraphs)
@@ -248,7 +248,7 @@ describe('Document Processing Integration Tests', () => {
         // All chunks should have content and startIndex
         chunks.forEach((chunk) => {
           expect(chunk.startIndex).toBeGreaterThanOrEqual(0);
-          expect(chunk.content).toBeDefined();
+          expect(chunk?.content).toBeDefined();
           expect(chunk.content.length).toBeGreaterThan(0);
         });
       }

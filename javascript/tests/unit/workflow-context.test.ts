@@ -8,7 +8,7 @@
  * - Context conversion (toDict)
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { WorkflowContext, WorkflowBuilder, Executor, LlmConfig } from '../../index';
 
 describe('WorkflowContext - Enhanced Methods', () => {
@@ -117,47 +117,48 @@ describe('WorkflowContext - Enhanced Methods', () => {
     it.skip('should demonstrate full workflow introspection', async () => {
       // This test requires actual workflow execution
       // Example of what it would look like:
-      
+
       const config = LlmConfig.openai({
         apiKey: process.env.OPENAI_API_KEY || 'test-key'
       });
-      
+
       const workflow = new WorkflowBuilder('Test Workflow')
         .description('Test workflow for context methods')
         .build();
-      
+
       // Add nodes...
-      
+
       const executor = new Executor(config);
-      const context = await executor.execute(workflow);
-      
+      const result = await executor.execute(workflow);
+      const context = result.getContext();
+
       // Set variables
       await context.setVariable('user_id', '12345');
       await context.setVariable('config', JSON.stringify({ theme: 'dark' }));
-      
+
       // Get variables
       const userId = await context.getVariable('user_id');
       expect(userId).toBe('12345');
-      
+
       const allVars = await context.getAllVariables();
       const varsObj = JSON.parse(allVars);
       expect(varsObj.user_id).toBe('12345');
-      
+
       // Get node outputs
       const nodeOutput = await context.getNodeOutput('node1');
       expect(nodeOutput).toBeTruthy();
-      
+
       // Get nested output
       const nestedValue = await context.getNestedOutput('node1.result.value');
       expect(nestedValue).toBeTruthy();
-      
+
       // Get workflow metadata
       const workflowId = await context.getWorkflowId();
       expect(workflowId).toBeTruthy();
-      
+
       const duration = await context.getExecutionDuration();
       expect(duration).toBeGreaterThan(0);
-      
+
       // Convert to dict
       const contextDict = await context.toDict();
       const contextData = JSON.parse(contextDict);

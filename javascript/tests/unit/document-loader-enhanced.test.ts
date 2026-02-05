@@ -104,7 +104,7 @@ describe('DocumentLoader - Enhanced Methods', () => {
       if (type) {
         const doc = await loader.loadFile(filePath, type);
         expect(doc.documentType).toBe('txt');
-        expect(doc.content).toBeTruthy();
+        expect(doc?.content).toBeTruthy();
       }
     });
 

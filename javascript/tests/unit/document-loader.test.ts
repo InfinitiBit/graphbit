@@ -41,7 +41,7 @@ describe('DocumentLoader', () => {
       
       const doc = await loader.loadText(text);
       expect(doc).toBeDefined();
-      expect(doc.content).toBe(text);
+      expect(doc?.content).toBe(text);
     });
 
     it('should load text content with source', async () => {
@@ -51,7 +51,7 @@ describe('DocumentLoader', () => {
       
       const doc = await loader.loadText(text, source);
       expect(doc).toBeDefined();
-      expect(doc.content).toBe(text);
+      expect(doc?.content).toBe(text);
       expect(doc.source).toBe(source);
     });
 
@@ -61,7 +61,7 @@ describe('DocumentLoader', () => {
       
       const doc = await loader.loadText(text);
       expect(doc).toBeDefined();
-      expect(doc.content).toBe(text);
+      expect(doc?.content).toBe(text);
     });
 
     it('should load empty text', async () => {
@@ -70,7 +70,7 @@ describe('DocumentLoader', () => {
       
       const doc = await loader.loadText(text);
       expect(doc).toBeDefined();
-      expect(doc.content).toBe(text);
+      expect(doc?.content).toBe(text);
     });
 
     it('should load multiline text', async () => {
@@ -79,7 +79,7 @@ describe('DocumentLoader', () => {
       
       const doc = await loader.loadText(text);
       expect(doc).toBeDefined();
-      expect(doc.content).toBe(text);
+      expect(doc?.content).toBe(text);
     });
 
     it('should load text with special characters', async () => {
@@ -88,7 +88,7 @@ describe('DocumentLoader', () => {
       
       const doc = await loader.loadText(text);
       expect(doc).toBeDefined();
-      expect(doc.content).toBe(text);
+      expect(doc?.content).toBe(text);
     });
 
     it('should load text with unicode characters', async () => {
@@ -97,7 +97,7 @@ describe('DocumentLoader', () => {
       
       const doc = await loader.loadText(text);
       expect(doc).toBeDefined();
-      expect(doc.content).toBe(text);
+      expect(doc?.content).toBe(text);
     });
   });
 
