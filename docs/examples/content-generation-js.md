@@ -164,13 +164,14 @@ Output clean, publication-ready content.`,
     await workflow.addNode(formatter);
 
     // Connect the pipeline: Research → Write → Edit → Review → Format
-    await workflow.connect('researcher', 'writer');
-    await workflow.connect('writer', 'editor');
-    await workflow.connect('editor', 'reviewer');
-    await workflow.connect('reviewer', 'formatter');
+    await workflow.addEdge('researcher', 'writer', { fromNode: 'researcher', toNode: 'writer' });
+    await workflow.addEdge('writer', 'editor', { fromNode: 'writer', toNode: 'editor' });
+    await workflow.addEdge('editor', 'reviewer', { fromNode: 'editor', toNode: 'reviewer' });
+    await workflow.addEdge('reviewer', 'formatter', { fromNode: 'reviewer', toNode: 'formatter' });
 
     // Validate workflow
-    await workflow.validate();
+    const isValid = await workflow.validate();
+    if (!isValid) throw new Error('Workflow validation failed');
 
     return workflow;
   }
@@ -459,10 +460,11 @@ async function example4_CustomWorkflow() {
   await workflow.addNode(writer);
   await workflow.addNode(optimizer);
 
-  await workflow.connect('seo_researcher', 'seo_writer');
-  await workflow.connect('seo_writer', 'seo_optimizer');
+  await workflow.addEdge('seo_researcher', 'seo_writer', { fromNode: 'seo_researcher', toNode: 'seo_writer' });
+  await workflow.addEdge('seo_writer', 'seo_optimizer', { fromNode: 'seo_writer', toNode: 'seo_optimizer' });
 
-  await workflow.validate();
+  const isValid = await workflow.validate();
+  if (!isValid) throw new Error('Invalid workflow');
 
   console.log('⏳ Executing custom SEO workflow...\n');
 
