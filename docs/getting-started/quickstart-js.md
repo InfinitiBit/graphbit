@@ -20,6 +20,7 @@ Let's create a simple agent that can answer questions.
 Create a new TypeScript file `quickstart.ts`:
 
 ```typescript
+import 'dotenv/config';
 import { init, LlmConfig, AgentBuilder } from '@infinitibit_gmbh/graphbit';
 
 // Initialize the library
