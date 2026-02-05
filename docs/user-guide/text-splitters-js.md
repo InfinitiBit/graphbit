@@ -17,7 +17,7 @@ Text splitters help you:
 Splits text based on character count.
 
 ```typescript
-import { TextSplitter } from '@graphbit/core';
+import { TextSplitter } from '@infinitibit_gmbh/graphbit';
 
 const splitter = TextSplitter.character(
   1000,     // Chunk size
@@ -37,7 +37,7 @@ for (const chunk of chunks) {
 Hierarchically splits text using multiple separators, ideal for structured documents.
 
 ```typescript
-import { TextSplitter } from '@graphbit/core';
+import { TextSplitter } from '@infinitibit_gmbh/graphbit';
 
 const splitter = TextSplitter.recursive(
   1000,     // Chunk size
@@ -52,7 +52,7 @@ const chunks = splitter.split(text);
 Maintains sentence boundaries for semantic coherence.
 
 ```typescript
-import { TextSplitter } from '@graphbit/core';
+import { TextSplitter } from '@infinitibit_gmbh/graphbit';
 
 const splitter = TextSplitter.sentence(
   500,      // Target size (optional)
@@ -67,7 +67,7 @@ const chunks = splitter.split(text);
 Splits based on token count, useful for LLM context limits.
 
 ```typescript
-import { TextSplitter } from '@graphbit/core';
+import { TextSplitter } from '@infinitibit_gmbh/graphbit';
 
 const splitter = TextSplitter.token(
   100,      // Max tokens per chunk
@@ -129,7 +129,7 @@ Common sizes:
 ## Complete Example
 
 ```typescript
-import { TextSplitter } from '@graphbit/core';
+import { TextSplitter } from '@infinitibit_gmbh/graphbit';
 
 async function processDocument(text: string) {
   // Create a recursive splitter
@@ -154,7 +154,7 @@ async function processDocument(text: string) {
 ## Integration with Embeddings
 
 ```typescript
-import { TextSplitter, EmbeddingClient, EmbeddingConfig } from '@graphbit/core';
+import { TextSplitter, EmbeddingClient, EmbeddingConfig } from '@infinitibit_gmbh/graphbit';
 
 async function createEmbeddings(text: string) {
   // Split text
