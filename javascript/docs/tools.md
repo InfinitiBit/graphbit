@@ -861,6 +861,233 @@ registry.register('fast', 'Fast tool', {}, (args) => {
 
 ---
 
+## Async Callbacks
+
+Due to NAPI-RS limitations (Rust's `Env` is not `Send`), async callbacks require special handling. GraphBit provides the **Callback ID Pattern** through the `async-helpers` module for true async integration.
+
+### Why Use Async Helpers?
+
+**Problem:** If you register an async callback directly:
+```javascript
+// ❌ DON'T: This won't work correctly!
+registry.register('fetchData', 'Fetches data', {}, async (args) => {
+  const response = await fetch(args.url);
+  return await response.json();
+});
+```
+
+The Promise returned by the async callback serializes as `{}` (empty object) in Rust, and the timing/metadata tracking won't include the async wait time.
+
+**Solution:** Use `registerAsync` from `async-helpers`:
+```javascript
+// ✅ DO: Use async-helpers for proper async support
+const { ToolRegistry, registerAsync } = require('./async-helpers');
+
+registerAsync(registry, 'fetchData', 'Fetches data', {}, async (args) => {
+  const response = await fetch(args.url);
+  return await response.json();
+});
+
+// Works correctly - timing includes full async wait!
+const result = await registry.execute('fetchData', { url: 'https://api.example.com' });
+console.log(result.executionTimeMs); // Includes actual async time
+```
+
+---
+
+### `registerAsync(registry, name, description, parameters, callback)`
+
+Registers a tool with full async support.
+
+**Signature:**
+
+```typescript
+function registerAsync(
+  registry: ToolRegistry,
+  name: string,
+  description: string,
+  parameters: Record<string, any>,
+  callback: (args: any) => any | Promise<any>
+): void
+```
+
+**Parameters:**
+
+- `registry` (ToolRegistry): The registry instance
+- `name` (string): Tool name
+- `description` (string): Tool description
+- `parameters` (object): Parameter schema
+- `callback` (function): Callback function (can be async)
+
+### 🟢 Verified Example
+
+```javascript
+const { ToolRegistry, registerAsync } = require('./async-helpers');
+
+const registry = new ToolRegistry();
+
+// Register async tool
+registerAsync(registry, 'delayedGreeting', 'Greets after delay', {
+  name: 'string',
+  delay: 'number'
+}, async (args) => {
+  await new Promise(r => setTimeout(r, args.delay));
+  return `Hello, ${args.name}!`;
+});
+
+// Execute - timing includes the full async wait!
+const result = await registry.execute('delayedGreeting', { name: 'World', delay: 1000 });
+console.log(result.success);         // true
+console.log(result.result);          // "Hello, World!"
+console.log(result.executionTimeMs); // ~1000 (includes async wait)
+```
+
+---
+
+### `wrapAsync(registry, callback)`
+
+Wraps a callback for async support. Use when you need more control.
+
+**Signature:**
+
+```typescript
+function wrapAsync<T>(
+  registry: ToolRegistry,
+  callback: (args: any) => T | Promise<T>
+): (args: any) => T | { __pending: true }
+```
+
+### 🟢 Verified Example
+
+```javascript
+const { ToolRegistry, wrapAsync } = require('./async-helpers');
+
+const registry = new ToolRegistry();
+
+// Create wrapped callback
+const asyncCallback = wrapAsync(registry, async (args) => {
+  const response = await fetch(args.url);
+  return await response.json();
+});
+
+// Register with wrapped callback
+registry.register('fetchJson', 'Fetches JSON from URL', {
+  url: 'string'
+}, asyncCallback);
+
+// Execute normally
+const result = await registry.execute('fetchJson', { url: 'https://api.example.com/data' });
+```
+
+---
+
+### Async Error Handling
+
+Errors in async callbacks are properly captured:
+
+```javascript
+registerAsync(registry, 'mayFail', 'May fail randomly', {}, async () => {
+  await new Promise(r => setTimeout(r, 100));
+  if (Math.random() < 0.5) {
+    throw new Error('Random failure!');
+  }
+  return { success: true };
+});
+
+const result = await registry.execute('mayFail', {});
+if (!result.success) {
+  console.log('Error:', result.error); // "Random failure!"
+}
+```
+
+**Special error cases handled:**
+- `throw null` → error: "null was thrown"
+- `throw undefined` → error: "undefined was thrown"
+- `throw { code: 500 }` → error: serialized JSON
+- `throw 42` → error: "42"
+
+---
+
+### Async Value Sanitization
+
+Non-JSON-serializable values are automatically sanitized:
+
+| Value | Sanitized To |
+|-------|-------------|
+| `Infinity` | `null` |
+| `-Infinity` | `null` |
+| `NaN` | `null` |
+| `undefined` | `null` |
+
+```javascript
+registerAsync(registry, 'mathematical', 'May return special values', {}, async (args) => {
+  return args.x / args.y; // Could be Infinity if y=0
+});
+
+// Infinity becomes null, preventing JSON serialization errors
+const result = await registry.execute('mathematical', { x: 1, y: 0 });
+console.log(result.result); // null (was Infinity)
+```
+
+---
+
+### Concurrent Async Calls
+
+Multiple async calls work correctly in parallel:
+
+```javascript
+registerAsync(registry, 'slowOperation', 'Slow async', {}, async (args) => {
+  await new Promise(r => setTimeout(r, 100));
+  return { id: args.id };
+});
+
+// All execute concurrently, each with correct result
+const [r1, r2, r3] = await Promise.all([
+  registry.execute('slowOperation', { id: 1 }),
+  registry.execute('slowOperation', { id: 2 }),
+  registry.execute('slowOperation', { id: 3 }),
+]);
+
+console.log(r1.result.id, r2.result.id, r3.result.id); // 1, 2, 3
+```
+
+---
+
+### Metadata Tracking
+
+Async call timing is fully tracked in Rust:
+
+```javascript
+registerAsync(registry, 'timedAsync', 'Timed async operation', {}, async () => {
+  await new Promise(r => setTimeout(r, 200));
+  return {};
+});
+
+await registry.execute('timedAsync', {});
+await registry.execute('timedAsync', {});
+await registry.execute('timedAsync', {});
+
+const metadata = registry.getToolMetadata('timedAsync');
+console.log(metadata.callCount);      // 3
+console.log(metadata.avgDurationMs);  // ~200 (includes async time)
+```
+
+---
+
+### Importing Async Helpers
+
+```javascript
+// CommonJS
+const { ToolRegistry, registerAsync, wrapAsync } = require('./async-helpers');
+
+// ES Modules
+import { ToolRegistry, registerAsync, wrapAsync } from './async-helpers';
+```
+
+**Note:** Import from `async-helpers`, not `index`. The `index.js` is auto-generated by NAPI and doesn't include the async helpers.
+
+---
+
 ## Related Documentation
 
 - [Agent](./agent.md) - Use tools with agents
