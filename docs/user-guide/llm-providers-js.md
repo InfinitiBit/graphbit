@@ -26,6 +26,7 @@ All configurations are created using the `LlmConfig` class.
 ### OpenAI Configuration
 
 ```typescript
+import 'dotenv/config';
 import { LlmConfig } from '@infinitibit_gmbh/graphbit';
 
 const config = LlmConfig.openai({
