@@ -21,6 +21,7 @@ import {
   Workflow,
   Node,
   ToolRegistry,
+  registerAsync,
   getSystemInfo,
   healthCheck
 } from '@infinitibit_gmbh/graphbit';
@@ -96,34 +97,36 @@ class IntelligentDocumentPipeline {
 
   private async registerTools(): Promise<void> {
     // Register document retrieval tool
-    await this.toolRegistry.register({
-      name: 'get_document',
-      description: 'Retrieve a document by ID',
-      inputSchema: {
+    registerAsync(
+      this.toolRegistry,
+      'get_document',
+      'Retrieve a document by ID',
+      {
         type: 'object',
         properties: {
           documentId: { type: 'string', description: 'Document ID' }
         },
         required: ['documentId']
       },
-      handler: async (params: any) => {
+      async (params: any) => {
         const doc = this.documents.find(d => d.id === params.documentId);
         return doc || { error: 'Document not found' };
       }
-    });
+    );
 
     // Register document search tool
-    await this.toolRegistry.register({
-      name: 'search_documents',
-      description: 'Search documents by keyword or category',
-      inputSchema: {
+    registerAsync(
+      this.toolRegistry,
+      'search_documents',
+      'Search documents by keyword or category',
+      {
         type: 'object',
         properties: {
           query: { type: 'string', description: 'Search query' },
           category: { type: 'string', description: 'Filter by category' }
         }
       },
-      handler: async (params: any) => {
+      async (params: any) => {
         let results = this.documents;
 
         if (params.category) {
@@ -146,20 +149,21 @@ class IntelligentDocumentPipeline {
           category: d.category
         }));
       }
-    });
+    );
 
     // Register quality scoring tool
-    await this.toolRegistry.register({
-      name: 'calculate_quality_score',
-      description: 'Calculate quality score for document analysis',
-      inputSchema: {
+    registerAsync(
+      this.toolRegistry,
+      'calculate_quality_score',
+      'Calculate quality score for document analysis',
+      {
         type: 'object',
         properties: {
           factorsJson: { type: 'string', description: 'JSON string of quality factors' }
         },
         required: ['factorsJson']
       },
-      handler: async (params: any) => {
+      async (params: any) => {
         try {
           const factors = JSON.parse(params.factorsJson);
           const weights = {
@@ -185,7 +189,7 @@ class IntelligentDocumentPipeline {
           return { error: 'Invalid factors JSON' };
         }
       }
-    });
+    );
 
     console.log('✅ Tools registered');
   }
@@ -273,11 +277,14 @@ Provide detailed quality report with recommendations.`,
     await workflow.addNode(summarizer);
     await workflow.addNode(assessor);
 
-    await workflow.connect('preprocessor', 'analyzer');
-    await workflow.connect('analyzer', 'summarizer');
-    await workflow.connect('summarizer', 'assessor');
+    await workflow.addEdge('preprocessor', 'analyzer', { fromNode: 'preprocessor', toNode: 'analyzer' });
+    await workflow.addEdge('analyzer', 'summarizer', { fromNode: 'analyzer', toNode: 'summarizer' });
+    await workflow.addEdge('summarizer', 'assessor', { fromNode: 'summarizer', toNode: 'assessor' });
 
-    await workflow.validate();
+    const isValid = await workflow.validate();
+    if (!isValid) {
+      throw new Error('Workflow validation failed');
+    }
 
     return workflow;
   }
@@ -312,8 +319,9 @@ Provide validation report.`,
 
     await workflow.addNode(enhancer);
     await workflow.addNode(validator);
-    await workflow.connect('enhancer', 'validator');
-    await workflow.validate();
+    await workflow.addEdge('enhancer', 'validator', { fromNode: 'enhancer', toNode: 'validator' });
+    const isValid = await workflow.validate();
+    if (!isValid) throw new Error('Workflow invalid');
 
     return workflow;
   }
@@ -352,8 +360,9 @@ Make recommendations actionable and relevant.`,
 
     await workflow.addNode(analyzer);
     await workflow.addNode(generator);
-    await workflow.connect('rec_analyzer', 'rec_generator');
-    await workflow.validate();
+    await workflow.addEdge('rec_analyzer', 'rec_generator', { fromNode: 'rec_analyzer', toNode: 'rec_generator' });
+    const isValid = await workflow.validate();
+    if (!isValid) throw new Error('Workflow invalid');
 
     return workflow;
   }
