@@ -39,7 +39,7 @@ interface ExecutorConfig {
 #### Basic Executor
 
 ```javascript
-const { Executor, LlmConfig } = require('graphbit');
+const { Executor, LlmConfig } = require('@infinitibit_gmbh/graphbit');
 
 // Create config
 const config = LlmConfig.openai({
@@ -98,7 +98,7 @@ async execute(workflow: Workflow): Promise<WorkflowContext>
 ### 🟢 Verified Example
 
 ```javascript
-const { WorkflowBuilder, Executor, LlmConfig } = require('graphbit');
+const { WorkflowBuilder, Executor, LlmConfig } = require('@infinitibit_gmbh/graphbit');
 
 async function runWorkflow() {
   // Create workflow
@@ -221,7 +221,7 @@ async state(): Promise<WorkflowState>
 - `WorkflowState.Cancelled` - Was cancelled
 
 ```javascript
-const { WorkflowState } = require('graphbit');
+const { WorkflowState } = require('@infinitibit_gmbh/graphbit');
 
 const state = await context.state();
 
@@ -323,7 +323,7 @@ const {
   Executor, 
   LlmConfig,
   RetryableErrorType 
-} = require('graphbit');
+} = require('@infinitibit_gmbh/graphbit');
 
 async function completeWorkflowExecution() {
   // 1. Configure LLM
