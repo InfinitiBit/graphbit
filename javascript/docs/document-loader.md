@@ -29,7 +29,7 @@ constructor()
 ### 🟢 Verified Example
 
 ```javascript
-const { DocumentLoader } = require('graphbit');
+const { DocumentLoader } = require('@infinitibit_gmbh/graphbit');
 
 const loader = new DocumentLoader();
 ```
@@ -98,12 +98,49 @@ async loadFile(path: string, documentType: string): Promise<DocumentContent>
 
 - `"txt"` - Plain text files
 - `"json"` - JSON files
+- `"txt"` - Plain text files
+- `"json"` - JSON files
 - Additional types may vary by platform
+
+---
+
+### Static Methods
+
+#### `DocumentLoader.supportedTypes()`
+
+Get a list of supported document types.
+
+**Signature:**
+
+```typescript
+static supportedTypes(): string[]
+```
+
+**Returns:** Array of file extensions (e.g., `['txt', 'pdf', 'docx']`)
+
+#### `DocumentLoader.detectDocumentType(path)`
+
+Detect document type from file path.
+
+**Signature:**
+
+```typescript
+static detectDocumentType(path: string): string | null
+```
+
+**Parameters:**
+
+- `path` (string): File path to analyze
+
+**Returns:** Detected type string or `null` if unknown
+
+---
+
 
 ### 🟢 Verified Example
 
 ```javascript
-const { DocumentLoader } = require('graphbit');
+const { DocumentLoader } = require('@infinitibit_gmbh/graphbit');
 
 const loader = new DocumentLoader();
 
@@ -223,7 +260,7 @@ console.log('Metadata:', doc.metadata || 'N/A'); // Optional metadata
 ### 🟢 Verified End-to-End Example
 
 ```javascript
-const { DocumentLoader } = require('graphbit');
+const { DocumentLoader } = require('@infinitibit_gmbh/graphbit');
 const fs = require('fs').promises;
 const path = require('path');
 
@@ -269,7 +306,7 @@ console.log(`Loaded ${docs.length} documents`);
 ### Example 2: Processing with Size Limits
 
 ```javascript
-const { DocumentLoader } = require('graphbit');
+const { DocumentLoader } = require('@infinitibit_gmbh/graphbit');
 
 async function loadWithSizeLimit(filePath, maxSizeMB) {
   const maxBytes = maxSizeMB * 1024 * 1024;
@@ -300,7 +337,7 @@ await loadWithSizeLimit('./large-document.txt', 5);
 ### Example 3: Integration with Text Splitter
 
 ```javascript
-const { DocumentLoader, TextSplitter } = require('graphbit');
+const { DocumentLoader, TextSplitter } = require('@infinitibit_gmbh/graphbit');
 
 async function loadAndSplitDocument(filePath) {
   // 1. Load document
@@ -340,7 +377,7 @@ processedChunks.forEach((chunk, idx) => {
 ### Example 4: Loading User Input
 
 ```javascript
-const { DocumentLoader } = require('graphbit');
+const { DocumentLoader } = require('@infinitibit_gmbh/graphbit');
 
 async function processUserInput(userText, userId) {
   const loader = new DocumentLoader();
@@ -424,7 +461,7 @@ const formattedLoader = DocumentLoader.withConfig({
 ### Common Errors and Solutions
 
 ```javascript
-const { DocumentLoader } = require('graphbit');
+const { DocumentLoader } = require('@infinitibit_gmbh/graphbit');
 
 async function safeLoadDocument(filePath, docType) {
   const loader = new DocumentLoader();
@@ -458,7 +495,8 @@ async function safeLoadDocument(filePath, docType) {
 | **Load method** | `load_document(source_path, document_type)` | `loadFile(path, documentType)` - async |
 | **Text loading** | Not available | `loadText(text, source)` - async |
 | **Config access** | Properties: `config.max_file_size` | Method: `loader.config()` |
-| **Static methods** | `DocumentLoader.supported_types()`, `detect_document_type()` | Not available in JS |
+| **Static methods** | `DocumentLoader.supported_types()`, `detect_document_type()` | `DocumentLoader.supportedTypes()`, `detectDocumentType()` |
+
 | **Return type** | `DocumentContent` class | Plain object |
 
 **Key Differences:**
@@ -474,7 +512,7 @@ async function safeLoadDocument(filePath, docType) {
 ### Use Case 1: RAG System Document Ingestion
 
 ```javascript
-const { DocumentLoader, TextSplitter, EmbeddingClient, EmbeddingConfig } = require('graphbit');
+const { DocumentLoader, TextSplitter, EmbeddingClient, EmbeddingConfig } = require('@infinitibit_gmbh/graphbit');
 
 async function ingestDocument(filePath) {
   // 1. Load document
