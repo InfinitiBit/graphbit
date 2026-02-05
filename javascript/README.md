@@ -72,6 +72,22 @@ const splitter = TextSplitter.recursive(500, 50);
 const chunks = await splitter.split(doc.content);
 ```
 
+### Tool Calling (with Async Support)
+```javascript
+const { ToolRegistry, registerAsync } = require('./async-helpers');
+
+const registry = new ToolRegistry();
+
+// Register async tools with proper timing tracking
+registerAsync(registry, 'fetchData', 'Fetches external data', {}, async (args) => {
+  const response = await fetch(args.url);
+  return await response.json();
+});
+
+const result = await registry.execute('fetchData', { url: 'https://api.example.com' });
+console.log(result.executionTimeMs); // Includes full async wait time
+```
+
 ## Documentation
 
 - 📚 [Full Documentation](https://docs.graphbit.ai/javascript/)
