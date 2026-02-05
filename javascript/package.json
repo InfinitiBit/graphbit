@@ -1,6 +1,6 @@
 {
   "name": "@infinitibit_gmbh/graphbit",
-  "version": "0.5.1",
+  "version": "0.5.5",
   "description": "JavaScript/Node.js bindings for GraphBit agentic workflow automation framework",
   "main": "graphbit.js",
   "types": "graphbit.d.ts",
@@ -93,12 +93,12 @@
     "LICENSE.md"
   ],
   "optionalDependencies": {
-    "@infinitibit_gmbh/graphbit-darwin-arm64": "0.5.1",
-    "@infinitibit_gmbh/graphbit-darwin-x64": "0.5.1",
-    "@infinitibit_gmbh/graphbit-linux-arm64-gnu": "0.5.1",
-    "@infinitibit_gmbh/graphbit-linux-x64-gnu": "0.5.1",
-    "@infinitibit_gmbh/graphbit-linux-x64-musl": "0.5.1",
-    "@infinitibit_gmbh/graphbit-win32-arm64-msvc": "0.5.1",
-    "@infinitibit_gmbh/graphbit-win32-x64-msvc": "0.5.1"
+    "@infinitibit_gmbh/graphbit-darwin-arm64": "0.5.5",
+    "@infinitibit_gmbh/graphbit-darwin-x64": "0.5.5",
+    "@infinitibit_gmbh/graphbit-linux-arm64-gnu": "0.5.5",
+    "@infinitibit_gmbh/graphbit-linux-x64-gnu": "0.5.5",
+    "@infinitibit_gmbh/graphbit-linux-x64-musl": "0.5.5",
+    "@infinitibit_gmbh/graphbit-win32-arm64-msvc": "0.5.5",
+    "@infinitibit_gmbh/graphbit-win32-x64-msvc": "0.5.5"
   }
 }

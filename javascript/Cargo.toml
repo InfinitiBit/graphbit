@@ -1,6 +1,6 @@
 [package]
 name = "graphbit-js"
-version = "0.5.1"
+version = "0.5.5"
 description = "JavaScript/Node.js bindings for GraphBit agentic workflow automation"
 authors = ["GraphBit Team"]
 edition = "2021"
