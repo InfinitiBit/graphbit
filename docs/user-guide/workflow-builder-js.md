@@ -112,8 +112,8 @@ await workflow.addNode({
 });
 
 // Connect nodes to define data flow
-await workflow.addEdge('analyzer', 'formatter');
-await workflow.addEdge('formatter', 'summarizer');
+await workflow.addEdge('analyzer', 'formatter', { fromNode: 'analyzer', toNode: 'formatter' });
+await workflow.addEdge('formatter', 'summarizer', { fromNode: 'formatter', toNode: 'summarizer' });
 ```
 
 ## Workflow Validation
@@ -122,10 +122,10 @@ Before execution, always validate your workflow:
 
 ```typescript
 // Validate workflow structure
-const errors = await workflow.validate();
+const isValid = await workflow.validate();
 
-if (errors.length > 0) {
-  console.error('Workflow validation failed:', errors);
+if (!isValid) {
+  console.error('Workflow validation failed');
 } else {
   console.log('Workflow is valid');
 }
@@ -220,12 +220,12 @@ async function main() {
   });
 
   // Connect nodes
-  await workflow.addEdge('analyzer', 'summarizer');
+  await workflow.addEdge('analyzer', 'summarizer', { fromNode: 'analyzer', toNode: 'summarizer' });
 
   // Validate
-  const errors = await workflow.validate();
-  if (errors.length > 0) {
-    console.error('Validation errors:', errors);
+  const isValid = await workflow.validate();
+  if (!isValid) {
+    console.error('Validation failed');
     return;
   }
 
@@ -282,9 +282,9 @@ await workflow.addNode({
 Validate before execution:
 
 ```typescript
-const errors = await workflow.validate();
-if (errors.length > 0) {
-  throw new Error(`Validation failed: ${JSON.stringify(errors)}`);
+const isValid = await workflow.validate();
+if (!isValid) {
+  throw new Error(`Validation failed`);
 }
 ```
 
