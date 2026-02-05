@@ -5,7 +5,7 @@
  * to process documents.
  */
 
-import { init, DocumentLoader, TextSplitter } from '@graphbit/core';
+import { init, DocumentLoader, TextSplitter } from 'graphbit';
 
 async function main() {
   // Initialize the GraphBit library
@@ -33,7 +33,7 @@ to load and process various document formats including PDF, DOCX, and plain text
   const characterChunks = await characterSplitter.split(sampleText);
 
   console.log(`Character splitter created ${characterChunks.length} chunks`);
-  characterChunks.forEach((chunk, index) => {
+  characterChunks.forEach((chunk: any, index) => {
     console.log(`\nChunk ${index + 1}:`);
     console.log(`  Content: ${chunk.content.substring(0, 50)}...`);
     console.log(`  Range: [${chunk.startIndex}, ${chunk.endIndex}]`);
@@ -54,7 +54,7 @@ to load and process various document formats including PDF, DOCX, and plain text
   const sentenceChunks = await sentenceSplitter.split(sampleText);
 
   console.log(`Sentence splitter created ${sentenceChunks.length} chunks`);
-  sentenceChunks.forEach((chunk, index) => {
+  sentenceChunks.forEach((chunk: any, index) => {
     console.log(`\nSentence chunk ${index + 1}:`);
     console.log(`  ${chunk.content}`);
   });
@@ -82,7 +82,7 @@ to load and process various document formats including PDF, DOCX, and plain text
   console.log(`  Content length: ${doc.content.length} characters`);
 
   // Split the loaded document
-  const docChunks = await characterSplitter.split(doc.content);
+  const docChunks = await characterSplitter.split(doc?.content);
   console.log(`  Split into ${docChunks.length} chunks`);
 
   // Example 6: Processing a file (if it exists)
@@ -95,7 +95,7 @@ to load and process various document formats including PDF, DOCX, and plain text
     console.log(`  Content length: ${fileDoc.content.length} characters`);
 
     // Split the file content
-    const fileChunks = await recursiveSplitter.split(fileDoc.content);
+    const fileChunks = await recursiveSplitter.split(fileDoc?.content);
     console.log(`  Split into ${fileChunks.length} chunks`);
   } catch (error) {
     console.log('  README.md not found (this is expected in examples)');
