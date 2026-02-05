@@ -32,7 +32,7 @@ static character(chunkSize: number, chunkOverlap?: number): TextSplitter
 ### 🟢 Verified Example
 
 ```javascript
-const { TextSplitter } = require('graphbit');
+const { TextSplitter } = require('@infinitibit_gmbh/graphbit');
 
 const splitter = TextSplitter.character(100, 20);
 
@@ -270,7 +270,7 @@ console.log('Length:', chunk.metadata.length);     // 46
 ### 🟢 Verified End-to-End Example
 
 ```javascript
-const { TextSplitter } = require('graphbit');
+const { TextSplitter } = require('@infinitibit_gmbh/graphbit');
 
 function processLargeDocument(documentText) {
   // Choose strategy based on content type
@@ -318,7 +318,7 @@ const chunks = processLargeDocument(largeDoc);
 ### Example 2: Handling Overlapping Chunks
 
 ```javascript
-const { TextSplitter } = require('graphbit');
+const { TextSplitter } = require('@infinitibit_gmbh/graphbit');
 
 // Create splitter with overlap for context preservation
 const splitter = TextSplitter.character(200, 50);
@@ -342,7 +342,7 @@ console.log('Chunk 1 start:', chunks[1].content.slice(0, 50));
 ### Example 3: Choosing the Right Strategy
 
 ```javascript
-const { TextSplitter } = require('graphbit');
+const { TextSplitter } = require('@infinitibit_gmbh/graphbit');
 
 function chooseStrategy(contentType, maxChunkSize) {
   switch (contentType) {
@@ -444,7 +444,7 @@ if (docType === 'prose') {
 ### Use Case 1: Preparing Text for Embeddings
 
 ```javascript
-const { TextSplitter, EmbeddingClient, EmbeddingConfig } = require('graphbit');
+const { TextSplitter, EmbeddingClient, EmbeddingConfig } = require('@infinitibit_gmbh/graphbit');
 
 async function createDocumentEmbeddings(documentText) {
   // 1. Split document
@@ -476,7 +476,7 @@ async function createDocumentEmbeddings(documentText) {
 ### Use Case 2: Chunking for LLM Context Window
 
 ```javascript
-const { TextSplitter } = require('graphbit');
+const { TextSplitter } = require('@infinitibit_gmbh/graphbit');
 
 function fitToContextWindow(text, maxTokens = 4000) {
   // Use token splitter with safety margin
