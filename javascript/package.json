@@ -72,6 +72,7 @@
     "@typescript-eslint/eslint-plugin": "^6.15.0",
     "@typescript-eslint/parser": "^6.15.0",
     "@vitest/coverage-v8": "^1.0.4",
+    "dotenv": "^17.2.3",
     "eslint": "^8.56.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.0.1",
@@ -89,12 +90,12 @@
     "LICENSE.md"
   ],
   "optionalDependencies": {
-    "@infinitibit_gmbh/graphbit-win32-x64-msvc": "0.5.1",
-    "@infinitibit_gmbh/graphbit-darwin-x64": "0.5.1",
-    "@infinitibit_gmbh/graphbit-linux-x64-gnu": "0.5.1",
     "@infinitibit_gmbh/graphbit-darwin-arm64": "0.5.1",
+    "@infinitibit_gmbh/graphbit-darwin-x64": "0.5.1",
     "@infinitibit_gmbh/graphbit-linux-arm64-gnu": "0.5.1",
+    "@infinitibit_gmbh/graphbit-linux-x64-gnu": "0.5.1",
+    "@infinitibit_gmbh/graphbit-linux-x64-musl": "0.5.1",
     "@infinitibit_gmbh/graphbit-win32-arm64-msvc": "0.5.1",
-    "@infinitibit_gmbh/graphbit-linux-x64-musl": "0.5.1"
+    "@infinitibit_gmbh/graphbit-win32-x64-msvc": "0.5.1"
   }
 }
