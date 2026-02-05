@@ -26,7 +26,7 @@ All configurations are created using the `LlmConfig` class.
 ### OpenAI Configuration
 
 ```typescript
-import { LlmConfig } from '@graphbit/core';
+import { LlmConfig } from '@infinitibit_gmbh/graphbit';
 
 const config = LlmConfig.openai({
   apiKey: process.env.OPENAI_API_KEY || '',
@@ -56,6 +56,9 @@ const config = LlmConfig.anthropic({
 
 ### MistralAI Configuration
 
+> [!IMPORTANT]
+> The `model` parameter is **required** for MistralAI.
+
 ```typescript
 const config = LlmConfig.mistralai({
   apiKey: process.env.MISTRALAI_API_KEY || '',
@@ -65,6 +68,9 @@ const config = LlmConfig.mistralai({
 
 ### Ollama Configuration (Local)
 
+> [!IMPORTANT]
+> The `model` parameter is **required** for Ollama. Make sure the model is pulled locally with `ollama pull <model-name>` before use.
+
 ```typescript
 const config = LlmConfig.ollama({
   model: 'llama2',
@@ -73,6 +79,9 @@ const config = LlmConfig.ollama({
 ```
 
 ### OpenRouter Configuration
+
+> [!IMPORTANT]
+> The `model` parameter is **required** for OpenRouter. Model format is `provider/model-name`.
 
 ```typescript
 const config = LlmConfig.openrouter({
@@ -92,6 +101,10 @@ const config = LlmConfig.bytedance({
 ```
 
 #### DeepSeek
+
+> [!IMPORTANT]
+> The `model` parameter is **required** for DeepSeek.
+
 ```typescript
 const config = LlmConfig.deepseek({
   apiKey: process.env.DEEPSEEK_API_KEY || '',
@@ -100,10 +113,14 @@ const config = LlmConfig.deepseek({
 ```
 
 #### Perplexity
+
+> [!IMPORTANT]
+> The `model` parameter is **required** for Perplexity.
+
 ```typescript
 const config = LlmConfig.perplexity({
   apiKey: process.env.PERPLEXITY_API_KEY || '',
-  model: 'sonar'
+  model: 'llama-3.1-sonar-small-128k-online'
 });
 ```
 
@@ -160,7 +177,7 @@ const config = LlmConfig.huggingface({
 Once configured, pass the `config` object to `AgentBuilder` or `Executor`.
 
 ```typescript
-import { AgentBuilder } from '@graphbit/core';
+import { AgentBuilder } from '@infinitibit_gmbh/graphbit';
 
 const agent = await new AgentBuilder('My Agent', config)
   .build();
