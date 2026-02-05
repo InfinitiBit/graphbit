@@ -10,7 +10,7 @@
  * Run with: npx ts-node examples/tool-registry-enhanced-demo.ts
  */
 
-import { createToolRegistry, ToolRegistry } from '../index';
+import { createToolRegistry, } from '../index';
 
 async function main() {
   console.log('='.repeat(70));
@@ -96,7 +96,7 @@ async function main() {
   const allMetadata = registry.getAllMetadata();
   console.log('📊 All registered tools:\n');
   
-  allMetadata.forEach((meta, idx) => {
+  allMetadata.forEach((meta: any, idx) => {
     console.log(`${idx + 1}. ${meta.name}`);
     console.log(`   Calls: ${meta.callCount}`);
     console.log(`   Avg duration: ${meta.avgDurationMs.toFixed(2)}ms`);
@@ -110,7 +110,7 @@ async function main() {
   const history = registry.getExecutionHistory();
   console.log(`📋 Execution history (${history.length} records):\n`);
   
-  history.forEach((exec, idx) => {
+  history.forEach((exec: any, idx) => {
     const status = exec.success ? '✅' : '❌';
     const time = new Date(exec.timestamp * 1000).toLocaleTimeString();
     console.log(`${idx + 1}. ${status} ${exec.toolName} (${exec.durationMs.toFixed(2)}ms) at ${time}`);
@@ -133,7 +133,7 @@ async function main() {
     console.log(`   Success rate: ${successRate}%`);
   }
   
-  console.log(`   Avg execution time: ${stats.avgExecutionTimeMs.toFixed(2)}ms`);
+  console.log(`   Avg execution time: ${stats.avg_execution_time_ms.toFixed(2)}ms`);
   console.log(`   Total execution time: ${stats.totalExecutionTimeMs.toFixed(2)}ms`);
   console.log();
 
@@ -202,8 +202,8 @@ async function main() {
   console.log('  }');
   console.log('  ');
   console.log('  // Alert on slow executions');
-  console.log('  if (stats.avgExecutionTimeMs > 1000) {');
-  console.log('    sendAlert(`Slow tools detected: ${stats.avgExecutionTimeMs}ms avg`);');
+  console.log('  if (stats.avg_execution_time_ms > 1000) {');
+  console.log('    sendAlert(`Slow tools detected: ${stats.avg_execution_time_ms}ms avg`);');
   console.log('  }');
   console.log('  ');
   console.log('  // Log for analytics');
