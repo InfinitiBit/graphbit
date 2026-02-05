@@ -269,42 +269,49 @@ executeWorkflow().catch(console.error);
 ### Tool Registry Operations
 
 ```typescript
-import { init, ToolRegistry } from '@infinitibit_gmbh/graphbit';
+import { init, ToolRegistry, registerAsync } from '@infinitibit_gmbh/graphbit';
 
 async function manageTools() {
   init();
 
   const registry = new ToolRegistry();
 
-  // Register tool (async)
-  await registry.register({
-    name: 'add',
-    description: 'Add two numbers',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        a: { type: 'number' },
-        b: { type: 'number' }
-      }
-    },
-    handler: async (params) => params.a + params.b
+  // Sync tool: use register() directly
+  registry.register('add', 'Add two numbers', {
+    a: { type: 'number' },
+    b: { type: 'number' }
+  }, (args) => args.a + args.b);
+
+  // Async tool: use registerAsync() for proper timing
+  registerAsync(registry, 'fetchData', 'Fetch data from API', {
+    url: { type: 'string' }
+  }, async (args) => {
+    const response = await fetch(args.url);
+    return await response.json();
   });
 
-  // Execute tool (async)
-  const result = await registry.execute('add', { a: 5, b: 3 });
-  console.log('Result:', result);
+  // Execute sync tool
+  const syncResult = await registry.execute('add', { a: 5, b: 3 });
+  console.log('Sync result:', syncResult.result); // 8
 
-  // List tools (async)
-  const tools = await registry.listTools();
+  // Execute async tool - timing includes full API wait
+  const asyncResult = await registry.execute('fetchData', { url: 'https://api.example.com' });
+  console.log('Async result:', asyncResult.result);
+  console.log('Execution time:', asyncResult.executionTimeMs); // Actual time
+
+  // List tools (sync)
+  const tools = registry.getRegisteredTools();
   console.log('Tools:', tools);
 
-  // Get metrics (async)
-  const metrics = await registry.getMetrics('add');
-  console.log('Metrics:', metrics);
+  // Get metadata - avgDurationMs includes async time
+  const metadata = registry.getToolMetadata('fetchData');
+  console.log('Avg duration:', metadata.avgDurationMs);
 }
 
 manageTools().catch(console.error);
 ```
+
+> **Important:** For async tool callbacks, always use `registerAsync()`. Using `registry.register()` with an async callback directly will result in incorrect timing (`executionTimeMs ≈ 0`) and the Promise may serialize as `{}`.
 
 ### Error Handling
 
