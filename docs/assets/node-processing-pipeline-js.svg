@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="550" height="750" viewBox="0 0 550 750" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Gradient definitions -->
+    <linearGradient id="jsGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#F7DF1E;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#F0DB4F;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="validationGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#8A6EF9;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#6C4FF7;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="templateGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#6C4FF7;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#5A42D6;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="llmGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#5A42D6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#4A35B8;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="responseGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#4A35B8;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3A2A98;stop-opacity:1" />
+    </linearGradient>
+
+    <!-- Drop shadow filter -->
+    <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="2" dy="4" stdDeviation="3" flood-color="rgba(0,0,0,0.3)"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="550" height="750" fill="#f8f9fa"/>
+
+  <!-- Title -->
+  <text x="275" y="35" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" font-weight="bold" fill="#2c3e50">
+    Node Processing Pipeline (JS)
+  </text>
+
+  <!-- Node Input -->
+  <rect x="175" y="60" width="200" height="50" rx="8" ry="8"
+        fill="url(#jsGradient)" stroke="#F0DB4F" stroke-width="2" filter="url(#dropShadow)"/>
+  <text x="275" y="90" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" font-weight="bold" fill="#323330">
+    Node Input (JS)
+  </text>
+
+  <!-- Arrow down -->
+  <path d="M 275 110 L 275 130" stroke="#333" stroke-width="3" marker-end="url(#arrowhead)" fill="none"/>
+
+  <!-- Input Validation -->
+  <rect x="175" y="130" width="200" height="85" rx="8" ry="8"
+        fill="url(#validationGradient)" stroke="#5A42D6" stroke-width="2" filter="url(#dropShadow)"/>
+  <text x="275" y="165" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" font-weight="bold" fill="white">
+    Input Validation
+  </text>
+  <text x="275" y="185" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="rgba(255,255,255,0.9)">
+    Type checking &
+  </text>
+  <text x="275" y="200" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="rgba(255,255,255,0.9)">
+    schema validation
+  </text>
+
+  <!-- Arrow down -->
+  <path d="M 275 215 L 275 240" stroke="#333" stroke-width="3" marker-end="url(#arrowhead)" fill="none"/>
+
+  <!-- Prompt Template Processing -->
+  <rect x="175" y="240" width="200" height="105" rx="8" ry="8"
+        fill="url(#templateGradient)" stroke="#6C4FF7" stroke-width="2" filter="url(#dropShadow)"/>
+  <text x="275" y="275" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" font-weight="bold" fill="white">
+    Prompt Template
+  </text>
+  <text x="275" y="295" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="rgba(255,255,255,0.9)">
+    Variable substitution
+  </text>
+  <text x="275" y="310" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="rgba(255,255,255,0.9)">
+    Context injection
+  </text>
+  <text x="275" y="325" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="rgba(255,255,255,0.9)">
+    Tool definitions
+  </text>
+
+  <!-- Arrow down -->
+  <path d="M 275 345 L 275 370" stroke="#333" stroke-width="3" marker-end="url(#arrowhead)" fill="none"/>
+
+  <!-- LLM Request with Circuit Breaker -->
+  <rect x="175" y="370" width="200" height="110" rx="8" ry="8"
+        fill="url(#llmGradient)" stroke="#4A35B8" stroke-width="2" filter="url(#dropShadow)"/>
+  <text x="275" y="405" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" font-weight="bold" fill="white">
+    LLM Request
+  </text>
+  <text x="275" y="425" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="rgba(255,255,255,0.9)">
+    Circuit breaker
+  </text>
+  <text x="275" y="440" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="rgba(255,255,255,0.9)">
+    Retry logic
+  </text>
+  <text x="275" y="455" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="rgba(255,255,255,0.9)">
+    Async execution
+  </text>
+
+  <!-- Arrow down -->
+  <path d="M 275 480 L 275 505" stroke="#333" stroke-width="3" marker-end="url(#arrowhead)" fill="none"/>
+
+  <!-- Response Processing & Validation -->
+  <rect x="175" y="505" width="200" height="115" rx="8" ry="8"
+        fill="url(#responseGradient)" stroke="#3A2A98" stroke-width="2" filter="url(#dropShadow)"/>
+  <text x="275" y="540" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" font-weight="bold" fill="white">
+    Response Processing
+  </text>
+  <text x="275" y="560" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="rgba(255,255,255,0.9)">
+    JSON parsing
+  </text>
+  <text x="275" y="575" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="rgba(255,255,255,0.9)">
+    Error handling
+  </text>
+  <text x="275" y="590" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="rgba(255,255,255,0.9)">
+    Result validation
+  </text>
+
+  <!-- Arrow down -->
+  <path d="M 275 620 L 275 645" stroke="#333" stroke-width="3" marker-end="url(#arrowhead)" fill="none"/>
+
+  <!-- Node Output -->
+  <rect x="175" y="645" width="200" height="50" rx="8" ry="8"
+        fill="url(#jsGradient)" stroke="#F0DB4F" stroke-width="2" filter="url(#dropShadow)"/>
+  <text x="275" y="675" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" font-weight="bold" fill="#323330">
+    Node Output (JS)
+  </text>
+
+  <!-- Arrow marker definition -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7"
+            refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#333" />
+    </marker>
+  </defs>
+</svg>
