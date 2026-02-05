@@ -15,7 +15,7 @@ The validation system helps you:
 ### Validate JSON
 
 ```typescript
-import { validateJson } from '@graphbit/core';
+import { validateJson } from '@infinitibit_gmbh/graphbit';
 
 const data = JSON.stringify({
   name: 'John Doe',
@@ -88,7 +88,7 @@ const arraySchema = JSON.stringify({
 ## Validation in Workflows
 
 ```typescript
-import { validateJson } from '@graphbit/core';
+import { validateJson } from '@infinitibit_gmbh/graphbit';
 
 function processUserData(jsonData: string) {
   const schema = JSON.stringify({
@@ -116,7 +116,7 @@ function processUserData(jsonData: string) {
 ## Complete Example
 
 ```typescript
-import { validateJson } from '@graphbit/core';
+import { validateJson } from '@infinitibit_gmbh/graphbit';
 
 function validateAndProcess() {
   // Define schema
