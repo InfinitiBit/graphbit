@@ -6,7 +6,7 @@ Welcome to GraphBit for JavaScript! This tutorial will guide you through creatin
 
 Before starting, ensure you have:
 - Node.js 16+ installed
-- GraphBit installed (`npm install @graphbit/core`)
+- GraphBit installed (`npm install @infinitibit_gmbh/graphbit`)
 - An OpenAI API key set in your environment
 
 ---
@@ -20,7 +20,7 @@ Let's create a simple agent that can answer questions.
 Create a new TypeScript file `quickstart.ts`:
 
 ```typescript
-import { init, LlmConfig, AgentBuilder } from '@graphbit/core';
+import { init, LlmConfig, AgentBuilder } from '@infinitibit_gmbh/graphbit';
 
 // Initialize the library
 init();
@@ -70,7 +70,7 @@ main().catch(console.error);
 Here's the complete working example:
 
 ```typescript
-import { init, LlmConfig, AgentBuilder } from '@graphbit/core';
+import { init, LlmConfig, AgentBuilder } from '@infinitibit_gmbh/graphbit';
 
 async function main() {
   // Initialize
