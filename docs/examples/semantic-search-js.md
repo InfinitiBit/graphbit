@@ -20,7 +20,8 @@ import {
   Executor,
   Workflow,
   Node,
-  ToolRegistry
+  ToolRegistry,
+  registerAsync
 } from '@infinitibit_gmbh/graphbit';
 
 interface Document {
@@ -71,12 +72,12 @@ class SemanticSearchSystem {
     console.log('✅ Semantic search system initialized');
   }
 
-  private async registerSearchTools(): Promise<void> {
     // Calculate cosine similarity
-    await this.toolRegistry.register({
-      name: 'calculate_similarity',
-      description: 'Calculate cosine similarity between two embedding vectors',
-      inputSchema: {
+    registerAsync(
+      this.toolRegistry,
+      'calculate_similarity',
+      'Calculate cosine similarity between two embedding vectors',
+      {
         type: 'object',
         properties: {
           vector1Json: { type: 'string', description: 'JSON array of first vector' },
@@ -84,7 +85,7 @@ class SemanticSearchSystem {
         },
         required: ['vector1Json', 'vector2Json']
       },
-      handler: async (params: any) => {
+      async (params: any) => {
         try {
           const vector1 = JSON.parse(params.vector1Json) as number[];
           const vector2 = JSON.parse(params.vector2Json) as number[];
@@ -115,13 +116,14 @@ class SemanticSearchSystem {
           return { error: 'Failed to calculate similarity' };
         }
       }
-    });
+    );
 
     // Search documents
-    await this.toolRegistry.register({
-      name: 'search_documents',
-      description: 'Search documents by keyword matching',
-      inputSchema: {
+    registerAsync(
+      this.toolRegistry,
+      'search_documents',
+      'Search documents by keyword matching',
+      {
         type: 'object',
         properties: {
           query: { type: 'string', description: 'Search query' },
@@ -130,7 +132,7 @@ class SemanticSearchSystem {
         },
         required: ['query', 'documentsJson']
       },
-      handler: async (params: any) => {
+      async (params: any) => {
         try {
           const query = (params.query as string).toLowerCase();
           const documents = JSON.parse(params.documentsJson) as Document[];
@@ -145,7 +147,6 @@ class SemanticSearchSystem {
               if (titleMatch) score += 2;
               if (contentMatch) score += 1;
               
-              // Count occurrences
               const occurrences = (doc.content.toLowerCase().match(new RegExp(query, 'g')) || []).length;
               score += occurrences * 0.5;
 
@@ -164,7 +165,7 @@ class SemanticSearchSystem {
           return { error: 'Search failed' };
         }
       }
-    });
+    );
 
     // Calculate TF-IDF relevance
     await this.toolRegistry.register({
