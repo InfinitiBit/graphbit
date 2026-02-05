@@ -1,4 +1,8 @@
-name: CI
+name: JavaScript/TypeScript - CI (Automated)
+
+# Triggers: Automatically runs on push/PR to main or develop branches
+# Purpose: Continuous integration testing across multiple OS and Node versions
+# Ensures code quality before merging
 
 on:
   push:
@@ -10,27 +14,32 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  # ============================================================================
+  # TEST JOB: Run comprehensive tests across 9 configurations
+  # ============================================================================
   test:
     name: Test on ${{ matrix.os }} with Node ${{ matrix.node }}
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
+      fail-fast: false  # Continue testing other configs if one fails
       matrix:
+        # 3 Operating Systems × 3 Node versions = 9 test configurations
         os: [ubuntu-latest, macos-latest, windows-latest]
-        node: [16, 18, 20]
+        node: [16, 18, 20]  # Node.js LTS versions
         rust: [stable]
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node.js ${{ matrix.node }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
           cache: 'npm'
           cache-dependency-path: javascript/package-lock.json
 
-      - name: Setup Rust
+      - name: Setup Rust stable toolchain
         uses: actions-rs/toolchain@v1
         with:
           toolchain: ${{ matrix.rust }}
@@ -38,7 +47,7 @@ jobs:
           override: true
           components: rustfmt, clippy
 
-      - name: Cache Cargo
+      - name: Cache Cargo dependencies
         uses: actions/cache@v4
         with:
           path: |
@@ -49,30 +58,34 @@ jobs:
             javascript/target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Install dependencies
+      - name: Install npm dependencies
         working-directory: javascript
         run: npm ci
 
-      - name: Check formatting (Rust)
+      # === Code Quality Checks ===
+      
+      - name: Check Rust formatting
         working-directory: javascript
         run: cargo fmt -- --check
 
-      - name: Lint (Rust)
+      - name: Lint Rust code with Clippy
         working-directory: javascript
         run: cargo clippy -- -D warnings
 
-      - name: Build
+      - name: Build debug binary
         working-directory: javascript
         run: npm run build:debug
 
-      - name: Lint (TypeScript)
+      - name: Lint TypeScript/JavaScript
         working-directory: javascript
         run: npm run lint
 
-      - name: Type check
+      - name: Type check TypeScript
         working-directory: javascript
         run: npm run typecheck
 
+      # === Test Execution ===
+      
       - name: Run unit tests
         working-directory: javascript
         run: npm run test:unit
@@ -85,31 +98,36 @@ jobs:
         working-directory: javascript
         run: npm run bench
 
+  # ============================================================================
+  # COVERAGE JOB: Generate and upload code coverage report
+  # ============================================================================
   coverage:
-    name: Code Coverage
+    name: Code Coverage Analysis
     runs-on: ubuntu-latest
+    
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
           cache-dependency-path: javascript/package-lock.json
 
-      - name: Setup Rust
+      - name: Setup Rust stable toolchain
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           profile: minimal
           override: true
 
-      - name: Install dependencies
+      - name: Install npm dependencies
         working-directory: javascript
         run: npm ci
 
-      - name: Build
+      - name: Build debug binary
         working-directory: javascript
         run: npm run build:debug
 
@@ -123,37 +141,43 @@ jobs:
           files: javascript/coverage/lcov.info
           flags: javascript
           name: javascript-coverage
+          fail_ci_if_error: false  # Don't fail CI if Codecov upload fails
 
+  # ============================================================================
+  # INTEGRATION JOB: Run integration tests with real API keys (main branch only)
+  # ============================================================================
   integration:
     name: Integration Tests
     runs-on: ubuntu-latest
+    # Only run on pushes to main (not PRs or develop)
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Setup Rust
+      - name: Setup Rust stable toolchain
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           profile: minimal
 
-      - name: Install dependencies
+      - name: Install npm dependencies
         working-directory: javascript
         run: npm ci
 
-      - name: Build
+      - name: Build production binary
         working-directory: javascript
         run: npm run build
 
-      - name: Run integration tests
+      - name: Run integration tests with API keys
         working-directory: javascript
         run: npm run test:integration
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-

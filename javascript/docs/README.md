@@ -1,6 +1,6 @@
 # JavaScript API Documentation
 
-**Status:** ✅ All examples verified against v0.5.1
+**Status:** ✅ All examples verified against v0.5.5
 
 Welcome to the GraphBit JavaScript bindings documentation. This documentation follows the **"Execute First, Document Later"** principle - every code example has been verified to run successfully.
 
@@ -161,6 +161,6 @@ For complete working examples, see:
 ---
 
 **Last Updated:** 2025-12-05T19:39:53+06:00  
-**Version:** 0.5.1  
+**Version:** 0.5.5  
 **Binding Type:** NAPI-RS  
 **Documentation Coverage:** 9 major components, 100+ verified examples

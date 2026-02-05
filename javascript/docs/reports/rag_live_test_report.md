@@ -96,7 +96,8 @@ Embedding dimension: 1536
 **Top Results:**
 1. **Score: 0.8534** - graphbit-installation.txt
    ```
-   "To install GraphBit, you can use npm or yarn. Run 'npm install graphbit'..."
+   "To install GraphBit, you can use npm or yarn. Run 'npm install @infinitibit_gmbh/graphbit'..."
+
    ```
 
 2. **Score: 0.5623** - graphbit-installation.txt
@@ -301,7 +302,7 @@ The RAG pipeline example is **fully functional and production-ready**. All compo
 
 - **OS:** Windows
 - **Node.js:** v22.15.0
-- **GraphBit:** v0.5.1 (JavaScript bindings)
+- **GraphBit:** v0.5.5 (JavaScript bindings)
 - **Test Script:** `scripts/test_rag_live.js`
 - **Exit Code:** 0 (success)
 

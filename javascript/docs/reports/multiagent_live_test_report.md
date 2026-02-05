@@ -393,7 +393,7 @@ The multi-agent system example is **fully functional and production-ready**. All
 
 - **OS:** Windows
 - **Node.js:** v22.15.0
-- **GraphBit:** v0.5.1 (JavaScript bindings)
+- **GraphBit:** v0.5.5 (JavaScript bindings)
 - **Test Script:** `scripts/test_multiagent_live.js`
 - **Exit Code:** 0 (success)
 

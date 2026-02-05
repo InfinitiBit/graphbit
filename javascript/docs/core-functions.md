@@ -108,7 +108,7 @@ function configureRuntime(config: RuntimeConfig): void
 const { version } = require('@infinitibit_gmbh/graphbit');
 
 const ver = version();
-console.log(`GraphBit version: ${ver}`); // GraphBit version: 0.5.1
+console.log(`GraphBit version: ${ver}`); // GraphBit version: 0.5.5
 ```
 
 **Differences from Python:**

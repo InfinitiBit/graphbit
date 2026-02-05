@@ -1,6 +1,6 @@
 # Migration Guide: Python to JavaScript
 
-**Version:** GraphBit 0.5.1  
+**Version:** GraphBit 0.5.5  
 **Last Updated:** 2025-12-06
 
 ## Overview
@@ -763,5 +763,5 @@ testMigration();
 ---
 
 **Last Updated:** 2025-12-06  
-**GraphBit Version:** 0.5.1  
+**GraphBit Version:** 0.5.5  
 **Maintainer:** GraphBit Documentation Team

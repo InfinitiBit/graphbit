@@ -17,7 +17,7 @@
 <p align="center">
     <a href="https://trendshift.io/repositories/14884" target="_blank"><img src="https://trendshift.io/api/badge/repositories/14884" alt="InfinitiBit%2Fgraphbit | Trendshift" width="250" height="55"/></a>
     <br>
-    <a href="https://www.npmjs.com/package/@infinitibit_gmbh/graphbit"><img src="https://img.shields.io/npm/dm/@infinitibit_gmbh/graphbit?period=total&units=INTERNATIONAL_SYSTEM&left_color=GREY&right_color=red&left_text=Downloads" alt="NPM Downloads"/></a>
+    <a href="https://www.npmjs.com/package/@infinitibit_gmbh/graphbit"><img src="https://img.shields.io/npm/dt/@infinitibit_gmbh/graphbit?color=red&label=Total%20Downloads" alt="NPM Total Downloads"/></a>
 </p>
 
 <p align="center">

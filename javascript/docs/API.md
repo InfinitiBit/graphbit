@@ -37,7 +37,7 @@ Get the version of the GraphBit bindings.
 import { version } from '@infinitibit_gmbh/graphbit';
 
 const v = version();
-console.log(v); // "0.5.1"
+console.log(v); // "0.5.5"
 ```
 
 **Returns:** `string`
@@ -52,7 +52,7 @@ import { versionInfo } from '@infinitibit_gmbh/graphbit';
 const info = versionInfo();
 console.log(info);
 // {
-//   version: "0.5.1",
+//   version: "0.5.5",
 //   rustVersion: "1.70.0",
 //   napiVersion: "2.16.0"
 // }

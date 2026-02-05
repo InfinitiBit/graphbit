@@ -115,4 +115,4 @@ Each example follows this structure:
 ---
 
 **Examples Last Updated:** 2025-12-05
-**GraphBit Version:** 0.5.1
+**GraphBit Version:** 0.5.5

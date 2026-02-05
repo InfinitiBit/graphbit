@@ -810,5 +810,5 @@ app.get('/dashboard', (req, res) => {
 ---
 
 **Guide Created:** 2025-12-05  
-**GraphBit Version:** 0.5.1  
+**GraphBit Version:** 0.5.5  
 **Difficulty:** Advanced
