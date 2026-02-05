@@ -15,7 +15,7 @@ GraphBit agents are AI-powered components that can:
 ### Basic Agent
 
 ```typescript
-import { AgentBuilder, LlmConfig } from '@graphbit/core';
+import { AgentBuilder, LlmConfig } from '@infinitibit_gmbh/graphbit';
 
 const config = LlmConfig.openai({
   apiKey: process.env.OPENAI_API_KEY || '',
@@ -104,7 +104,7 @@ console.log(`Description: ${description}`);
 ### Research Assistant
 
 ```typescript
-import { AgentBuilder, LlmConfig } from '@graphbit/core';
+import { AgentBuilder, LlmConfig } from '@infinitibit_gmbh/graphbit';
 
 async function createResearchAssistant() {
   const config = LlmConfig.openai({
@@ -209,7 +209,7 @@ async function createCreativeWriter() {
 ## Error Handling
 
 ```typescript
-import { AgentBuilder, LlmConfig } from '@graphbit/core';
+import { AgentBuilder, LlmConfig } from '@infinitibit_gmbh/graphbit';
 
 async function safeAgentExecution() {
   try {
