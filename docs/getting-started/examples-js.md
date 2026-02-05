@@ -452,7 +452,7 @@ workflowValidationExample().catch(console.error);
 Create workflows with custom tools:
 
 ```typescript
-import { init, LlmConfig, Node, Workflow, Executor, ToolRegistry } from '@infinitibit_gmbh/graphbit';
+import { init, LlmConfig, Node, Workflow, Executor, ToolRegistry, registerAsync } from '@infinitibit_gmbh/graphbit';
 
 async function toolIntegrationExample() {
   init();
@@ -465,10 +465,11 @@ async function toolIntegrationExample() {
   const toolRegistry = new ToolRegistry();
 
   // Register a custom calculator tool
-  await toolRegistry.register({
-    name: 'calculate',
-    description: 'Perform mathematical calculations',
-    inputSchema: {
+  registerAsync(
+    toolRegistry,
+    'calculate',
+    'Perform mathematical calculations',
+    {
       type: 'object',
       properties: {
         operation: { type: 'string', description: 'Operation: add, subtract, multiply, divide' },
@@ -477,7 +478,7 @@ async function toolIntegrationExample() {
       },
       required: ['operation', 'a', 'b']
     },
-    handler: async (params: any) => {
+    async (params: any) => {
       const { operation, a, b } = params;
       
       switch (operation) {
@@ -493,7 +494,7 @@ async function toolIntegrationExample() {
           return { error: 'Unknown operation' };
       }
     }
-  });
+  );
 
   const workflow = new Workflow('Calculator Workflow');
 
