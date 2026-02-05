@@ -108,10 +108,11 @@ Configuration class for Large Language Model providers.
 Create OpenAI provider configuration.
 
 ```typescript
+import 'dotenv/config';
 import { LlmConfig } from '@infinitibit_gmbh/graphbit';
 
 const config = LlmConfig.openai({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.OPENAI_API_KEY || '',
   model: 'gpt-4o-mini'
 });
 ```
@@ -121,8 +122,11 @@ const config = LlmConfig.openai({
 Create Anthropic provider configuration.
 
 ```typescript
+import 'dotenv/config';
+import { LlmConfig } from '@infinitibit_gmbh/graphbit';
+
 const config = LlmConfig.anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
+  apiKey: process.env.ANTHROPIC_API_KEY || '',
   model: 'claude-3-5-sonnet-20241022'
 });
 ```
@@ -141,9 +145,12 @@ const config = LlmConfig.ollama({
 Create Azure OpenAI provider configuration.
 
 ```typescript
+import 'dotenv/config';
+import { LlmConfig } from '@infinitibit_gmbh/graphbit';
+
 const config = LlmConfig.azureOpenai({
-  apiKey: process.env.AZURE_API_KEY,
-  endpoint: 'https://...',
+  apiKey: process.env.AZURE_OPENAI_API_KEY || '',
+  endpoint: process.env.AZURE_OPENAI_ENDPOINT || '',
   deploymentName: 'gpt-4'
 });
 ```
@@ -152,8 +159,11 @@ const config = LlmConfig.azureOpenai({
 Create DeepSeek provider configuration.
 
 ```typescript
+import 'dotenv/config';
+import { LlmConfig } from '@infinitibit_gmbh/graphbit';
+
 const config = LlmConfig.deepseek({
-  apiKey: process.env.DEEPSEEK_API_KEY,
+  apiKey: process.env.DEEPSEEK_API_KEY || '',
   model: 'deepseek-chat'
 });
 ```
