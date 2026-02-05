@@ -14,7 +14,7 @@ This guide helps Python developers transition to GraphBit's JavaScript bindings.
 | Category | Python | JavaScript |
 |----------|--------|------------|
 | **Async** | Optional (sync/async) | Required (everything is async) |
-| **Imports** | `from graphbit import ...` | `const { ... } = require('graphbit')` |
+| **Imports** | `from graphbit import ...` | `const { ... } = require('@infinitibit_gmbh/graphbit')` |
 | **Null handling** | `None` for optional | `undefined` (omit field) |
 | **Enums** | Strings | Numbers |
 | **Naming** | `snake_case` | `camelCase` |
@@ -32,7 +32,7 @@ pip install graphbit
 ### JavaScript
 
 ```javascript
-npm install graphbit
+npm install @infinitibit_gmbh/graphbit
 ```
 
 ---
@@ -54,7 +54,7 @@ version = graphbit.version()
 ### JavaScript
 
 ```javascript
-const { init, version } = require('graphbit');
+const { init, version } = require('@infinitibit_gmbh/graphbit');
 
 // Required initialization
 init();
@@ -87,7 +87,7 @@ config = LlmConfig.openai(
 ### JavaScript
 
 ```javascript
-const { LlmConfig } = require('graphbit');
+const { LlmConfig } = require('@infinitibit_gmbh/graphbit');
 
 // Object parameters (required)
 const config = LlmConfig.openai({
@@ -137,7 +137,7 @@ is_valid = workflow.validate()
 ### JavaScript
 
 ```javascript
-const { WorkflowBuilder } = require('graphbit');
+const { WorkflowBuilder } = require('@infinitibit_gmbh/graphbit');
 
 // Create workflow  
 const builder = new WorkflowBuilder('My Workflow');
@@ -191,7 +191,7 @@ retry_config = RetryConfig(
 ### JavaScript
 
 ```javascript
-const { RetryableErrorType } = require('graphbit');
+const { RetryableErrorType } = require('@infinitibit_gmbh/graphbit');
 
 const retryConfig = {
   maxAttempts: 3,
@@ -238,7 +238,7 @@ response = agent.execute('What is Python?')
 ### JavaScript
 
 ```javascript
-const { AgentBuilder, LlmConfig } = require('graphbit');
+const { AgentBuilder, LlmConfig } = require('@infinitibit_gmbh/graphbit');
 
 const llmConfig = LlmConfig.openai({
   apiKey: 'key',
@@ -287,7 +287,7 @@ if context.is_completed():
 ### JavaScript
 
 ```javascript
-const { Executor, LlmConfig } = require('graphbit');
+const { Executor, LlmConfig } = require('@infinitibit_gmbh/graphbit');
 
 const llmConfig = LlmConfig.openai({ apiKey: 'key' });
 
@@ -326,7 +326,7 @@ print(doc.content)
 ### JavaScript
 
 ```javascript
-const { DocumentLoader } = require('graphbit');
+const { DocumentLoader } = require('@infinitibit_gmbh/graphbit');
 
 const loader = new DocumentLoader();
 const doc = await loader.loadFile('file.txt', 'txt');  // async!
@@ -359,7 +359,7 @@ chunks = char_splitter.split_text('long text...')
 ### JavaScript
 
 ```javascript
-const { TextSplitter } = require('graphbit');
+const { TextSplitter } = require('@infinitibit_gmbh/graphbit');
 
 // Unified class with factory methods
 const charSplitter = TextSplitter.character(100, 20);
@@ -396,7 +396,7 @@ embeddings = client.embed_many(['text1', 'text2'])
 ### JavaScript
 
 ```javascript
-const { EmbeddingConfig, EmbeddingClient } = require('graphbit');
+const { EmbeddingConfig, EmbeddingClient } = require('@infinitibit_gmbh/graphbit');
 
 const config = EmbeddingConfig.openai('key', 'text-embedding-3-small');
 const client = new EmbeddingClient(config);
@@ -443,7 +443,7 @@ result = registry.execute_tool('calculator', {
 ### JavaScript
 
 ```javascript
-const { createToolRegistry } = require('graphbit');
+const { createToolRegistry } = require('@infinitibit_gmbh/graphbit');
 
 const registry = createToolRegistry();
 
@@ -650,7 +650,7 @@ const {
   Executor,
   LlmConfig,
   RetryableErrorType
-} = require('graphbit');
+} = require('@infinitibit_gmbh/graphbit');
 
 async function main() {
   // Config
@@ -712,7 +712,7 @@ When migrating from Python to JavaScript:
 
 ```javascript
 // Quick test script
-const { init, version } = require('graphbit');
+const { init, version } = require('@infinitibit_gmbh/graphbit');
 
 async function testMigration() {
   try {
