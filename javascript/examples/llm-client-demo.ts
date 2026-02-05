@@ -92,7 +92,7 @@ async function main() {
   const duration = Date.now() - startTime;
   console.log(`Completed in ${duration}ms\n`);
   
-  batchResponses.forEach((response, index) => {
+  batchResponses.forEach((response: any, index) => {
     console.log(`  ${index + 1}. "${batchPrompts[index]}" → "${response}"`);
   });
   console.log();
