@@ -20,7 +20,8 @@ import {
   Executor,
   Workflow,
   Node,
-  ToolRegistry
+  ToolRegistry,
+  registerAsync
 } from '@infinitibit_gmbh/graphbit';
 
 interface DataPoint {
@@ -63,18 +64,22 @@ class DataProcessingPipeline {
   }
 
   private async registerDataTools(): Promise<void> {
+    // Register data processing tools
+    
     // Statistical calculation tool
-    await this.toolRegistry.register({
-      name: 'calculate_statistics',
-      description: 'Calculate basic statistics for numerical data',
-      inputSchema: {
+    // Statistical calculation tool
+    registerAsync(
+      this.toolRegistry,
+      'calculate_statistics',
+      'Calculate basic statistics for numerical data',
+      {
         type: 'object',
         properties: {
           data: { type: 'array', description: 'Array of numbers' }
         },
         required: ['data']
       },
-      handler: async (params: any) => {
+      async (params: any) => {
         const data = params.data as number[];
         
         if (!Array.isArray(data) || data.length === 0) {
@@ -106,7 +111,7 @@ class DataProcessingPipeline {
           range: sorted[sorted.length - 1] - sorted[0]
         };
       }
-    });
+    );
 
     // Outlier detection tool
     await this.toolRegistry.register({
