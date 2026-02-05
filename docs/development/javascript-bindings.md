@@ -463,12 +463,9 @@ if (result.isSuccess()) {
 ```typescript
 const registry = new ToolRegistry();
 
-await registry.register({
-  name: 'search',
-  description: 'Search the web',
-  handler: async (params) => {
-    // Implementation
-  }
+// Use registerAsync for async tools
+registerAsync(registry, 'search', 'Search the web', {}, async (args) => {
+  // Async implementation
 });
 
 const agent = Node.agent('Smart Agent', 'Find information', 'agent_1');
