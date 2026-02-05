@@ -5,7 +5,8 @@
  * using the GraphBit JavaScript bindings.
  */
 
-import { init, WorkflowBuilder, Executor, LlmConfig } from '@graphbit/core';
+import 'dotenv/config';
+import { init, WorkflowBuilder, Executor, LlmConfig, AgentBuilder } from 'graphbit';
 
 async function main() {
   // Initialize the GraphBit library
@@ -14,11 +15,18 @@ async function main() {
 
   // Configure the LLM provider (OpenAI in this example)
   const llmConfig = LlmConfig.openai({
-    apiKey: process.env.OPENAI_API_KEY || '',
+    apiKey: process.env.OPENAI_API_KEY || 'sk-proj-**',
     model: 'gpt-4o-mini',
-    temperature: 0.7,
-    maxTokens: 1000,
   });
+
+  // Create an agent
+  const agentBuilder = new AgentBuilder('Assistant', llmConfig)
+    .description('A helpful assistant')
+    .systemPrompt('You are a helpful assistant.')
+    .temperature(0.7);
+
+  const agent = await agentBuilder.build();
+  console.log('Agent created:', await agent.name());
 
   // Create a simple workflow
   const workflow = new WorkflowBuilder('Hello World Workflow')
@@ -29,6 +37,16 @@ async function main() {
 
   console.log('Workflow created:', await workflow.name());
   console.log('Workflow ID:', await workflow.id());
+
+  // Add the agent to the workflow
+  const agentId = await agent.id();
+  const nodeId = await workflow.addNode({
+    id: agentId.uuid,
+    name: await agent.name(),
+    description: await agent.description(),
+    nodeType: "Agent"
+  });
+  console.log('Agent added to workflow as node:', nodeId);
 
   // Create an executor with configuration
   const executor = new Executor(llmConfig, {
@@ -43,25 +61,24 @@ async function main() {
     const result = await executor.execute(workflow);
 
     // Check the result
-    const isCompleted = await result.isCompleted();
+    const isCompleted = await result.isSuccess();
     const isFailed = await result.isFailed();
 
     if (isCompleted) {
       console.log('✓ Workflow completed successfully');
 
       // Get execution statistics
-      const stats = await result.stats();
+      const stats = await result.getStats();
       if (stats) {
         console.log('Execution stats:', {
-          duration: `${stats.totalDurationMs}ms`,
-          nodesExecuted: stats.nodesExecuted,
-          nodesFailed: stats.nodesFailed,
-          nodesSkipped: stats.nodesSkipped,
+          duration: `${stats.totalExecutionTimeMs}ms`,
+          nodesExecuted: stats.successfulNodes,
+          nodesFailed: stats.failedNodes,
         });
       }
 
       // Get all outputs
-      const outputs = await result.getAllOutputs();
+      const outputs = await result.getAllNodeOutputs();
       console.log('Outputs:', outputs);
     } else if (isFailed) {
       console.error('✗ Workflow failed');
