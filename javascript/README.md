@@ -74,7 +74,7 @@ const chunks = await splitter.split(doc.content);
 
 ### Tool Calling (with Async Support)
 ```javascript
-const { ToolRegistry, registerAsync } = require('./async-helpers');
+const { ToolRegistry, registerAsync } = require('@infinitibit_gmbh/graphbit');
 
 const registry = new ToolRegistry();
 
