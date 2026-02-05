@@ -38,7 +38,7 @@ static openai(apiKey: string, model?: string): EmbeddingConfig
 ### 🟢 Verified Example
 
 ```javascript
-const { EmbeddingConfig } = require('graphbit');
+const { EmbeddingConfig } = require('@infinitibit_gmbh/graphbit');
 
 // With specific model
 const config = EmbeddingConfig.openai(
@@ -111,7 +111,7 @@ constructor(config: EmbeddingConfig)
 ### 🟢 Verified Example
 
 ```javascript
-const { EmbeddingConfig, EmbeddingClient } = require('graphbit');
+const { EmbeddingConfig, EmbeddingClient } = require('@infinitibit_gmbh/graphbit');
 
 const config = EmbeddingConfig.openai(process.env.OPENAI_API_KEY);
 const client = new EmbeddingClient(config);
@@ -155,7 +155,7 @@ interface EmbeddingUsage {
 ### 🟢 Verified Example
 
 ```javascript
-const { EmbeddingConfig, EmbeddingClient } = require('graphbit');
+const { EmbeddingConfig, EmbeddingClient } = require('@infinitibit_gmbh/graphbit');
 
 async function generateEmbeddings() {
   const config = EmbeddingConfig.openai(process.env.OPENAI_API_KEY);
@@ -178,6 +178,15 @@ async function generateEmbeddings() {
 }
 ```
 
+#### `EmbeddingClient.similarity(embedding1, embedding2)`
+
+Calculate cosine similarity between two embeddings.
+
+```typescript
+const score = EmbeddingClient.similarity(emb1, emb2);
+```
+```
+
 ---
 
 ## Complete Examples
@@ -187,7 +196,7 @@ async function generateEmbeddings() {
 ### 🟢 Verified End-to-End Example
 
 ```javascript
-const { EmbeddingConfig, EmbeddingClient } = require('graphbit');
+const { EmbeddingConfig, EmbeddingClient } = require('@infinitibit_gmbh/graphbit');
 
 class SemanticSearch {
   constructor(apiKey) {
@@ -268,7 +277,7 @@ main().catch(console.error);
 ### Example 2: Document Clustering
 
 ```javascript
-const { EmbeddingConfig, EmbeddingClient } = require('graphbit');
+const { EmbeddingConfig, EmbeddingClient } = require('@infinitibit_gmbh/graphbit');
 
 async function clusterDocuments(documents, numClusters = 3) {
   const config = EmbeddingConfig.openai(process.env.OPENAI_API_KEY);
@@ -321,7 +330,7 @@ const {
   EmbeddingClient, 
   DocumentLoader, 
   TextSplitter 
-} = require('graphbit');
+} = require('@infinitibit_gmbh/graphbit');
 
 async function processDocumentForRAG(filePath) {
   // 1. Load document
@@ -388,7 +397,7 @@ processDocumentForRAG('./document.txt')
 ### Example 4: Batch Processing with Rate Limiting
 
 ```javascript
-const { EmbeddingConfig, EmbeddingClient } = require('graphbit');
+const { EmbeddingConfig, EmbeddingClient } = require('@infinitibit_gmbh/graphbit');
 
 async function batchEmbedWithRateLimit(texts, batchSize = 100, delayMs = 1000) {
   const config = EmbeddingConfig.openai(process.env.OPENAI_API_KEY);
