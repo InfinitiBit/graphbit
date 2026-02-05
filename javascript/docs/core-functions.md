@@ -30,7 +30,7 @@ This function should be called once at the start of your application. It sets up
 ### 🟢 Verified Example
 
 ```javascript
-const { init } = require('graphbit');
+const { init } = require('@infinitibit_gmbh/graphbit');
 
 // Initialize the library
 init();
@@ -60,12 +60,52 @@ Returns the semantic version string of the GraphBit core library.
 
 **Parameters:** None
 
-**Returns:** `string` - Version in semver format (e.g., "0.5.1")
+**Returns:** `{ version: string; rustVersion: string; napiVersion: string }`
+
+---
+
+### `getSystemInfo()`
+
+Get detailed system information.
+
+**Signature:**
+
+```typescript
+function getSystemInfo(): SystemInfo
+```
+
+**Returns:** `SystemInfo` object
+
+---
+
+### `healthCheck()`
+
+Perform a library health check.
+
+**Signature:**
+
+```typescript
+function healthCheck(): HealthStatus
+```
+
+**Returns:** `HealthStatus` object
+
+---
+
+### `configureRuntime(config)`
+
+Configure runtime settings.
+
+**Signature:**
+
+```typescript
+function configureRuntime(config: RuntimeConfig): void
+```
 
 ### 🟢 Verified Example
 
 ```javascript
-const { version } = require('graphbit');
+const { version } = require('@infinitibit_gmbh/graphbit');
 
 const ver = version();
 console.log(`GraphBit version: ${ver}`); // GraphBit version: 0.5.1
@@ -105,7 +145,7 @@ Python only. Gracefully shuts down the library (primarily for testing).
 ### Basic Initialization
 
 ```javascript
-const { init, version } = require('graphbit');
+const { init, version } = require('@infinitibit_gmbh/graphbit');
 
 // Always initialize first
 init();
@@ -119,7 +159,7 @@ console.log(`Running GraphBit v${version()}`);
 ### Error Handling
 
 ```javascript
-const { init } = require('graphbit');
+const { init } = require('@infinitibit_gmbh/graphbit');
 
 try {
   init();
