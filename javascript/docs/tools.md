@@ -23,7 +23,7 @@ function createToolRegistry(): ToolRegistry
 ### 🟢 Verified Example
 
 ```javascript
-const { createToolRegistry } = require('graphbit');
+const { createToolRegistry } = require('@infinitibit_gmbh/graphbit');
 
 const registry = createToolRegistry();
 ```
@@ -57,7 +57,7 @@ function tool(
 ### 🟢 Verified Example
 
 ```javascript
-const { tool } = require('graphbit');
+const { tool } = require('@infinitibit_gmbh/graphbit');
 
 const calculator = tool(
   'calculator',
@@ -262,6 +262,161 @@ console.log('Registered tools:', tools); // ['tool1', 'tool2', 'tool3']
 
 ---
 
+#### `unregisterTool(name)`
+
+Unregister a tool by name.
+
+**Signature:**
+
+```typescript
+unregisterTool(name: string): boolean
+```
+
+**Parameters:**
+
+- `name` (string): Name of the tool to remove
+
+**Returns:** `true` if tool was found and removed
+
+---
+
+#### `getToolMetadata(name)`
+
+Get metadata for a specific tool.
+
+**Signature:**
+
+```typescript
+getToolMetadata(name: string): ToolMetadata | null
+```
+
+**ToolMetadata:**
+
+```typescript
+interface ToolMetadata {
+  name: string;
+  description: string;
+  parametersSchema: any;
+  createdAt: number;
+  callCount: number;
+  totalDurationMs: number;
+  avgDurationMs: number;
+  lastCalledAt?: number;
+}
+```
+
+---
+
+#### `getAllMetadata()`
+
+Get metadata for all registered tools.
+
+**Signature:**
+
+```typescript
+getAllMetadata(): ToolMetadata[]
+```
+
+---
+
+#### `getExecutionHistory()`
+
+Get list of all tool executions.
+
+**Signature:**
+
+```typescript
+getExecutionHistory(): ToolExecution[]
+```
+
+**ToolExecution:**
+
+```typescript
+interface ToolExecution {
+  toolName: string;
+  success: boolean;
+  durationMs: number;
+  timestamp: number;
+  error?: string;
+}
+```
+
+---
+
+#### `clearHistory()`
+
+Clear execution history.
+
+**Signature:**
+
+```typescript
+clearHistory(): void
+```
+
+---
+
+#### `getStats()`
+
+Get comprehensive statistics.
+
+**Signature:**
+
+```typescript
+getStats(): ToolStats
+```
+
+**ToolStats:**
+
+```typescript
+interface ToolStats {
+  totalTools: number;
+  totalExecutions: number;
+  successfulExecutions: number;
+  failedExecutions: number;
+  avgExecutionTimeMs: number;
+  totalExecutionTimeMs: number;
+}
+```
+
+---
+
+#### `clearAll()`
+
+Clear all tools and history.
+
+**Signature:**
+
+```typescript
+clearAll(): void
+```
+
+---
+
+#### `getLlmTools()`
+
+Get tools in LLM-compatible format.
+
+**Signature:**
+
+```typescript
+getLlmTools(): any[]
+```
+
+---
+
+#### `getToolCount()`
+
+Get count of registered tools.
+
+**Signature:**
+
+```typescript
+getToolCount(): number
+```
+
+
+---
+
 ## Complete Examples
 
 ### Example 1: Basic Tool Registry
@@ -269,7 +424,7 @@ console.log('Registered tools:', tools); // ['tool1', 'tool2', 'tool3']
 ### 🟢 Verified End-to-End Example
 
 ```javascript
-const { createToolRegistry } = require('graphbit');
+const { createToolRegistry } = require('@infinitibit_gmbh/graphbit');
 
 // Create registry
 const registry = createToolRegistry();
@@ -316,7 +471,7 @@ runTools();
 ### Example 2: Tool Registry with Validation
 
 ```javascript
-const { createToolRegistry } = require('graphbit');
+const { createToolRegistry } = require('@infinitibit_gmbh/graphbit');
 
 function createValidatedRegistry() {
   const registry = createToolRegistry();
@@ -364,7 +519,7 @@ useSafeDivide();
 ### Example 3: Utility Tools Collection
 
 ```javascript
-const { createToolRegistry } = require('graphbit');
+const { createToolRegistry } = require('@infinitibit_gmbh/graphbit');
 
 function createUtilityTools() {
   const registry = createToolRegistry();
@@ -448,7 +603,7 @@ demonstrateUtils();
 ### Example 4: Integration with Agents
 
 ```javascript
-const { createToolRegistry, AgentBuilder, LlmConfig } = require('graphbit');
+const { createToolRegistry, AgentBuilder, LlmConfig } = require('@infinitibit_gmbh/graphbit');
 
 async function createAgentWithTools() {
   // Create tool registry
