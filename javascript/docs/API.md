@@ -22,7 +22,7 @@ Complete API reference for the GraphBit JavaScript bindings.
 Initialize the GraphBit library. Must be called before using any other functions.
 
 ```typescript
-import { init } from 'graphbit';
+import { init } from '@infinitibit_gmbh/graphbit';
 
 init();
 ```
@@ -34,7 +34,7 @@ init();
 Get the version of the GraphBit bindings.
 
 ```typescript
-import { version } from 'graphbit';
+import { version } from '@infinitibit_gmbh/graphbit';
 
 const v = version();
 console.log(v); // "0.5.1"
@@ -47,7 +47,7 @@ console.log(v); // "0.5.1"
 Get detailed version information.
 
 ```typescript
-import { versionInfo } from 'graphbit';
+import { versionInfo } from '@infinitibit_gmbh/graphbit';
 
 const info = versionInfo();
 console.log(info);
@@ -59,6 +59,80 @@ console.log(info);
 ```
 
 **Returns:** `{ version: string; rustVersion: string; napiVersion: string }`
+
+### `getSystemInfo()`
+
+Get detailed system information.
+
+```typescript
+import { getSystemInfo } from '@infinitibit_gmbh/graphbit';
+
+const info = getSystemInfo();
+console.log(info);
+```
+
+**Returns:** `SystemInfo`
+
+**SystemInfo:**
+
+```typescript
+interface SystemInfo {
+  os: string;
+  osVersion: string;
+  arch: string;
+  cpuCount: number;
+  totalMemoryMb: number;
+  nodeVersion: string;
+  graphbitVersion: string;
+}
+```
+
+### `healthCheck()`
+
+Perform a health check on the library.
+
+```typescript
+import { healthCheck } from '@infinitibit_gmbh/graphbit';
+
+const status = healthCheck();
+if (status.healthy) {
+  console.log('Healthy!');
+}
+```
+
+**Returns:** `HealthStatus`
+
+**HealthStatus:**
+
+```typescript
+interface HealthStatus {
+  healthy: boolean;
+  timestamp: number;
+  version: string;
+  uptimeSeconds: number;
+}
+```
+
+### `configureRuntime(config)`
+
+Configure runtime settings.
+
+```typescript
+import { configureRuntime } from '@infinitibit_gmbh/graphbit';
+
+configureRuntime({
+  maxThreads: 4,
+  enableMonitoring: true,
+  memoryLimitMb: 1024,
+});
+```
+
+**Parameters:**
+
+- `config.maxThreads` (number, optional): Maximum thread pool size
+- `config.enableMonitoring` (boolean, optional): Enable performance monitoring
+- `config.memoryLimitMb` (number, optional): Memory limit in MB
+
 
 ## LLM Configuration
 
@@ -226,6 +300,16 @@ const state = await workflow.state();
 // 'Pending' | 'Running' | 'Completed' | 'Failed' | 'Cancelled'
 ```
 
+##### `validate(): Promise<boolean>`
+
+Validate the workflow structure.
+
+```typescript
+const isValid = await workflow.validate();
+```
+
+```
+
 ### `Executor`
 
 Executes workflows.
@@ -326,7 +410,8 @@ Builder for creating agents.
 #### Constructor
 
 ```typescript
-const builder = new AgentBuilder(name: string);
+const builder = new AgentBuilder(name: string, llmConfig: LlmConfig);
+
 ```
 
 #### Methods
@@ -411,6 +496,61 @@ Get the agent ID.
 const id = await agent.id();
 ```
 
+### `ToolRegistry`
+
+Registry for managing generic tools.
+
+#### `new ToolRegistry()`
+
+Create a new tool registry.
+
+```typescript
+const registry = new ToolRegistry();
+```
+
+#### `register(name, description, parameters, callback)`
+
+Register a generic tool.
+
+```typescript
+registry.register(
+  'calculate',
+  'Perform calculation',
+  { type: 'object' },
+  (args) => {
+    return args.x + args.y;
+  }
+);
+```
+
+#### `execute(name, args)`
+
+Execute a specific tool.
+
+```typescript
+const result = await registry.execute('calculate', { x: 10, y: 20 });
+console.log(result.success, result.result);
+```
+
+#### `getStats()`
+
+Get statistics about tool usage.
+
+```typescript
+const stats = registry.getStats();
+console.log(stats.totalExecutions);
+```
+
+#### `clearAll()`
+
+Clear all tools and history.
+
+```typescript
+registry.clearAll();
+```
+
+```
+
 ## Document Processing
 
 ### `DocumentLoader`
@@ -459,8 +599,27 @@ interface DocumentContent {
   content: string;
   metadata?: string;
   source: string;
+  documentType: string;
 }
 ```
+
+#### `DocumentLoader.supportedTypes()`
+
+Get a list of supported document types.
+
+```typescript
+const types = DocumentLoader.supportedTypes();
+// ['txt', 'pdf', 'docx', 'json', 'csv', 'xml', 'html']
+```
+
+#### `DocumentLoader.detectDocumentType(path)`
+
+Detect document type from file path.
+
+```typescript
+const type = DocumentLoader.detectDocumentType('doc.pdf'); // 'pdf'
+```
+
 
 ## Text Splitting
 
@@ -589,6 +748,16 @@ interface EmbeddingResponse {
 }
 ```
 
+#### `EmbeddingClient.similarity(embedding1, embedding2)`
+
+Calculate cosine similarity between two embeddings.
+
+```typescript
+const score = EmbeddingClient.similarity(emb1, emb2);
+// Returns 0.0 to 1.0 (or -1.0 to 1.0)
+```
+
+
 ## Validation
 
 ### `validateJson(data: string, schema: string): ValidationResult`
@@ -596,7 +765,7 @@ interface EmbeddingResponse {
 Validate JSON data against a schema.
 
 ```typescript
-import { validateJson } from 'graphbit';
+import { validateJson } from '@infinitibit_gmbh/graphbit';
 
 const result = validateJson(
   JSON.stringify({ name: 'John', age: 30 }),
