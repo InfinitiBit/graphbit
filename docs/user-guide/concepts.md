@@ -73,7 +73,7 @@ openrouter_config = LlmConfig.openrouter(
 # DeepSeek
 deepseek_config = LlmConfig.deepseek(
     api_key="your-deepseek-key",
-    model="deepseek-chat"  # Optional, defaults to deepseek-chat
+    model="deepseek-chat"  # Required
 )
 
 # Fireworks AI
@@ -84,7 +84,7 @@ fireworks_config = LlmConfig.fireworks(
 
 # Ollama (local models)
 ollama_config = LlmConfig.ollama(
-    model="llama3.2"  # Optional, defaults to llama3.2
+    model="llama3.2"  # Required
 )
 ```
 
@@ -348,3 +348,4 @@ except Exception as e:
 - Explore [LLM Providers](llm-providers.md) for detailed provider configuration
 - Check [Embeddings](embeddings.md) for semantic operations
 - See [Performance](performance.md) for optimization techniques
+
