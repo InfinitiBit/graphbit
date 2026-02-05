@@ -42,7 +42,7 @@ Production-grade error handling is critical for reliable GraphBit applications. 
 ## Pattern 1: Basic Try-Catch
 
 ```javascript
-const { AgentBuilder, LlmConfig } = require('graphbit');
+const { AgentBuilder, LlmConfig } = require('@infinitibit_gmbh/graphbit');
 
 async function basicErrorHandling() {
   try {
@@ -461,7 +461,7 @@ try {
 ## Complete Example
 
 ```javascript
-const { AgentBuilder, LlmConfig } = require('graphbit');
+const { AgentBuilder, LlmConfig } = require('@infinitibit_gmbh/graphbit');
 
 class ProductionAgent {
   constructor(config, options = {}) {
