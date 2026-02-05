@@ -26,7 +26,7 @@
     "native"
   ],
   "author": "GraphBit Team",
-  "license": "SEE LICENSE IN ../LICENSE.md",
+  "license": "Apache-2.0",
   "engines": {
     "node": ">=16.0.0"
   },
