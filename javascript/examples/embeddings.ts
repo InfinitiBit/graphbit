@@ -4,7 +4,7 @@
  * This example demonstrates how to generate embeddings using different providers.
  */
 
-import { init, EmbeddingConfig, EmbeddingClient } from '@graphbit/core';
+import { init, EmbeddingConfig, EmbeddingClient } from 'graphbit';
 
 async function main() {
   // Initialize the GraphBit library
@@ -38,14 +38,14 @@ async function main() {
       console.log('✓ Embeddings generated successfully');
       console.log(`  Model: ${response.model}`);
       console.log(`  Number of embeddings: ${response.embeddings.length}`);
-      console.log(`  Embedding dimensions: ${response.embeddings[0].length}`);
+      console.log(`  Embedding dimensions: ${response.embeddings[0]!.length}`);
 
       if (response.usage) {
         console.log(`  Tokens used: ${response.usage.totalTokens}`);
       }
 
       // Show similarity between first two texts
-      const similarity = cosineSimilarity(response.embeddings[0], response.embeddings[1]);
+      const similarity = cosineSimilarity(response.embeddings[0]!, response.embeddings[1]!);
       console.log(`  Similarity between text 1 and 2: ${similarity.toFixed(4)}`);
     } catch (error) {
       console.error('Failed to generate OpenAI embeddings:', error);
@@ -72,7 +72,7 @@ async function main() {
       console.log('✓ Embeddings generated successfully');
       console.log(`  Model: ${response.model}`);
       console.log(`  Number of embeddings: ${response.embeddings.length}`);
-      console.log(`  Embedding dimensions: ${response.embeddings[0].length}`);
+      console.log(`  Embedding dimensions: ${response.embeddings[0]!.length}`);
     } catch (error) {
       console.error('Failed to generate HuggingFace embeddings:', error);
     }
