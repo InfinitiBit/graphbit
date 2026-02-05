@@ -558,7 +558,7 @@ spec:
 const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
-const { init, AgentBuilder, LlmConfig } = require('graphbit');
+const { init, AgentBuilder, LlmConfig } = require('@infinitibit_gmbh/graphbit');
 const config = require('./config');
 const logger = require('./logger');
 const metrics = require('./metrics');
