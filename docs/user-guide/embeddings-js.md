@@ -15,7 +15,8 @@ GraphBit's embedding system supports:
 ### OpenAI Configuration
 
 ```typescript
-import { EmbeddingConfig } from '@graphbit/core';
+import { EmbeddingConfig } from '@infinitibit_gmbh/graphbit';
+
 
 const config = EmbeddingConfig.openai(
   process.env.OPENAI_API_KEY || '',
@@ -26,7 +27,8 @@ const config = EmbeddingConfig.openai(
 ### HuggingFace Configuration
 
 ```typescript
-import { EmbeddingConfig } from '@graphbit/core';
+import { EmbeddingConfig } from '@infinitibit_gmbh/graphbit';
+
 
 const config = EmbeddingConfig.huggingface(
   process.env.HUGGINGFACE_API_KEY || '',
@@ -39,7 +41,8 @@ const config = EmbeddingConfig.huggingface(
 ### Creating Embedding Client
 
 ```typescript
-import { EmbeddingClient, EmbeddingConfig } from '@graphbit/core';
+import { EmbeddingClient, EmbeddingConfig } from '@infinitibit_gmbh/graphbit';
+
 
 const config = EmbeddingConfig.openai(
   process.env.OPENAI_API_KEY || ''
@@ -51,7 +54,8 @@ const client = new EmbeddingClient(config);
 ### Batch Text Embeddings
 
 ```typescript
-import { EmbeddingClient, EmbeddingConfig } from '@graphbit/core';
+import { EmbeddingClient, EmbeddingConfig } from '@infinitibit_gmbh/graphbit';
+
 
 const client = new EmbeddingClient(
   EmbeddingConfig.openai(process.env.OPENAI_API_KEY || '')
@@ -76,6 +80,20 @@ for (let i = 0; i < response.embeddings.length; i++) {
 }
 ```
 
+### Calculating Similarity
+
+GraphBit provides a helper method to calculate cosine similarity between two embeddings.
+
+```typescript
+import { EmbeddingClient } from '@infinitibit_gmbh/graphbit';
+
+// ... obtain embeddings as emb1, emb2
+
+const similarity = EmbeddingClient.similarity(emb1, emb2);
+console.log(`Similarity score: ${similarity}`); // 0.0 to 1.0 (or -1.0 to 1.0)
+```
+
+
 ## Response Format
 
 ```typescript
@@ -94,7 +112,8 @@ interface EmbeddingUsage {
 ##  Complete Example
 
 ```typescript
-import { EmbeddingClient, EmbeddingConfig } from '@graphbit/core';
+import { EmbeddingClient, EmbeddingConfig } from '@infinitibit_gmbh/graphbit';
+
 
 async function main() {
   // Create client
@@ -129,7 +148,8 @@ import {
   TextSplitter, 
   EmbeddingClient, 
   EmbeddingConfig 
-} from '@graphbit/core';
+} from '@infinitibit_gmbh/graphbit';
+
 
 async function embedDocument(text: string) {
   // Split large document
