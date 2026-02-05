@@ -467,20 +467,11 @@ async function registerCalculator() {
 
   const registry = new ToolRegistry();
 
-  await registry.register({
-    name: 'add',
-    description: 'Add two numbers',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        a: { type: 'number', description: 'First number' },
-        b: { type: 'number', description: 'Second number' }
-      },
-      required: ['a', 'b']
-    },
-    handler: async (params: any) => {
-      return { result: params.a + params.b };
-    }
+  registry.register('add', 'Add two numbers', {
+    a: { type: 'number' },
+    b: { type: 'number' }
+  }, (args: any) => {
+    return { result: args.a + args.b };
   });
 
   console.log('Tool registered');
@@ -495,19 +486,11 @@ async function executeTool() {
 
   const registry = new ToolRegistry();
 
-  await registry.register({
-    name: 'multiply',
-    description: 'Multiply two numbers',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        x: { type: 'number' },
-        y: { type: 'number' }
-      }
-    },
-    handler: async (params: any) => {
-      return params.x * params.y;
-    }
+  registry.register('multiply', 'Multiply two numbers', {
+    x: { type: 'number' },
+    y: { type: 'number' }
+  }, (args: any) => {
+    return args.x * args.y;
   });
 
   const result = await registry.execute('multiply', { x: 5, y: 3 });
@@ -523,24 +506,24 @@ async function listTools() {
 
   const registry = new ToolRegistry();
 
-  await registry.register({
-    name: 'tool1',
-    description: 'First tool',
-    inputSchema: { type: 'object', properties: {} },
-    handler: async () => 'result1'
+  // For sync tools, use register() directly
+  registry.register('tool1', 'First tool (sync)', {}, () => 'result1');
+
+  // For async tools, use registerAsync() for proper timing
+  // This ensures the Promise is handled correctly by the Rust core
+  registerAsync(registry, 'asyncTool', 'Async tool', {}, async () => {
+    await someAsyncOperation();
+    return 'result';
   });
 
-  await registry.register({
-    name: 'tool2',
-    description: 'Second tool',
-    inputSchema: { type: 'object', properties: {} },
-    handler: async () => 'result2'
-  });
+  registry.register('tool2', 'Second tool (sync)', {}, () => 'result2');
 
-  const tools = await registry.listTools();
+  const tools = registry.getRegisteredTools();
   console.log('Available tools:', tools);
 }
 ```
+
+> **Note:** For async callbacks (that use `await` or return Promises), always use `registerAsync()`. See [Tool Calling Guide](./tool-calling-js.md#async-callbacks-callback-id-pattern) for details.
 
 ## Results
 
@@ -605,7 +588,8 @@ import {
   Executor, 
   Workflow, 
   Node,
-  ToolRegistry 
+  ToolRegistry,
+  registerAsync 
 } from '@infinitibit_gmbh/graphbit';
 
 async function completeExample() {
@@ -623,23 +607,18 @@ async function completeExample() {
 
   // 4. Register tools
   const registry = new ToolRegistry();
-  await registry.register({
-    name: 'get_weather',
-    description: 'Get current weather for a location',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        location: { type: 'string' }
-      },
-      required: ['location']
-    },
-    handler: async (params: any) => {
-      return { 
-        location: params.location,
-        temperature: 72,
-        condition: 'sunny'
-      };
-    }
+  
+  // Register async tool
+  registerAsync(registry, 'get_weather', 'Get current weather for a location', {
+    location: { type: 'string' }
+  }, async (args: any) => {
+    // Simulate async API call
+    await new Promise(resolve => setTimeout(resolve, 100));
+    return { 
+      location: args.location,
+      temperature: 72,
+      condition: 'sunny'
+    };
   });
 
   // 5. Build workflow
