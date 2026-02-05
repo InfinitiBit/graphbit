@@ -27,7 +27,7 @@ GraphBit extracts content from multiple document formats for AI workflow process
 ## Quick Start
 
 ```typescript
-import { DocumentLoader } from '@graphbit/core';
+import { DocumentLoader } from '@infinitibit_gmbh/graphbit';
 
 const loader = new DocumentLoader();
 
@@ -47,7 +47,7 @@ console.log(`Loaded ${content.content.length} characters`);
 ### Load from Text
 
 ```typescript
-import { DocumentLoader } from '@graphbit/core';
+import { DocumentLoader } from '@infinitibit_gmbh/graphbit';
 
 const loader = new DocumentLoader();
 
@@ -64,7 +64,7 @@ console.log(content.documentType); // 'txt'
 ### Load from File
 
 ```typescript
-import { DocumentLoader } from '@graphbit/core';
+import { DocumentLoader } from '@infinitibit_gmbh/graphbit';
 
 const loader = new DocumentLoader();
 
@@ -85,7 +85,7 @@ console.log(`Metadata: ${content.metadata}`);
 ### Custom Configuration
 
 ```typescript
-import { DocumentLoader } from '@graphbit/core';
+import { DocumentLoader } from '@infinitibit_gmbh/graphbit';
 
 const loader = DocumentLoader.withConfig({
   maxFileSize: 50_000_000,      // 50MB limit
@@ -111,7 +111,7 @@ const content = await loader.loadFile('document.pdf', 'pdf');
 ### PDF Documents
 
 ```typescript
-import { DocumentLoader } from '@graphbit/core';
+import { DocumentLoader } from '@infinitibit_gmbh/graphbit';
 
 const loader = DocumentLoader.withConfig({
   preserveFormatting: true
@@ -129,7 +129,7 @@ if (content.metadata) {
 ### Text Files
 
 ```typescript
-import { DocumentLoader } from '@graphbit/core';
+import { DocumentLoader } from '@infinitibit_gmbh/graphbit';
 
 const loader = DocumentLoader.withConfig({
   defaultEncoding: 'utf-8'
@@ -142,7 +142,7 @@ console.log(content.content);
 ### Structured Data
 
 ```typescript
-import { DocumentLoader } from '@graphbit/core';
+import { DocumentLoader } from '@infinitibit_gmbh/graphbit';
 
 const loader = new DocumentLoader();
 
@@ -161,7 +161,7 @@ const xmlContent = await loader.loadFile('data.xml', 'xml');
 ## Batch Processing
 
 ```typescript
-import { DocumentLoader } from '@graphbit/core';
+import { DocumentLoader } from '@infinitibit_gmbh/graphbit';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -192,7 +192,7 @@ async function processDirectory(directory: string) {
 ## Error Handling
 
 ```typescript
-import { DocumentLoader } from '@graphbit/core';
+import { DocumentLoader } from '@infinitibit_gmbh/graphbit';
 import * as fs from 'fs';
 
 async function safeLoadDocument(filePath: string, maxSize = 50_000_000) {
@@ -250,7 +250,7 @@ async function safeLoadDocument(filePath: string, maxSize = 50_000_000) {
 ## Complete Example
 
 ```typescript
-import { DocumentLoader } from '@graphbit/core';
+import { DocumentLoader } from '@infinitibit_gmbh/graphbit';
 
 async function main() {
   // Create loader with configuration
