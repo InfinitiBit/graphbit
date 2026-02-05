@@ -86,6 +86,9 @@
   "files": [
     "index.js",
     "index.d.ts",
+    "graphbit.js",
+    "graphbit.d.ts",
+    "lib/",
     "README.md",
     "LICENSE.md"
   ],
