@@ -6,6 +6,8 @@ use napi_derive::napi;
 use napi::threadsafe_function::{ErrorStrategy, ThreadsafeFunction, ThreadsafeFunctionCallMode};
 use serde_json::Value;
 use serde::{Serialize, Deserialize};
+use tokio::sync::oneshot;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 /// Tool execution result
 #[napi(object)]
@@ -56,6 +58,17 @@ pub struct ToolStats {
 
 use graphbit_core::llm::LlmTool;
 
+/// Pending async result for callback ID pattern
+#[derive(Clone)]
+struct AsyncPendingResult {
+    result: Option<Value>,
+    error: Option<String>,
+    completed: bool,
+}
+
+/// Global counter for generating unique pending IDs
+static PENDING_ID_COUNTER: AtomicU64 = AtomicU64::new(1);
+
 struct RegisteredTool {
     definition: LlmTool,
     callback: ThreadsafeFunction<Value, ErrorStrategy::Fatal>,
@@ -66,6 +79,10 @@ struct RegisteredTool {
 pub struct ToolRegistry {
     tools: Arc<Mutex<HashMap<String, RegisteredTool>>>,
     execution_history: Arc<Mutex<Vec<ToolExecution>>>,
+    /// Pending results for async callbacks - stores resolved values by pending_id
+    pending_results: Arc<Mutex<HashMap<String, AsyncPendingResult>>>,
+    /// Notifiers for waiting tasks - oneshot senders by pending_id
+    pending_notifiers: Arc<Mutex<HashMap<String, oneshot::Sender<()>>>>,
 }
 
 // Internal implementation for Rust usage
@@ -74,6 +91,8 @@ impl ToolRegistry {
         Self {
             tools: Arc::new(Mutex::new(HashMap::new())),
             execution_history: Arc::new(Mutex::new(Vec::new())),
+            pending_results: Arc::new(Mutex::new(HashMap::new())),
+            pending_notifiers: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
@@ -145,10 +164,82 @@ impl ToolRegistry {
 
         let start = std::time::Instant::now();
         
-        let result: napi::Result<Value> = tool.call_async(args).await;
+        // Generate unique pending ID for callback identification
+        let pending_id = format!("pending_{}", PENDING_ID_COUNTER.fetch_add(1, Ordering::SeqCst));
+        
+        // Create oneshot channel for async notification
+        let (tx, rx) = oneshot::channel::<()>();
+        
+        // Store the notifier
+        {
+            let mut notifiers = self.pending_notifiers.lock()
+                .map_err(|_| napi::Error::from_reason("Failed to lock notifiers"))?;
+            notifiers.insert(pending_id.clone(), tx);
+        }
+        
+        // Wrap args with pending_id so JS knows how to call back
+        let wrapper_args = serde_json::json!({
+            "__pendingId": pending_id,
+            "__originalArgs": args
+        });
+        
+        // Call the JavaScript function
+        let immediate_result: napi::Result<Value> = tool.call_async(wrapper_args).await;
+        
+        // Check if the result indicates a pending async operation
+        let (final_result, is_pending) = match &immediate_result {
+            Ok(val) => {
+                // Check if this is a pending marker from the JS wrapper
+                if let Some(obj) = val.as_object() {
+                    if obj.get("__pending").and_then(|v| v.as_bool()) == Some(true) {
+                        (None, true)
+                    } else {
+                        // Direct result (sync callback)
+                        (Some(val.clone()), false)
+                    }
+                } else {
+                    // Primitive result (sync callback)
+                    (Some(val.clone()), false)
+                }
+            }
+            Err(_) => (None, false),
+        };
+        
+        let resolved_result = if is_pending {
+            // Wait for JS to call set_pending_result
+            let _ = rx.await;
+            
+            // Retrieve the pending result
+            let mut pending = self.pending_results.lock()
+                .map_err(|_| napi::Error::from_reason("Failed to lock pending results"))?;
+            
+            if let Some(result) = pending.remove(&pending_id) {
+                if let Some(err) = result.error {
+                    Err(napi::Error::from_reason(err))
+                } else {
+                    Ok(result.result.unwrap_or(Value::Null))
+                }
+            } else {
+                Err(napi::Error::from_reason("Pending result not found"))
+            }
+        } else {
+            // Clean up notifier for sync path
+            {
+                let mut notifiers = self.pending_notifiers.lock()
+                    .map_err(|_| napi::Error::from_reason("Failed to lock notifiers"))?;
+                notifiers.remove(&pending_id);
+            }
+            
+            // Use immediate result
+            match (final_result, immediate_result) {
+                (Some(val), _) => Ok(val),
+                (None, Ok(val)) => Ok(val),
+                (None, Err(e)) => Err(e),
+            }
+        };
         
         let duration = start.elapsed().as_secs_f64() * 1000.0;
-        let success = result.is_ok();
+        let success = resolved_result.is_ok();
 
         // Update metadata
         {
@@ -175,7 +266,7 @@ impl ToolRegistry {
             history.push(execution);
         }
 
-        match result {
+        match resolved_result {
             Ok(val) => Ok(ToolResult {
                 success: true,
                 result: val,
@@ -189,6 +280,46 @@ impl ToolRegistry {
                 execution_time_ms: duration,
             }),
         }
+    }
+
+    /// Set the result for a pending async callback
+    /// 
+    /// Called from JavaScript when an async callback's Promise resolves.
+    /// This stores the result and wakes the waiting Rust task.
+    ///
+    /// # Arguments
+    /// * `pending_id` - The pending ID that was passed to the callback
+    /// * `result` - The resolved result value (null if error)
+    /// * `error` - Optional error message if the Promise rejected
+    #[napi]
+    pub fn set_pending_result(
+        &self,
+        pending_id: String,
+        #[napi(ts_arg_type = "any")]
+        result: Option<Value>,
+        error: Option<String>,
+    ) -> napi::Result<()> {
+        // Store the result
+        {
+            let mut pending = self.pending_results.lock()
+                .map_err(|_| napi::Error::from_reason("Failed to lock pending results"))?;
+            pending.insert(pending_id.clone(), AsyncPendingResult {
+                result,
+                error,
+                completed: true,
+            });
+        }
+        
+        // Notify the waiting task
+        {
+            let mut notifiers = self.pending_notifiers.lock()
+                .map_err(|_| napi::Error::from_reason("Failed to lock notifiers"))?;
+            if let Some(tx) = notifiers.remove(&pending_id) {
+                let _ = tx.send(()); // Ignore send errors (task may have timed out)
+            }
+        }
+        
+        Ok(())
     }
 
     #[napi]
