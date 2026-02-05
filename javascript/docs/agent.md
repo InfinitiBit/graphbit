@@ -20,6 +20,7 @@ Create a new agent builder.
 
 ```typescript
 constructor(name: string, llmConfig: LlmConfig)
+
 ```
 
 **Parameters:**
@@ -30,7 +31,7 @@ constructor(name: string, llmConfig: LlmConfig)
 ### 🟢 Verified Example
 
 ```javascript
-const { AgentBuilder, LlmConfig } = require('graphbit');
+const { AgentBuilder, LlmConfig } = require('@infinitibit_gmbh/graphbit');
 
 const llmConfig = LlmConfig.openai({
   apiKey: process.env.OPENAI_API_KEY,
@@ -325,7 +326,7 @@ console.log('Max tokens:', config.maxTokens);
 ### 🟢 Verified End-to-End Example
 
 ```javascript
-const { AgentBuilder, LlmConfig } = require('graphbit');
+const { AgentBuilder, LlmConfig } = require('@infinitibit_gmbh/graphbit');
 
 async function createQAAgent() {
   // 1. Configure LLM
@@ -366,7 +367,7 @@ createQAAgent().catch(console.error);
 ### Example 2: Code Review Agent
 
 ```javascript
-const { AgentBuilder, LlmConfig } = require('graphbit');
+const { AgentBuilder, LlmConfig } = require('@infinitibit_gmbh/graphbit');
 
 async function createCodeReviewAgent() {
   const llmConfig = LlmConfig.openai({
@@ -414,7 +415,7 @@ function processUsers(users) {
 ### Example 3: Multi-Agent Conversation
 
 ```javascript
-const { AgentBuilder, LlmConfig } = require('graphbit');
+const { AgentBuilder, LlmConfig } = require('@infinitibit_gmbh/graphbit');
 
 async function multiAgentConversation() {
   const llmConfig = LlmConfig.anthropic({
@@ -471,7 +472,7 @@ async function multiAgentConversation() {
 ### Example 4: Agent with Tool Integration
 
 ```javascript
-const { AgentBuilder, LlmConfig } = require('graphbit');
+const { AgentBuilder, LlmConfig } = require('@infinitibit_gmbh/graphbit');
 
 async function createToolAwareAgent() {
   const llmConfig = LlmConfig.openai({
