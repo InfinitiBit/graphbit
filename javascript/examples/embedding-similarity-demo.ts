@@ -33,16 +33,16 @@ async function main() {
   console.log('-'.repeat(70));
   const texts1 = ['cat', 'dog', 'car'];
   console.log('Generating embeddings for:', texts1);
-  
+
   const response1 = await client.embed(texts1);
-  const catEmb = response1.embeddings[0];
-  const dogEmb = response1.embeddings[1];
-  const carEmb = response1.embeddings[2];
-  
-  const catDogSim = EmbeddingClient.similarity(catEmb, dogEmb);
-  const catCarSim = EmbeddingClient.similarity(catEmb, carEmb);
-  const dogCarSim = EmbeddingClient.similarity(dogEmb, carEmb);
-  
+  const catEmb = response1.embeddings[0]!;
+  const dogEmb = response1.embeddings[1]!;
+  const carEmb = response1.embeddings[2]!;
+
+  const catDogSim = EmbeddingClient.similarity(catEmb!, dogEmb!);
+  const catCarSim = EmbeddingClient.similarity(catEmb!, carEmb!);
+  const dogCarSim = EmbeddingClient.similarity(dogEmb!, carEmb!);
+
   console.log(`\n📊 Similarity Scores:`);
   console.log(`  Cat ↔ Dog: ${catDogSim.toFixed(4)} (animals - should be high)`);
   console.log(`  Cat ↔ Car: ${catCarSim.toFixed(4)} (unrelated - should be low)`);
@@ -60,26 +60,26 @@ async function main() {
     'I like to eat pizza',
     'Neural networks are inspired by the human brain'
   ];
-  
+
   console.log(`Query: "${query}"`);
   console.log(`\nSearching through ${documents.length} documents...\n`);
-  
+
   // Generate embeddings
   const allTexts = [query, ...documents];
   const response2 = await client.embed(allTexts);
-  const queryEmb = response2.embeddings[0];
+  const queryEmb = response2.embeddings[0]!;
   const docEmbs = response2.embeddings.slice(1);
-  
+
   // Calculate similarities and rank
   const results = documents.map((doc, idx) => ({
     document: doc,
-    score: EmbeddingClient.similarity(queryEmb, docEmbs[idx])
+    score: EmbeddingClient.similarity(queryEmb, docEmbs[idx]!)
   }));
-  
+
   results.sort((a, b) => b.score - a.score);
-  
+
   console.log('📊 Search Results (ranked by relevance):');
-  results.forEach((result, idx) => {
+  results.forEach((result: any, idx) => {
     const bar = '█'.repeat(Math.round(result.score * 20));
     console.log(`\n${idx + 1}. Score: ${result.score.toFixed(4)} ${bar}`);
     console.log(`   "${result.document}"`);
@@ -94,22 +94,22 @@ async function main() {
     'car', 'truck', 'bus',             // Vehicles
     'dog', 'cat', 'hamster'            // Animals
   ];
-  
+
   console.log('Items to cluster:', items.join(', '));
   console.log('\nGenerating embeddings...');
-  
+
   const response3 = await client.embed(items);
-  
+
   console.log('\n📊 Similarity Matrix:\n');
   console.log('         ', items.map(i => i.slice(0, 6).padEnd(6)).join(' '));
-  
+
   for (let i = 0; i < items.length; i++) {
-    const row = items[i].slice(0, 8).padEnd(8);
+    const row = items[i]!.slice(0, 8).padEnd(8);
     const sims = items.map((_, j) => {
       if (i === j) return '1.0000';
       const sim = EmbeddingClient.similarity(
-        response3.embeddings[i],
-        response3.embeddings[j]
+        response3.embeddings[i]!,
+        response3.embeddings[j]!
       );
       return sim.toFixed(4);
     });
@@ -126,20 +126,20 @@ async function main() {
     'The weather is nice today',                  // Different
     'The quick brown fox jumps over the lazy dog' // Exact duplicate
   ];
-  
+
   console.log('Detecting duplicates and near-duplicates...\n');
   const response4 = await client.embed(texts4);
-  
+
   const threshold = 0.95;
   console.log(`Using similarity threshold: ${threshold}\n`);
-  
+
   for (let i = 0; i < texts4.length; i++) {
     for (let j = i + 1; j < texts4.length; j++) {
       const sim = EmbeddingClient.similarity(
-        response4.embeddings[i],
-        response4.embeddings[j]
+        response4.embeddings[i]!,
+        response4.embeddings[j]!
       );
-      
+
       if (sim > threshold) {
         console.log(`🔍 Similar pair found (${sim.toFixed(4)}):`);
         console.log(`   [${i}] "${texts4[i]}"`);
@@ -161,27 +161,27 @@ async function main() {
     'Cooking recipes',
     'Apollo 13'
   ];
-  
+
   console.log('User likes:', userLikes.join(', '));
   console.log(`\nFinding recommendations from ${recommendations.length} items...\n`);
-  
+
   const response5 = await client.embed([...userLikes, ...recommendations]);
   const userEmbs = response5.embeddings.slice(0, userLikes.length);
   const recEmbs = response5.embeddings.slice(userLikes.length);
-  
+
   // Calculate average similarity to user preferences
   const scores = recommendations.map((rec, idx) => {
-    const sims = userEmbs.map(userEmb => 
-      EmbeddingClient.similarity(userEmb, recEmbs[idx])
+    const sims = userEmbs.map(userEmb =>
+      EmbeddingClient.similarity(userEmb!, recEmbs[idx]!)
     );
     const avgSim = sims.reduce((a, b) => a + b, 0) / sims.length;
     return { recommendation: rec, score: avgSim };
   });
-  
+
   scores.sort((a, b) => b.score - a.score);
-  
+
   console.log('📊 Recommendations (ranked):');
-  scores.forEach((item, idx) => {
+  scores.forEach((item: any, idx) => {
     const stars = '⭐'.repeat(Math.round(item.score * 5));
     console.log(`${idx + 1}. ${stars} (${item.score.toFixed(4)})`);
     console.log(`   "${item.recommendation}"`);
@@ -191,27 +191,27 @@ async function main() {
   // Example 6: Edge Cases
   console.log('Example 6: Edge Cases & Validation');
   console.log('-'.repeat(70));
-  
+
   console.log('Testing error handling...\n');
-  
+
   try {
     console.log('1. Empty embeddings:');
     EmbeddingClient.similarity([], [1, 2, 3]);
   } catch (error) {
     console.log(`   ✅ Caught: ${error}`);
   }
-  
+
   try {
     console.log('2. Mismatched lengths:');
     EmbeddingClient.similarity([1, 2], [1, 2, 3]);
   } catch (error) {
     console.log(`   ✅ Caught: ${error}`);
   }
-  
+
   console.log('3. High-dimensional vectors (1536d):');
   const highDim1 = Array(1536).fill(0).map(() => Math.random());
   const highDim2 = Array(1536).fill(0).map(() => Math.random());
-  const highDimSim = EmbeddingClient.similarity(highDim1, highDim2);
+  const highDimSim = EmbeddingClient.similarity(highDim1!, highDim2!);
   console.log(`   ✅ Calculated: ${highDimSim.toFixed(4)}`);
   console.log();
 
