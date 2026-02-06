@@ -90,7 +90,8 @@ jemallocator.workspace = true
 [workspace]
 members = [
   "core",
-  "python"
+  "python",
+  "javascript"
 ]
 resolver = "2"
 
@@ -102,6 +103,10 @@ resolver = "2"
 [workspace.dependencies]
 # Core dependencies with consistent versions
 anyhow = "1.0"
+# NAPI-RS bindings for JavaScript
+napi = { version = "2", features = ["async", "serde-json", "napi6"] }
+napi-derive = "2"
+napi-build = "2"
 async-trait = "0.1.88"
 chrono = {version = "0.4", features = ["serde"]}
 # CSV and XML parsing
@@ -129,6 +134,7 @@ quick-xml = {version = "0.36", features = ["serialize"]}
 rand = "0.8"
 regex = "1.10"
 reqwest = {version = "0.11", features = ["json", "stream"]}
+rusqlite = { version = "0.31", features = ["bundled"] }
 # HTML parsing
 scraper = "0.20"
 serde = {version = "1.0", features = ["derive"]}
