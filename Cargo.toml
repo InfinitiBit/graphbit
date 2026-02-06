@@ -103,6 +103,8 @@ resolver = "2"
 # Core dependencies with consistent versions
 anyhow = "1.0"
 async-trait = "0.1.88"
+# Excel parsing (including XLSB support)
+calamine = "0.26"
 chrono = {version = "0.4", features = ["serde"]}
 # CSV and XML parsing
 csv = "1.3"

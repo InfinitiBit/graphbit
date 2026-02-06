@@ -4,6 +4,7 @@
 //! document formats including PDF, TXT, Word, JSON, CSV, XML, and HTML.
 
 use crate::errors::{GraphBitError, GraphBitResult};
+use calamine::Data;
 use csv::ReaderBuilder;
 use quick_xml::events::Event;
 use quick_xml::Reader;
@@ -80,7 +81,9 @@ impl DocumentLoader {
         document_type: &str,
     ) -> GraphBitResult<DocumentContent> {
         // Validate document type
-        let supported_types = ["pdf", "txt", "docx", "json", "csv", "xml", "html"];
+        let supported_types = [
+            "pdf", "txt", "docx", "json", "csv", "xml", "html", "xlsb", "xlsx", "xls",
+        ];
         if !supported_types.contains(&document_type.to_lowercase().as_str()) {
             return Err(GraphBitError::validation(
                 "document_loader",
@@ -150,6 +153,7 @@ impl DocumentLoader {
             "csv" => Self::extract_csv_content(file_path).await?,
             "xml" => Self::extract_xml_content(file_path).await?,
             "html" => Self::extract_html_content(file_path).await?,
+            "xlsb" | "xlsx" | "xls" => Self::extract_excel_content(file_path).await?,
             _ => {
                 return Err(GraphBitError::validation(
                     "document_loader",
@@ -747,9 +751,66 @@ impl DocumentLoader {
         Ok(text_content.trim().to_string())
     }
 
+    /// Extract content from Excel (XLSB, XLSX, XLS,etc.) files
+    async fn extract_excel_content(file_path: &str) -> GraphBitResult<String> {
+        use calamine::{open_workbook_auto, Reader};
+
+        let mut workbook = open_workbook_auto(file_path).map_err(|e| {
+            GraphBitError::validation(
+                "document_loader",
+                format!("Failed to open Excel file {}: {}", file_path, e),
+            )
+        })?;
+
+        let mut result = String::new();
+        result.push_str("Excel Document Content:\n\n");
+
+        let sheet_names = workbook.sheet_names().to_vec();
+        for sheet_name in sheet_names {
+            if let Ok(range) = workbook.worksheet_range(&sheet_name) {
+                writeln!(result, "Sheet: {}", sheet_name).unwrap();
+                result.push_str("-".repeat(sheet_name.len() + 7).as_str());
+                result.push('\n');
+
+                for row in range.rows() {
+                    let row_str = row
+                        .iter()
+                        .map(|cell| match cell {
+                            Data::Empty => "".to_string(),
+                            Data::String(s) => s.clone(),
+                            Data::Float(f) => f.to_string(),
+                            Data::Int(i) => i.to_string(),
+                            Data::Bool(b) => b.to_string(),
+                            Data::DateTime(d) => d.to_string(),
+                            Data::Error(e) => format!("Error({:?})", e),
+                            _ => "".to_string(),
+                        })
+                        .collect::<Vec<_>>()
+                        .join(" | ");
+
+                    if !row_str.trim().is_empty() {
+                        writeln!(result, "{}", row_str).unwrap();
+                    }
+                }
+                result.push('\n');
+            }
+        }
+
+        if result.trim().is_empty() {
+            return Err(GraphBitError::validation(
+                "document_loader",
+                "No content could be extracted from the Excel file",
+            ));
+        }
+
+        Ok(result.trim().to_string())
+    }
+
     /// Get supported document types
     pub fn supported_types() -> Vec<&'static str> {
-        vec!["txt", "pdf", "docx", "json", "csv", "xml", "html"]
+        vec![
+            "txt", "pdf", "docx", "json", "csv", "xml", "html", "xlsb", "xlsx", "xls",
+        ]
     }
 }
 
