@@ -291,9 +291,9 @@ Para procedimientos detallados de reporte y plazos de respuesta, consulte nuestr
 
 ## Licencia
 
-GraphBit está licenciado bajo un modelo de tres niveles: **Modelo A (Uso Gratuito)** para individuos, instituciones académicas y equipos pequeños (hasta 10 empleados/usuarios), **Modelo B (Prueba Gratuita)** para evaluación de 30 días, y **Modelo C (Empresarial)** para uso comercial/producción. La redistribución está prohibida bajo todos los modelos sin una Licencia Empresarial explícita.
+El proyecto GraphBit está licenciado bajo la Licencia Apache, versión 2.0.
 
-Para términos y condiciones completos, consulte la [Full License](LICENSE.md).
+Para conocer los términos y condiciones completos, consulte la [Full License](LICENSE.md).
 
 Copyright © 2023–2026 InfinitiBit GmbH. All rights reserved.
 

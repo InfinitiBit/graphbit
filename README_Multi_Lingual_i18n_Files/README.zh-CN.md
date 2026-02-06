@@ -291,9 +291,9 @@ GraphBit 由一个优秀的研究人员和工程师社区构建。
 
 ## 许可证
 
-GraphBit 采用三层许可模式：**模式 A（免费使用）** 适用于个人、学术机构和小型团队（最多 10 名员工/用户），**模式 B（免费试用）** 适用于 30 天评估，**模式 C（企业版）** 适用于商业/生产使用。未经明确的企业许可证，所有模式下均禁止重新分发。
+GraphBit 项目遵循 Apache 许可证 2.0 版本。
 
-完整条款和条件，请参阅 [Full License](LICENSE.md)。
+有关完整条款和条件，请参阅 [完整许可证](LICENSE.md)。
 
 Copyright © 2023–2026 InfinitiBit GmbH. All rights reserved.
 

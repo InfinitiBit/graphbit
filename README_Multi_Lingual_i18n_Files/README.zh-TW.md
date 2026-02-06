@@ -291,9 +291,9 @@ GraphBit 由一個優秀的研究人員和工程師社群建立。
 
 ## 授權
 
-GraphBit 採用三層授權模式：**模式 A（免費使用）** 適用於個人、學術機構和小型團隊（最多 10 名員工/使用者），**模式 B（免費試用）** 適用於 30 天評估，**模式 C（企業版）** 適用於商業/生產使用。未經明確的企業授權，所有模式下均禁止重新分發。
+GraphBit 專案依 Apache License, Version 2.0 授權。
 
-完整條款和條件，請參閱 [Full License](LICENSE.md)。
+完整條款與條件請參閱 [完整授權](LICENSE.md)。
 
 Copyright © 2023–2026 InfinitiBit GmbH. All rights reserved.
 

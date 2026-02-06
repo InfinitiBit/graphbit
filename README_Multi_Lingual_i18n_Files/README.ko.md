@@ -291,9 +291,9 @@ GraphBit은 훌륭한 연구자 및 엔지니어 커뮤니티에 의해 구축�
 
 ## 라이선스
 
-GraphBit은 3단계 모델로 라이선스가 부여됩니다: **모델 A(무료 사용)**는 개인, 학술 기관 및 소규모 팀(최대 10명의 직원/사용자)용, **모델 B(무료 평가판)**는 30일 평가용, **모델 C(엔터프라이즈)**는 상업/프로덕션 사용용입니다. 명시적인 엔터프라이즈 라이선스 없이는 모든 모델에서 재배포가 금지됩니다.
+GraphBit 프로젝트는 Apache License, Version 2.0 하에 라이선스되었습니다.
 
-전체 이용 약관은 [Full License](LICENSE.md)를 참조하세요.
+전체 약관은 [전체 라이선스](LICENSE.md)에서 확인하십시오.
 
 Copyright © 2023–2026 InfinitiBit GmbH. All rights reserved.
 
