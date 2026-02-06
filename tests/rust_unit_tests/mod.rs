@@ -1,5 +1,6 @@
 mod agent_comprehensive_tests;
 mod agent_tests;
+mod memory_tests;
 mod azurellm_tests;
 mod concurrency_comprehensive_tests;
 mod document_loader_unit_tests;
