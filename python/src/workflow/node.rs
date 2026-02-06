@@ -988,7 +988,7 @@ pub(crate) fn execute_production_tool_calls(
         Ok::<(), PyErr>(())
     })?;
 
-    let mut results = Vec::new();
+    let mut tool_execution_results = Vec::new();
 
     // Execute each tool call
     for tool_call in tool_calls.iter() {
@@ -998,41 +998,91 @@ pub(crate) fn execute_production_tool_calls(
         ) {
             // Convert parameters to PyDict
             let params_dict = pyo3::types::PyDict::new(py);
+            let mut param_conversion_error = None;
+
             for (key, value) in parameters {
                 match json_to_python_value(value, py) {
                     Ok(py_value) => {
-                        params_dict.set_item(key, py_value)?;
+                        if let Err(e) = params_dict.set_item(key, py_value) {
+                            param_conversion_error =
+                                Some(format!("Failed to set parameter '{}': {}", key, e));
+                            break;
+                        }
                     }
                     Err(e) => {
-                        results.push(format!(
-                            "{}: Error - Parameter conversion failed: {}",
-                            tool_name, e
-                        ));
-                        continue;
+                        param_conversion_error =
+                            Some(format!("Failed to convert parameter '{}': {}", key, e));
+                        break;
                     }
                 }
             }
 
+            if let Some(error) = param_conversion_error {
+                tool_execution_results.push(serde_json::json!({
+                    "tool_name": tool_name,
+                    "output": "",
+                    "success": false,
+                    "error": error
+                }));
+                continue;
+            }
+
+            // Capture start time
+            let start_time = chrono::Utc::now();
+            let start_instant = std::time::Instant::now();
+
             // Execute the tool
-            match registry.execute_tool(tool_name, &params_dict, py) {
+            let result_json = match registry.execute_tool(tool_name, &params_dict, py) {
                 Ok(tool_result) => {
-                    if tool_result.success {
-                        results.push(format!("{}: {}", tool_name, tool_result.output));
-                    } else {
-                        let error_msg = tool_result
-                            .error
-                            .unwrap_or_else(|| "Unknown error".to_string());
-                        results.push(format!("{}: Error - {}", tool_name, error_msg));
-                    }
+                    let end_time = chrono::Utc::now();
+                    let duration = start_instant.elapsed();
+                    let duration_ms = duration.as_millis() as u64;
+
+                    serde_json::json!({
+                        "tool_name": tool_name,
+                        "output": tool_result.output,
+                        "success": tool_result.success,
+                        "error": tool_result.error,
+                        "start_time": start_time.to_rfc3339(),
+                        "end_time": end_time.to_rfc3339(),
+                        "latency_ms": duration_ms
+                    })
                 }
                 Err(e) => {
-                    results.push(format!("{}: Error - {}", tool_name, e));
+                    let end_time = chrono::Utc::now();
+                    let duration = start_instant.elapsed();
+                    let duration_ms = duration.as_millis() as u64;
+
+                    serde_json::json!({
+                        "tool_name": tool_name,
+                        "output": "",
+                        "success": false,
+                        "error": e.to_string(),
+                        "start_time": start_time.to_rfc3339(),
+                        "end_time": end_time.to_rfc3339(),
+                        "latency_ms": duration_ms
+                    })
                 }
-            }
+            };
+
+            tool_execution_results.push(result_json);
         } else {
-            results.push("Error: Invalid tool call format".to_string());
+            tool_execution_results.push(serde_json::json!({
+                "tool_name": "unknown",
+                "output": "",
+                "success": false,
+                "error": "Invalid tool call format",
+                "start_time": chrono::Utc::now().to_rfc3339(),
+                "end_time": chrono::Utc::now().to_rfc3339(),
+                "latency_ms": 0
+            }));
         }
     }
 
-    Ok(results.join("\n"))
+    serde_json::to_string(&tool_execution_results).map_err(|e| {
+        PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+            "Failed to serialize tool results: {}",
+            e
+        ))
+    })
 }
