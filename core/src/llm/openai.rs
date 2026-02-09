@@ -214,7 +214,7 @@ impl LlmProviderTrait for OpenAiProvider {
         let body = OpenAiRequest {
             model: self.model.clone(),
             messages,
-            max_tokens: request.max_tokens,
+            max_completion_tokens: request.max_tokens,
             temperature: request.temperature,
             top_p: request.top_p,
             tools: tools.clone(),
@@ -295,7 +295,7 @@ impl LlmProviderTrait for OpenAiProvider {
         let body = OpenAiRequest {
             model: self.model.clone(),
             messages,
-            max_tokens: request.max_tokens,
+            max_completion_tokens: request.max_tokens,
             temperature: request.temperature,
             top_p: request.top_p,
             tools: tools.clone(),
@@ -591,7 +591,7 @@ struct OpenAiRequest {
     model: String,
     messages: Vec<OpenAiMessage>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    max_tokens: Option<u32>,
+    max_completion_tokens: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     temperature: Option<f32>,
     #[serde(skip_serializing_if = "Option::is_none")]
