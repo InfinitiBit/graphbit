@@ -146,9 +146,8 @@ impl Agent {
         let is_python_bridge = false;
 
         if !is_python_bridge {
-            // Use max_tokens=10 for validation to accommodate reasoning models (GPT-5, o1, o3)
-            // which need extra tokens for internal reasoning before producing visible output
-            let test_request = LlmRequest::new("test").with_max_tokens(10);
+            // Use a small prompt for validation.
+            let test_request = LlmRequest::new("Hello");
             if let Err(e) = llm_provider.complete(test_request).await {
                 return Err(crate::errors::GraphBitError::config(format!(
                     "LLM configuration validation failed: {e}"
