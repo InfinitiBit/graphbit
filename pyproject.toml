@@ -9,7 +9,7 @@ authors = [
 classifiers = [
   "Development Status :: 4 - Beta",
   "Intended Audience :: Developers",
-  "License :: InfinitiBit Approved :: Custom License",
+  "License :: OSI Approved :: Apache Software License",
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3",
@@ -42,7 +42,7 @@ maintainers = [
 name = "graphbit"
 readme = "README.md"
 requires-python = ">=3.9,<3.14"
-version = "0.6.1"
+version = "0.6.2"
 
 [project.urls]
 "Bug Tracker" = "https://github.com/InfinitiBit/graphbit/issues"
@@ -154,7 +154,7 @@ name = "graphbit"
 package-mode = false
 readme = "README.md"
 repository = "https://github.com/InfinitiBit/graphbit"
-version = "0.6.1"
+version = "0.6.2"
 
 [tool.poetry.dependencies]
 # Core dependencies - minimal for framework functionality
