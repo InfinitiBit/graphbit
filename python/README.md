@@ -28,7 +28,7 @@
     <br>
     <a href="https://www.rust-lang.org"><img src="https://img.shields.io/badge/rust-1.70+-orange.svg?logo=rust" alt="Rust Version"></a>
     <a href="https://www.python.org"><img src="https://img.shields.io/badge/python-3.9--3.13-blue.svg?logo=python&logoColor=white" alt="Python Version"></a>
-    <a href="https://github.com/InfinitiBit/graphbit/blob/main/LICENSE.md"><img src="https://img.shields.io/badge/license-Custom-lightgrey.svg" alt="License"></a>
+    <a href="https://github.com/InfinitiBit/graphbit/blob/main/LICENSE.md"><img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License"></a>
 
 </p>
 <p align="center">
@@ -255,7 +255,7 @@ For detailed reporting procedures and response timelines, see our [Security Poli
 
 ## License
 
-GraphBit package is licensed under the Apache License, Version 2.0.
+GraphBit is licensed under the Apache License, Version 2.0.
 
 For complete terms and conditions, see the [Full License](https://github.com/InfinitiBit/graphbit/blob/main/LICENSE.md).
 
