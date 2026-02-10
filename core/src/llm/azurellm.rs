@@ -154,18 +154,74 @@ impl AzureLlmProvider {
             Vec::new()
         };
 
-        Ok(LlmResponse::new(
-            choice.message.content.unwrap_or_default(),
-            &self.deployment_name,
-        )
-        .with_tool_calls(tool_calls)
-        .with_finish_reason(finish_reason)
-        .with_usage(LlmUsage {
-            prompt_tokens: response.usage.prompt_tokens,
-            completion_tokens: response.usage.completion_tokens,
-            total_tokens: response.usage.total_tokens,
-        })
-        .with_id(response.id))
+        // Handle Azure's null/empty content bug
+        // When finish_reason is "length" or "content_filter", Azure returns EMPTY STRING (not null!)
+        // despite consuming completion tokens. This is a known Azure API quirk.
+        let has_content = choice
+            .message
+            .content
+            .as_ref()
+            .map(|s| !s.is_empty())
+            .unwrap_or(false);
+        let content_value = choice.message.content.unwrap_or_default();
+
+        let content = if has_content {
+            // Normal case: content exists and is not empty
+            tracing::debug!("Azure response has content: {} chars", content_value.len());
+            content_value
+        } else if response.usage.completion_tokens > 0 {
+            // Bug case: empty/null content but tokens were used
+            match &finish_reason {
+                FinishReason::Length => {
+                    tracing::warn!(
+                        "Azure API returned empty content despite using {} completion tokens (finish_reason: Length). \
+                        This typically occurs with very low max_tokens limits. Consider increasing max_tokens for better results.",
+                        response.usage.completion_tokens
+                    );
+                    let msg = format!(
+                        "[Azure API used {} tokens but returned no content. This occurs when max_tokens is set too low. \
+                        The model may have started generating a response but was cut off before producing visible text. \
+                        Increase max_tokens for meaningful output.]",
+                        response.usage.completion_tokens
+                    );
+                    tracing::debug!("Returning Azure empty content message");
+                    msg
+                }
+                FinishReason::ContentFilter => {
+                    tracing::warn!(
+                        "Azure API filtered content after using {} tokens",
+                        response.usage.completion_tokens
+                    );
+                    "[Content was filtered by Azure's content policy]".to_string()
+                }
+                FinishReason::ToolCalls => {
+                    // Tool calls typically have no content - this is expected
+                    tracing::debug!("Tool calls response - no content expected");
+                    String::new()
+                }
+                _ => {
+                    tracing::debug!(
+                        "Azure empty content - other case: finish_reason={:?}, tokens={}",
+                        finish_reason,
+                        response.usage.completion_tokens
+                    );
+                    String::new()
+                }
+            }
+        } else {
+            // No content and no tokens - truly empty response
+            String::new()
+        };
+
+        Ok(LlmResponse::new(content, &self.deployment_name)
+            .with_tool_calls(tool_calls)
+            .with_finish_reason(finish_reason)
+            .with_usage(LlmUsage {
+                prompt_tokens: response.usage.prompt_tokens,
+                completion_tokens: response.usage.completion_tokens,
+                total_tokens: response.usage.total_tokens,
+            })
+            .with_id(response.id))
     }
 }
 

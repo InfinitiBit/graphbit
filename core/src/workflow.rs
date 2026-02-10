@@ -1147,6 +1147,32 @@ impl WorkflowExecutor {
             request = request.with_tool(tool.clone());
         }
 
+        // Apply node-level configuration overrides (temperature, max_tokens, top_p)
+        // This ensures the initial tool selection LLM call respects node configuration
+        if let Some(temp_value) = node_config.get("temperature") {
+            if let Some(temp_num) = temp_value.as_f64() {
+                request = request.with_temperature(temp_num as f32);
+                tracing::debug!("Applied temperature={} to tool selection request", temp_num);
+            }
+        }
+
+        if let Some(max_tokens_value) = node_config.get("max_tokens") {
+            if let Some(max_tokens_num) = max_tokens_value.as_u64() {
+                request = request.with_max_tokens(max_tokens_num as u32);
+                tracing::debug!(
+                    "Applied max_tokens={} to tool selection request",
+                    max_tokens_num
+                );
+            }
+        }
+
+        if let Some(top_p_value) = node_config.get("top_p") {
+            if let Some(top_p_num) = top_p_value.as_f64() {
+                request = request.with_top_p(top_p_num as f32);
+                tracing::debug!("Applied top_p={} to tool selection request", top_p_num);
+            }
+        }
+
         tracing::info!("Created LLM request with {} tools", request.tools.len());
         for (i, tool) in request.tools.iter().enumerate() {
             tracing::info!("Tool {i}: {} - {}", tool.name, tool.description);
@@ -1225,11 +1251,14 @@ impl WorkflowExecutor {
             })?;
 
             // Return a structured response that the Python layer can interpret
+            // Include token usage for budget tracking
             Ok(serde_json::json!({
                 "type": "tool_calls_required",
                 "content": llm_response.content,
                 "tool_calls": tool_calls_json,
                 "original_prompt": prompt,
+                "initial_tokens_used": llm_response.usage.completion_tokens,
+                "max_tokens_configured": node_config.get("max_tokens").and_then(|v| v.as_u64()),
                 "message": "Tool execution should be handled by Python layer with proper tool registry"
             }))
         } else {
