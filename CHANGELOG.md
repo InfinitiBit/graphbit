@@ -1,3 +1,24 @@
+## [0.6.3] - 2026-02-10
+
+### ✨ New Features
+
+- **Deepseek Streaming Support** by @Junaid-Hossain in [#429](https://github.com/InfinitiBit/graphbit/pull/429) ([b757028](https://github.com/InfinitiBit/graphbit/commit/b757028)) on 2026-02-10
+  - Added streaming support for Deepseek LLM provider
+  - Enhanced real-time response capabilities
+
+### 🔧 Maintenance
+
+- **LLM Workflow Enhancements** by @Junaid-Hossain in [#432](https://github.com/InfinitiBit/graphbit/pull/432) ([6a72724](https://github.com/InfinitiBit/graphbit/commit/6a72724)) on 2026-02-10
+  - Implemented cumulative token budget tracking across workflow
+  - Added per-node LLM configuration support
+  - Fixed Azure OpenAI empty-response handling
+
+- **Release v0.6.3** in [#434](https://github.com/InfinitiBit/graphbit/pull/434) ([3b8c16b](https://github.com/InfinitiBit/graphbit/commit/3b8c16b)) on 2026-02-10
+
+---
+**Total Changes**: 3
+**Changes by Category**: ✨ New Features: 1 | 🔧 Maintenance: 2
+
 ## [0.6.2] - 2026-02-10
 
 ### ✨ New Features
