@@ -1,3 +1,131 @@
+## [0.6.2] - 2026-02-10
+
+### ✨ New Features
+
+- Add autogent missing deps by @jaid-jashim in [#416](https://github.com/InfinitiBit/graphbit/pull/416) ([24ae0f7](https://github.com/InfinitiBit/graphbit/commit/24ae0f79)) on 2026-02-02
+- Xai Streaming Support by @junaid-hossain in [#392](https://github.com/InfinitiBit/graphbit/pull/392) ([310a70b](https://github.com/InfinitiBit/graphbit/commit/310a70be)) on 2026-01-30
+- Anthropic Streaming Support by @junaid-hossain in [#390](https://github.com/InfinitiBit/graphbit/pull/390) ([828cd83](https://github.com/InfinitiBit/graphbit/commit/828cd830)) on 2026-01-30
+- Implementation of streaming feature by @junaid-hossain in [#386](https://github.com/InfinitiBit/graphbit/pull/386) ([a787963](https://github.com/InfinitiBit/graphbit/commit/a7879633)) on 2026-01-30
+- Py bridge llm config context manager resource management by @jaid-jashim in [#377](https://github.com/InfinitiBit/graphbit/pull/377) ([7c42931](https://github.com/InfinitiBit/graphbit/commit/7c429315)) on 2026-01-30
+- Litellm Embeddings Implementation by @junaid-hossain in [#364](https://github.com/InfinitiBit/graphbit/pull/364) ([3c52559](https://github.com/InfinitiBit/graphbit/commit/3c525595)) on 2026-01-30
+- Add Litellm as python wrapper by @junaid-hossain in [#318](https://github.com/InfinitiBit/graphbit/pull/318) ([0bd15d1](https://github.com/InfinitiBit/graphbit/commit/0bd15d12)) on 2026-01-30
+- Add autogen in the graphbit benchmark module by @shahid-ullah in [#368](https://github.com/InfinitiBit/graphbit/pull/368) ([faf729c](https://github.com/InfinitiBit/graphbit/commit/faf729c1)) on 2026-01-30
+- Platform-optimized memory allocators by @junaid-hossain in [#375](https://github.com/InfinitiBit/graphbit/pull/375) ([48e2091](https://github.com/InfinitiBit/graphbit/commit/48e2091d)) on 2026-01-30
+- Perplexity Streaming Support by @junaid-hossain in [#391](https://github.com/InfinitiBit/graphbit/pull/391) ([b3f9f0b](https://github.com/InfinitiBit/graphbit/commit/b3f9f0be)) on 2026-01-30
+
+### 🐛 Bug Fixes
+
+- Resolve litellm duplication and instance id by @junaid-hossain in [#410](https://github.com/InfinitiBit/graphbit/pull/410) ([b3785dd](https://github.com/InfinitiBit/graphbit/commit/b3785dd4)) on 2026-01-30
+- Fixed pyproject no root issue by @humayrakhanom in [#388](https://github.com/InfinitiBit/graphbit/pull/388) ([975f2ab](https://github.com/InfinitiBit/graphbit/commit/975f2abd)) on 2026-01-29
+
+### 🗑️ Removed
+
+- Remove autogen dependencies from root pyproject.toml by @junaid-hossain in [#409](https://github.com/InfinitiBit/graphbit/pull/409) ([c3aab78](https://github.com/InfinitiBit/graphbit/commit/c3aab781)) on 2026-01-30
+- Remove cargo lock file by @azman-ib in [#408](https://github.com/InfinitiBit/graphbit/pull/408) ([dfc3279](https://github.com/InfinitiBit/graphbit/commit/dfc32790)) on 2026-01-30
+
+### 📚 Documentation
+
+- Add prominent Munich, Germany badge with official Bundesflagge colors by @jaid-jashim in [#414](https://github.com/InfinitiBit/graphbit/pull/414) ([e981cdb](https://github.com/InfinitiBit/graphbit/commit/e981cdb3)) on 2026-01-31
+- Add Grant Thornton logo and elevate production case study in README by @jaid-jashim in [#413](https://github.com/InfinitiBit/graphbit/pull/413) ([d472674](https://github.com/InfinitiBit/graphbit/commit/d4726747)) on 2026-01-31
+- Revise production use case for Grant Thornton by @jaid-jashim in [#412](https://github.com/InfinitiBit/graphbit/pull/412) ([6ac9561](https://github.com/InfinitiBit/graphbit/commit/6ac9561e)) on 2026-01-31
+- Revise README for clarity and production usage by @jaid-jashim in [#411](https://github.com/InfinitiBit/graphbit/pull/411) ([1f1c077](https://github.com/InfinitiBit/graphbit/commit/1f1c077d)) on 2026-01-31
+- Streaming feature Documentation by @junaid-hossain in [#387](https://github.com/InfinitiBit/graphbit/pull/387) ([5977b60](https://github.com/InfinitiBit/graphbit/commit/5977b60f)) on 2026-01-30
+- Litellm llm providers and embeddings documentation by @junaid-hossain in [#365](https://github.com/InfinitiBit/graphbit/pull/365) ([deb63a2](https://github.com/InfinitiBit/graphbit/commit/deb63a29)) on 2026-01-30
+- Update info of project license for Apache License 2.0 by @asifiibrahim in [#407](https://github.com/InfinitiBit/graphbit/pull/407) ([412ce4b](https://github.com/InfinitiBit/graphbit/commit/412ce4b4)) on 2026-01-30
+- Update license to Apache License 2.0 info for pypi by @zobaid in [#403](https://github.com/InfinitiBit/graphbit/pull/403) ([df23ba9](https://github.com/InfinitiBit/graphbit/commit/df23ba94)) on 2026-01-30
+- Add comment for python binding doc by @saddat-hasan in [#406](https://github.com/InfinitiBit/graphbit/pull/406) ([02c2b0e](https://github.com/InfinitiBit/graphbit/commit/02c2b0e2)) on 2026-01-30
+- Add doc details for perplexity streaming support by @rifat-infinitibit in [#405](https://github.com/InfinitiBit/graphbit/pull/405) ([8b05c8d](https://github.com/InfinitiBit/graphbit/commit/8b05c8d3)) on 2026-01-30
+- Add rust core contributor documentation by @shoaib-hossain in [#401](https://github.com/InfinitiBit/graphbit/pull/401) ([2233a43](https://github.com/InfinitiBit/graphbit/commit/2233a432)) on 2026-01-30
+- Add Code of Conduct by @hazrat-ali in [#404](https://github.com/InfinitiBit/graphbit/pull/404) ([4d9b889](https://github.com/InfinitiBit/graphbit/commit/4d9b8893)) on 2026-01-30
+- Update contributing guidelines by @md-erfanul-islam-bhuiyan in [#402](https://github.com/InfinitiBit/graphbit/pull/402) ([b322e3f](https://github.com/InfinitiBit/graphbit/commit/b322e3fe)) on 2026-01-30
+- **security**: Align security policy with OSS (Apache-2.0) by @minhaz-infinitibit in [#399](https://github.com/InfinitiBit/graphbit/pull/399) ([b41bb87](https://github.com/InfinitiBit/graphbit/commit/b41bb873)) on 2026-01-30
+
+### 🔧 Maintenance
+
+- **github**: Add pull request template by @md-rahmat-ullah in [#415](https://github.com/InfinitiBit/graphbit/pull/415) ([1eb7f63](https://github.com/InfinitiBit/graphbit/commit/1eb7f637)) on 2026-02-01
+- Azure LLM Provider Support by @anick-ib in [#400](https://github.com/InfinitiBit/graphbit/pull/400) ([5de04dd](https://github.com/InfinitiBit/graphbit/commit/5de04dd4)) on 2026-01-30
+- **license**: Replace custom license with Apache-2.0 by @md-rahmat-ullah in [#394](https://github.com/InfinitiBit/graphbit/pull/394) ([7ae1366](https://github.com/InfinitiBit/graphbit/commit/7ae13660)) on 2026-01-29
+
+---
+**Total Changes**: 31
+**Changes by Category**: ✨ New Features: 10 | 🐛 Bug Fixes: 2 | 🗑️ Removed: 2 | 📚 Documentation: 14 | 🔧 Maintenance: 3
+
+## [0.6.1] - 2026-01-12
+
+### 📚 Documentation
+
+- Update license date info by @Jaid-Jashim in [#383](https://github.com/InfinitiBit/graphbit/pull/383) ([f4b1210](https://github.com/InfinitiBit/graphbit/commit/f4b1210)) on 2026-01-12
+
+### 🔧 Maintenance
+
+- Modified the workflow to be fully manual trigger ([964211c](https://github.com/InfinitiBit/graphbit/commit/964211c)) on 2025-12-26
+- Add manual trigger CI workflow for js-ts by @Jaid-Jashim in [#329](https://github.com/InfinitiBit/graphbit/pull/329) ([1c1d965](https://github.com/InfinitiBit/graphbit/commit/1c1d965)) on 2025-12-14
+- Add custom issue templates by @Jaid-Jashim in [#326](https://github.com/InfinitiBit/graphbit/pull/326) ([692e738](https://github.com/InfinitiBit/graphbit/commit/692e738)) on 2025-12-13
+- Add templates for issue: bug report by @Jaid-Jashim in [#324](https://github.com/InfinitiBit/graphbit/pull/324) ([ede2387](https://github.com/InfinitiBit/graphbit/commit/ede2387)) on 2025-12-12
+
+---
+**Total Changes**: 5
+**Changes by Category**: 📚 Documentation: 1 | 🔧 Maintenance: 4
+
+## [0.6.0] - 2025-12-20
+
+### 🔧 Maintenance
+
+- Version alignment and package metadata updates
+- Consolidated release preparation
+
+---
+**Total Changes**: Minor maintenance release
+**Changes by Category**: 🔧 Maintenance: 1
+
+## [0.5.3] - 2025-12-19
+
+### 🐛 Bug Fixes
+
+- Bugfix: Native Binding Crashes and NPM Dependencies by @Jaid-Jashim in [#302](https://github.com/InfinitiBit/graphbit/pull/302) ([6ae493f](https://github.com/InfinitiBit/graphbit/commit/6ae493f)) on 2025-12-19
+
+### 🔧 Maintenance
+
+- Disable optimized build and publish workflow for PyPI by @Jaid-Jashim in [#279](https://github.com/InfinitiBit/graphbit/pull/279) ([bb0bbeb](https://github.com/InfinitiBit/graphbit/commit/bb0bbeb)) on 2025-10-24
+
+### 📚 Documentation
+
+- Prepared Redis vector search documentation ([8135951](https://github.com/InfinitiBit/graphbit/commit/8135951)) on 2025-11-08
+
+---
+**Total Changes**: 3
+**Changes by Category**: 🐛 Bug Fixes: 1 | 🔧 Maintenance: 1 | 📚 Documentation: 1
+
+## [0.5.1] - 2025-10-24
+
+### 🐛 Bug Fixes
+
+- Update GraphBit version and description by @Md-Rahmat-Ullah in [#251](https://github.com/InfinitiBit/graphbit/pull/251) ([6478f0c](https://github.com/InfinitiBit/graphbit/commit/6478f0c)) on 2025-10-24
+
+### 🔧 Maintenance
+
+- Align Python packaging metadata and crate names for PyPI by @Md-Rahmat-Ullah in [#248](https://github.com/InfinitiBit/graphbit/pull/248) ([3ec3a69](https://github.com/InfinitiBit/graphbit/commit/3ec3a69)) on 2025-10-07
+- Create build-artifacts-only workflow ([543ccec](https://github.com/InfinitiBit/graphbit/commit/543ccec)) on 2025-10-08
+
+---
+**Total Changes**: 3
+**Changes by Category**: 🐛 Bug Fixes: 1 | 🔧 Maintenance: 2
+
+## [0.5.0] - 2025-10-03
+
+### 🐛 Bug Fixes
+
+- Fix failing tests in replicate AI by @tanbir in [#244](https://github.com/InfinitiBit/graphbit/pull/244) ([86bb8c2](https://github.com/InfinitiBit/graphbit/commit/86bb8c2)) on 2025-10-03
+
+### 📚 Documentation
+
+- Update CHANGELOG.md ([64c4e12](https://github.com/InfinitiBit/graphbit/commit/64c4e12)) on 2025-09-18
+- Update README.md with new links and installation instructions by @Jaid-Jashim in [#189](https://github.com/InfinitiBit/graphbit/pull/189) ([97f40df](https://github.com/InfinitiBit/graphbit/commit/97f40df)) on 2025-09-13
+
+---
+**Total Changes**: 3
+**Changes by Category**: 🐛 Bug Fixes: 1 | 📚 Documentation: 2
+
 ## [0.4.0] - 2025-09-12
 
 # New & Enhanced Features
