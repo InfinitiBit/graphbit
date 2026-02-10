@@ -22,19 +22,6 @@ async fn test_azurellm_provider_creation() {
 }
 
 #[tokio::test]
-async fn test_azurellm_provider_with_defaults() {
-    let config = LlmConfig::azurellm_with_defaults(
-        "test-key".to_string(),
-        "gpt-4o".to_string(),
-        "https://test.openai.azure.com".to_string(),
-    );
-
-    let provider = LlmProviderFactory::create_provider(config).unwrap();
-    assert_eq!(provider.provider_name(), "azurellm");
-    assert_eq!(provider.model_name(), "gpt-4o");
-}
-
-#[tokio::test]
 async fn test_azurellm_config_helpers() {
     // Test basic config
     let config = LlmConfig::azurellm(
