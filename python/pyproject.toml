@@ -40,7 +40,7 @@ maintainers = [
 name = "graphbit"
 readme = "README.md"
 requires-python = ">=3.9,<3.14"
-version = "0.6.2"
+version = "0.6.3"
 
 [project.urls]
 "Bug Tracker" = "https://github.com/InfinitiBit/graphbit/issues"

@@ -58,7 +58,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-graphbit-core = "0.6.2"
+graphbit-core = "0.6.3"
 
 # Optional: enable Python bridge support (PyO3 integration points)
 # graphbit-core = { version = "0.6.2", features = ["python"] }
