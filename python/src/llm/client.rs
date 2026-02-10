@@ -764,7 +764,7 @@ impl LlmClient {
                     if debug {
                         info!("Warming up LLM client...");
                     }
-                    let test_request = LlmRequest::new("Hello".to_string()).with_max_tokens(1);
+                    let test_request = LlmRequest::new("Hello".to_string()).with_max_tokens(10);
                     let guard = provider.read().await;
 
                     if let Err(e) = guard.complete(test_request).await {

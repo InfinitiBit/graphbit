@@ -691,10 +691,77 @@ impl Executor {
                                         Ok(provider_trait) => {
                                             let llm_provider =
                                                 LlmProvider::new(provider_trait, llm_config);
-                                            let final_request = LlmRequest::new(final_prompt.clone());
+
+                                            // Create final request and apply node configuration parameters
+                                            let mut final_request = LlmRequest::new(final_prompt.clone());
+
+                                            // CUMULATIVE TOKEN BUDGET TRACKING
+                                            // Extract initial tokens used and max_tokens to calculate remaining budget
+                                            let initial_tokens_used = response_obj
+                                                .get("initial_tokens_used")
+                                                .and_then(|v| v.as_u64())
+                                                .unwrap_or(0) as u32;
+
+                                            let max_tokens_configured = response_obj
+                                                .get("max_tokens_configured")
+                                                .and_then(|v| v.as_u64())
+                                                .map(|v| v as u32);
+
+                                            // Calculate remaining token budget
+                                            let remaining_budget = if let Some(max_configured) = max_tokens_configured {
+                                                if initial_tokens_used < max_configured {
+                                                    Some(max_configured - initial_tokens_used)
+                                                } else {
+                                                    // Initial call used all/more tokens, set minimum
+                                                    tracing::warn!(
+                                                        "Initial LLM call used {} tokens, which meets/exceeds max_tokens={}. Setting final call to 10 tokens minimum.",
+                                                        initial_tokens_used, max_configured
+                                                    );
+                                                    Some(10) // Minimum tokens for final call
+                                                }
+                                            } else {
+                                                None
+                                            };
+
+                                            // Apply node-level configuration overrides (temperature, max_tokens, top_p)
+                                            // For max_tokens, use the remaining budget if available
+                                            if let Some(temp_value) = node.config.get("temperature") {
+                                                if let Some(temp_num) = temp_value.as_f64() {
+                                                    final_request = final_request.with_temperature(temp_num as f32);
+                                                    tracing::debug!("Applied temperature={} to final synthesis request", temp_num);
+                                                }
+                                            }
+
+                                            // Use remaining budget if calculated, otherwise fall back to node config
+                                            if let Some(remaining) = remaining_budget {
+                                                final_request = final_request.with_max_tokens(remaining);
+                                                tracing::info!(
+                                                    "Applied CUMULATIVE max_tokens={} to final synthesis request (initial used: {}, configured: {:?})",
+                                                    remaining, initial_tokens_used, max_tokens_configured
+                                                );
+                                            } else if let Some(max_tokens_value) = node.config.get("max_tokens") {
+                                                if let Some(max_tokens_num) = max_tokens_value.as_u64() {
+                                                    final_request = final_request.with_max_tokens(max_tokens_num as u32);
+                                                    tracing::debug!("Applied max_tokens={} to final synthesis request (no budget tracking)", max_tokens_num);
+                                                }
+                                            }
+
+                                            if let Some(top_p_value) = node.config.get("top_p") {
+                                                if let Some(top_p_num) = top_p_value.as_f64() {
+                                                    final_request = final_request.with_top_p(top_p_num as f32);
+                                                    tracing::debug!("Applied top_p={} to final synthesis request", top_p_num);
+                                                }
+                                            }
 
                                             match llm_provider.complete(final_request).await {
                                                 Ok(final_response) => {
+                                                    tracing::debug!(
+                                                        "Final LLM response received - content: '{}', tokens: {}, finish_reason: {:?}",
+                                                        final_response.content,
+                                                        final_response.usage.completion_tokens,
+                                                        final_response.finish_reason
+                                                    );
+
                                                     // Clone the content to avoid borrow checker issues
                                                     let response_content =
                                                         final_response.content.clone();
