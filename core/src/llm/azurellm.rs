@@ -105,6 +105,26 @@ impl AzureLlmProvider {
         }
     }
 
+    /// Check if the deployment is an OpenAI model
+    /// OpenAI models require `max_completion_tokens` instead of `max_tokens`
+    /// Other models (Claude, Llama, Mistral, etc.) use `max_tokens`
+    fn is_openai_model(&self) -> bool {
+        let name = self.deployment_name.to_lowercase();
+        // OpenAI model patterns: gpt-*, o1*, o3*, o4*, gpt4*, gpt5*, etc.
+        name.contains("gpt")
+            || name.starts_with("o1")
+            || name.starts_with("o3")
+            || name.starts_with("o4")
+            || name.contains("-o1")
+            || name.contains("-o3")
+            || name.contains("-o4")
+            || name.starts_with("text-davinci")
+            || name.starts_with("davinci")
+            || name.starts_with("curie")
+            || name.starts_with("babbage")
+            || name.starts_with("ada")
+    }
+
     /// Parse `Azure LLM` response to `GraphBit` response
     fn parse_response(&self, response: AzureLlmResponse) -> GraphBitResult<LlmResponse> {
         let choice = response
@@ -176,9 +196,17 @@ impl LlmProviderTrait for AzureLlmProvider {
             Some(request.tools.iter().map(Self::convert_tool).collect())
         };
 
+        // Use max_completion_tokens for OpenAI models, max_tokens for others (Claude, Llama, etc.)
+        let (max_tokens, max_completion_tokens) = if self.is_openai_model() {
+            (None, request.max_tokens)
+        } else {
+            (request.max_tokens, None)
+        };
+
         let body = AzureLlmRequest {
             messages,
-            max_tokens: request.max_tokens,
+            max_tokens,
+            max_completion_tokens,
             temperature: request.temperature,
             top_p: request.top_p,
             tools: tools.clone(),
@@ -249,8 +277,12 @@ impl LlmProviderTrait for AzureLlmProvider {
 #[derive(Debug, Serialize)]
 struct AzureLlmRequest {
     messages: Vec<AzureLlmMessage>,
+    /// Used for non-OpenAI models (Claude, Llama, Mistral, etc.)
     #[serde(skip_serializing_if = "Option::is_none")]
     max_tokens: Option<u32>,
+    /// Used for OpenAI models (gpt-*, o1*, o3*, etc.) - deprecated max_tokens replacement
+    #[serde(skip_serializing_if = "Option::is_none")]
+    max_completion_tokens: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     temperature: Option<f32>,
     #[serde(skip_serializing_if = "Option::is_none")]
