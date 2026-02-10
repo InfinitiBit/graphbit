@@ -58,10 +58,10 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-graphbit-core = "0.6.1"
+graphbit-core = "0.6.2"
 
 # Optional: enable Python bridge support (PyO3 integration points)
-# graphbit-core = { version = "0.6.1", features = ["python"] }
+# graphbit-core = { version = "0.6.2", features = ["python"] }
 ```
 
 The library uses async/await with Tokio runtime and includes serialization support via Serde.

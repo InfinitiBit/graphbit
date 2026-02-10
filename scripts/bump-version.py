@@ -11,6 +11,8 @@ Effects:
   - python/pyproject.toml  -> [project].version
   - pyproject.toml         -> [project].version and [tool.poetry].version (if present)
   - Cargo.toml             -> [workspace.package].version
+  - core/README.md         -> code examples (graphbit-core = "X.Y.Z")
+  - benchmarks/frameworks/__init__.py -> __version__
 
 Notes:
 - Preserves file formatting by targeted regex replacement within the relevant sections.
@@ -27,6 +29,8 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 PY_PYPROJECT = ROOT / "python" / "pyproject.toml"
 ROOT_PYPROJECT = ROOT / "pyproject.toml"
 ROOT_CARGO = ROOT / "Cargo.toml"
+CORE_README = ROOT / "core" / "README.md"
+BENCHMARKS_INIT = ROOT / "benchmarks" / "frameworks" / "__init__.py"
 
 SEMVER_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
 
@@ -87,6 +91,22 @@ def replace_workspace_package_version(toml: str, new_version: str) -> tuple[str,
         return f"{m.group(1)}{m.group(2)}{new_version}{m.group(4)}{m.group(5)}"
     new_toml, n = pattern.subn(_repl, toml, count=1)
     return new_toml, n > 0
+
+
+def update_readme_versions(content: str, new_version: str) -> tuple[str, bool]:
+    """Update version references in README files."""
+    # Pattern: graphbit-core = "X.Y.Z"
+    pattern = re.compile(r'(graphbit-core\s*=\s*\")([^\"]+)(\")')
+    new_content = pattern.sub(rf'\g<1>{new_version}\g<3>', content)
+    return new_content, new_content != content
+
+
+def update_init_version(content: str, new_version: str) -> tuple[str, bool]:
+    """Update __version__ in Python __init__.py files."""
+    # Pattern: __version__ = "X.Y.Z"
+    pattern = re.compile(r'(__version__\s*=\s*\")([^\"]+)(\")')
+    new_content = pattern.sub(rf'\g<1>{new_version}\g<3>', content)
+    return new_content, new_content != content
 
 
 def get_current_versions() -> dict:
@@ -174,6 +194,26 @@ def main() -> int:
             print(f"Updated: {ROOT_CARGO}")
         else:
             print(f"No change in: {ROOT_CARGO}")
+
+    # 4) core/README.md - update version in code examples
+    if CORE_README.exists():
+        txt = read_text(CORE_README)
+        new_txt, changed = update_readme_versions(txt, new_version)
+        if changed:
+            write_text(CORE_README, new_txt, args.dry_run)
+            print(f"Updated: {CORE_README}")
+        else:
+            print(f"No change in: {CORE_README}")
+
+    # 5) benchmarks/frameworks/__init__.py - update __version__
+    if BENCHMARKS_INIT.exists():
+        txt = read_text(BENCHMARKS_INIT)
+        new_txt, changed = update_init_version(txt, new_version)
+        if changed:
+            write_text(BENCHMARKS_INIT, new_txt, args.dry_run)
+            print(f"Updated: {BENCHMARKS_INIT}")
+        else:
+            print(f"No change in: {BENCHMARKS_INIT}")
 
     print("Done." + (" (dry-run)" if args.dry_run else ""))
     return 0

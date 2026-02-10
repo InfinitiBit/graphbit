@@ -1,6 +1,6 @@
 """Framework benchmarks package."""
 
-__version__ = "0.4.0"
+__version__ = "0.6.2"
 
 from .common import BenchmarkMetrics, BenchmarkScenario, FrameworkType
 
