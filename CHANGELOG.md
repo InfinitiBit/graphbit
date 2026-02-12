@@ -1,3 +1,14 @@
+## [0.6.4] - 2026-02-12
+
+### 🐛 Bug Fixes
+
+- **AzureLLM Max Tokens Warning Bug** by @Junaid-Hossain in [#437](https://github.com/InfinitiBit/graphbit/pull/437) ([1216173](https://github.com/InfinitiBit/graphbit/commit/1216173)) on 2026-02-12
+  - Fixed issue with max tokens warning in AzureLLM provider
+
+---
+**Total Changes**: 1
+**Changes by Category**: 🐛 Bug Fixes: 1
+
 ## [0.6.3] - 2026-02-10
 
 ### ✨ New Features
