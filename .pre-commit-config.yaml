@@ -30,7 +30,7 @@ repos:
 
   # Python Code Formatting
 - repo: https://github.com/psf/black
-  rev: 25.9.0
+  rev: 26.1.0
   hooks:
   - id: black
     language_version: python3.11
@@ -61,7 +61,7 @@ repos:
 
   # Python Type Checking
 - repo: https://github.com/pre-commit/mirrors-mypy
-  rev: v1.18.2
+  rev: v1.19.1
   hooks:
   - id: mypy
     # args: [--ignore-missing-imports, --no-strict-optional]
@@ -74,7 +74,7 @@ repos:
 
   # Python Security Checks
 - repo: https://github.com/pycqa/bandit
-  rev: 1.8.6
+  rev: 1.9.3
   hooks:
   - id: bandit
     args: [-r, '--skip=B101,B601']
@@ -115,7 +115,7 @@ repos:
 
   # TOML Formatting and Validation
 - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
-  rev: v2.15.0
+  rev: v2.16.0
   hooks:
   - id: pretty-format-toml
     args: [--autofix]
@@ -123,7 +123,7 @@ repos:
 
   # YAML Formatting
 - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
-  rev: v2.15.0
+  rev: v2.16.0
   hooks:
   - id: pretty-format-yaml
     args: [--autofix, --indent, '2']
@@ -160,7 +160,7 @@ repos:
 
   # Commit Message Linting
 - repo: https://github.com/commitizen-tools/commitizen
-  rev: v4.9.1
+  rev: v4.13.5
   hooks:
   - id: commitizen
     stages: [commit-msg]
