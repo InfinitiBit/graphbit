@@ -6,8 +6,11 @@ use crate::llm::{
     FinishReason, LlmMessage, LlmRequest, LlmResponse, LlmRole, LlmTool, LlmToolCall, LlmUsage,
 };
 use async_trait::async_trait;
+use futures::stream::{Stream, StreamExt};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
+use std::time::Duration;
+use tokio::time::timeout;
 
 /// `MistralAI` API provider
 pub struct MistralAiProvider {
@@ -298,6 +301,256 @@ impl LlmProviderTrait for MistralAiProvider {
             || self.model.starts_with("pixtral")
     }
 
+    fn supports_streaming(&self) -> bool {
+        true // MistralAI supports streaming via OpenAI-compatible SSE
+    }
+
+    async fn stream(
+        &self,
+        request: LlmRequest,
+    ) -> GraphBitResult<Box<dyn Stream<Item = GraphBitResult<LlmResponse>> + Unpin + Send>> {
+        let url = format!("{}/chat/completions", self.base_url);
+
+        let messages: Vec<MistralAiMessage> =
+            request.messages.iter().map(Self::convert_message).collect();
+
+        let tools: Option<Vec<MistralAiTool>> = if request.tools.is_empty() {
+            None
+        } else {
+            Some(request.tools.iter().map(Self::convert_tool).collect())
+        };
+
+        let body = MistralAiStreamRequest {
+            model: self.model.clone(),
+            messages,
+            max_tokens: request.max_tokens,
+            temperature: request.temperature,
+            top_p: request.top_p,
+            tools: tools.clone(),
+            tool_choice: if tools.is_some() {
+                Some("auto".to_string())
+            } else {
+                None
+            },
+            stream: Some(true),
+        };
+
+        // Add extra parameters
+        let mut request_json = serde_json::to_value(&body)?;
+        if let serde_json::Value::Object(ref mut map) = request_json {
+            for (key, value) in request.extra_params {
+                map.insert(key, value);
+            }
+        }
+
+        // Timeout constants for different phases of the request
+        const CONNECTION_TIMEOUT: Duration = Duration::from_secs(60);
+        const ERROR_BODY_TIMEOUT: Duration = Duration::from_secs(10);
+        const CHUNK_TIMEOUT: Duration = Duration::from_secs(30);
+
+        // Apply timeout to initial connection
+        let response = timeout(
+            CONNECTION_TIMEOUT,
+            self.client
+                .post(&url)
+                .header("Authorization", format!("Bearer {}", self.api_key))
+                .header("Content-Type", "application/json")
+                .json(&request_json)
+                .send(),
+        )
+        .await
+        .map_err(|_| {
+            GraphBitError::llm_provider(
+                "mistralai",
+                format!(
+                    "Connection timeout after {:?} - MistralAI did not respond. \
+                     Check network connectivity and MistralAI status.",
+                    CONNECTION_TIMEOUT
+                ),
+            )
+        })?
+        .map_err(|e| GraphBitError::llm_provider("mistralai", format!("Request failed: {e}")))?;
+
+        if !response.status().is_success() {
+            let error_text = timeout(ERROR_BODY_TIMEOUT, response.text())
+                .await
+                .unwrap_or_else(|_| {
+                    Ok(format!(
+                        "Error body read timeout after {:?}",
+                        ERROR_BODY_TIMEOUT
+                    ))
+                })
+                .unwrap_or_else(|_| "Unknown error (failed to read body)".to_string());
+
+            return Err(GraphBitError::llm_provider(
+                "mistralai",
+                format!("API error: {error_text}"),
+            ));
+        }
+
+        // Parse SSE stream with proper line buffering and per-chunk timeout
+        let model = self.model.clone();
+        let byte_stream = response.bytes_stream();
+
+        // State: (byte_stream, buffer, timeout_occurred, consecutive_parse_errors, total_parse_errors)
+        const MAX_CONSECUTIVE_PARSE_ERRORS: u32 = 5;
+
+        let stream = futures::stream::unfold(
+            (byte_stream, String::new(), false, 0u32, 0u32),
+            move |(
+                mut byte_stream,
+                mut buffer,
+                timeout_occurred,
+                mut consecutive_parse_errors,
+                mut total_parse_errors,
+            )| {
+                let model = model.clone();
+                async move {
+                    // If we already had a timeout, don't continue
+                    if timeout_occurred {
+                        return None;
+                    }
+
+                    loop {
+                        // Process complete lines already in the buffer
+                        while let Some(newline_pos) = buffer.find('\n') {
+                            let line: String = buffer.drain(..=newline_pos).collect();
+                            let line = line.trim();
+
+                            // Skip empty lines and comments
+                            if line.is_empty() || line.starts_with(':') {
+                                continue;
+                            }
+
+                            // Check for data: prefix (OpenAI-compatible SSE format)
+                            if let Some(data) = line.strip_prefix("data: ") {
+                                // Check for [DONE] marker
+                                if data.trim() == "[DONE]" {
+                                    if total_parse_errors > 0 {
+                                        tracing::warn!(
+                                            "MistralAI stream completed with {} total parse errors.",
+                                            total_parse_errors
+                                        );
+                                    }
+                                    return None; // End of stream
+                                }
+
+                                // Parse JSON chunk
+                                match serde_json::from_str::<MistralAiStreamChunk>(data) {
+                                    Ok(stream_chunk) => {
+                                        consecutive_parse_errors = 0;
+
+                                        if let Some(choice) = stream_chunk.choices.first() {
+                                            if let Some(content) = &choice.delta.content {
+                                                if !content.is_empty() {
+                                                    let response =
+                                                        LlmResponse::new(content.clone(), &model)
+                                                            .with_id(stream_chunk.id);
+                                                    return Some((
+                                                        Ok(response),
+                                                        (
+                                                            byte_stream,
+                                                            buffer,
+                                                            false,
+                                                            consecutive_parse_errors,
+                                                            total_parse_errors,
+                                                        ),
+                                                    ));
+                                                }
+                                            }
+                                        }
+                                    }
+                                    Err(e) => {
+                                        consecutive_parse_errors += 1;
+                                        total_parse_errors += 1;
+
+                                        tracing::warn!(
+                                            "Failed to parse MistralAI stream chunk (consecutive: {}, total: {}): {}, data: {}",
+                                            consecutive_parse_errors,
+                                            total_parse_errors,
+                                            e,
+                                            if data.len() > 200 { &data[..200] } else { data }
+                                        );
+
+                                        if consecutive_parse_errors >= MAX_CONSECUTIVE_PARSE_ERRORS
+                                        {
+                                            return Some((
+                                                Err(GraphBitError::llm_provider(
+                                                    "mistralai",
+                                                    format!(
+                                                        "Stream corrupted: {} consecutive parse errors. \
+                                                         Last error: {}. Data may be incomplete.",
+                                                        consecutive_parse_errors, e
+                                                    ),
+                                                )),
+                                                (byte_stream, buffer, true, consecutive_parse_errors, total_parse_errors),
+                                            ));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Need more data from the network
+                        let chunk_result = match timeout(CHUNK_TIMEOUT, byte_stream.next()).await {
+                            Ok(Some(result)) => result,
+                            Ok(None) => {
+                                // Stream naturally ended
+                                if total_parse_errors > 0 {
+                                    tracing::warn!(
+                                        "MistralAI stream ended with {} total parse errors.",
+                                        total_parse_errors
+                                    );
+                                }
+                                return None;
+                            }
+                            Err(_) => {
+                                tracing::warn!(
+                                    "MistralAI stream chunk timeout after {:?} - response may be incomplete.",
+                                    CHUNK_TIMEOUT
+                                );
+                                return Some((
+                                    Err(GraphBitError::llm_provider(
+                                        "mistralai",
+                                        format!(
+                                            "Stream timeout after {:?} - response may be incomplete",
+                                            CHUNK_TIMEOUT
+                                        ),
+                                    )),
+                                    (byte_stream, buffer, true, consecutive_parse_errors, total_parse_errors),
+                                ));
+                            }
+                        };
+
+                        let chunk = match chunk_result {
+                            Ok(c) => c,
+                            Err(e) => {
+                                return Some((
+                                    Err(GraphBitError::llm_provider(
+                                        "mistralai",
+                                        format!("Stream error: {e}"),
+                                    )),
+                                    (
+                                        byte_stream,
+                                        buffer,
+                                        false,
+                                        consecutive_parse_errors,
+                                        total_parse_errors,
+                                    ),
+                                ));
+                            }
+                        };
+
+                        // Append new data to buffer
+                        buffer.push_str(&String::from_utf8_lossy(&chunk));
+                    }
+                }
+            },
+        );
+
+        Ok(Box::new(Box::pin(stream)))
+    }
+
     fn max_context_length(&self) -> Option<u32> {
         // Context lengths for different MistralAI models
         match self.model.as_str() {
@@ -398,4 +651,48 @@ struct MistralAiResponseMessage {
 struct MistralAiUsage {
     prompt_tokens: u32,
     completion_tokens: u32,
+}
+
+// Streaming-specific types (OpenAI-compatible SSE format)
+
+/// Request body for streaming API calls (includes stream: true)
+#[derive(Debug, Serialize)]
+struct MistralAiStreamRequest {
+    model: String,
+    messages: Vec<MistralAiMessage>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    max_tokens: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    temperature: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    top_p: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tools: Option<Vec<MistralAiTool>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tool_choice: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    stream: Option<bool>,
+}
+
+/// Streaming chunk from MistralAI API (OpenAI-compatible format)
+#[derive(Debug, Deserialize)]
+struct MistralAiStreamChunk {
+    id: String,
+    choices: Vec<MistralAiStreamChoice>,
+}
+
+#[derive(Debug, Deserialize)]
+struct MistralAiStreamChoice {
+    delta: MistralAiDelta,
+    #[allow(dead_code)]
+    finish_reason: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct MistralAiDelta {
+    #[serde(default)]
+    content: Option<String>,
+    #[serde(default)]
+    #[allow(dead_code)]
+    role: Option<String>,
 }
