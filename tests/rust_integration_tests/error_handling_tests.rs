@@ -144,7 +144,7 @@ async fn test_invalid_configuration_handling() {
     // Test with invalid LLM configuration
     let invalid_llm_config = llm::LlmConfig::openai("", "");
 
-    let result = agents::AgentConfig::new(
+    let result = AgentConfig::new(
         "Test Agent",
         "An agent with invalid config",
         invalid_llm_config,
@@ -212,7 +212,7 @@ async fn test_error_propagation_chain() {
 async fn test_agent_config_validation() {
     let llm_config = llm::LlmConfig::openai(super::get_test_api_key(), super::get_test_model());
 
-    let result = agents::AgentConfig::new("Test Agent", "An agent with invalid config", llm_config);
+    let result = AgentConfig::new("Test Agent", "An agent with invalid config", llm_config);
 
     assert_eq!(result.name, "Test Agent");
     assert_eq!(result.description, "An agent with invalid config");

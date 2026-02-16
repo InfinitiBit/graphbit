@@ -1,5 +1,5 @@
 use graphbit_core::{
-    agents::{Agent, AgentBuilder},
+    Agent, AgentBuilder,
     embeddings::{
         EmbeddingConfig, EmbeddingProvider, EmbeddingProviderFactory, EmbeddingProviderTrait,
     },
