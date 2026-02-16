@@ -3,7 +3,7 @@
 //! Tests for agent functionality in real-world scenarios,
 //! testing actual agent configurations and LLM interactions.
 
-use graphbit_core::agents::*;
+use graphbit_core::AgentConfig;
 use graphbit_core::llm::LlmConfig;
 use graphbit_core::types::*;
 
