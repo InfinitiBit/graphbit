@@ -1,0 +1,26 @@
+[package]
+name = "graphbit-js"
+description = "JavaScript/Node.js bindings for GraphBit memory layer"
+publish = false
+authors.workspace = true
+edition.workspace = true
+version.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+graphbit-core = { path = "../core" }
+napi = { workspace = true }
+napi-derive = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+
+[build-dependencies]
+napi-build = { workspace = true }
+
+[lints]
+workspace = true

@@ -90,7 +90,8 @@ jemallocator.workspace = true
 [workspace]
 members = [
   "core",
-  "python"
+  "python",
+  "javascript"
 ]
 resolver = "2"
 
@@ -103,6 +104,10 @@ resolver = "2"
 # Core dependencies with consistent versions
 anyhow = "1.0"
 async-trait = "0.1.88"
+# NAPI-RS bindings for JavaScript
+napi = { version = "2", features = ["async", "serde-json", "napi6"] }
+napi-derive = "2"
+napi-build = "2"
 # Excel parsing (including XLSB support)
 calamine = "0.26"
 chrono = {version = "0.4", features = ["serde"]}
