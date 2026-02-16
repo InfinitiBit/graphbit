@@ -347,18 +347,6 @@ async fn test_workflow_retry_configuration() {
 }
 
 #[tokio::test]
-async fn test_workflow_concurrency_limits() {
-    graphbit_core::init().expect("Failed to initialize GraphBit");
-
-    // Test workflow execution with concurrency configuration
-    let executor = WorkflowExecutor::new_low_latency(); // Limited concurrency
-    let stats = executor.get_concurrency_stats().await;
-
-    assert_eq!(stats.current_active_tasks, 0);
-    assert_eq!(stats.total_permit_acquisitions, 0);
-}
-
-#[tokio::test]
 async fn test_workflow_execution_stats() {
     graphbit_core::init().expect("Failed to initialize GraphBit");
 
@@ -707,25 +695,6 @@ async fn test_workflow_execution_context_isolation() {
     assert_eq!(context1.get_variable("shared_key"), Some(&json!("value1")));
     assert_eq!(context2.get_variable("shared_key"), Some(&json!("value2")));
     assert_ne!(context1.workflow_id, context2.workflow_id);
-}
-
-#[tokio::test]
-async fn test_workflow_executor_configuration_variants() {
-    graphbit_core::init().expect("Failed to initialize GraphBit");
-
-    // Test different executor configurations
-    let high_throughput = WorkflowExecutor::new_high_throughput();
-    let low_latency = WorkflowExecutor::new_low_latency();
-    let memory_optimized = WorkflowExecutor::new_memory_optimized();
-
-    // Verify different concurrency limits
-    let ht_concurrency = high_throughput.max_concurrency().await;
-    let ll_concurrency = low_latency.max_concurrency().await;
-    let mo_concurrency = memory_optimized.max_concurrency().await;
-
-    assert!(ht_concurrency >= ll_concurrency);
-    assert!(ll_concurrency >= mo_concurrency);
-    assert!(mo_concurrency > 0);
 }
 
 #[tokio::test]

@@ -21,12 +21,6 @@ use crate::runtime::get_runtime;
 /// Execution mode for different performance characteristics
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum ExecutionMode {
-    /// High-throughput mode for batch processing
-    HighThroughput,
-    /// Low-latency mode for real-time applications
-    LowLatency,
-    /// Memory-optimized mode for resource-constrained environments
-    MemoryOptimized,
     /// Balanced mode for general use
     Balanced,
 }
@@ -116,15 +110,6 @@ impl Executor {
 
         let mut exec_config = ExecutionConfig::default();
 
-        // Configure based on lightweight mode for backward compatibility
-        if let Some(lightweight) = lightweight_mode {
-            exec_config.mode = if lightweight {
-                ExecutionMode::LowLatency
-            } else {
-                ExecutionMode::HighThroughput
-            };
-        }
-
         // Set timeout if specified
         if let Some(timeout) = timeout_seconds {
             exec_config.timeout = Duration::from_secs(timeout);
@@ -143,105 +128,6 @@ impl Executor {
         Ok(Self {
             config: exec_config,
             llm_config: config,
-            stats: ExecutionStats::default(),
-        })
-    }
-
-    /// Create a high-throughput executor with optimized configuration
-    #[staticmethod]
-    #[pyo3(signature = (llm_config, timeout_seconds=None, debug=None))]
-    fn new_high_throughput(
-        llm_config: LlmConfig,
-        timeout_seconds: Option<u64>,
-        debug: Option<bool>,
-    ) -> PyResult<Self> {
-        let mut config = ExecutionConfig {
-            mode: ExecutionMode::HighThroughput,
-            enable_tracing: debug.unwrap_or(false), // Default to false
-            ..Default::default()
-        };
-
-        if let Some(timeout) = timeout_seconds {
-            if timeout == 0 || timeout > 3600 {
-                return Err(validation_error(
-                    "timeout_seconds",
-                    Some(&timeout.to_string()),
-                    "Timeout must be between 1 and 3600 seconds",
-                ));
-            }
-            config.timeout = Duration::from_secs(timeout);
-        }
-
-        Ok(Self {
-            config,
-            llm_config,
-            stats: ExecutionStats::default(),
-        })
-    }
-
-    /// Create a low-latency executor with optimized configuration
-    #[staticmethod]
-    #[pyo3(signature = (llm_config, timeout_seconds=None, debug=None))]
-    fn new_low_latency(
-        llm_config: LlmConfig,
-        timeout_seconds: Option<u64>,
-        debug: Option<bool>,
-    ) -> PyResult<Self> {
-        let mut config = ExecutionConfig {
-            mode: ExecutionMode::LowLatency,
-            timeout: Duration::from_secs(30), // Shorter timeout for low latency
-            max_retries: 1,                   // Fewer retries for faster response
-            enable_tracing: debug.unwrap_or(false), // Default to false
-            ..Default::default()
-        };
-
-        if let Some(timeout) = timeout_seconds {
-            if timeout == 0 || timeout > 300 {
-                return Err(validation_error(
-                    "timeout_seconds",
-                    Some(&timeout.to_string()),
-                    "Low-latency timeout must be between 1 and 300 seconds",
-                ));
-            }
-            config.timeout = Duration::from_secs(timeout);
-        }
-
-        Ok(Self {
-            config,
-            llm_config,
-            stats: ExecutionStats::default(),
-        })
-    }
-
-    /// Create a memory-optimized executor for resource-constrained environments
-    #[staticmethod]
-    #[pyo3(signature = (llm_config, timeout_seconds=None, debug=None))]
-    fn new_memory_optimized(
-        llm_config: LlmConfig,
-        timeout_seconds: Option<u64>,
-        debug: Option<bool>,
-    ) -> PyResult<Self> {
-        let mut config = ExecutionConfig {
-            mode: ExecutionMode::MemoryOptimized,
-            enable_metrics: false, // Disable metrics to save memory
-            enable_tracing: debug.unwrap_or(false), // Default to false
-            ..Default::default()
-        };
-
-        if let Some(timeout) = timeout_seconds {
-            if timeout == 0 || timeout > 3600 {
-                return Err(validation_error(
-                    "timeout_seconds",
-                    Some(&timeout.to_string()),
-                    "Timeout must be between 1 and 3600 seconds",
-                ));
-            }
-            config.timeout = Duration::from_secs(timeout);
-        }
-
-        Ok(Self {
-            config,
-            llm_config,
             stats: ExecutionStats::default(),
         })
     }
@@ -492,23 +378,6 @@ impl Executor {
     fn get_execution_mode(&self) -> String {
         format!("{:?}", self.config.mode)
     }
-
-    /// Legacy method for backward compatibility
-    fn set_lightweight_mode(&mut self, enabled: bool) {
-        self.config.mode = if enabled {
-            ExecutionMode::LowLatency
-        } else {
-            ExecutionMode::HighThroughput
-        };
-        if self.config.enable_tracing {
-            info!("Execution mode changed to: {:?}", self.config.mode);
-        }
-    }
-
-    /// Legacy method for backward compatibility
-    fn is_lightweight_mode(&self) -> bool {
-        matches!(self.config.mode, ExecutionMode::LowLatency)
-    }
 }
 
 impl Executor {
@@ -519,15 +388,7 @@ impl Executor {
         config: ExecutionConfig,
     ) -> Result<graphbit_core::types::WorkflowContext, graphbit_core::errors::GraphBitError> {
         let executor = match config.mode {
-            ExecutionMode::HighThroughput => CoreWorkflowExecutor::new_high_throughput()
-                .with_default_llm_config(llm_config.clone()),
-            ExecutionMode::LowLatency => CoreWorkflowExecutor::new_low_latency()
-                .with_default_llm_config(llm_config.clone())
-                .without_retries()
-                .with_fail_fast(true),
-            ExecutionMode::MemoryOptimized => CoreWorkflowExecutor::new_high_throughput()
-                .with_default_llm_config(llm_config.clone()),
-            ExecutionMode::Balanced => CoreWorkflowExecutor::new_high_throughput()
+            ExecutionMode::Balanced => CoreWorkflowExecutor::new()
                 .with_default_llm_config(llm_config.clone()),
         };
 

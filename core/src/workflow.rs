@@ -166,57 +166,6 @@ impl WorkflowExecutor {
         }
     }
 
-    /// Create a workflow executor optimized for high throughput
-    pub fn new_high_throughput() -> Self {
-        let concurrency_config = ConcurrencyConfig::high_throughput();
-        let concurrency_manager = Arc::new(ConcurrencyManager::new(concurrency_config));
-
-        Self {
-            agents: Arc::new(RwLock::new(HashMap::with_capacity(16))),
-            concurrency_manager,
-            max_node_execution_time_ms: None,
-            fail_fast: false,
-            default_retry_config: Some(RetryConfig::default()),
-            circuit_breakers: Arc::new(RwLock::new(HashMap::with_capacity(8))),
-            circuit_breaker_config: CircuitBreakerConfig::default(),
-            default_llm_config: None,
-        }
-    }
-
-    /// Create a workflow executor optimized for low latency
-    pub fn new_low_latency() -> Self {
-        let concurrency_config = ConcurrencyConfig::low_latency();
-        let concurrency_manager = Arc::new(ConcurrencyManager::new(concurrency_config));
-
-        Self {
-            agents: Arc::new(RwLock::new(HashMap::with_capacity(16))),
-            concurrency_manager,
-            max_node_execution_time_ms: None,
-            fail_fast: true,            // Fail fast for low latency
-            default_retry_config: None, // No retries for low latency
-            circuit_breakers: Arc::new(RwLock::new(HashMap::with_capacity(8))),
-            circuit_breaker_config: CircuitBreakerConfig::default(),
-            default_llm_config: None,
-        }
-    }
-
-    /// Create a workflow executor optimized for memory usage
-    pub fn new_memory_optimized() -> Self {
-        let concurrency_config = ConcurrencyConfig::memory_optimized();
-        let concurrency_manager = Arc::new(ConcurrencyManager::new(concurrency_config));
-
-        Self {
-            agents: Arc::new(RwLock::new(HashMap::with_capacity(8))),
-            concurrency_manager,
-            max_node_execution_time_ms: None,
-            fail_fast: false,
-            default_retry_config: Some(RetryConfig::default()),
-            circuit_breakers: Arc::new(RwLock::new(HashMap::with_capacity(4))),
-            circuit_breaker_config: CircuitBreakerConfig::default(),
-            default_llm_config: None,
-        }
-    }
-
     /// Register an agent with the executor
     pub async fn register_agent(&self, agent: Arc<dyn AgentTrait>) {
         let agent_id = agent.id().clone();
@@ -733,15 +682,6 @@ impl WorkflowExecutor {
                         agents.clone(),
                     )
                     .await
-                }
-                NodeType::Condition { expression } => {
-                    Self::execute_condition_node_static(expression).await
-                }
-                NodeType::Transform { transformation } => {
-                    Self::execute_transform_node_static(transformation, context.clone()).await
-                }
-                NodeType::Delay { duration_seconds } => {
-                    Self::execute_delay_node_static(*duration_seconds).await
                 }
                 NodeType::DocumentLoader {
                     document_type,
@@ -1269,29 +1209,6 @@ impl WorkflowExecutor {
             );
             Ok(serde_json::Value::String(llm_response.content))
         }
-    }
-
-    /// Execute a condition node (static version)
-    async fn execute_condition_node_static(_expression: &str) -> GraphBitResult<serde_json::Value> {
-        // Simple condition evaluation (in a real implementation, you'd use a proper expression evaluator)
-        Ok(serde_json::Value::Bool(true))
-    }
-
-    /// Execute a transform node (static version)
-    async fn execute_transform_node_static(
-        _transformation: &str,
-        _context: Arc<Mutex<WorkflowContext>>,
-    ) -> GraphBitResult<serde_json::Value> {
-        // Simple transformation (in a real implementation, you'd use a proper transformation engine)
-        Ok(serde_json::Value::String("transformed".to_string()))
-    }
-
-    /// Execute a delay node (static version)
-    async fn execute_delay_node_static(duration_seconds: u64) -> GraphBitResult<serde_json::Value> {
-        tokio::time::sleep(tokio::time::Duration::from_secs(duration_seconds)).await;
-        Ok(serde_json::Value::String(format!(
-            "Delayed for {duration_seconds} seconds",
-        )))
     }
 
     /// Execute a document loader node (static version)
