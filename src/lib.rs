@@ -35,7 +35,7 @@ pub use graphbit_core::*;
 pub mod prelude {
     //! Commonly used types and traits
     pub use graphbit_core::{
-        agents::{Agent, AgentConfig, AgentTrait},
+        agents::{agent::Agent, config::AgentConfig, r#trait::AgentTrait},
         embeddings::{EmbeddingProvider, EmbeddingRequest, EmbeddingResponse},
         graph::{NodeType, WorkflowEdge, WorkflowGraph, WorkflowNode},
         llm::{LlmProvider, LlmResponse},

@@ -42,7 +42,7 @@ pub mod validation;
 pub mod workflow;
 
 // Re-export important types for convenience - only keep what's actually used
-pub use agents::{Agent, AgentBuilder, AgentConfig, AgentTrait};
+pub use agents::{agent::Agent, builder::AgentBuilder, config::AgentConfig, r#trait::AgentTrait};
 pub use document_loader::{DocumentContent, DocumentLoader, DocumentLoaderConfig};
 pub use embeddings::{
     EmbeddingConfig, EmbeddingProvider, EmbeddingRequest, EmbeddingResponse, EmbeddingService,
