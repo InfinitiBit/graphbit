@@ -9,6 +9,7 @@ pub mod azurellm;
 pub mod bytedance;
 pub mod deepseek;
 pub mod fireworks;
+pub mod gemini;
 pub mod huggingface;
 pub mod mistralai;
 pub mod ollama;
@@ -452,6 +453,20 @@ impl LlmProviderFactory {
                     )?))
                 } else {
                     Ok(Box::new(mistralai::MistralAiProvider::new(api_key, model)?))
+                }
+            }
+            LlmConfig::Gemini {
+                api_key,
+                model,
+                base_url,
+                ..
+            } => {
+                if let Some(base_url) = base_url {
+                    Ok(Box::new(gemini::GeminiProvider::with_base_url(
+                        api_key, model, base_url,
+                    )?))
+                } else {
+                    Ok(Box::new(gemini::GeminiProvider::new(api_key, model)?))
                 }
             }
             #[cfg(feature = "python")]

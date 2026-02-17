@@ -247,6 +247,19 @@ impl LlmConfig {
 
     #[staticmethod]
     #[pyo3(signature = (api_key, model=None))]
+    fn gemini(api_key: String, model: Option<String>) -> PyResult<Self> {
+        validate_api_key(&api_key, "Gemini")?;
+
+        Ok(Self {
+            inner: CoreLlmConfig::gemini(
+                api_key,
+                model.unwrap_or_else(|| "gemini-2.5-flash".to_string()),
+            ),
+        })
+    }
+
+    #[staticmethod]
+    #[pyo3(signature = (api_key, model=None))]
     fn huggingface(api_key: String, model: Option<String>) -> PyResult<Self> {
         validate_api_key(&api_key, "HuggingFace")?;
 
