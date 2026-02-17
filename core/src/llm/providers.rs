@@ -5,12 +5,13 @@ use crate::llm::{LlmRequest, LlmResponse};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::sync::LazyLock;
+#[cfg(feature = "python")]
+use std::sync::{Arc, Mutex};
 
 #[cfg(feature = "python")]
-#[cfg(feature = "python")]
-lazy_static::lazy_static! {
-    static ref PYTHON_INSTANCE_REGISTRY: std::sync::Mutex<HashMap<String, std::sync::Arc<pyo3::PyObject>>> = std::sync::Mutex::new(HashMap::new());
-}
+static PYTHON_INSTANCE_REGISTRY: LazyLock<Mutex<HashMap<String, Arc<pyo3::PyObject>>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
 
 /// Register a Python LLM instance in the global registry
 ///

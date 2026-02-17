@@ -13,16 +13,14 @@ use crate::types::{
     TaskInfo, WorkflowContext, WorkflowExecutionStats, WorkflowId, WorkflowState,
 };
 use futures::future::join_all;
-use lazy_static::lazy_static;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 use tokio::sync::{Mutex, RwLock};
 
-lazy_static! {
-    static ref NODE_REF_PATTERN: Regex = Regex::new(r"\{\{node\.([a-zA-Z0-9_\-\.]+)\}\}").unwrap();
-}
+
+static NODE_REF_PATTERN: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\{\{node\.([a-zA-Z0-9_\-\.]+)\}\}").unwrap());
 
 /// A complete workflow definition
 #[derive(Debug, Clone, Serialize, Deserialize)]
