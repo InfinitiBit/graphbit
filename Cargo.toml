@@ -10,10 +10,12 @@ serde.workspace = true
 serde_json.workspace = true
 tempfile.workspace = true
 tokio.workspace = true
+temp-env.workspace = true
 
 [dev-dependencies]
 pyo3 = {workspace = true, features = ["auto-initialize"]}
 async-trait.workspace = true
+temp-env.workspace = true
 
 [features]
 default = []
@@ -116,7 +118,6 @@ graphbit-core = {path = "core"}
 # Platform-specific dependencies
 jemallocator = "0.5"
 # Utilities
-lazy_static = "1.4"
 lopdf = "0.32"
 mimalloc = {version = "0.1", default-features = false}
 num_cpus = "1.16"
@@ -128,17 +129,18 @@ pyo3 = "0.24.1"
 pyo3-async-runtimes = "0.24"
 pythonize = "0.24"
 quick-xml = {version = "0.36", features = ["serialize"]}
-rand = "0.8"
+rand = "0.9"
 regex = "1.10"
-reqwest = {version = "0.11", features = ["json", "stream"]}
+reqwest = {version = "0.13", features = ["json", "stream"]}
 # HTML parsing
 scraper = "0.20"
 serde = {version = "1.0", features = ["derive"]}
 serde_json = "1.0"
 sys-info = "0.9"
+temp-env = "0.3.6"
 tempfile = "3.10.0"
 # Error handling
-thiserror = "1.0"
+thiserror = "2.0"
 tokio = {version = "1.38", features = ["full"]}
 # Tracing and logging
 tracing = "0.1"
@@ -183,10 +185,10 @@ pre-release-replacements = [
 authors = ["GraphBit Team"]
 categories = ["development-tools", "api-bindings", "asynchronous"]
 documentation = "https://docs.graphbit.ai"
-edition = "2021"
+edition = "2024"
 homepage = "https://graphbit.ai"
 keywords = ["ai", "automation", "workflow", "agent", "llm"]
 license-file = "LICENSE.md"
 repository = "https://github.com/InfinitiBit/graphbit"
-rust-version = "1.70.0"
+rust-version = "1.93.0"
 version = "0.6.4"

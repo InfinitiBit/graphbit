@@ -247,36 +247,34 @@ async fn test_environment_variable_substitution() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     let config_path = temp_dir.path().join("env_config.json");
 
-    // Set test environment variable
-    std::env::set_var("TEST_API_KEY", "test-key-from-env");
+    // TODO: Audit that the environment access only happens in single-threaded code.
+    // temp env closure to ensure environment variable is set only for this test
+    temp_env::with_var("TEST_API_KEY", Some("test-key-from-env"), || {
+        let config_content = serde_json::json!({
+            "llm": {
+                "provider": "openai",
+                "api_key": "${TEST_API_KEY}",
+                "model": "gpt-3.5-turbo"
+            }
+        });
 
-    let config_content = serde_json::json!({
-        "llm": {
-            "provider": "openai",
-            "api_key": "${TEST_API_KEY}",
-            "model": "gpt-3.5-turbo"
-        }
+        fs::write(
+            &config_path,
+            serde_json::to_string(&config_content).unwrap(),
+        )
+        .expect("Failed to write config file");
+
+        let content = fs::read_to_string(&config_path).expect("Failed to read config file");
+
+        // Manual environment variable substitution for testing
+        let env_value = std::env::var("TEST_API_KEY").unwrap_or_default();
+        let substituted_content = content.replace("${TEST_API_KEY}", &env_value);
+
+        let parsed: serde_json::Value =
+            serde_json::from_str(&substituted_content).expect("Failed to parse substituted JSON");
+
+        assert_eq!(parsed["llm"]["api_key"], "test-key-from-env");
     });
-
-    fs::write(
-        &config_path,
-        serde_json::to_string(&config_content).unwrap(),
-    )
-    .expect("Failed to write config file");
-
-    let content = fs::read_to_string(&config_path).expect("Failed to read config file");
-
-    // Manual environment variable substitution for testing
-    let env_value = std::env::var("TEST_API_KEY").unwrap_or_default();
-    let substituted_content = content.replace("${TEST_API_KEY}", &env_value);
-
-    let parsed: serde_json::Value =
-        serde_json::from_str(&substituted_content).expect("Failed to parse substituted JSON");
-
-    assert_eq!(parsed["llm"]["api_key"], "test-key-from-env");
-
-    // Clean up
-    std::env::remove_var("TEST_API_KEY");
 }
 
 #[tokio::test]
