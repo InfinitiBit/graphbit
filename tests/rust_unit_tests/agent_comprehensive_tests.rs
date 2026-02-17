@@ -4,7 +4,7 @@
 //! and agent builder patterns.
 
 use graphbit_core::{
-    agents::{AgentBuilder, AgentConfig},
+    AgentBuilder, AgentConfig,
     types::{
         AgentCapability, AgentId, AgentMessage, MessageContent, NodeId, WorkflowContext, WorkflowId,
     },
