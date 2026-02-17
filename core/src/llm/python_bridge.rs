@@ -90,7 +90,7 @@ impl PythonBridgeProvider {
     /// 3. Simple text formats: plain string, `{"text": "..."}`, or `{"generated_text": "..."}`
     ///
     /// The function tries each format in order and provides detailed error messages if all fail.
-    fn parse_python_response(&self, py: Python, result: PyObject) -> GraphBitResult<LlmResponse> {
+    fn parse_python_response(&self, py: Python<'_>, result: PyObject) -> GraphBitResult<LlmResponse> {
         // Collect error information for debugging
         let mut error_details = Vec::new();
 
@@ -158,7 +158,7 @@ impl PythonBridgeProvider {
     ///   "usage": {"prompt_tokens": N, "completion_tokens": N}
     /// }
     /// ```
-    fn try_openai_format(py: Python, result: &PyObject, model: &str) -> Option<LlmResponse> {
+    fn try_openai_format(py: Python<'_>, result: &PyObject, model: &str) -> Option<LlmResponse> {
         // Try to get choices array
         let choices = result.getattr(py, "choices").ok()?;
         let first_choice = choices.call_method1(py, "__getitem__", (0,)).ok()?;
@@ -197,7 +197,7 @@ impl PythonBridgeProvider {
     /// ```json
     /// [{"generated_text": "..."}]
     /// ```
-    fn try_transformers_format(py: Python, result: &PyObject, model: &str) -> Option<LlmResponse> {
+    fn try_transformers_format(py: Python<'_>, result: &PyObject, model: &str) -> Option<LlmResponse> {
         // Check if result is a list
         let bound = result.bind(py);
         let list = bound.downcast::<PyList>().ok()?;
@@ -223,7 +223,7 @@ impl PythonBridgeProvider {
     /// - Plain string: `"generated text"`
     /// - Dict with text: `{"text": "..."}`
     /// - Dict with generated_text: `{"generated_text": "..."}`
-    fn try_simple_text_format(py: Python, result: &PyObject, model: &str) -> Option<LlmResponse> {
+    fn try_simple_text_format(py: Python<'_>, result: &PyObject, model: &str) -> Option<LlmResponse> {
         // Try direct string extraction
         if let Ok(content) = result.extract::<String>(py) {
             return Some(LlmResponse::new(content, model).with_finish_reason(FinishReason::Stop));
@@ -253,7 +253,7 @@ impl PythonBridgeProvider {
     /// Safely extract usage information from response
     ///
     /// Returns `None` if usage information is missing or malformed.
-    fn extract_usage_safely(py: Python, result: &PyObject) -> Option<LlmUsage> {
+    fn extract_usage_safely(py: Python<'_>, result: &PyObject) -> Option<LlmUsage> {
         let usage_obj = result.getattr(py, "usage").ok()?;
 
         // Try to extract token counts - handle both u32 and i64 (Python int)
@@ -277,7 +277,7 @@ impl PythonBridgeProvider {
     /// Safely extract finish reason from response
     ///
     /// Returns `FinishReason::Stop` as default if finish_reason is missing or unrecognized.
-    fn extract_finish_reason_safely(py: Python, result: &PyObject) -> FinishReason {
+    fn extract_finish_reason_safely(py: Python<'_>, result: &PyObject) -> FinishReason {
         result
             .getattr(py, "choices")
             .ok()
