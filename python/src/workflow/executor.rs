@@ -90,10 +90,10 @@ pub struct Executor {
 #[pymethods]
 impl Executor {
     #[new]
-    #[pyo3(signature = (config, lightweight_mode=None, timeout_seconds=None, debug=None))]
+    #[pyo3(signature = (config, _lightweight_mode=None, timeout_seconds=None, debug=None))]
     fn new(
         config: LlmConfig,
-        lightweight_mode: Option<bool>,
+        _lightweight_mode: Option<bool>,
         timeout_seconds: Option<u64>,
         debug: Option<bool>,
     ) -> PyResult<Self> {
