@@ -1,35 +1,16 @@
 name: Build Distribution Artifacts
 
 # ============================================================================
-# Purpose: Build wheels and source distribution for all platforms
+# Purpose
+# - Build wheels for supported platforms and a source distribution (sdist)
+# - Verify artifacts to ensure builds are working correctly
+# - Does NOT publish to PyPI or TestPyPI
 #
-# SAFE TO RUN: This workflow ONLY builds artifacts. It does NOT:
-# - Validate code (no cargo fmt, no clippy)
-# - Run tests (no pytest, no cargo test)
-# - Publish to PyPI or any package registry
-# - Create GitHub releases
-# - Modify any files in the repository
-# - Create or modify git tags
-# - Update version numbers
-# - Create or modify release notes
-# - Make any commits
-# - Have ANY side effects on repository state
-#
-# OUTPUTS: Only creates downloadable build artifacts (wheels + sdist)
-#
-# Use this workflow to:
-# - Quickly generate artifacts for all platforms
-# - Test build process without full CI/CD
-# - Prepare artifacts for manual inspection
-# - Generate wheels for local testing
-# - Debug platform-specific build issues
-#
-# TRIGGER: Manual only - runs on the branch you select when triggering
+# Use this workflow to test if the project builds accurately without publishing
 # ============================================================================
 
 on:
-  # Manual trigger ONLY - no automatic triggers
-  # This workflow runs on whichever branch you select when manually triggering
+  # Manual trigger
   workflow_dispatch:
     inputs:
       artifact_retention_days:
@@ -38,18 +19,12 @@ on:
         default: '7'
         type: string
 
-  # Automatic triggers are DISABLED to prevent accidental runs
-  # If you want automatic triggers, uncomment the following:
-  # push:
-  #   branches:
-  #     - 'build-test/**'
-  #     - 'artifact-test/**'
 
-# Permissions for artifact attestation
+# Permissions
 permissions:
-  contents: read
-  id-token: write
-  attestations: write
+  contents: read         # For checking out code
+  id-token: write        # For artifact attestation
+  attestations: write    # For build provenance
 
 # Environment variables
 env:
@@ -69,7 +44,7 @@ jobs:
       fail-fast: false
       matrix:
         platform:
-          # Linux (glibc) - Standard Linux distributions
+          # Linux (glibc) - common Linux distributions
         - runner: ubuntu-22.04
           target: x86_64
           manylinux: auto
@@ -77,7 +52,7 @@ jobs:
           target: aarch64
           manylinux: auto
 
-          # Linux (musl) - Alpine Linux and minimal containers
+          # Linux (musl) - Alpine / minimal containers
         - runner: ubuntu-22.04
           target: x86_64
           manylinux: musllinux_1_2
@@ -90,14 +65,9 @@ jobs:
           target: x64
           manylinux: default
 
-          # macOS (Intel)
-        - runner: macos-13
-          target: x86_64
-          manylinux: default
-
-          # macOS (Apple Silicon)
+          # macOS (universal2)
         - runner: macos-14
-          target: aarch64
+          target: universal2-apple-darwin
           manylinux: default
 
     steps:
@@ -153,11 +123,11 @@ jobs:
     - name: Verify wheel contents
       shell: bash
       run: |
-        echo "📦 Built wheels:"
+        echo "[ARTIFACT] Built wheels:"
         ls -lh python/dist/
 
         echo ""
-        echo "🔍 Wheel details:"
+        echo "[INSPECT] Wheel details:"
         python -m pip install --upgrade pip wheel
         for wheel in python/dist/*.whl; do
           echo "Inspecting: $(basename $wheel)"
@@ -170,7 +140,7 @@ jobs:
       with:
         name: wheels-${{ matrix.platform.runner }}-${{ matrix.platform.target }}-${{ matrix.platform.manylinux }}
         path: python/dist/*.whl
-        retention-days: ${{ inputs.artifact_retention_days || 7 }}
+        retention-days: ${{ inputs.artifact_retention_days || 30 }}
         if-no-files-found: error
 
     - name: Generate build attestation
@@ -221,11 +191,11 @@ jobs:
 
     - name: Verify sdist contents
       run: |
-        echo "📦 Built source distribution:"
+        echo "[ARTIFACT] Built source distribution:"
         ls -lh python/dist/
 
         echo ""
-        echo "🔍 Sdist contents:"
+        echo "[INSPECT] Sdist contents:"
         tar -tzf python/dist/*.tar.gz | head -30
 
     - name: Upload sdist artifact
@@ -233,7 +203,7 @@ jobs:
       with:
         name: wheels-sdist
         path: python/dist/*.tar.gz
-        retention-days: ${{ inputs.artifact_retention_days || 7 }}
+        retention-days: ${{ inputs.artifact_retention_days || 30 }}
         if-no-files-found: error
 
     - name: Generate build attestation
@@ -242,120 +212,186 @@ jobs:
         subject-path: python/dist/*.tar.gz
 
   # ============================================================================
-  # Job 3: Build Summary (Always runs to provide artifact overview)
+  # Job 3: Verify Artifacts (Safety Checks)
+  # ============================================================================
+  verify-artifacts:
+    name: Verify Build Artifacts
+    needs: [build-wheels, build-sdist]
+    runs-on: ubuntu-latest
+
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      wheel_count: ${{ steps.count.outputs.wheel_count }}
+      sdist_count: ${{ steps.count.outputs.sdist_count }}
+      verification_passed: ${{ steps.verify.outputs.passed }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: dist-all
+
+    - name: Collect all distribution files
+      run: |
+        mkdir -p dist
+        find dist-all -name "*.whl" -exec cp {} dist/ \;
+        find dist-all -name "*.tar.gz" -exec cp {} dist/ \;
+
+        echo "[ARTIFACT] Collected distribution files:"
+        ls -lh dist/
+
+    - name: Extract version from pyproject.toml
+      id: version
+      run: |
+        # Extract from pyproject.toml
+        VERSION=$(python -c "import tomllib; data = tomllib.load(open('python/pyproject.toml', 'rb')); print(data['project']['version'])")
+        echo "Version from pyproject.toml: $VERSION"
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+    - name: Count artifacts
+      id: count
+      run: |
+        WHEEL_COUNT=$(find dist -name "*.whl" | wc -l)
+        SDIST_COUNT=$(find dist -name "*.tar.gz" | wc -l)
+
+        echo "wheel_count=$WHEEL_COUNT" >> $GITHUB_OUTPUT
+        echo "sdist_count=$SDIST_COUNT" >> $GITHUB_OUTPUT
+
+        echo "[STATS] Artifact counts:"
+        echo "  Wheels: $WHEEL_COUNT"
+        echo "  Sdist: $SDIST_COUNT"
+
+    - name: Verify artifact counts
+      id: verify
+      run: |
+        WHEEL_COUNT=${{ steps.count.outputs.wheel_count }}
+        SDIST_COUNT=${{ steps.count.outputs.sdist_count }}
+
+        echo "[STATS] Verification Summary:"
+        echo "  Wheels found: $WHEEL_COUNT"
+        echo "  Sdist found: $SDIST_COUNT"
+        echo ""
+
+        # Check sdist count (must be exactly 1)
+        if [ "$SDIST_COUNT" -ne 1 ]; then
+          echo "[ERROR] Expected 1 sdist, found $SDIST_COUNT"
+          exit 1
+        else
+          echo "[OK] Sdist count correct: 1"
+        fi
+
+        # Report wheel count (informational only)
+        echo "[OK] Found $WHEEL_COUNT wheel(s)"
+        echo ""
+        echo "[OK] Artifact verification passed!"
+        echo "passed=true" >> $GITHUB_OUTPUT
+
+    - name: Upload verified distribution files
+      uses: actions/upload-artifact@v4
+      with:
+        name: verified-dist
+        path: dist/
+        retention-days: ${{ inputs.artifact_retention_days || 30 }}
+        if-no-files-found: error
+
+    - name: Generate verification summary
+      if: always()
+      run: |
+        echo "## Artifact Verification" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Version**: ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+        echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+
+        echo "| Wheels Found | ${{ steps.count.outputs.wheel_count }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Sdist Found | ${{ steps.count.outputs.sdist_count }} |" >> $GITHUB_STEP_SUMMARY
+
+        if [ "${{ steps.verify.outputs.passed }}" = "true" ]; then
+          echo "| Overall | ✅ **PASSED** |" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "| Overall | ❌ **FAILED** |" >> $GITHUB_STEP_SUMMARY
+        fi
+
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "---" >> $GITHUB_STEP_SUMMARY
+        echo "**Note**: This is a test build workflow. No packages were published to PyPI." >> $GITHUB_STEP_SUMMARY
+
+  # ============================================================================
+  # Job 4: Build Summary
   # ============================================================================
   build-summary:
     name: Build Summary
-    needs: [build-wheels, build-sdist]
+    needs: [build-wheels, build-sdist, verify-artifacts]
     if: always()
     runs-on: ubuntu-latest
 
     steps:
-    - name: Download all artifacts for summary
-      uses: actions/download-artifact@v4
-      with:
-        path: all-artifacts
-
-    - name: Generate build summary
+    - name: Generate comprehensive build summary
       run: |
-        echo "# 🎯 Build Artifacts Summary" >> $GITHUB_STEP_SUMMARY
+        echo "# Test Build Workflow Summary" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "**Trigger**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
         echo "**Ref**: ${{ github.ref }}" >> $GITHUB_STEP_SUMMARY
         echo "**Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Version**: ${{ needs.verify-artifacts.outputs.version || 'N/A' }}" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
 
-        echo "## 📊 Job Status" >> $GITHUB_STEP_SUMMARY
+        echo "## Job Status" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
         echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
 
         # Build Wheels
         if [ "${{ needs.build-wheels.result }}" = "success" ]; then
-          echo "| 🔨 Build Wheels | ✅ Success (7 platforms) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build Wheels | ✅ Success (7 platforms) |" >> $GITHUB_STEP_SUMMARY
         else
-          echo "| 🔨 Build Wheels | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build Wheels | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
         fi
 
-        # Build sdist
+        # Build Sdist
         if [ "${{ needs.build-sdist.result }}" = "success" ]; then
-          echo "| 📦 Source Distribution | ✅ Success |" >> $GITHUB_STEP_SUMMARY
+          echo "| Source Distribution | ✅ Success |" >> $GITHUB_STEP_SUMMARY
         else
-          echo "| 📦 Source Distribution | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Source Distribution | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
         fi
 
-        echo "" >> $GITHUB_STEP_SUMMARY
-
-        # Artifact details
-        echo "## 📦 Generated Artifacts" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-
-        if [ -d "all-artifacts" ]; then
-          echo "### Artifact Breakdown" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-
-          total_size=0
-          wheel_count=0
-
-          for artifact_dir in all-artifacts/*/; do
-            if [ -d "$artifact_dir" ]; then
-              artifact_name=$(basename "$artifact_dir")
-              echo "📁 $artifact_name:" >> $GITHUB_STEP_SUMMARY
-
-              for file in "$artifact_dir"*; do
-                if [ -f "$file" ]; then
-                  filename=$(basename "$file")
-                  size=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file" 2>/dev/null || echo "0")
-                  size_mb=$(echo "scale=2; $size / 1048576" | bc 2>/dev/null || echo "N/A")
-
-                  echo "  - $filename (${size_mb} MB)" >> $GITHUB_STEP_SUMMARY
-
-                  total_size=$((total_size + size))
-
-                  if [[ "$filename" == *.whl ]]; then
-                    wheel_count=$((wheel_count + 1))
-                  fi
-                fi
-              done
-              echo "" >> $GITHUB_STEP_SUMMARY
-            fi
-          done
-
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          total_size_mb=$(echo "scale=2; $total_size / 1048576" | bc 2>/dev/null || echo "N/A")
-
-          echo "### Summary Statistics" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **Total Wheels**: $wheel_count" >> $GITHUB_STEP_SUMMARY
-          echo "- **Total Size**: ${total_size_mb} MB" >> $GITHUB_STEP_SUMMARY
-          echo "- **Retention**: ${{ inputs.artifact_retention_days || 7 }} days" >> $GITHUB_STEP_SUMMARY
+        # Verify Artifacts
+        if [ "${{ needs.verify-artifacts.result }}" = "success" ]; then
+          echo "| Verify Artifacts | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
         else
-          echo "⚠️  No artifacts found" >> $GITHUB_STEP_SUMMARY
+          echo "| Verify Artifacts | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
         fi
 
         echo "" >> $GITHUB_STEP_SUMMARY
 
         # Overall status
         if [ "${{ needs.build-wheels.result }}" = "success" ] && \
-           [ "${{ needs.build-sdist.result }}" = "success" ]; then
-          echo "## ✅ Build Completed Successfully" >> $GITHUB_STEP_SUMMARY
+           [ "${{ needs.build-sdist.result }}" = "success" ] && \
+           [ "${{ needs.verify-artifacts.result }}" = "success" ]; then
+          echo "## ✅ All Builds Passed!" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "All artifacts have been built and are ready for download!" >> $GITHUB_STEP_SUMMARY
+          echo "All wheels and source distribution built successfully." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📥 How to Download" >> $GITHUB_STEP_SUMMARY
+          echo "**Artifacts:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Wheels: ${{ needs.verify-artifacts.outputs.wheel_count }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Sdist: ${{ needs.verify-artifacts.outputs.sdist_count }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "1. Scroll to the **Artifacts** section at the bottom of this workflow run" >> $GITHUB_STEP_SUMMARY
-          echo "2. Click on any artifact to download" >> $GITHUB_STEP_SUMMARY
-          echo "3. Extract the downloaded ZIP file to access the wheels" >> $GITHUB_STEP_SUMMARY
+          echo "Download artifacts from the workflow run to test locally." >> $GITHUB_STEP_SUMMARY
         else
-          echo "## ⚠️  Build Completed with Issues" >> $GITHUB_STEP_SUMMARY
+          echo "## ❌ Build Issues Detected" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Some build jobs failed. Please review the logs above." >> $GITHUB_STEP_SUMMARY
+          echo "Some jobs failed. Please review the logs above." >> $GITHUB_STEP_SUMMARY
         fi
 
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "---" >> $GITHUB_STEP_SUMMARY
-        echo "*Generated by Build Artifacts Only Workflow*" >> $GITHUB_STEP_SUMMARY
+        echo "*This workflow only tests builds - no packages are published to PyPI*" >> $GITHUB_STEP_SUMMARY
