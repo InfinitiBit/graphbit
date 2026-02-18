@@ -131,7 +131,7 @@ pythonize = "0.24"
 quick-xml = {version = "0.36", features = ["serialize"]}
 rand = "0.9"
 regex = "1.10"
-reqwest = {version = "0.13", features = ["json", "stream"]}
+reqwest = {version = "0.12", default-features = false, features = ["json", "stream", "native-tls"]}
 # HTML parsing
 scraper = "0.20"
 serde = {version = "1.0", features = ["derive"]}
