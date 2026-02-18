@@ -47,10 +47,10 @@ jobs:
           # Linux (glibc) - common Linux distributions
         - runner: ubuntu-22.04
           target: x86_64
-          manylinux: auto
+          manylinux: manylinux_2_28
         - runner: ubuntu-22.04
           target: aarch64
-          manylinux: auto
+          manylinux: manylinux_2_28
 
           # Linux (musl) - Alpine / minimal containers
         - runner: ubuntu-22.04
@@ -97,6 +97,8 @@ jobs:
 
     - name: Build wheels
       uses: PyO3/maturin-action@v1
+      env:
+        CFLAGS_aarch64_unknown_linux_gnu: "-D__ARM_ARCH=8"
       with:
         target: ${{ matrix.platform.target }}
         args: --release --out dist --find-interpreter
