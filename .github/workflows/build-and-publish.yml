@@ -137,6 +137,8 @@ jobs:
 
     - name: Build wheels
       uses: PyO3/maturin-action@v1
+      env:
+        CFLAGS_aarch64_unknown_linux_gnu: "-D__ARM_ARCH=8"
       with:
         target: ${{ matrix.platform.target }}
         args: --release --out dist --find-interpreter
