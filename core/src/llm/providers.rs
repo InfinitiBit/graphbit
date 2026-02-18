@@ -200,6 +200,15 @@ pub enum LlmConfig {
         /// Optional custom base URL
         base_url: Option<String>,
     },
+    /// `Google Gemini` LLM provider configuration
+    Gemini {
+        /// API key for authentication
+        api_key: String,
+        /// Model name to use (e.g., "gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash")
+        model: String,
+        /// Optional custom base URL
+        base_url: Option<String>,
+    },
     /// Python bridge provider configuration for calling Python LLM implementations
     #[cfg(feature = "python")]
     PythonBridge {
@@ -435,6 +444,15 @@ impl LlmConfig {
         }
     }
 
+    /// Create `Google Gemini` configuration
+    pub fn gemini(api_key: impl Into<String>, model: impl Into<String>) -> Self {
+        Self::Gemini {
+            api_key: api_key.into(),
+            model: model.into(),
+            base_url: None,
+        }
+    }
+
     /// Create `Ollama` configuration
     pub fn ollama(model: impl Into<String>) -> Self {
         Self::Ollama {
@@ -469,6 +487,7 @@ impl LlmConfig {
             Self::Xai { .. } => "xai",
             Self::Ai21 { .. } => "ai21",
             Self::MistralAI { .. } => "mistralai",
+            Self::Gemini { .. } => "gemini",
             #[cfg(feature = "python")]
             Self::PythonBridge { .. } => "python_bridge",
             Self::Custom { provider_type, .. } => provider_type,
@@ -496,6 +515,7 @@ impl LlmConfig {
             Self::Xai { model, .. } => model,
             Self::Ai21 { model, .. } => model,
             Self::MistralAI { model, .. } => model,
+            Self::Gemini { model, .. } => model,
             #[cfg(feature = "python")]
             Self::PythonBridge { model, .. } => model,
             Self::Custom { config, .. } => config
