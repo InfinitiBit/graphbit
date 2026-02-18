@@ -105,13 +105,15 @@ class AdvancedVersionManager:
             result = subprocess.run([git_path, "tag", "--sort=-version:refname"], capture_output=True, text=True, cwd=self.root_path, shell=False)  # nosec
             if result.returncode == 0:
                 tags = [tag.strip() for tag in result.stdout.split("\n") if tag.strip()]
-                if tags:
+                # Filter to only semver-style tags (v1.2.3 or 1.2.3)
+                semver_tags = [t for t in tags if re.match(r"^v?\d+\.\d+\.\d+$", t)]
+                if semver_tags:
                     # Get the latest tag
-                    latest_tag = tags[0]
+                    latest_tag = semver_tags[0]
                     # Remove 'v' prefix if present
                     clean_version = latest_tag.lstrip("v")
                     remote_versions["git_latest_tag"] = clean_version
-                    remote_versions["git_all_tags"] = ", ".join(tags[:5])  # Top 5 tags
+                    remote_versions["git_all_tags"] = ", ".join(semver_tags[:5])  # Top 5 tags
         except Exception as e:
             print(f"Warning: Could not fetch git tags: {e}")
 
@@ -122,8 +124,12 @@ class AdvancedVersionManager:
             response.raise_for_status()  # Raise an exception for bad status codes
             data = response.json()
             tag_name = data.get("tag_name", "")
-            clean_version = tag_name.lstrip("v")
-            remote_versions["github_latest_release"] = clean_version
+            # Validate tag is a semver-style version (v1.2.3 or 1.2.3)
+            if re.match(r"^v?\d+\.\d+\.\d+$", tag_name):
+                clean_version = tag_name.lstrip("v")
+                remote_versions["github_latest_release"] = clean_version
+            else:
+                print(f"Warning: GitHub latest release tag '{tag_name}' is not a semver version, skipping")
         except Exception as e:
             print(f"Warning: Could not fetch GitHub releases: {e}")
 
