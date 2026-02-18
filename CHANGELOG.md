@@ -1,3 +1,26 @@
+## [0.6.5] - 2026-02-18
+
+### ✨ New Features
+
+- **Ollama Streaming Support** by @Junaid-Hossain in [#443](https://github.com/InfinitiBit/graphbit/pull/443) ([a51037c](https://github.com/InfinitiBit/graphbit/commit/a51037c)) on 2026-02-13
+- **MistralAI Streaming Support** in [#444](https://github.com/InfinitiBit/graphbit/pull/444) ([2011f80](https://github.com/InfinitiBit/graphbit/commit/2011f80)) on 2026-02-13
+- **Google Gemini LLM Provider Implementation** in [#454](https://github.com/InfinitiBit/graphbit/pull/454) ([e532059](https://github.com/InfinitiBit/graphbit/commit/e532059)) on 2026-02-17
+- **AI21 LLM Streaming Support** in [#455](https://github.com/InfinitiBit/graphbit/pull/455) ([9b7e643](https://github.com/InfinitiBit/graphbit/commit/9b7e643)) on 2026-02-17
+- **Azure OpenAI Codex Model Support** in [#457](https://github.com/InfinitiBit/graphbit/pull/457) ([dc98339](https://github.com/InfinitiBit/graphbit/commit/dc98339)) on 2026-02-18
+
+### 🐛 Bug Fixes
+
+- **Patch version updated on Cargo.lock file** in [#441](https://github.com/InfinitiBit/graphbit/pull/441) ([cd38aa8](https://github.com/InfinitiBit/graphbit/commit/cd38aa8)) on 2026-02-12
+
+### 🔧 Maintenance
+
+- **Upgraded Rust MSRV to 1.90.0 and edition to 2024** in [#453](https://github.com/InfinitiBit/graphbit/pull/453) ([aec39d3](https://github.com/InfinitiBit/graphbit/commit/aec39d3)) on 2026-02-17
+- **Dead code removal and address build warnings** in [#442](https://github.com/InfinitiBit/graphbit/pull/442) ([4846c57](https://github.com/InfinitiBit/graphbit/commit/4846c57)) on 2026-02-17
+
+---
+**Total Changes**: 8
+**Changes by Category**: ✨ New Features: 5 | 🐛 Bug Fixes: 1 | 🔧 Maintenance: 2
+
 ## [0.6.4] - 2026-02-12
 
 ### 🐛 Bug Fixes
