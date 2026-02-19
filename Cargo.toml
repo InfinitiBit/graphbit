@@ -74,19 +74,7 @@ debug = true
 incremental = true
 opt-level = 1
 
-# Enable vendored OpenSSL for aarch64 cross-compilation
-# Cross-compilation containers lack aarch64-specific OpenSSL dev packages
-[target.aarch64-unknown-linux-gnu]
-
-[target.aarch64-unknown-linux-gnu.dependencies]
-openssl = {version = "0.10", features = ["vendored"]}
-
-# Enable vendored OpenSSL for musl targets (Alpine Linux)
-# musl containers don't have OpenSSL dev packages, so we compile from source
-[target.'cfg(target_env = "musl")'.dependencies]
-openssl = {version = "0.10", features = ["vendored"]}
-
-[target.'cfg(unix)'.dependencies]
+[target.'cfg(all(unix, target_arch = "x86_64"))'.dependencies]
 jemallocator.workspace = true
 
 [workspace]
@@ -131,7 +119,7 @@ pythonize = "0.24"
 quick-xml = {version = "0.36", features = ["serialize"]}
 rand = "0.9"
 regex = "1.10"
-reqwest = {version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls"]}
+reqwest = {version = "0.13", default-features = false, features = ["json", "stream", "rustls"]}
 # HTML parsing
 scraper = "0.25"
 serde = {version = "1.0", features = ["derive"]}

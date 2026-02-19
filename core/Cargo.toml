@@ -44,31 +44,15 @@ repository.workspace = true
 rust-version.workspace = true
 version.workspace = true
 
-# Enable vendored OpenSSL for aarch64 cross-compilation
-# Cross-compilation containers lack aarch64-specific OpenSSL dev packages
-[target.aarch64-unknown-linux-gnu]
-
-[target.aarch64-unknown-linux-gnu.dependencies]
-openssl = {version = "0.10", features = ["vendored"]}
-
 # Other Unix systems: jemalloc (broad compatibility)
 [target.'cfg(all(unix, not(any(target_os = "linux", target_os = "macos"))))']
 
-[target.'cfg(all(unix, not(any(target_os = "linux", target_os = "macos"))))'.dependencies]
+[target.'cfg(all(unix, target_arch = "x86_64", not(any(target_os = "linux", target_os = "macos"))))'.dependencies]
 jemallocator.workspace = true
 
-# Enable vendored OpenSSL for musl targets (Alpine Linux)
-# musl containers don't have OpenSSL dev packages, so we compile from source
-[target.'cfg(target_env = "musl")']
 
-[target.'cfg(target_env = "musl")'.dependencies]
-openssl = {version = "0.10", features = ["vendored"]}
 
-# Platform-specific memory allocators
-# Linux: jemalloc
-[target.'cfg(target_os = "linux")']
-
-[target.'cfg(target_os = "linux")'.dependencies]
+[target.'cfg(all(target_os = "linux", target_arch = "x86_64"))'.dependencies]
 jemallocator.workspace = true
 
 # macOS: mimalloc
@@ -78,5 +62,5 @@ jemallocator.workspace = true
 mimalloc.workspace = true
 
 # Windows: mimalloc
-[target.'cfg(target_os = "windows")'.dependencies]
-mimalloc.workspace = true
+# [target.'cfg(target_os = "windows")'.dependencies]
+# mimalloc.workspace = true
