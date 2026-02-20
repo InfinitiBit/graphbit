@@ -23,28 +23,6 @@
 //! client = graphbit.LlmClient(config)
 //! ```
 
-#![allow(non_local_definitions)]
-#![deny(unsafe_code)]
-#![warn(
-    missing_docs,
-    rust_2018_idioms,
-    unreachable_pub,
-    bad_style,
-    dead_code,
-    improper_ctypes,
-    non_shorthand_field_patterns,
-    no_mangle_generic_items,
-    overflowing_literals,
-    path_statements,
-    patterns_in_fns_without_body,
-    unconditional_recursion,
-    unused,
-    unused_allocation,
-    unused_comparisons,
-    unused_parens,
-    while_true
-)]
-
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;

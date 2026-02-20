@@ -13,38 +13,38 @@ use tokio::runtime::Runtime;
 
 // API Key Helpers
 #[allow(dead_code)]
-pub fn has_openai_key() -> bool {
+pub(super) fn has_openai_key() -> bool {
     env::var("OPENAI_API_KEY").is_ok()
 }
 
 #[allow(dead_code)]
-pub fn has_anthropic_key() -> bool {
+pub(super) fn has_anthropic_key() -> bool {
     env::var("ANTHROPIC_API_KEY").is_ok()
 }
 
 #[allow(dead_code)]
-pub fn has_huggingface_key() -> bool {
+pub(super) fn has_huggingface_key() -> bool {
     env::var("HUGGINGFACE_API_KEY").is_ok()
 }
 
 #[allow(dead_code)]
-pub fn has_perplexity_key() -> bool {
+pub(super) fn has_perplexity_key() -> bool {
     env::var("PERPLEXITY_API_KEY").is_ok()
 }
 
 #[allow(dead_code)]
-pub fn has_deepseek_key() -> bool {
+pub(super) fn has_deepseek_key() -> bool {
     env::var("DEEPSEEK_API_KEY").is_ok()
 }
 
 #[allow(dead_code)]
-pub fn has_togetherai_key() -> bool {
+pub(super) fn has_togetherai_key() -> bool {
     env::var("TOGETHER_API_KEY").is_ok()
 }
 
 #[allow(dead_code)]
 // `Ollama` Helper
-pub async fn is_ollama_available() -> bool {
+pub(super) async fn is_ollama_available() -> bool {
     let client = reqwest::Client::new();
     match client
         .get("http://localhost:11434/api/version")
@@ -58,7 +58,7 @@ pub async fn is_ollama_available() -> bool {
 
 #[allow(dead_code)]
 // Test LLM Provider Factory
-pub fn create_test_llm_provider() -> Box<dyn LlmProviderTrait> {
+pub(super) fn create_test_llm_provider() -> Box<dyn LlmProviderTrait> {
     let config = LlmConfig::OpenAI {
         api_key: "test_key".to_string(),
         model: "test_model".to_string(),
@@ -70,7 +70,7 @@ pub fn create_test_llm_provider() -> Box<dyn LlmProviderTrait> {
 
 #[allow(dead_code)]
 // Test Embedding Provider Factory
-pub fn create_test_embedding_provider() -> Box<dyn EmbeddingProviderTrait> {
+pub(super) fn create_test_embedding_provider() -> Box<dyn EmbeddingProviderTrait> {
     let config = EmbeddingConfig {
         provider: EmbeddingProvider::OpenAI,
         api_key: "test_key".to_string(),
@@ -86,7 +86,7 @@ pub fn create_test_embedding_provider() -> Box<dyn EmbeddingProviderTrait> {
 
 #[allow(dead_code)]
 // Test Agent Builder
-pub async fn create_test_agent() -> Arc<Agent> {
+pub(super) async fn create_test_agent() -> Arc<Agent> {
     let llm_config = LlmConfig::OpenAI {
         api_key: std::env::var("OPENAI_API_KEY").unwrap(),
         model: "gpt-3.5-turbo".to_string(),
@@ -106,7 +106,7 @@ pub async fn create_test_agent() -> Arc<Agent> {
 
 #[allow(dead_code)]
 // Test Workflow Builder
-pub fn create_test_workflow() -> graphbit_core::workflow::Workflow {
+pub(super) fn create_test_workflow() -> graphbit_core::workflow::Workflow {
     WorkflowBuilder::new("test_workflow")
         .description("A test workflow")
         .metadata("test_key".to_string(), serde_json::json!("test_value"))
@@ -116,7 +116,7 @@ pub fn create_test_workflow() -> graphbit_core::workflow::Workflow {
 
 #[allow(dead_code)]
 // Test Node Creation
-pub fn create_test_node(
+pub(super) fn create_test_node(
     node_type: graphbit_core::graph::NodeType,
 ) -> graphbit_core::graph::WorkflowNode {
     let mut node = graphbit_core::graph::WorkflowNode::new("test_node", "A test node", node_type);
@@ -126,7 +126,7 @@ pub fn create_test_node(
 
 #[allow(dead_code)]
 // Test Executor
-pub fn create_test_executor() -> WorkflowExecutor {
+pub(super) fn create_test_executor() -> WorkflowExecutor {
     WorkflowExecutor::new()
         .with_max_node_execution_time(5000)
         .with_fail_fast(true)
@@ -134,7 +134,7 @@ pub fn create_test_executor() -> WorkflowExecutor {
 
 #[allow(dead_code)]
 // Temporary File Helper
-pub fn create_temp_file(content: &str) -> tempfile::NamedTempFile {
+pub(super) fn create_temp_file(content: &str) -> tempfile::NamedTempFile {
     use std::io::Write;
     let mut temp_file = tempfile::NamedTempFile::new().unwrap();
     temp_file.write_all(content.as_bytes()).unwrap();
@@ -144,7 +144,7 @@ pub fn create_temp_file(content: &str) -> tempfile::NamedTempFile {
 
 #[allow(dead_code)]
 // Test Data Generator
-pub struct TestData {
+pub(super) struct TestData {
     pub text: String,
     pub json: serde_json::Value,
     pub file: tempfile::NamedTempFile,
@@ -152,7 +152,7 @@ pub struct TestData {
 
 impl TestData {
     #[allow(dead_code)]
-    pub fn new() -> Self {
+    pub(super) fn new() -> Self {
         let text = "This is test content".to_string();
         let json = serde_json::json!({
             "key": "value",
@@ -176,7 +176,7 @@ impl Default for TestData {
 
 #[allow(dead_code)]
 // Async Test Helper
-pub fn run_async<F>(future: F) -> F::Output
+pub(super) fn run_async<F>(future: F) -> F::Output
 where
     F: std::future::Future,
 {
@@ -187,7 +187,7 @@ where
 // Additional helpers for comprehensive tests
 #[allow(dead_code)]
 /// Create a mock LLM configuration for testing
-pub fn create_mock_llm_config() -> graphbit_core::llm::LlmConfig {
+pub(super) fn create_mock_llm_config() -> graphbit_core::llm::LlmConfig {
     graphbit_core::llm::LlmConfig::OpenAI {
         api_key: "test-api-key".to_string(),
         model: "gpt-3.5-turbo".to_string(),
@@ -198,7 +198,7 @@ pub fn create_mock_llm_config() -> graphbit_core::llm::LlmConfig {
 
 #[allow(dead_code)]
 /// Create a test retry configuration
-pub fn create_test_retry_config() -> graphbit_core::types::RetryConfig {
+pub(super) fn create_test_retry_config() -> graphbit_core::types::RetryConfig {
     graphbit_core::types::RetryConfig::new(3)
         .with_exponential_backoff(100, 2.0, 5000)
         .with_jitter(0.1)
@@ -206,7 +206,7 @@ pub fn create_test_retry_config() -> graphbit_core::types::RetryConfig {
 
 #[allow(dead_code)]
 /// Create various test error types
-pub fn create_test_errors() -> Vec<graphbit_core::errors::GraphBitError> {
+pub(super) fn create_test_errors() -> Vec<graphbit_core::errors::GraphBitError> {
     vec![
         graphbit_core::errors::GraphBitError::Configuration {
             message: "Test config error".to_string(),
@@ -235,7 +235,7 @@ pub fn create_test_errors() -> Vec<graphbit_core::errors::GraphBitError> {
 
 #[allow(dead_code)]
 /// Wait for a condition to be true with timeout
-pub async fn wait_for_condition<F>(
+pub(super) async fn wait_for_condition<F>(
     mut condition: F,
     timeout_ms: u64,
     check_interval_ms: u64,
@@ -259,7 +259,7 @@ where
 
 #[allow(dead_code)]
 /// Measure execution time of an async operation
-pub async fn measure_async_execution_time<F, Fut, T>(operation: F) -> (T, std::time::Duration)
+pub(super) async fn measure_async_execution_time<F, Fut, T>(operation: F) -> (T, std::time::Duration)
 where
     F: FnOnce() -> Fut,
     Fut: std::future::Future<Output = T>,
@@ -272,7 +272,7 @@ where
 
 #[allow(dead_code)]
 /// Measure execution time of a sync operation
-pub fn measure_execution_time<F, T>(operation: F) -> (T, std::time::Duration)
+pub(super) fn measure_execution_time<F, T>(operation: F) -> (T, std::time::Duration)
 where
     F: FnOnce() -> T,
 {

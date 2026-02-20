@@ -139,21 +139,73 @@ uuid = {version = "1.8", features = ["v4", "v5", "serde"]}
 # Set lint groups with proper priority hierarchy
 all = {level = "warn", priority = -1}
 cargo = {level = "warn", priority = -1}
-# Individual lint overrides (higher priority)
-missing_errors_doc = "allow"
-missing_panics_doc = "allow"
-# Allow some pedantic lints that are too strict for this project
-module_name_repetitions = "allow"
 nursery = {level = "warn", priority = -1}
 pedantic = {level = "warn", priority = -1}
 
+# Individual lint overrides (higher priority)
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+
+# Allow some pedantic lints that are too strict for this project
+module_name_repetitions = "allow"
+
+# The unwrap problem you mentioned
+unwrap_used = "warn"       
+panic = "warn"           
+
+# Error handling hygiene
+map_unwrap_or = "warn"            # use map_or instead
+
+# Common correctness issues
+inefficient_to_string = "warn"
+match_wildcard_for_single_variants = "warn"
+unnecessary_unwrap = "warn"  
+
+# Performance
+large_futures = "warn" 
+large_stack_arrays = "warn"
+unnecessary_box_returns = "warn"
+
+# API design (important for open source)
+must_use_candidate = "warn"
+
+# Async-specific
+async_yields_async = "warn"
+redundant_async_block = "warn"
+
+
 # Workspace-wide lints configuration
 [workspace.lints.rust]
-dead_code = "warn"
-missing_docs = "warn"
+# unsafe warnings
 unsafe_code = "forbid"
+unconditional_recursion = "warn"
+unused_allocation = "warn"
+unused_comparisons = "warn"
+overflowing_literals = "warn"
+improper_ctypes = "warn"
+patterns_in_fns_without_body = "warn"
+
+# styling / naming patterns
+non_camel_case_types = "warn"
+non_snake_case = "warn"
+non_upper_case_globals = "warn"
+
+# dead / unreachable code
+dead_code = "warn"
+unused = "warn"
 unused_imports = "warn"
 unused_variables = "warn"
+unused_parens = "warn"
+path_statements = "warn"
+while_true = "warn"
+
+# api hygiene
+missing_docs = "warn"
+unreachable_pub = "warn"
+non_local_definitions = "allow"
+
+# FFI correctness
+no_mangle_generic_items = "warn"
 
 # Workspace metadata for better tooling support
 [workspace.metadata.docs.rs]
