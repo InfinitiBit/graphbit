@@ -308,6 +308,26 @@ impl LlmConfig {
         Ok(Self { inner: config })
     }
 
+    /// Create Gemini configuration
+    ///
+    /// # Example
+    ///
+    /// ```javascript
+    /// const config = LlmConfig.gemini({
+    ///   apiKey: process.env.GEMINI_API_KEY,
+    ///   model: 'gemini-2.5-flash'
+    /// });
+    /// ```
+    #[napi(factory)]
+    pub fn gemini(options: GeminiOptions) -> Result<Self> {
+        let config = CoreLlmConfig::gemini(
+            options.api_key,
+            options.model.unwrap_or_else(|| "gemini-2.5-flash".to_string()),
+        );
+
+        Ok(Self { inner: config })
+    }
+
     /// Get the inner core config (internal use)
     pub(crate) fn inner(&self) -> &CoreLlmConfig {
         &self.inner
@@ -424,6 +444,13 @@ pub struct Ai21Options {
 pub struct MistralAiOptions {
     pub api_key: String,
     pub model: String,
+}
+
+/// Gemini configuration options
+#[napi(object)]
+pub struct GeminiOptions {
+    pub api_key: String,
+    pub model: Option<String>,
 }
 
 /// LLM response finish reason
