@@ -92,6 +92,7 @@ impl XaiProvider {
                         .collect(),
                 )
             },
+            tool_call_id: message.tool_call_id.clone(),
         }
     }
 
@@ -418,7 +419,13 @@ impl LlmProviderTrait for XaiProvider {
                                             CHUNK_TIMEOUT
                                         ),
                                     )),
-                                    (byte_stream, buffer, true, consecutive_parse_errors, total_parse_errors),
+                                    (
+                                        byte_stream,
+                                        buffer,
+                                        true,
+                                        consecutive_parse_errors,
+                                        total_parse_errors,
+                                    ),
                                 ));
                             }
                         };
@@ -513,11 +520,16 @@ impl LlmProviderTrait for XaiProvider {
                                                     format!(
                                                         "Stream corrupted: {} consecutive parse errors. \
                                                          Last error: {}. Data may be incomplete.",
-                                                        consecutive_parse_errors,
-                                                        e
+                                                        consecutive_parse_errors, e
                                                     ),
                                                 )),
-                                                (byte_stream, buffer, true, consecutive_parse_errors, total_parse_errors),
+                                                (
+                                                    byte_stream,
+                                                    buffer,
+                                                    true,
+                                                    consecutive_parse_errors,
+                                                    total_parse_errors,
+                                                ),
                                             ));
                                         }
                                     }
@@ -560,6 +572,8 @@ struct XaiMessage {
     content: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     tool_calls: Option<Vec<XaiToolCall>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tool_call_id: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

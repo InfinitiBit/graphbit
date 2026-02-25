@@ -417,7 +417,13 @@ impl LlmProviderTrait for GeminiProvider {
                                             CHUNK_TIMEOUT
                                         ),
                                     )),
-                                    (byte_stream, buffer, true, consecutive_parse_errors, total_parse_errors),
+                                    (
+                                        byte_stream,
+                                        buffer,
+                                        true,
+                                        consecutive_parse_errors,
+                                        total_parse_errors,
+                                    ),
                                 ));
                             }
                         };
@@ -514,11 +520,16 @@ impl LlmProviderTrait for GeminiProvider {
                                                     format!(
                                                         "Stream corrupted: {} consecutive parse errors. \
                                                          Last error: {}. Data may be incomplete.",
-                                                        consecutive_parse_errors,
-                                                        e
+                                                        consecutive_parse_errors, e
                                                     ),
                                                 )),
-                                                (byte_stream, buffer, true, consecutive_parse_errors, total_parse_errors),
+                                                (
+                                                    byte_stream,
+                                                    buffer,
+                                                    true,
+                                                    consecutive_parse_errors,
+                                                    total_parse_errors,
+                                                ),
                                             ));
                                         }
                                     }

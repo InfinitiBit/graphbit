@@ -90,6 +90,7 @@ impl AzureLlmProvider {
                         .collect(),
                 )
             },
+            tool_call_id: message.tool_call_id.clone(),
         }
     }
 
@@ -150,10 +151,7 @@ impl AzureLlmProvider {
         let endpoint = self.endpoint.trim_end_matches('/');
         // The Responses API requires api-version 2025-04-01-preview or later
         let api_version = "2025-04-01-preview";
-        let url = format!(
-            "{}/openai/responses?api-version={}",
-            endpoint, api_version
-        );
+        let url = format!("{}/openai/responses?api-version={}", endpoint, api_version);
 
         // Convert messages to the Responses API input format
         let input: Vec<serde_json::Value> = request
@@ -224,9 +222,7 @@ impl AzureLlmProvider {
             .json(&body)
             .send()
             .await
-            .map_err(|e| {
-                GraphBitError::llm_provider("azurellm", format!("Request failed: {e}"))
-            })?;
+            .map_err(|e| GraphBitError::llm_provider("azurellm", format!("Request failed: {e}")))?;
 
         if !response.status().is_success() {
             let error_text = response
@@ -249,10 +245,7 @@ impl AzureLlmProvider {
         tracing::debug!("Responses API raw response: {}", resp_json);
 
         // Parse the Responses API response
-        let id = resp_json["id"]
-            .as_str()
-            .unwrap_or_default()
-            .to_string();
+        let id = resp_json["id"].as_str().unwrap_or_default().to_string();
 
         // Extract content and tool calls from the output array
         let mut content_parts: Vec<String> = Vec::new();
@@ -280,13 +273,8 @@ impl AzureLlmProvider {
                             .or_else(|| item["id"].as_str())
                             .unwrap_or_default()
                             .to_string();
-                        let name = item["name"]
-                            .as_str()
-                            .unwrap_or_default()
-                            .to_string();
-                        let arguments = item["arguments"]
-                            .as_str()
-                            .unwrap_or("{}");
+                        let name = item["name"].as_str().unwrap_or_default().to_string();
+                        let arguments = item["arguments"].as_str().unwrap_or("{}");
                         let parameters: serde_json::Value =
                             serde_json::from_str(arguments).unwrap_or_default();
 
@@ -297,7 +285,10 @@ impl AzureLlmProvider {
                         });
                     }
                     _ => {
-                        tracing::debug!("Responses API: ignoring output item type: {:?}", item["type"]);
+                        tracing::debug!(
+                            "Responses API: ignoring output item type: {:?}",
+                            item["type"]
+                        );
                     }
                 }
             }
@@ -307,15 +298,9 @@ impl AzureLlmProvider {
 
         // Extract usage
         let usage = LlmUsage {
-            prompt_tokens: resp_json["usage"]["input_tokens"]
-                .as_u64()
-                .unwrap_or(0) as u32,
-            completion_tokens: resp_json["usage"]["output_tokens"]
-                .as_u64()
-                .unwrap_or(0) as u32,
-            total_tokens: resp_json["usage"]["total_tokens"]
-                .as_u64()
-                .unwrap_or(0) as u32,
+            prompt_tokens: resp_json["usage"]["input_tokens"].as_u64().unwrap_or(0) as u32,
+            completion_tokens: resp_json["usage"]["output_tokens"].as_u64().unwrap_or(0) as u32,
+            total_tokens: resp_json["usage"]["total_tokens"].as_u64().unwrap_or(0) as u32,
         };
 
         // Determine finish reason from status
@@ -590,8 +575,6 @@ struct AzureLlmRequest {
     tool_choice: Option<String>,
 }
 
-
-
 #[derive(Debug, Serialize, Deserialize)]
 struct AzureLlmMessage {
     role: String,
@@ -599,6 +582,8 @@ struct AzureLlmMessage {
     content: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     tool_calls: Option<Vec<AzureLlmToolCall>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tool_call_id: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -770,6 +755,7 @@ mod tests {
             role: LlmRole::User,
             content: "Hello, world!".to_string(),
             tool_calls: Vec::new(),
+            tool_call_id: None,
         };
 
         let azure_message = AzureLlmProvider::convert_message(&message);
