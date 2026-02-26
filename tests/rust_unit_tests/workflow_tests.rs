@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use graphbit_core::types::RetryConfig;
+use graphbit_core::workflow::WorkflowExecutor;
 use graphbit_core::*;
 use serde_json::json;
 use std::sync::Arc;
@@ -24,14 +25,14 @@ fn test_resolve_template_variables_node_and_vars() {
 
     let template = format!("Hi {{node.{node_id}.greeting}}, {{user}}!");
     let resolved =
-        graphbit_core::workflow::WorkflowExecutor::resolve_template_variables(&template, &ctx);
+        graphbit_core::workflow::template::resolve_template_variables(&template, &ctx);
 
     assert!(resolved.contains("alice"));
     assert!(!resolved.contains("{{node."));
 
     // Also test simple variable-only replacement
     let only_var =
-        graphbit_core::workflow::WorkflowExecutor::resolve_template_variables("User={user}", &ctx);
+        graphbit_core::workflow::template::resolve_template_variables("User={user}", &ctx);
     assert!(only_var.contains("alice"));
 }
 
@@ -71,16 +72,16 @@ impl graphbit_core::llm::LlmProviderTrait for DummyLlmProvider {
 
 // ---- Dummy agent for workflow execution tests (no external API) ----
 struct DummyAgent {
-    cfg: graphbit_core::agents::AgentConfig,
+    cfg: AgentConfig,
     llm_provider: graphbit_core::llm::LlmProvider,
 }
 
 #[async_trait::async_trait]
-impl graphbit_core::agents::AgentTrait for DummyAgent {
+impl graphbit_core::AgentTrait for DummyAgent {
     fn id(&self) -> &graphbit_core::types::AgentId {
         &self.cfg.id
     }
-    fn config(&self) -> &graphbit_core::agents::AgentConfig {
+    fn config(&self) -> &graphbit_core::AgentConfig {
         &self.cfg
     }
 
@@ -126,7 +127,7 @@ impl graphbit_core::agents::AgentTrait for DummyAgent {
 
 fn build_dummy_agent(name: &str) -> (graphbit_core::types::AgentId, std::sync::Arc<DummyAgent>) {
     let id = graphbit_core::types::AgentId::new();
-    let cfg = graphbit_core::agents::AgentConfig::new(
+    let cfg = graphbit_core::AgentConfig::new(
         name,
         "dummy",
         graphbit_core::llm::LlmConfig::default(),
@@ -298,8 +299,9 @@ async fn test_execute_concurrent_tasks_with_retry_errors() {
     };
 
     let retry = RetryConfig::new(2);
+    let exec = exec.with_retry_config(retry);
     let results = exec
-        .execute_concurrent_tasks_with_retry(tasks, task_fn, Some(retry))
+        .execute_concurrent_tasks(tasks, task_fn)
         .await
         .expect("execution failed");
 

@@ -3,7 +3,9 @@
 //! Tests for complete workflow execution including agent interactions,
 //! real LLM calls, document processing, and complex workflow patterns.
 
-use graphbit_core::{agents::*, embeddings::*, graph::*, llm::*, types::*, workflow::*};
+use graphbit_core::{
+    embeddings::*, graph::*, llm::*, types::*, workflow::*, Agent, AgentConfig,
+};
 use serde_json::json;
 use std::collections::HashMap;
 use std::fs;

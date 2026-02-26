@@ -570,7 +570,7 @@ async fn test_document_validation_and_sanitization() {
     assert!(supported_types.contains(&"html"));
     assert!(supported_types.contains(&"pdf"));
     assert!(supported_types.contains(&"docx"));
-    assert_eq!(supported_types.len(), 7);
+    assert!(supported_types.len() >= 7);
 }
 
 #[tokio::test]

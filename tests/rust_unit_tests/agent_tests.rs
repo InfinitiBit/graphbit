@@ -2,10 +2,10 @@
 #[path = "test_helpers.rs"]
 mod test_helpers;
 use graphbit_core::{
-    agents::{AgentBuilder, AgentConfig, AgentTrait},
     errors::GraphBitResult,
     llm::LlmConfig,
     types::{AgentCapability, AgentId, AgentMessage, MessageContent, WorkflowContext, WorkflowId},
+    AgentBuilder, AgentConfig, AgentTrait,
 };
 use std::sync::Arc;
 use test_helpers::*;
@@ -21,11 +21,11 @@ impl AgentTrait for DummyAgent {
         &self.id
     }
 
-    fn config(&self) -> &graphbit_core::agents::AgentConfig {
+    fn config(&self) -> &AgentConfig {
         // Create a leaked boxed config to return a &'static reference without adding deps
         // This intentionally leaks memory in test process only.
         let llm_cfg = graphbit_core::llm::LlmConfig::default();
-        let boxed = Box::new(graphbit_core::agents::AgentConfig::new(
+        let boxed = Box::new(AgentConfig::new(
             "dummy", "desc", llm_cfg,
         ));
         Box::leak(boxed)

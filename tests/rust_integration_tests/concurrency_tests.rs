@@ -348,7 +348,7 @@ async fn test_agent_capabilities_management() {
     ];
 
     let llm_config = llm::LlmConfig::ollama("llama3.2");
-    let agent_config = agents::AgentConfig::new(
+    let agent_config = AgentConfig::new(
         "Multi-Capability Agent",
         "Agent with multiple capabilities",
         llm_config,
@@ -364,7 +364,7 @@ async fn test_agent_capabilities_management() {
         .contains(&AgentCapability::Custom("machine_learning".to_string())));
 
     // Test capability checking
-    let agent_trait: &dyn agents::AgentTrait = &agents::Agent::new(agent_config.clone())
+    let agent_trait: &dyn AgentTrait = &Agent::new(agent_config.clone())
         .await
         .unwrap_or_else(|_| {
             panic!("Failed to create agent for capability testing");
