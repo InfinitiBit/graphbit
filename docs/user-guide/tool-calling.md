@@ -60,7 +60,8 @@ agent = Node.agent(
     name="Smart Agent",
     prompt="What's the weather in Paris and what is 15 + 27?",
     agent_id="smart_agent_001",
-    tools=[get_weather, calculate]  # Provide tools to the agent
+    tools=[get_weather, calculate],  # Provide tools to the agent
+    max_iterations=5,                # Optional: Maximum number of iterations (default: 10)
 )
 
 workflow.add_node(agent)
