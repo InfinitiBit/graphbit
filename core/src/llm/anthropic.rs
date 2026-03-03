@@ -44,9 +44,13 @@ impl AnthropicProvider {
     }
 
     /// Convert `GraphBit` messages to `Anthropic` format
+    ///
+    /// Anthropic uses structured content blocks for tool interactions:
+    /// - Assistant tool calls → `tool_use` content blocks
+    /// - Tool results → `user` message with `tool_result` content blocks
     fn convert_messages(messages: &[LlmMessage]) -> (Option<String>, Vec<AnthropicMessage>) {
         let mut system_prompt = None;
-        let mut anthropic_messages = Vec::new();
+        let mut anthropic_messages: Vec<AnthropicMessage> = Vec::new();
 
         for message in messages {
             match message.role {
@@ -56,19 +60,57 @@ impl AnthropicProvider {
                 LlmRole::User => {
                     anthropic_messages.push(AnthropicMessage {
                         role: "user".to_string(),
-                        content: message.content.clone(),
+                        content: serde_json::Value::String(message.content.clone()),
                     });
                 }
                 LlmRole::Assistant => {
-                    anthropic_messages.push(AnthropicMessage {
-                        role: "assistant".to_string(),
-                        content: message.content.clone(),
-                    });
+                    if message.tool_calls.is_empty() {
+                        // Plain assistant message
+                        anthropic_messages.push(AnthropicMessage {
+                            role: "assistant".to_string(),
+                            content: serde_json::Value::String(message.content.clone()),
+                        });
+                    } else {
+                        // Assistant message with tool calls → structured content blocks
+                        let mut content_blocks: Vec<serde_json::Value> = Vec::new();
+
+                        // Add text block if there's content
+                        if !message.content.is_empty() {
+                            content_blocks.push(serde_json::json!({
+                                "type": "text",
+                                "text": message.content
+                            }));
+                        }
+
+                        // Add tool_use blocks for each tool call
+                        for tc in &message.tool_calls {
+                            content_blocks.push(serde_json::json!({
+                                "type": "tool_use",
+                                "id": tc.id,
+                                "name": tc.name,
+                                "input": tc.parameters
+                            }));
+                        }
+
+                        anthropic_messages.push(AnthropicMessage {
+                            role: "assistant".to_string(),
+                            content: serde_json::Value::Array(content_blocks),
+                        });
+                    }
                 }
                 LlmRole::Tool => {
+                    // Tool result → user message with tool_result content block
+                    let tool_use_id = message.tool_call_id.clone().unwrap_or_default();
+
+                    let content_block = serde_json::json!([{
+                        "type": "tool_result",
+                        "tool_use_id": tool_use_id,
+                        "content": message.content
+                    }]);
+
                     anthropic_messages.push(AnthropicMessage {
                         role: "user".to_string(),
-                        content: format!("Tool result: {}", message.content),
+                        content: content_block,
                     });
                 }
             }
@@ -521,7 +563,7 @@ struct AnthropicRequest {
 #[derive(Debug, Serialize, Deserialize)]
 struct AnthropicMessage {
     role: String,
-    content: String,
+    content: serde_json::Value,
 }
 
 #[derive(Debug, Serialize)]
