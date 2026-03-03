@@ -90,7 +90,11 @@ impl PythonBridgeProvider {
     /// 3. Simple text formats: plain string, `{"text": "..."}`, or `{"generated_text": "..."}`
     ///
     /// The function tries each format in order and provides detailed error messages if all fail.
-    fn parse_python_response(&self, py: Python<'_>, result: PyObject) -> GraphBitResult<LlmResponse> {
+    fn parse_python_response(
+        &self,
+        py: Python<'_>,
+        result: PyObject,
+    ) -> GraphBitResult<LlmResponse> {
         // Collect error information for debugging
         let mut error_details = Vec::new();
 
@@ -197,7 +201,11 @@ impl PythonBridgeProvider {
     /// ```json
     /// [{"generated_text": "..."}]
     /// ```
-    fn try_transformers_format(py: Python<'_>, result: &PyObject, model: &str) -> Option<LlmResponse> {
+    fn try_transformers_format(
+        py: Python<'_>,
+        result: &PyObject,
+        model: &str,
+    ) -> Option<LlmResponse> {
         // Check if result is a list
         let bound = result.bind(py);
         let list = bound.downcast::<PyList>().ok()?;
@@ -223,7 +231,11 @@ impl PythonBridgeProvider {
     /// - Plain string: `"generated text"`
     /// - Dict with text: `{"text": "..."}`
     /// - Dict with generated_text: `{"generated_text": "..."}`
-    fn try_simple_text_format(py: Python<'_>, result: &PyObject, model: &str) -> Option<LlmResponse> {
+    fn try_simple_text_format(
+        py: Python<'_>,
+        result: &PyObject,
+        model: &str,
+    ) -> Option<LlmResponse> {
         // Try direct string extraction
         if let Ok(content) = result.extract::<String>(py) {
             return Some(LlmResponse::new(content, model).with_finish_reason(FinishReason::Stop));

@@ -68,11 +68,13 @@ impl GeminiProvider {
     /// - Messages are "contents" with "parts"
     /// - System instructions are sent separately via `systemInstruction`
     /// - Roles are "user" and "model" (not "assistant")
+    /// - Tool results use `functionResponse` parts (not plain text)
+    /// - Consecutive tool results are coalesced into a single user content
     fn convert_messages(messages: &[LlmMessage]) -> (Option<GeminiContent>, Vec<GeminiContent>) {
         let mut system_instruction: Option<GeminiContent> = None;
         let mut contents: Vec<GeminiContent> = Vec::new();
 
-        for message in messages {
+        for (idx, message) in messages.iter().enumerate() {
             match message.role {
                 LlmRole::System => {
                     // Gemini handles system instructions separately
@@ -83,27 +85,58 @@ impl GeminiProvider {
                         }],
                     });
                 }
-                LlmRole::User | LlmRole::Tool => {
-                    let role = match message.role {
-                        LlmRole::Tool => "user".to_string(),
-                        _ => "user".to_string(),
-                    };
-
-                    // If tool role, wrap content as function response parts
-                    let parts = if message.role == LlmRole::Tool {
-                        vec![GeminiPart::Text {
-                            text: message.content.clone(),
-                        }]
-                    } else {
-                        vec![GeminiPart::Text {
-                            text: message.content.clone(),
-                        }]
-                    };
-
+                LlmRole::User => {
                     contents.push(GeminiContent {
-                        role: Some(role),
-                        parts,
+                        role: Some("user".to_string()),
+                        parts: vec![GeminiPart::Text {
+                            text: message.content.clone(),
+                        }],
                     });
+                }
+                LlmRole::Tool => {
+                    // Resolve the tool name by looking up the tool_call_id in
+                    // the preceding assistant message's tool_calls
+                    let tool_call_id = message.tool_call_id.clone().unwrap_or_default();
+                    let tool_name = messages[..idx]
+                        .iter()
+                        .rev()
+                        .find(|m| m.role == LlmRole::Assistant && !m.tool_calls.is_empty())
+                        .and_then(|m| {
+                            m.tool_calls
+                                .iter()
+                                .find(|tc| tc.id == tool_call_id)
+                                .map(|tc| tc.name.clone())
+                        })
+                        .unwrap_or_else(|| "unknown".to_string());
+
+                    let function_response_part = GeminiPart::FunctionResponse {
+                        function_response: GeminiFunctionResponse {
+                            name: tool_name,
+                            response: serde_json::json!({ "result": message.content }),
+                        },
+                    };
+
+                    // Coalesce: if the last content is already a "user" with
+                    // functionResponse parts (i.e., from a previous Tool message),
+                    // append to it instead of creating a new entry
+                    let should_coalesce = contents.last().map_or(false, |last| {
+                        last.role.as_deref() == Some("user")
+                            && last
+                                .parts
+                                .iter()
+                                .all(|p| matches!(p, GeminiPart::FunctionResponse { .. }))
+                    });
+
+                    if should_coalesce {
+                        if let Some(last) = contents.last_mut() {
+                            last.parts.push(function_response_part);
+                        }
+                    } else {
+                        contents.push(GeminiContent {
+                            role: Some("user".to_string()),
+                            parts: vec![function_response_part],
+                        });
+                    }
                 }
                 LlmRole::Assistant => {
                     let mut parts: Vec<GeminiPart> = Vec::new();
@@ -417,7 +450,13 @@ impl LlmProviderTrait for GeminiProvider {
                                             CHUNK_TIMEOUT
                                         ),
                                     )),
-                                    (byte_stream, buffer, true, consecutive_parse_errors, total_parse_errors),
+                                    (
+                                        byte_stream,
+                                        buffer,
+                                        true,
+                                        consecutive_parse_errors,
+                                        total_parse_errors,
+                                    ),
                                 ));
                             }
                         };
@@ -514,11 +553,16 @@ impl LlmProviderTrait for GeminiProvider {
                                                     format!(
                                                         "Stream corrupted: {} consecutive parse errors. \
                                                          Last error: {}. Data may be incomplete.",
-                                                        consecutive_parse_errors,
-                                                        e
+                                                        consecutive_parse_errors, e
                                                     ),
                                                 )),
-                                                (byte_stream, buffer, true, consecutive_parse_errors, total_parse_errors),
+                                                (
+                                                    byte_stream,
+                                                    buffer,
+                                                    true,
+                                                    consecutive_parse_errors,
+                                                    total_parse_errors,
+                                                ),
                                             ));
                                         }
                                     }
@@ -604,7 +648,7 @@ struct GeminiContent {
     parts: Vec<GeminiPart>,
 }
 
-/// Parts of a content message (text, function call, etc.)
+/// Parts of a content message (text, function call, function response)
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
 enum GeminiPart {
@@ -615,6 +659,10 @@ enum GeminiPart {
         #[serde(rename = "functionCall")]
         function_call: GeminiFunctionCall,
     },
+    FunctionResponse {
+        #[serde(rename = "functionResponse")]
+        function_response: GeminiFunctionResponse,
+    },
 }
 
 /// Function call in a content part
@@ -622,6 +670,13 @@ enum GeminiPart {
 struct GeminiFunctionCall {
     name: String,
     args: serde_json::Value,
+}
+
+/// Function response in a content part (tool result)
+#[derive(Debug, Serialize)]
+struct GeminiFunctionResponse {
+    name: String,
+    response: serde_json::Value,
 }
 
 /// Tool definition for Gemini API

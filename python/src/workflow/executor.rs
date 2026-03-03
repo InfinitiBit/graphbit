@@ -388,8 +388,9 @@ impl Executor {
         config: ExecutionConfig,
     ) -> Result<graphbit_core::types::WorkflowContext, graphbit_core::errors::GraphBitError> {
         let executor = match config.mode {
-            ExecutionMode::Balanced => CoreWorkflowExecutor::new()
-                .with_default_llm_config(llm_config.clone()),
+            ExecutionMode::Balanced => {
+                CoreWorkflowExecutor::new().with_default_llm_config(llm_config.clone())
+            }
         };
 
         // Execute the workflow
@@ -408,13 +409,22 @@ impl Executor {
         Ok(context)
     }
 
-    /// Handle tool calls in workflow context by executing them and updating the context
+    /// Handle tool calls in workflow context using an iterative ReAct loop.
+    ///
+    /// When an agent node returns `tool_calls_required`, this function:
+    /// 1. Executes the requested tools via Python
+    /// 2. Sends tool results back to the LLM WITH tool definitions
+    /// 3. If the LLM requests more tools, repeats from step 1
+    /// 4. Exits when the LLM returns a final answer (no tool calls) or max_iterations is reached
+    ///
+    /// This enables multi-step reasoning where the agent can chain dependent tool calls
+    /// across multiple iterations (e.g., "add 2+3, then multiply the result by 4").
     async fn handle_tool_calls_in_context(
         mut context: graphbit_core::types::WorkflowContext,
         workflow: &graphbit_core::workflow::Workflow,
     ) -> Result<graphbit_core::types::WorkflowContext, graphbit_core::errors::GraphBitError> {
         use crate::workflow::node::execute_production_tool_calls;
-        use graphbit_core::llm::{LlmProvider, LlmRequest};
+        use graphbit_core::llm::{LlmMessage, LlmProvider, LlmRequest, LlmTool, LlmToolCall};
 
         // Check each node output for tool_calls_required responses
         let node_outputs = context.node_outputs.clone();
@@ -423,55 +433,215 @@ impl Executor {
             if let Ok(response_obj) = serde_json::from_value::<serde_json::Value>(output.clone()) {
                 if let Some(response_type) = response_obj.get("type").and_then(|v| v.as_str()) {
                     if response_type == "tool_calls_required" {
-                        // Extract tool calls and execute them
-                        if let (Some(tool_calls), Some(original_prompt)) = (
+                        // Extract initial tool calls and original prompt
+                        if let (Some(initial_tool_calls), Some(original_prompt)) = (
                             response_obj.get("tool_calls"),
                             response_obj.get("original_prompt").and_then(|v| v.as_str()),
                         ) {
-                            // Get the node configuration to find available tools
-                            if let Some(node) = workflow
+                            // Get the node from the workflow
+                            let node = match workflow
                                 .graph
                                 .get_nodes()
                                 .iter()
                                 .find(|(id, _)| id.to_string() == node_id)
-                                .map(|(_, node)| node)
+                                .map(|(_, node)| node.clone())
                             {
-                                let node_tools = node
-                                    .config
-                                    .get("tools")
-                                    .and_then(|v| v.as_array())
-                                    .map(|arr| {
-                                        arr.iter()
-                                            .filter_map(|v| v.as_str().map(|s| s.to_string()))
-                                            .collect::<Vec<String>>()
+                                Some(n) => n,
+                                None => continue,
+                            };
+
+                            // Only handle agent nodes
+                            if !matches!(
+                                node.node_type,
+                                graphbit_core::graph::NodeType::Agent { .. }
+                            ) {
+                                continue;
+                            }
+
+                            // Get node name for metadata storage
+                            let node_name = workflow
+                                .graph
+                                .get_nodes()
+                                .iter()
+                                .find(|(id, _)| **id == node.id)
+                                .map(|(_, n)| n.name.clone())
+                                .unwrap_or_else(|| "unknown".to_string());
+
+                            // Extract available tool names for this node
+                            let node_tools = node
+                                .config
+                                .get("tools")
+                                .and_then(|v| v.as_array())
+                                .map(|arr| {
+                                    arr.iter()
+                                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                                        .collect::<Vec<String>>()
+                                })
+                                .unwrap_or_default();
+
+                            // Extract LlmTool definitions from node config for subsequent LLM calls
+                            let llm_tools: Vec<LlmTool> = node
+                                .config
+                                .get("tool_schemas")
+                                .and_then(|v| v.as_array())
+                                .map(|schemas| {
+                                    schemas
+                                        .iter()
+                                        .filter_map(|schema| {
+                                            let name = schema.get("name")?.as_str()?;
+                                            let description =
+                                                schema.get("description")?.as_str()?;
+                                            let parameters = schema.get("parameters")?;
+                                            Some(LlmTool::new(
+                                                name,
+                                                description,
+                                                parameters.clone(),
+                                            ))
+                                        })
+                                        .collect()
+                                })
+                                .unwrap_or_default();
+
+                            // Get max_iterations from node config (default: 10)
+                            let max_iterations =
+                                node.config
+                                    .get("max_iterations")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(10) as usize;
+
+                            // Get LLM config for subsequent calls
+                            let llm_config = context.metadata.get("llm_config").and_then(|v| {
+                                serde_json::from_value::<graphbit_core::llm::LlmConfig>(v.clone())
+                                    .ok()
+                            });
+
+                            let llm_config = match llm_config {
+                                Some(cfg) => cfg,
+                                None => {
+                                    tracing::warn!(
+                                        "No LLM configuration found in context metadata for iterative tool loop."
+                                    );
+                                    continue;
+                                }
+                            };
+
+                            let llm_provider =
+                                match graphbit_core::llm::LlmProviderFactory::create_provider(
+                                    llm_config.clone(),
+                                ) {
+                                    Ok(provider_trait) => {
+                                        LlmProvider::new(provider_trait, llm_config)
+                                    }
+                                    Err(e) => {
+                                        tracing::error!(
+                                            "Failed to create LLM provider for iterative loop: {}",
+                                            e
+                                        );
+                                        continue;
+                                    }
+                                };
+
+                            // Get the initial assistant content from the tool_calls_required response
+                            let initial_content = response_obj
+                                .get("content")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("")
+                                .to_string();
+
+                            // ============================================================
+                            // ITERATIVE REACT LOOP
+                            // ============================================================
+
+                            // Build message history starting with the original user prompt
+                            let mut messages: Vec<LlmMessage> =
+                                vec![LlmMessage::user(original_prompt)];
+
+                            // Parse initial tool calls from the first LLM response
+                            let mut current_tool_calls: Vec<serde_json::Value> =
+                                initial_tool_calls.as_array().cloned().unwrap_or_default();
+
+                            // Current assistant content
+                            let mut current_content = initial_content.clone();
+
+                            // Tracking for observability
+                            let mut all_tool_executions: Vec<serde_json::Value> = Vec::new();
+                            let mut total_tokens_used: u32 = response_obj
+                                .get("initial_tokens_used")
+                                .and_then(|v| v.as_u64())
+                                .unwrap_or(0)
+                                as u32;
+                            let mut iteration: usize = 0;
+                            let mut final_content = current_content.clone();
+                            let overall_start = std::time::Instant::now();
+
+                            loop {
+                                // Safety check: max iterations (check BEFORE incrementing)
+                                if iteration >= max_iterations {
+                                    tracing::warn!(
+                                        "Agent reached max iterations ({}) for node '{}'. Using last response as final answer.",
+                                        max_iterations,
+                                        node_name
+                                    );
+                                    final_content = current_content.clone();
+                                    break;
+                                }
+
+                                iteration += 1;
+
+                                tracing::info!(
+                                    "Agent loop iteration {} / {} - processing {} tool call(s) for node '{}'",
+                                    iteration,
+                                    max_iterations,
+                                    current_tool_calls.len(),
+                                    node_name
+                                );
+
+                                // ---- Step 1: Append assistant message with tool calls to history ----
+                                let assistant_tool_calls: Vec<LlmToolCall> = current_tool_calls
+                                    .iter()
+                                    .filter_map(|tc| {
+                                        let id = tc
+                                            .get("id")
+                                            .and_then(|v| v.as_str())
+                                            .unwrap_or("")
+                                            .to_string();
+                                        let name =
+                                            tc.get("name").and_then(|v| v.as_str())?.to_string();
+                                        let parameters = tc
+                                            .get("parameters")
+                                            .cloned()
+                                            .unwrap_or(serde_json::json!({}));
+                                        Some(LlmToolCall {
+                                            id,
+                                            name,
+                                            parameters,
+                                        })
                                     })
-                                    .unwrap_or_default();
+                                    .collect();
 
-                                // Convert tool calls to the format expected by Python layer
-                                let python_tool_calls: Vec<serde_json::Value> =
-                                    if let Some(tool_calls_array) = tool_calls.as_array() {
-                                        tool_calls_array
-                                            .iter()
-                                            .map(|tc| {
-                                                // Extract name and parameters from the tool call object
-                                                let name = tc
-                                                    .get("name")
-                                                    .and_then(|v| v.as_str())
-                                                    .unwrap_or("unknown");
-                                                let parameters = tc
-                                                    .get("parameters")
-                                                    .cloned()
-                                                    .unwrap_or(serde_json::json!({}));
+                                messages.push(
+                                    LlmMessage::assistant(&current_content)
+                                        .with_tool_calls(assistant_tool_calls.clone()),
+                                );
 
-                                                serde_json::json!({
-                                                    "tool_name": name,
-                                                    "parameters": parameters
-                                                })
-                                            })
-                                            .collect()
-                                    } else {
-                                        Vec::new()
-                                    };
+                                // ---- Step 2: Execute tools via Python ----
+                                let python_tool_calls: Vec<serde_json::Value> = current_tool_calls
+                                    .iter()
+                                    .map(|tc| {
+                                        let name = tc
+                                            .get("name")
+                                            .and_then(|v| v.as_str())
+                                            .unwrap_or("unknown");
+                                        let parameters = tc
+                                            .get("parameters")
+                                            .cloned()
+                                            .unwrap_or(serde_json::json!({}));
+                                        serde_json::json!({
+                                            "tool_name": name,
+                                            "parameters": parameters
+                                        })
+                                    })
+                                    .collect();
 
                                 let tool_calls_json = serde_json::to_string(&python_tool_calls)
                                     .map_err(|e| {
@@ -480,328 +650,226 @@ impl Executor {
                                         )
                                     })?;
 
-                                // Execute tools in Python context
                                 let tool_results_json = Python::with_gil(|py| {
-                                    execute_production_tool_calls(py, tool_calls_json, node_tools)
+                                    execute_production_tool_calls(
+                                        py,
+                                        tool_calls_json,
+                                        node_tools.clone(),
+                                    )
                                 })
                                 .map_err(|e| {
                                     graphbit_core::errors::GraphBitError::workflow_execution(
-                                        format!("Failed to execute tools: {}", e),
+                                        format!(
+                                            "Failed to execute tools in iteration {}: {}",
+                                            iteration, e
+                                        ),
                                     )
                                 })?;
 
-                                // Parse tool results to reconstruct the summary text and for metadata
                                 let tool_execution_results: Vec<serde_json::Value> =
                                     serde_json::from_str(&tool_results_json)
                                         .unwrap_or_else(|_| Vec::new());
 
-                                // Reconstruct summary string for LLM prompt
-                                let mut summary_lines = Vec::new();
-                                for res in &tool_execution_results {
-                                    if let (Some(name), Some(success)) = (
-                                        res.get("tool_name").and_then(|v| v.as_str()),
-                                        res.get("success").and_then(|v| v.as_bool()),
-                                    ) {
-                                        if success {
-                                            let output = res
-                                                .get("output")
-                                                .and_then(|v| v.as_str())
-                                                .unwrap_or("");
-                                            summary_lines.push(format!("{}: {}", name, output));
-                                        } else {
-                                            let error = res
-                                                .get("error")
-                                                .and_then(|v| v.as_str())
-                                                .unwrap_or("Unknown error");
-                                            summary_lines
-                                                .push(format!("{}: Error - {}", name, error));
+                                // ---- Step 3: Append tool result messages to history ----
+                                for (i, result) in tool_execution_results.iter().enumerate() {
+                                    let tool_call_id = assistant_tool_calls
+                                        .get(i)
+                                        .map(|tc| tc.id.as_str())
+                                        .unwrap_or("");
+                                    let tool_name = result
+                                        .get("tool_name")
+                                        .and_then(|v| v.as_str())
+                                        .unwrap_or("unknown");
+                                    let success = result
+                                        .get("success")
+                                        .and_then(|v| v.as_bool())
+                                        .unwrap_or(false);
+                                    let output_text = if success {
+                                        result.get("output").and_then(|v| v.as_str()).unwrap_or("")
+                                    } else {
+                                        result
+                                            .get("error")
+                                            .and_then(|v| v.as_str())
+                                            .unwrap_or("Tool execution failed")
+                                    };
+
+                                    messages.push(LlmMessage::tool(tool_call_id, output_text));
+
+                                    tracing::info!(
+                                        "Iteration {} - Tool '{}' result: {} (success: {})",
+                                        iteration,
+                                        tool_name,
+                                        output_text,
+                                        success
+                                    );
+                                }
+
+                                // Record tool executions for observability
+                                for (i, result) in tool_execution_results.iter().enumerate() {
+                                    let mut enriched = result.clone();
+                                    if let Some(obj) = enriched.as_object_mut() {
+                                        obj.insert(
+                                            "iteration".to_string(),
+                                            serde_json::json!(iteration),
+                                        );
+                                        // Add tool call ID and original parameters from the LLM request
+                                        if let Some(tc) = current_tool_calls.get(i) {
+                                            if let Some(id) = tc.get("id") {
+                                                obj.insert("id".to_string(), id.clone());
+                                            }
+                                            if let Some(params) = tc.get("parameters") {
+                                                obj.insert(
+                                                    "parameters".to_string(),
+                                                    params.clone(),
+                                                );
+                                            }
                                         }
                                     }
+                                    all_tool_executions.push(enriched);
                                 }
-                                let tool_results_summary = if summary_lines.is_empty() {
-                                    "No tool results available".to_string()
-                                } else {
-                                    summary_lines.join("\n")
-                                };
 
-                                // Create final prompt with tool results summary
-                                let final_prompt = format!(
-                                    "{}\n\nTool execution results:\n{}\n\nPlease provide a comprehensive response based on the tool results.",
-                                    original_prompt, tool_results_summary
+                                // ---- Step 4: Call LLM again WITH tools to let it decide next action ----
+                                let mut next_request = LlmRequest::with_messages(messages.clone());
+                                for tool in &llm_tools {
+                                    next_request = next_request.with_tool(tool.clone());
+                                }
+
+                                // Apply node-level configuration overrides
+                                if let Some(temp_value) = node.config.get("temperature") {
+                                    if let Some(temp_num) = temp_value.as_f64() {
+                                        next_request =
+                                            next_request.with_temperature(temp_num as f32);
+                                    }
+                                }
+                                if let Some(max_tokens_value) = node.config.get("max_tokens") {
+                                    if let Some(max_tokens_num) = max_tokens_value.as_u64() {
+                                        next_request =
+                                            next_request.with_max_tokens(max_tokens_num as u32);
+                                    }
+                                }
+                                if let Some(top_p_value) = node.config.get("top_p") {
+                                    if let Some(top_p_num) = top_p_value.as_f64() {
+                                        next_request = next_request.with_top_p(top_p_num as f32);
+                                    }
+                                }
+
+                                let llm_start = std::time::Instant::now();
+                                let next_response = match llm_provider.complete(next_request).await
+                                {
+                                    Ok(resp) => resp,
+                                    Err(e) => {
+                                        tracing::error!(
+                                            "LLM call failed in iteration {} for node '{}': {}",
+                                            iteration,
+                                            node_name,
+                                            e
+                                        );
+                                        // Use accumulated tool results as fallback
+                                        let fallback: Vec<String> = all_tool_executions
+                                            .iter()
+                                            .filter_map(|r| {
+                                                let name = r.get("tool_name")?.as_str()?;
+                                                let output = r.get("output")?.as_str()?;
+                                                Some(format!("{}: {}", name, output))
+                                            })
+                                            .collect();
+                                        final_content = fallback.join("\n");
+                                        break;
+                                    }
+                                };
+                                let llm_duration_ms = llm_start.elapsed().as_secs_f64() * 1000.0;
+
+                                tracing::info!(
+                                    "Iteration {} - LLM response: content='{}', tool_calls={}, duration={:.1}ms",
+                                    iteration,
+                                    &next_response.content.chars().take(100).collect::<String>(),
+                                    next_response.tool_calls.len(),
+                                    llm_duration_ms
                                 );
 
-                                // Get LLM provider from node configuration and make final call
-                                if let graphbit_core::graph::NodeType::Agent { .. } =
-                                    &node.node_type
+                                total_tokens_used += next_response.usage.completion_tokens;
+
+                                // ---- Step 5: Check if LLM wants more tools or is done ----
+                                if next_response.tool_calls.is_empty() {
+                                    // No more tool calls — LLM produced a final answer
+                                    tracing::info!(
+                                        "Agent loop completed after {} iteration(s) for node '{}' - final answer produced",
+                                        iteration,
+                                        node_name
+                                    );
+                                    final_content = next_response.content.clone();
+                                    break;
+                                }
+
+                                // LLM wants to call more tools — update state and continue loop
+                                current_content = next_response.content.clone();
+                                current_tool_calls =
+                                    serde_json::to_value(&next_response.tool_calls)
+                                        .and_then(|v| {
+                                            serde_json::from_value::<Vec<serde_json::Value>>(v)
+                                        })
+                                        .unwrap_or_default();
+                            }
+
+                            // ============================================================
+                            // STORE RESULTS AND METADATA
+                            // ============================================================
+
+                            let overall_duration_ms =
+                                overall_start.elapsed().as_secs_f64() * 1000.0;
+
+                            // Build rich observability metadata
+                            let execution_metadata = serde_json::json!({
+                                "content": final_content,
+                                "iterations": iteration,
+                                "max_iterations": max_iterations,
+                                "total_tokens_used": total_tokens_used,
+                                "total_duration_ms": overall_duration_ms,
+                                "tool_calls": all_tool_executions,
+                                "prompt": original_prompt,
+                            });
+
+                            // Merge with any existing metadata from the initial LLM call
+                            let existing_metadata = context
+                                .metadata
+                                .get(&format!("node_response_{}", node.id))
+                                .cloned();
+
+                            let mut final_metadata = execution_metadata.clone();
+                            if let Some(existing) = &existing_metadata {
+                                if let (Some(final_obj), Some(existing_obj)) =
+                                    (final_metadata.as_object_mut(), existing.as_object())
                                 {
-                                    // Create a simple LLM request for the final response
-                                    let llm_config =
-                                        context.metadata.get("llm_config").and_then(|v| {
-                                            serde_json::from_value::<graphbit_core::llm::LlmConfig>(
-                                                v.clone(),
-                                            )
-                                            .ok()
-                                        });
-
-                                    // Only proceed if we have an explicit LLM configuration
-                                    if let Some(llm_config) = llm_config {
-                                        // Create the LLM provider using the factory
-                                        match graphbit_core::llm::LlmProviderFactory::create_provider(
-                                            llm_config.clone(),
-                                        ) {
-                                        Ok(provider_trait) => {
-                                            let llm_provider =
-                                                LlmProvider::new(provider_trait, llm_config);
-
-                                            // Create final request and apply node configuration parameters
-                                            let mut final_request = LlmRequest::new(final_prompt.clone());
-
-                                            // CUMULATIVE TOKEN BUDGET TRACKING
-                                            // Extract initial tokens used and max_tokens to calculate remaining budget
-                                            let initial_tokens_used = response_obj
-                                                .get("initial_tokens_used")
-                                                .and_then(|v| v.as_u64())
-                                                .unwrap_or(0) as u32;
-
-                                            let max_tokens_configured = response_obj
-                                                .get("max_tokens_configured")
-                                                .and_then(|v| v.as_u64())
-                                                .map(|v| v as u32);
-
-                                            // Calculate remaining token budget
-                                            let remaining_budget = if let Some(max_configured) = max_tokens_configured {
-                                                if initial_tokens_used < max_configured {
-                                                    Some(max_configured - initial_tokens_used)
-                                                } else {
-                                                    // Initial call used all/more tokens, set minimum
-                                                    tracing::warn!(
-                                                        "Initial LLM call used {} tokens, which meets/exceeds max_tokens={}. Setting final call to 10 tokens minimum.",
-                                                        initial_tokens_used, max_configured
-                                                    );
-                                                    Some(10) // Minimum tokens for final call
-                                                }
-                                            } else {
-                                                None
-                                            };
-
-                                            // Apply node-level configuration overrides (temperature, max_tokens, top_p)
-                                            // For max_tokens, use the remaining budget if available
-                                            if let Some(temp_value) = node.config.get("temperature") {
-                                                if let Some(temp_num) = temp_value.as_f64() {
-                                                    final_request = final_request.with_temperature(temp_num as f32);
-                                                    tracing::debug!("Applied temperature={} to final synthesis request", temp_num);
-                                                }
-                                            }
-
-                                            // Use remaining budget if calculated, otherwise fall back to node config
-                                            if let Some(remaining) = remaining_budget {
-                                                final_request = final_request.with_max_tokens(remaining);
-                                                tracing::info!(
-                                                    "Applied CUMULATIVE max_tokens={} to final synthesis request (initial used: {}, configured: {:?})",
-                                                    remaining, initial_tokens_used, max_tokens_configured
-                                                );
-                                            } else if let Some(max_tokens_value) = node.config.get("max_tokens") {
-                                                if let Some(max_tokens_num) = max_tokens_value.as_u64() {
-                                                    final_request = final_request.with_max_tokens(max_tokens_num as u32);
-                                                    tracing::debug!("Applied max_tokens={} to final synthesis request (no budget tracking)", max_tokens_num);
-                                                }
-                                            }
-
-                                            if let Some(top_p_value) = node.config.get("top_p") {
-                                                if let Some(top_p_num) = top_p_value.as_f64() {
-                                                    final_request = final_request.with_top_p(top_p_num as f32);
-                                                    tracing::debug!("Applied top_p={} to final synthesis request", top_p_num);
-                                                }
-                                            }
-
-                                            match llm_provider.complete(final_request).await {
-                                                Ok(final_response) => {
-                                                    tracing::debug!(
-                                                        "Final LLM response received - content: '{}', tokens: {}, finish_reason: {:?}",
-                                                        final_response.content,
-                                                        final_response.usage.completion_tokens,
-                                                        final_response.finish_reason
-                                                    );
-
-                                                    // Clone the content to avoid borrow checker issues
-                                                    let response_content =
-                                                        final_response.content.clone();
-
-                                                    // Store full LLM response metadata in context
-                                                    // This enables observability tools to capture complete LLM metadata
-                                                    // IMPORTANT: Preserve existing metadata fields (prompt, duration_ms, execution_timestamp, tool_calls)
-                                                    if let Ok(mut response_metadata) = serde_json::to_value(&final_response) {
-                                                        // Get existing metadata to preserve prompt, duration_ms, execution_timestamp, and tool_calls
-                                                        let existing_metadata_by_id = context.metadata.get(&format!("node_response_{}", node.id)).cloned();
-
-                                                        // Merge existing metadata fields into new metadata
-                                                        if let (Some(existing), Some(response_obj)) = (existing_metadata_by_id.as_ref(), response_metadata.as_object_mut()) {
-                                                            if let Some(existing_obj) = existing.as_object() {
-                                                                // Preserve these critical fields from the initial LLM call
-                                                                if let Some(prompt) = existing_obj.get("prompt") {
-                                                                    response_obj.insert("prompt".to_string(), prompt.clone());
-                                                                }
-                                                                if let Some(duration_ms) = existing_obj.get("duration_ms") {
-                                                                    response_obj.insert("duration_ms".to_string(), duration_ms.clone());
-                                                                }
-                                                                if let Some(execution_timestamp) = existing_obj.get("execution_timestamp") {
-                                                                    response_obj.insert("execution_timestamp".to_string(), execution_timestamp.clone());
-                                                                }
-                                                            }
-                                                        }
-
-                                                        // IMPORTANT: Add the original tool_calls from the initial LLM response
-                                                        // The final_response.tool_calls will be empty since tools were already executed
-                                                        // We need to preserve the original tool calls for observability
-                                                        if let Some(response_obj) = response_metadata.as_object_mut() {
-                                                            // Enrich tool_calls with their execution results
-                                                            let mut enriched_tool_calls = tool_calls.clone();
-                                                            if let Some(calls_array) = enriched_tool_calls.as_array_mut() {
-                                                                for (i, call) in calls_array.iter_mut().enumerate() {
-                                                                    if let Some(result) = tool_execution_results.get(i) {
-                                                                        if let Some(call_obj) = call.as_object_mut() {
-                                                                            let mut result_clone = result.clone();
-
-                                                                            // Extract timing details and add to tool call object
-                                                                            if let Some(start_time) = result_clone.get("start_time") {
-                                                                                call_obj.insert("start_time".to_string(), start_time.clone());
-                                                                            }
-                                                                            if let Some(end_time) = result_clone.get("end_time") {
-                                                                                call_obj.insert("end_time".to_string(), end_time.clone());
-                                                                            }
-                                                                            if let Some(latency) = result_clone.get("latency_ms") {
-                                                                                call_obj.insert("latency_ms".to_string(), latency.clone());
-                                                                            }
-
-                                                                            // Remove timing fields and redundant tool name from the output object to avoid duplication
-                                                                            if let Some(result_obj) = result_clone.as_object_mut() {
-                                                                                result_obj.remove("start_time");
-                                                                                result_obj.remove("end_time");
-                                                                                result_obj.remove("latency_ms");
-                                                                                result_obj.remove("tool_name");
-                                                                            }
-
-                                                                            // Insert the cleaned result object as "output"
-                                                                            call_obj.insert("output".to_string(), result_clone);
-                                                                        }
-                                                                    }
-                                                                }
-                                                            }
-
-                                                            response_obj.insert("tool_calls".to_string(), enriched_tool_calls);
-
-                                                            // 1. Prepare the value (unwrap and make it mutable)
-                                                            let mut initial_response_value = existing_metadata_by_id
-                                                                .clone()
-                                                                .unwrap_or(serde_json::Value::Null);
-
-                                                            // 2. If the value is a JSON Object, remove the unwanted fields
-                                                            if let Some(obj) = initial_response_value.as_object_mut() {
-                                                                obj.remove("content");
-                                                                obj.remove("duration_ms");
-                                                                obj.remove("execution_timestamp");
-                                                                obj.remove("metadata");
-                                                            }
-
-                                                            // 3. Insert the cleaned object into your response_obj
-                                                            response_obj.insert(
-                                                                "initial_response".to_string(),
-                                                                initial_response_value
-                                                            );
-
-                                                            // Add final input
-                                                            response_obj.insert("final_input".to_string(), serde_json::Value::String(final_prompt.clone()));
-                                                        }
-
-                                                        // Store by node ID
-                                                        context.metadata.insert(
-                                                            format!("node_response_{}", node.id),
-                                                            response_metadata.clone(),
-                                                        );
-
-                                                        // Also store by node name if available
-                                                        if let Some(node_name) = workflow
-                                                            .graph
-                                                            .get_nodes()
-                                                            .iter()
-                                                            .find(|(id, _)| **id == node.id)
-                                                            .map(|(_, n)| &n.name)
-                                                        {
-                                                            context.metadata.insert(
-                                                                format!("node_response_{}", node_name),
-                                                                response_metadata,
-                                                            );
-                                                        }
-                                                    }
-
-                                                    // Update the context with the final response (text content only)
-                                                    context.set_node_output(
-                                                        &node.id,
-                                                        serde_json::Value::String(
-                                                            response_content.clone(),
-                                                        ),
-                                                    );
-                                                    if let Some(node_name) = workflow
-                                                        .graph
-                                                        .get_nodes()
-                                                        .iter()
-                                                        .find(|(id, _)| **id == node.id)
-                                                        .map(|(_, n)| &n.name)
-                                                    {
-                                                        context.set_node_output_by_name(
-                                                            node_name,
-                                                            serde_json::Value::String(
-                                                                response_content.clone(),
-                                                            ),
-                                                        );
-                                                        context.set_variable(
-                                                            node_name.clone(),
-                                                            serde_json::Value::String(
-                                                                response_content.clone(),
-                                                            ),
-                                                        );
-                                                        context.set_variable(
-                                                            node.id.to_string(),
-                                                            serde_json::Value::String(
-                                                                response_content,
-                                                            ),
-                                                        );
-                                                    }
-                                                }
-                                                Err(e) => {
-                                                    tracing::error!(
-                                                        "Failed to get final LLM response: {}",
-                                                        e
-                                                    );
-                                                    // Keep the tool results as the output
-                                                    context.set_node_output(
-                                                        &node.id,
-                                                        serde_json::Value::String(
-                                                            tool_results_summary.clone(),
-                                                        ),
-                                                    );
-                                                }
-                                            }
-                                        }
-                                        Err(e) => {
-                                            tracing::error!("Failed to create LLM provider: {}", e);
-                                            // Keep the tool results as the output
-                                            context.set_node_output(
-                                                &node.id,
-                                                serde_json::Value::String(tool_results_summary.clone()),
-                                            );
-                                        }
+                                    // Preserve execution_timestamp from initial call
+                                    if let Some(ts) = existing_obj.get("execution_timestamp") {
+                                        final_obj
+                                            .insert("execution_timestamp".to_string(), ts.clone());
                                     }
-                                    } else {
-                                        // No LLM configuration available, just keep tool results
-                                        tracing::warn!("No LLM configuration found in context metadata for final response. Using tool results only.");
-                                        context.set_node_output(
-                                            &node.id,
-                                            serde_json::Value::String(tool_results_summary.clone()),
-                                        );
+                                    // Preserve initial response metadata
+                                    let mut initial = existing.clone();
+                                    if let Some(obj) = initial.as_object_mut() {
+                                        obj.remove("content");
+                                        obj.remove("metadata");
                                     }
+                                    final_obj.insert("initial_response".to_string(), initial);
                                 }
                             }
+
+                            // Store metadata by node ID and name
+                            context.metadata.insert(
+                                format!("node_response_{}", node.id),
+                                final_metadata.clone(),
+                            );
+                            context
+                                .metadata
+                                .insert(format!("node_response_{}", node_name), final_metadata);
+
+                            // Update context with final response content
+                            let final_value = serde_json::Value::String(final_content.clone());
+                            context.set_node_output(&node.id, final_value.clone());
+                            context.set_node_output_by_name(&node_name, final_value.clone());
+                            context.set_variable(node_name.clone(), final_value.clone());
+                            context.set_variable(node.id.to_string(), final_value);
                         }
                     }
                 }

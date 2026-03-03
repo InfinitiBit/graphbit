@@ -98,6 +98,7 @@ impl ByteDanceProvider {
                         .collect(),
                 )
             },
+            tool_call_id: message.tool_call_id.clone(),
         }
     }
 
@@ -287,6 +288,8 @@ struct ByteDanceMessage {
     content: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     tool_calls: Option<Vec<ByteDanceToolCall>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tool_call_id: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -380,6 +383,7 @@ mod tests {
             role: LlmRole::User,
             content: "Hello, world!".to_string(),
             tool_calls: Vec::new(),
+            tool_call_id: None,
         };
 
         let bytedance_message = ByteDanceProvider::convert_message(&message);
@@ -394,6 +398,7 @@ mod tests {
             role: LlmRole::Assistant,
             content: "Hello! How can I help you?".to_string(),
             tool_calls: Vec::new(),
+            tool_call_id: None,
         };
 
         let bytedance_message = ByteDanceProvider::convert_message(&message);
@@ -408,6 +413,7 @@ mod tests {
             role: LlmRole::System,
             content: "You are a helpful assistant.".to_string(),
             tool_calls: Vec::new(),
+            tool_call_id: None,
         };
 
         let bytedance_message = ByteDanceProvider::convert_message(&message);

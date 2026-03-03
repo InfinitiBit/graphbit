@@ -27,7 +27,7 @@ pub struct Node {
 #[pymethods]
 impl Node {
     #[staticmethod]
-    #[pyo3(signature = (name, prompt, agent_id=None, output_name=None, tools=None, system_prompt=None, llm_config=None, temperature=None, max_tokens=None))]
+    #[pyo3(signature = (name, prompt, agent_id=None, output_name=None, tools=None, system_prompt=None, llm_config=None, temperature=None, max_tokens=None, max_iterations=None))]
     fn agent(
         name: String,
         prompt: String,
@@ -38,6 +38,7 @@ impl Node {
         llm_config: Option<LlmConfig>,
         temperature: Option<f32>,
         max_tokens: Option<u32>,
+        max_iterations: Option<u32>,
     ) -> PyResult<Self> {
         // Validate required parameters
         if name.trim().is_empty() {
@@ -129,6 +130,20 @@ impl Node {
             node.config.insert(
                 "max_tokens".to_string(),
                 serde_json::Value::Number(serde_json::Number::from(tokens)),
+            );
+        }
+
+        // Store max_iterations in metadata if provided
+        // Controls how many tool-call → result → LLM cycles the agent can perform
+        if let Some(iterations) = max_iterations {
+            if iterations == 0 || iterations > 100 {
+                return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                    "max_iterations must be between 1 and 100",
+                ));
+            }
+            node.config.insert(
+                "max_iterations".to_string(),
+                serde_json::Value::Number(serde_json::Number::from(iterations)),
             );
         }
 

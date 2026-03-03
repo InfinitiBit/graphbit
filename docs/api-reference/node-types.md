@@ -29,6 +29,7 @@ agent = Node.agent(
 - `llm_config` (obj, optional): Custom LLM configuration for the node
 - `output_name` (str, optional): Custom name for the node's output
 - `tools` (List, optional): List of tools available to the agent
+- `max_iterations` (int, optional): Maximum number of iterations (default: 10)
 - `system_prompt` (str, optional): System prompt that defines agent behavior and constraints
 - `temperature` (float, optional): Controls randomness in LLM responses (0.0-2.0). Lower values = more focused, higher = more creative
 - `max_tokens` (int, optional): Maximum number of tokens to generate in the response
@@ -42,7 +43,8 @@ agent = Node.agent(
     name="Weather Agent",
     prompt=f"Using the tool, get the weather forecast for: {input}",
     agent_id="weather_agent",  # Optional, auto-generated if not provided
-    tools=[get_weather]         
+    tools=[get_weather],         
+    max_iterations=5,          # Optional, maximum number of iterations (default: 10)
 )
 ```
 
