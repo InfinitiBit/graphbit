@@ -575,6 +575,17 @@ impl Executor {
                             let overall_start = std::time::Instant::now();
 
                             loop {
+                                // Safety check: max iterations (check BEFORE incrementing)
+                                if iteration >= max_iterations {
+                                    tracing::warn!(
+                                        "Agent reached max iterations ({}) for node '{}'. Using last response as final answer.",
+                                        max_iterations,
+                                        node_name
+                                    );
+                                    final_content = current_content.clone();
+                                    break;
+                                }
+
                                 iteration += 1;
 
                                 tracing::info!(
@@ -584,17 +595,6 @@ impl Executor {
                                     current_tool_calls.len(),
                                     node_name
                                 );
-
-                                // Safety check: max iterations
-                                if iteration > max_iterations {
-                                    tracing::warn!(
-                                        "Agent reached max iterations ({}) for node '{}'. Using last response as final answer.",
-                                        max_iterations,
-                                        node_name
-                                    );
-                                    final_content = current_content.clone();
-                                    break;
-                                }
 
                                 // ---- Step 1: Append assistant message with tool calls to history ----
                                 let assistant_tool_calls: Vec<LlmToolCall> = current_tool_calls
