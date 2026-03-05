@@ -33,6 +33,7 @@ use tracing::{error, info, warn};
 mod document_loader;
 mod embeddings;
 mod errors;
+mod guardrail;
 mod llm;
 mod runtime;
 mod text_splitter;
@@ -49,6 +50,7 @@ pub use text_splitter::{
     TokenSplitter,
 };
 pub use tools::{ToolDecorator, ToolExecutor, ToolRegistry, ToolResult};
+pub use guardrail::GuardRailPolicyConfig;
 pub use workflow::{Executor, Node, Workflow, WorkflowContext, WorkflowResult};
 
 /// Global initialization flag to ensure init is called only once
@@ -385,6 +387,9 @@ fn graphbit(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyFinishReason>()?;
     m.add_class::<PyLlmToolCall>()?;
     m.add_class::<PyLlmResponse>()?;
+
+    // GuardRail policy config (optional for executor.execute(workflow, policy=...))
+    m.add_class::<GuardRailPolicyConfig>()?;
 
     // Workflow classes
     m.add_class::<Node>()?;

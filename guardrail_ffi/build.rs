@@ -1,0 +1,19 @@
+//! Link the prebuilt GuardRail static library (vendor/guardrail/libguardrail_ffi.a).
+
+use std::env;
+use std::path::Path;
+
+fn main() {
+    let manifest_dir = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR");
+    let lib_dir = env::var("GUARDRAIL_LIB_DIR")
+        .unwrap_or_else(|_| Path::new(&manifest_dir).join("../vendor/guardrail").to_string_lossy().into_owned());
+
+    let lib_path = Path::new(&lib_dir);
+    if !lib_path.exists() {
+        eprintln!("cargo:warning=GuardRail lib dir not found: {} (set GUARDRAIL_LIB_DIR or add vendor/guardrail/)", lib_dir);
+        return;
+    }
+
+    println!("cargo:rustc-link-search=native={}", lib_path.display());
+    println!("cargo:rustc-link-lib=static=guardrail_ffi");
+}

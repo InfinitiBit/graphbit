@@ -41,7 +41,7 @@ version.workspace = true
 [profile.bench]
 debug = false
 incremental = false
-lto = "fat"
+lto = false
 opt-level = 3
 
 # Workspace profiles (applied to all members)
@@ -55,7 +55,8 @@ overflow-checks = true
 codegen-units = 1
 debug = false
 incremental = false
-lto = "fat"
+# LTO disabled: prebuilt libguardrail_ffi.a has no bitcode; fat LTO would fail at link.
+lto = false
 opt-level = 3
 panic = "abort"
 strip = "symbols"
@@ -64,7 +65,8 @@ strip = "symbols"
 [profile.release-python]
 codegen-units = 1
 inherits = "release"
-lto = "fat"
+# LTO follows release (false) so we can link prebuilt libguardrail_ffi.a
+lto = false
 opt-level = "s"  # Optimize for size (important for Python extensions)
 panic = "abort"
 strip = "symbols"
@@ -80,6 +82,7 @@ jemallocator.workspace = true
 [workspace]
 members = [
   "core",
+  "guardrail_ffi",
   "python"
 ]
 resolver = "2"
