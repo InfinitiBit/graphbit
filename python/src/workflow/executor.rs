@@ -454,6 +454,12 @@ impl Executor {
                 .insert("llm_config".to_string(), llm_config_json);
         }
 
+        // Store workflow name in context metadata for result schema
+        context.metadata.insert(
+            "workflow_name".to_string(),
+            serde_json::Value::String(workflow.name.clone()),
+        );
+
         // Check if any node outputs contain tool_calls_required responses and handle them
         context = Self::handle_tool_calls_in_context(
             context,
