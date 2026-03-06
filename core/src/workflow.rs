@@ -983,26 +983,23 @@ impl WorkflowExecutor {
             // Execute agent without tools (original behavior)
             tracing::info!("NO TOOLS DETECTED - using standard agent execution");
 
-            // Guardrail: encode prompt before sending to LLM (Llm context adds signature + instruction)
+            // Guardrail: encode prompt before sending to LLM; combine injection text + payload
             let prompt_for_llm = if let Some(ref enforcer) = guardrail_enforcer {
                 tracing::debug!("Guardrail: encoding prompt before LLM call (sensitive data will be masked)");
                 let result = enforcer.encode(
                     serde_json::Value::String(resolved_prompt.clone()),
                     EncodeContext::Llm,
                 );
-                tracing::debug!("Guardrail: prompt encoded for LLM: {:#?}", result);
-                tracing::debug!("Guardrail: prompt encoded for LLM");
-                result
-                    .payload
-                    .as_str()
-                    .map(String::from)
-                    .unwrap_or_else(|| resolved_prompt.clone())
+                tracing::debug!("Guardrail: prompt encoded for LLM (payload only): {}", result.payload.as_str().unwrap_or(""));
+                tracing::debug!("[GuardRail] encoded prompt (sent to LLM, payload only): {}", result.payload.as_str().unwrap_or(""));
+                format!(
+                    "{}{}",
+                    result.signature_injection_text,
+                    result.payload.as_str().unwrap_or("")
+                )
             } else {
                 resolved_prompt.clone()
             };
-            if guardrail_enforcer.is_some() {
-                tracing::debug!("[GuardRail] encoded prompt (sent to LLM): {}", prompt_for_llm);
-            }
 
             // Call LLM provider directly to capture metadata
             use crate::llm::LlmRequest;
@@ -1141,26 +1138,23 @@ impl WorkflowExecutor {
         tracing::info!("Starting execute_agent_with_tools for agent: {_agent_id}");
         use crate::llm::{LlmRequest, LlmTool};
 
-        // Guardrail: encode prompt before sending to LLM (Llm context adds signature + instruction)
+        // Guardrail: encode prompt before sending to LLM; combine injection text + payload
         let prompt_for_llm = if let Some(ref enforcer) = guardrail_enforcer {
             tracing::debug!("Guardrail: encoding prompt before LLM call (tool path; sensitive data masked)");
             let result = enforcer.encode(
                 serde_json::Value::String(prompt.to_string()),
                 EncodeContext::Llm,
             );
-            tracing::debug!("Guardrail: prompt encoded for LLM: {:#?}", result);
-            tracing::debug!("Guardrail: prompt encoded for LLM encoded: {}", result.payload);
-            result
-                .payload
-                .as_str()
-                .map(String::from)
-                .unwrap_or_else(|| prompt.to_string())
+            tracing::debug!("Guardrail: prompt encoded for LLM (payload only): {}", result.payload.as_str().unwrap_or_default());
+            tracing::debug!("[GuardRail] encoded prompt (sent to LLM, payload only): {}", result.payload.as_str().unwrap_or_default());
+            format!(
+                "{}{}",
+                result.signature_injection_text,
+                result.payload.as_str().unwrap_or_default()
+            )
         } else {
             prompt.to_string()
         };
-        if guardrail_enforcer.is_some() {
-            tracing::debug!("[GuardRail] encoded prompt (sent to LLM): {}", prompt_for_llm);
-        }
 
         // Extract tool schemas from node config
         let tool_schemas = node_config

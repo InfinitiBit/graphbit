@@ -609,12 +609,12 @@ impl Executor {
                                         serde_json::Value::String(final_prompt.clone()),
                                         EncodeContext::Llm,
                                     );
-                                    let encoded_str = result
-                                        .payload
-                                        .as_str()
-                                        .map(String::from)
-                                        .unwrap_or_else(|| final_prompt.clone());
-                                    tracing::info!("[GuardRail] final prompt (after encode, sent to LLM): {}", encoded_str);
+                                    let encoded_str = format!(
+                                        "{}{}",
+                                        result.signature_injection_text,
+                                        result.payload.as_str().unwrap_or_default()
+                                    );
+                                    tracing::info!("[GuardRail] final prompt (after encode, sent to LLM, payload only): {}", result.payload.as_str().unwrap_or_default());
                                     encoded_str
                                 } else {
                                     final_prompt.clone()

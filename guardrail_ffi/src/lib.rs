@@ -202,10 +202,12 @@ impl std::fmt::Debug for Enforcer {
 unsafe impl Send for Enforcer {}
 unsafe impl Sync for Enforcer {}
 
-/// Result of encode: payload plus metadata.
+/// Result of encode: payload (masked only) plus optional injection text and metadata.
 #[derive(Debug, Clone)]
 pub struct EncodeResult {
     pub payload: serde_json::Value,
+    /// Rule text to prepend when sending to LLM; empty when not applicable. Caller concatenates with payload.
+    pub signature_injection_text: String,
     pub rules_applied_count: u32,
     pub rule_names: Vec<String>,
     pub policy_name: String,
@@ -225,6 +227,7 @@ impl Enforcer {
     pub fn encode(&self, payload: serde_json::Value, context: EncodeContext) -> EncodeResult {
         let default_result = EncodeResult {
             payload: payload.clone(),
+            signature_injection_text: String::new(),
             rules_applied_count: 0,
             rule_names: Vec::new(),
             policy_name: String::new(),
@@ -306,6 +309,7 @@ fn parse_encode_result_legacy(s: &str) -> Option<EncodeResult> {
     let payload: serde_json::Value = serde_json::from_str(s).ok()?;
     Some(EncodeResult {
         payload,
+        signature_injection_text: String::new(),
         rules_applied_count: 0,
         rule_names: Vec::new(),
         policy_name: String::new(),
@@ -326,6 +330,11 @@ fn parse_decode_result_legacy(s: &str) -> Option<DecodeResult> {
 fn parse_encode_result(s: &str) -> Option<EncodeResult> {
     let v: serde_json::Value = serde_json::from_str(s).ok()?;
     let payload = v.get("payload")?.clone();
+    let signature_injection_text = v
+        .get("signature_injection_text")
+        .and_then(|x| x.as_str())
+        .unwrap_or("")
+        .to_string();
     let rules_applied_count = v.get("rules_applied_count")?.as_u64()? as u32;
     let rule_names: Vec<String> = v
         .get("rule_names")?
@@ -336,6 +345,7 @@ fn parse_encode_result(s: &str) -> Option<EncodeResult> {
     let policy_name = v.get("policy_name")?.as_str()?.to_string();
     Some(EncodeResult {
         payload,
+        signature_injection_text,
         rules_applied_count,
         rule_names,
         policy_name,
