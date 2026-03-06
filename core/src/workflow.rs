@@ -989,6 +989,7 @@ impl WorkflowExecutor {
             let mut executions: Vec<serde_json::Value> = Vec::new();
 
             // Guardrail: encode prompt before sending to LLM; combine injection text + payload
+            let mut encoded_payload_for_meta = String::new();
             let prompt_for_llm = if let Some(ref enforcer) = guardrail_enforcer {
                 tracing::debug!(
                     "Guardrail: encoding prompt before LLM call (sensitive data will be masked)"
@@ -1014,6 +1015,9 @@ impl WorkflowExecutor {
                     "pii_rule_names": encode_result.rule_names,
                     "policy_name": encode_result.policy_name
                 }));
+
+                // Capture encoded payload (without signature) for metadata user_input
+                encoded_payload_for_meta = encode_result.payload.as_str().unwrap_or("").to_string();
 
                 format!(
                     "{}{}",
@@ -1051,6 +1055,8 @@ impl WorkflowExecutor {
             // Get provider name for metadata
             let provider_name = agent.llm_provider().config().provider_name().to_string();
 
+            // Capture raw LLM content before decode for metadata
+            let raw_llm_content = llm_response.content.clone();
             if guardrail_enforcer.is_some() {
                 tracing::debug!(
                     "[GuardRail] raw LLM response (before decode): content={:?}, tool_calls={:?}",
@@ -1157,7 +1163,9 @@ impl WorkflowExecutor {
                     "node_id": current_node_id.to_string(),
                     "node_name": node_name,
                     "node_type": "Agent",
-                    "user_input": resolved_prompt,
+                    // When GR active: user_input = masked prompt, final_output = raw LLM content
+                    // When GR inactive: user_input = original prompt, final_output = decoded content
+                    "user_input": if guardrail_enforcer.is_some() { encoded_payload_for_meta.clone() } else { resolved_prompt.clone() },
                     "tools_available": [],
                     "total_tools_available": 0,
                     "start_time": execution_timestamp.to_rfc3339(),
@@ -1165,7 +1173,7 @@ impl WorkflowExecutor {
                     "duration_ms": llm_duration_ms,
                     "success": true,
                     "error": serde_json::Value::Null,
-                    "final_output": llm_response.content,
+                    "final_output": if guardrail_enforcer.is_some() { raw_llm_content } else { llm_response.content.clone() },
                     "total_iterations": 0,
                     "max_iterations": max_iterations,
                     "exit_reason": llm_response.finish_reason,
@@ -1231,6 +1239,7 @@ impl WorkflowExecutor {
         let mut executions: Vec<serde_json::Value> = Vec::new();
 
         // Guardrail: encode prompt before sending to LLM; combine injection text + payload
+        let mut encoded_payload_for_meta = String::new();
         let prompt_for_llm = if let Some(ref enforcer) = guardrail_enforcer {
             tracing::debug!(
                 "Guardrail: encoding prompt before LLM call (tool path; sensitive data masked)"
@@ -1256,6 +1265,9 @@ impl WorkflowExecutor {
                 "pii_rule_names": encode_result.rule_names,
                 "policy_name": encode_result.policy_name
             }));
+
+            // Capture encoded payload (without signature) for metadata user_input
+            encoded_payload_for_meta = encode_result.payload.as_str().unwrap_or_default().to_string();
 
             format!(
                 "{}{}",
@@ -1345,6 +1357,8 @@ impl WorkflowExecutor {
         // Get provider name for metadata
         let provider_name = agent.llm_provider().config().provider_name().to_string();
 
+        // Capture raw LLM content before decode for metadata
+        let raw_llm_content = llm_response.content.clone();
         if guardrail_enforcer.is_some() {
             tracing::debug!(
                 "[GuardRail] raw LLM response (before decode): content={:?}, tool_calls={:?}",
@@ -1451,7 +1465,9 @@ impl WorkflowExecutor {
             "node_id": node_id.to_string(),
             "node_name": node_name,
             "node_type": "Agent",
-            "user_input": prompt,
+            // When GR active: user_input = masked prompt, final_output = raw LLM content
+            // When GR inactive: user_input = original prompt, final_output = decoded content
+            "user_input": if guardrail_enforcer.is_some() { encoded_payload_for_meta.clone() } else { prompt.to_string() },
             "tools_available": tool_names,
             "total_tools_available": tool_names.len(),
             "start_time": execution_timestamp.to_rfc3339(),
@@ -1459,7 +1475,7 @@ impl WorkflowExecutor {
             "duration_ms": llm_duration_ms,
             "success": true,
             "error": serde_json::Value::Null,
-            "final_output": llm_response.content,
+            "final_output": if guardrail_enforcer.is_some() { raw_llm_content.clone() } else { llm_response.content.clone() },
             "total_iterations": 0,
             "max_iterations": max_iterations,
             "exit_reason": format!("{}", llm_response.finish_reason),

@@ -547,6 +547,7 @@ impl Executor {
                                                     parameters = decoded_result.payload;
                                                 }
                                                 serde_json::json!({
+                                                    "id": tc.get("id").and_then(|v| v.as_str()).unwrap_or(""),
                                                     "tool_name": name,
                                                     "parameters": parameters
                                                 })
@@ -665,14 +666,15 @@ impl Executor {
 
                                     executions.push(serde_json::json!({
                                         "type": "tool_call",
+                                        "id": tc.get("id").and_then(|v| v.as_str()).unwrap_or(""),
                                         "tool_name": tool_name,
-                                        "input": tc.get("parameters").cloned().unwrap_or(serde_json::json!({})),
+                                        "parameters": tc.get("parameters").cloned().unwrap_or(serde_json::json!({})),
                                         "output": output,
                                         "success": success,
                                         "error": error,
                                         "start_time": start_time,
                                         "end_time": end_time,
-                                        "duration_ms": latency_ms,
+                                        "latency_ms": latency_ms,
                                         "retries": []
                                     }));
                                 }
@@ -913,7 +915,14 @@ impl Executor {
                                                                     obj.insert("duration_ms".to_string(), serde_json::json!(total_duration));
                                                                 }
                                                             }
-                                                            obj.insert("final_output".to_string(), serde_json::Value::String(response_content.clone()));
+                                                            // When GR active: final_output = raw LLM content (before decode)
+                                                            // When GR inactive: final_output = response content (same as raw)
+                                                            let final_output_for_meta = if guardrail_enforcer.is_some() {
+                                                                final_response.content.clone()
+                                                            } else {
+                                                                response_content.clone()
+                                                            };
+                                                            obj.insert("final_output".to_string(), serde_json::Value::String(final_output_for_meta));
                                                             obj.insert("exit_reason".to_string(), serde_json::json!(format!("{}", final_response.finish_reason)));
                                                             obj.insert("total_tool_calls".to_string(), serde_json::json!(total_tool_calls));
                                                             obj.insert("tools_used".to_string(), serde_json::json!(tools_used));
