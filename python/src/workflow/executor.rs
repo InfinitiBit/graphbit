@@ -8,7 +8,7 @@
 //! - Graceful error handling and recovery
 
 use graphbit_core::workflow::WorkflowExecutor as CoreWorkflowExecutor;
-use graphbit_core::{DecodeContext, EncodeContext, GuardRail, Enforcer};
+use graphbit_core::{DecodeContext, EncodeContext, Enforcer, GuardRail};
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyDict};
 use std::sync::Arc;
@@ -177,9 +177,10 @@ impl Executor {
         // Build optional guardrail enforcer from policy (for encode/decode at LLM and tool boundaries)
         let guardrail_enforcer = policy.map(|p| {
             let config = p.borrow().get_inner();
-            Arc::new(
-                GuardRail::enforcer_for(config, workflow_clone.id.to_string()),
-            )
+            Arc::new(GuardRail::enforcer_for(
+                config,
+                workflow_clone.id.to_string(),
+            ))
         });
 
         if debug {
@@ -262,9 +263,10 @@ impl Executor {
         let debug = config.enable_tracing;
         let guardrail_enforcer = policy.map(|p| {
             let config = p.borrow().get_inner();
-            Arc::new(
-                GuardRail::enforcer_for(config, workflow_clone.id.to_string()),
-            )
+            Arc::new(GuardRail::enforcer_for(
+                config,
+                workflow_clone.id.to_string(),
+            ))
         });
 
         if debug {
@@ -435,8 +437,9 @@ impl Executor {
         guardrail_enforcer: Option<Arc<Enforcer>>,
     ) -> Result<graphbit_core::types::WorkflowContext, graphbit_core::errors::GraphBitError> {
         let executor = match config.mode {
-            ExecutionMode::Balanced => CoreWorkflowExecutor::new()
-                .with_default_llm_config(llm_config.clone()),
+            ExecutionMode::Balanced => {
+                CoreWorkflowExecutor::new().with_default_llm_config(llm_config.clone())
+            }
         };
 
         // Execute the workflow (core applies encode before LLM, decode after LLM when enforcer is Some)
@@ -470,8 +473,8 @@ impl Executor {
         workflow: &graphbit_core::workflow::Workflow,
         guardrail_enforcer: Option<&Enforcer>,
     ) -> Result<graphbit_core::types::WorkflowContext, graphbit_core::errors::GraphBitError> {
-        use graphbit_core::DecodeContext;
         use crate::workflow::node::execute_production_tool_calls;
+        use graphbit_core::DecodeContext;
         use graphbit_core::llm::{LlmProvider, LlmRequest};
 
         // Check each node output for tool_calls_required responses
@@ -513,9 +516,12 @@ impl Executor {
                                         tool_calls
                                     );
                                 }
-                                let python_tool_calls: Vec<serde_json::Value> =
-                                    if let Some(tool_calls_array) = tool_calls.as_array() {
-                                        tool_calls_array
+                                let python_tool_calls: Vec<serde_json::Value> = if let Some(
+                                    tool_calls_array,
+                                ) =
+                                    tool_calls.as_array()
+                                {
+                                    tool_calls_array
                                             .iter()
                                             .map(|tc| {
                                                 let name = tc
@@ -540,9 +546,9 @@ impl Executor {
                                                 })
                                             })
                                             .collect()
-                                    } else {
-                                        Vec::new()
-                                    };
+                                } else {
+                                    Vec::new()
+                                };
 
                                 let tool_calls_json = serde_json::to_string(&python_tool_calls)
                                     .map_err(|e| {
@@ -598,23 +604,110 @@ impl Executor {
                                 // Guardrail: before tool we decode; after tool we do nothing (no encode of results).
                                 let summary_for_llm = tool_results_summary.clone();
 
+                                // --- Build tool_call execution entries ---
+                                // Read existing node metadata (seeded by core execute_agent_with_tools)
+                                let existing_node_metadata = context
+                                    .metadata
+                                    .get(&format!("node_response_{}", node.id))
+                                    .cloned();
+
+                                // Extract existing executions array from the seeded metadata
+                                let mut executions: Vec<serde_json::Value> = existing_node_metadata
+                                    .as_ref()
+                                    .and_then(|m| m.get("executions"))
+                                    .and_then(|e| e.as_array())
+                                    .cloned()
+                                    .unwrap_or_default();
+
+                                // Append a tool_call entry for each tool execution result
+                                let mut tools_used: Vec<String> = Vec::new();
+                                for (i, tc) in python_tool_calls.iter().enumerate() {
+                                    let tool_name = tc
+                                        .get("tool_name")
+                                        .and_then(|v| v.as_str())
+                                        .unwrap_or("unknown")
+                                        .to_string();
+
+                                    let tool_result = tool_execution_results.get(i);
+                                    let success = tool_result
+                                        .and_then(|r| r.get("success").and_then(|v| v.as_bool()))
+                                        .unwrap_or(false);
+                                    let output = tool_result
+                                        .and_then(|r| r.get("output").and_then(|v| v.as_str()))
+                                        .unwrap_or("")
+                                        .to_string();
+                                    let error = tool_result
+                                        .and_then(|r| r.get("error").and_then(|v| v.as_str()))
+                                        .map(|e| serde_json::Value::String(e.to_string()))
+                                        .unwrap_or(serde_json::Value::Null);
+                                    let start_time = tool_result
+                                        .and_then(|r| r.get("start_time"))
+                                        .cloned()
+                                        .unwrap_or(serde_json::Value::Null);
+                                    let end_time = tool_result
+                                        .and_then(|r| r.get("end_time"))
+                                        .cloned()
+                                        .unwrap_or(serde_json::Value::Null);
+                                    let latency_ms = tool_result
+                                        .and_then(|r| r.get("latency_ms"))
+                                        .cloned()
+                                        .unwrap_or(serde_json::json!(0.0));
+
+                                    if !tools_used.contains(&tool_name) {
+                                        tools_used.push(tool_name.clone());
+                                    }
+
+                                    executions.push(serde_json::json!({
+                                        "type": "tool_call",
+                                        "tool_name": tool_name,
+                                        "input": tc.get("parameters").cloned().unwrap_or(serde_json::json!({})),
+                                        "output": output,
+                                        "success": success,
+                                        "error": error,
+                                        "start_time": start_time,
+                                        "end_time": end_time,
+                                        "duration_ms": latency_ms,
+                                        "retries": []
+                                    }));
+                                }
+
                                 // Build final prompt; when GuardRail is active encode it and debug-print.
                                 let final_prompt = format!(
                                     "{}\n\nTool execution results:\n{}\n\nPlease provide a comprehensive response based on the tool results.",
                                     original_prompt, summary_for_llm
                                 );
-                                let prompt_for_final_llm = if let Some(ref enforcer) = guardrail_enforcer {
-                                    tracing::info!("[GuardRail] final prompt (before encode): {}", final_prompt);
-                                    let result = enforcer.encode(
+
+                                // Guardrail: encode final prompt before LLM call
+                                let prompt_for_final_llm = if let Some(ref enforcer) =
+                                    guardrail_enforcer
+                                {
+                                    tracing::info!(
+                                        "[GuardRail] final prompt (before encode): {}",
+                                        final_prompt
+                                    );
+                                    let encode_result = enforcer.encode(
                                         serde_json::Value::String(final_prompt.clone()),
                                         EncodeContext::Llm,
                                     );
+
+                                    // Record guardrail encode execution entry
+                                    executions.push(serde_json::json!({
+                                        "type": "guardrail_policy",
+                                        "operation": "encode",
+                                        "pii_rules_applied_count": encode_result.rules_applied_count,
+                                        "pii_rule_names": encode_result.rule_names,
+                                        "policy_name": encode_result.policy_name
+                                    }));
+
                                     let encoded_str = format!(
                                         "{}{}",
-                                        result.signature_injection_text,
-                                        result.payload.as_str().unwrap_or_default()
+                                        encode_result.signature_injection_text,
+                                        encode_result.payload.as_str().unwrap_or_default()
                                     );
-                                    tracing::info!("[GuardRail] final prompt (after encode, sent to LLM, payload only): {}", result.payload.as_str().unwrap_or_default());
+                                    tracing::info!(
+                                        "[GuardRail] final prompt (after encode, sent to LLM, payload only): {}",
+                                        encode_result.payload.as_str().unwrap_or_default()
+                                    );
                                     encoded_str
                                 } else {
                                     final_prompt.clone()
@@ -641,7 +734,7 @@ impl Executor {
                                         ) {
                                         Ok(provider_trait) => {
                                             let llm_provider =
-                                                LlmProvider::new(provider_trait, llm_config);
+                                                LlmProvider::new(provider_trait, llm_config.clone());
 
                                             // Create final request (with encoded prompt when GuardRail is on)
                                             let mut final_request = LlmRequest::new(prompt_for_final_llm);
@@ -704,8 +797,15 @@ impl Executor {
                                                 }
                                             }
 
+                                            // Measure final LLM call timing
+                                            let final_llm_timestamp = chrono::Utc::now();
+                                            let final_llm_start = std::time::Instant::now();
+
                                             match llm_provider.complete(final_request).await {
                                                 Ok(final_response) => {
+                                                    let final_llm_duration_ms = final_llm_start.elapsed().as_secs_f64() * 1000.0;
+                                                    let final_llm_end_timestamp = chrono::Utc::now();
+
                                                     tracing::info!(
                                                         "[GuardRail] final LLM response (GuardRail active={}); before decode: {}",
                                                         guardrail_enforcer.is_some(),
@@ -718,6 +818,38 @@ impl Executor {
                                                         final_response.finish_reason
                                                     );
 
+                                                    // Build the final llm_call execution entry
+                                                    let final_llm_call_entry = serde_json::json!({
+                                                        "type": "llm_call",
+                                                        "id": final_response.id.clone().unwrap_or_default(),
+                                                        "model": final_response.model,
+                                                        "provider": llm_config.provider_name(),
+                                                        "input": final_prompt,
+                                                        "output": final_response.content,
+                                                        "finish_reason": format!("{}", final_response.finish_reason),
+                                                        "tool_calls": [],
+                                                        "start_time": final_llm_timestamp.to_rfc3339(),
+                                                        "end_time": final_llm_end_timestamp.to_rfc3339(),
+                                                        "duration_ms": final_llm_duration_ms,
+                                                        "usage": {
+                                                            "prompt_tokens": final_response.usage.prompt_tokens,
+                                                            "completion_tokens": final_response.usage.completion_tokens,
+                                                            "total_tokens": final_response.usage.total_tokens,
+                                                            "prompt_tokens_details": {
+                                                                "cached_tokens": 0,
+                                                                "audio_tokens": 0
+                                                            },
+                                                            "completion_tokens_details": {
+                                                                "reasoning_tokens": 0,
+                                                                "audio_tokens": 0,
+                                                                "accepted_prediction_tokens": 0,
+                                                                "rejected_prediction_tokens": 0
+                                                            }
+                                                        },
+                                                        "retries": []
+                                                    });
+                                                    executions.push(final_llm_call_entry);
+
                                                     // Guardrail: decode after every LLM call so user sees rehydrated content
                                                     let response_content = if let Some(ref enforcer) = guardrail_enforcer {
                                                         let payload = serde_json::json!({
@@ -725,6 +857,16 @@ impl Executor {
                                                         });
                                                         let decoded_result =
                                                             enforcer.decode(payload, DecodeContext::LlmResponse);
+
+                                                        // Record guardrail decode execution entry
+                                                        executions.push(serde_json::json!({
+                                                            "type": "guardrail_policy",
+                                                            "operation": "decode",
+                                                            "pii_rules_applied_count": decoded_result.rules_applied_count,
+                                                            "pii_rule_names": decoded_result.rule_names,
+                                                            "policy_name": decoded_result.policy_name
+                                                        }));
+
                                                         let content = decoded_result
                                                             .payload
                                                             .get("content")
@@ -737,96 +879,60 @@ impl Executor {
                                                         final_response.content.clone()
                                                     };
 
-                                                    // Store full LLM response metadata in context
-                                                    // This enables observability tools to capture complete LLM metadata
-                                                    // IMPORTANT: Preserve existing metadata fields (prompt, duration_ms, execution_timestamp, tool_calls)
-                                                    if let Ok(mut response_metadata) = serde_json::to_value(&final_response) {
-                                                        // Get existing metadata to preserve prompt, duration_ms, execution_timestamp, and tool_calls
-                                                        let existing_metadata_by_id = context.metadata.get(&format!("node_response_{}", node.id)).cloned();
-
-                                                        // Merge existing metadata fields into new metadata
-                                                        if let (Some(existing), Some(response_obj)) = (existing_metadata_by_id.as_ref(), response_metadata.as_object_mut()) {
-                                                            if let Some(existing_obj) = existing.as_object() {
-                                                                // Preserve these critical fields from the initial LLM call
-                                                                if let Some(prompt) = existing_obj.get("prompt") {
-                                                                    response_obj.insert("prompt".to_string(), prompt.clone());
-                                                                }
-                                                                if let Some(duration_ms) = existing_obj.get("duration_ms") {
-                                                                    response_obj.insert("duration_ms".to_string(), duration_ms.clone());
-                                                                }
-                                                                if let Some(execution_timestamp) = existing_obj.get("execution_timestamp") {
-                                                                    response_obj.insert("execution_timestamp".to_string(), execution_timestamp.clone());
-                                                                }
+                                                    // --- Update node-level metadata with completed data ---
+                                                    // Aggregate total_usage from all llm_call executions
+                                                    let mut total_prompt_tokens: u32 = 0;
+                                                    let mut total_completion_tokens: u32 = 0;
+                                                    let mut total_tokens: u32 = 0;
+                                                    for exec in &executions {
+                                                        if exec.get("type").and_then(|v| v.as_str()) == Some("llm_call") {
+                                                            if let Some(usage) = exec.get("usage") {
+                                                                total_prompt_tokens += usage.get("prompt_tokens").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
+                                                                total_completion_tokens += usage.get("completion_tokens").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
+                                                                total_tokens += usage.get("total_tokens").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
                                                             }
                                                         }
+                                                    }
 
-                                                        // IMPORTANT: Add the original tool_calls from the initial LLM response
-                                                        // The final_response.tool_calls will be empty since tools were already executed
-                                                        // We need to preserve the original tool calls for observability
-                                                        if let Some(response_obj) = response_metadata.as_object_mut() {
-                                                            // Enrich tool_calls with their execution results
-                                                            let mut enriched_tool_calls = tool_calls.clone();
-                                                            if let Some(calls_array) = enriched_tool_calls.as_array_mut() {
-                                                                for (i, call) in calls_array.iter_mut().enumerate() {
-                                                                    if let Some(result) = tool_execution_results.get(i) {
-                                                                        if let Some(call_obj) = call.as_object_mut() {
-                                                                            let mut result_clone = result.clone();
+                                                    let total_tool_calls = tool_execution_results.len();
 
-                                                                            // Extract timing details and add to tool call object
-                                                                            if let Some(start_time) = result_clone.get("start_time") {
-                                                                                call_obj.insert("start_time".to_string(), start_time.clone());
-                                                                            }
-                                                                            if let Some(end_time) = result_clone.get("end_time") {
-                                                                                call_obj.insert("end_time".to_string(), end_time.clone());
-                                                                            }
-                                                                            if let Some(latency) = result_clone.get("latency_ms") {
-                                                                                call_obj.insert("latency_ms".to_string(), latency.clone());
-                                                                            }
-
-                                                                            // Remove timing fields and redundant tool name from the output object to avoid duplication
-                                                                            if let Some(result_obj) = result_clone.as_object_mut() {
-                                                                                result_obj.remove("start_time");
-                                                                                result_obj.remove("end_time");
-                                                                                result_obj.remove("latency_ms");
-                                                                                result_obj.remove("tool_name");
-                                                                            }
-
-                                                                            // Insert the cleaned result object as "output"
-                                                                            call_obj.insert("output".to_string(), result_clone);
-                                                                        }
-                                                                    }
+                                                    // Build complete node metadata by updating the seeded metadata
+                                                    if let Some(mut node_meta) = existing_node_metadata.clone() {
+                                                        if let Some(obj) = node_meta.as_object_mut() {
+                                                            obj.insert("end_time".to_string(), serde_json::json!(final_llm_end_timestamp.to_rfc3339()));
+                                                            // Calculate total duration from node start to now
+                                                            if let Some(start_str) = obj.get("start_time").and_then(|v| v.as_str()) {
+                                                                if let Ok(start_dt) = chrono::DateTime::parse_from_rfc3339(start_str) {
+                                                                    let total_duration = (final_llm_end_timestamp - start_dt.with_timezone(&chrono::Utc)).num_milliseconds() as f64;
+                                                                    obj.insert("duration_ms".to_string(), serde_json::json!(total_duration));
                                                                 }
                                                             }
-
-                                                            response_obj.insert("tool_calls".to_string(), enriched_tool_calls);
-
-                                                            // 1. Prepare the value (unwrap and make it mutable)
-                                                            let mut initial_response_value = existing_metadata_by_id
-                                                                .clone()
-                                                                .unwrap_or(serde_json::Value::Null);
-
-                                                            // 2. If the value is a JSON Object, remove the unwanted fields
-                                                            if let Some(obj) = initial_response_value.as_object_mut() {
-                                                                obj.remove("content");
-                                                                obj.remove("duration_ms");
-                                                                obj.remove("execution_timestamp");
-                                                                obj.remove("metadata");
-                                                            }
-
-                                                            // 3. Insert the cleaned object into your response_obj
-                                                            response_obj.insert(
-                                                                "initial_response".to_string(),
-                                                                initial_response_value
-                                                            );
-
-                                                            // Add final input
-                                                            response_obj.insert("final_input".to_string(), serde_json::Value::String(final_prompt.clone()));
+                                                            obj.insert("final_output".to_string(), serde_json::Value::String(response_content.clone()));
+                                                            obj.insert("exit_reason".to_string(), serde_json::json!(format!("{}", final_response.finish_reason)));
+                                                            obj.insert("total_tool_calls".to_string(), serde_json::json!(total_tool_calls));
+                                                            obj.insert("tools_used".to_string(), serde_json::json!(tools_used));
+                                                            obj.insert("total_usage".to_string(), serde_json::json!({
+                                                                "prompt_tokens": total_prompt_tokens,
+                                                                "completion_tokens": total_completion_tokens,
+                                                                "total_tokens": total_tokens,
+                                                                "prompt_tokens_details": {
+                                                                    "cached_tokens": 0,
+                                                                    "audio_tokens": 0
+                                                                },
+                                                                "completion_tokens_details": {
+                                                                    "reasoning_tokens": 0,
+                                                                    "audio_tokens": 0,
+                                                                    "accepted_prediction_tokens": 0,
+                                                                    "rejected_prediction_tokens": 0
+                                                                }
+                                                            }));
+                                                            obj.insert("executions".to_string(), serde_json::json!(executions));
                                                         }
 
                                                         // Store by node ID
                                                         context.metadata.insert(
                                                             format!("node_response_{}", node.id),
-                                                            response_metadata.clone(),
+                                                            node_meta.clone(),
                                                         );
 
                                                         // Also store by node name if available
@@ -839,7 +945,7 @@ impl Executor {
                                                         {
                                                             context.metadata.insert(
                                                                 format!("node_response_{}", node_name),
-                                                                response_metadata,
+                                                                node_meta,
                                                             );
                                                         }
                                                     }
@@ -904,7 +1010,9 @@ impl Executor {
                                     }
                                     } else {
                                         // No LLM configuration available, just keep tool results
-                                        tracing::warn!("No LLM configuration found in context metadata for final response. Using tool results only.");
+                                        tracing::warn!(
+                                            "No LLM configuration found in context metadata for final response. Using tool results only."
+                                        );
                                         context.set_node_output(
                                             &node.id,
                                             serde_json::Value::String(tool_results_summary.clone()),
