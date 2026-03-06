@@ -269,7 +269,10 @@ impl WorkflowResult {
             "end_time": end_time,
             "duration_ms": duration_ms,
             "user_input": user_input,
+            // TODO: Remove these placeholder fields in a future release
+            "user_input_masked": "",
             "final_output": final_output,
+            "final_output_masked": "",
             "workflow_state": workflow_state,
             "nodes": nodes,
             "total_usage": {
