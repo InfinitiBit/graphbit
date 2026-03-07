@@ -15,5 +15,12 @@ fn main() {
     }
 
     println!("cargo:rustc-link-search=native={}", lib_path.display());
-    println!("cargo:rustc-link-lib=static=guardrail_ffi");
+    
+    let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
+    if target_os == "windows" {
+        // Link the DLL's import library; guardrail_ffi.dll must be shipped next to the .pyd (see workflow / python-src).
+        println!("cargo:rustc-link-lib=dylib=guardrail_ffi");
+    } else {
+        println!("cargo:rustc-link-lib=static=guardrail_ffi");
+    }
 }
