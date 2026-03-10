@@ -1267,7 +1267,11 @@ impl WorkflowExecutor {
             }));
 
             // Capture encoded payload (without signature) for metadata user_input
-            encoded_payload_for_meta = encode_result.payload.as_str().unwrap_or_default().to_string();
+            encoded_payload_for_meta = encode_result
+                .payload
+                .as_str()
+                .unwrap_or_default()
+                .to_string();
 
             format!(
                 "{}{}",

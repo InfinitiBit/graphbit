@@ -444,9 +444,56 @@ pub enum AgentCapability {
     /// Tool execution capability
     ToolExecution,
     /// Decision making capability
+    /// Capability for decision making
     DecisionMaking,
     /// Custom capability
     Custom(String),
+}
+
+/// Events emitted during workflow streaming
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "event")]
+pub enum StreamEvent {
+    /// A node has started execution
+    #[serde(rename = "node_start")]
+    NodeStart {
+        /// Unique ID of the node
+        node_id: NodeId,
+        /// Human-readable name of the node
+        node_name: String,
+    },
+    /// A text token has been received from a node
+    #[serde(rename = "token")]
+    Token {
+        /// Unique ID of the node emitting the token
+        node_id: NodeId,
+        /// The text chunk received from the LLM
+        text: String,
+    },
+    /// A tool call delta has been received from a node
+    #[serde(rename = "tool_call_delta")]
+    ToolCallDelta {
+        /// Unique ID of the node emitting the tool call delta
+        node_id: NodeId,
+        /// The partial tool call delta structure
+        delta: crate::llm::LlmToolCall,
+    },
+    /// A node has finished execution
+    #[serde(rename = "node_finish")]
+    NodeFinish {
+        /// Unique ID of the node that finished
+        node_id: NodeId,
+        /// Final output data from the node
+        output: serde_json::Value,
+    },
+    /// The entire workflow has finished
+    #[serde(rename = "workflow_finish")]
+    WorkflowFinish {
+        /// Unique ID of the workflow that finished
+        workflow_id: WorkflowId,
+        /// Final execution context result
+        result: serde_json::Value,
+    },
 }
 
 /// Node execution result

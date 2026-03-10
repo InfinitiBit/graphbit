@@ -6,8 +6,8 @@
 use crate::errors::{GraphBitError, GraphBitResult};
 use calamine::Data;
 use csv::ReaderBuilder;
-use quick_xml::events::Event;
 use quick_xml::Reader;
+use quick_xml::events::Event;
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -161,7 +161,7 @@ impl DocumentLoader {
                         "Unsupported document type: {document_type}. Supported types: {:?}",
                         Self::supported_types()
                     ),
-                ))
+                ));
             }
         };
 
@@ -753,7 +753,7 @@ impl DocumentLoader {
 
     /// Extract content from Excel (XLSB, XLSX, XLS,etc.) files
     async fn extract_excel_content(file_path: &str) -> GraphBitResult<String> {
-        use calamine::{open_workbook_auto, Reader};
+        use calamine::{Reader, open_workbook_auto};
 
         let mut workbook = open_workbook_auto(file_path).map_err(|e| {
             GraphBitError::validation(

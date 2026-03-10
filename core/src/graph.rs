@@ -6,9 +6,9 @@
 use crate::errors::{GraphBitError, GraphBitResult};
 use crate::types::{NodeId, RetryConfig};
 use petgraph::{
+    Direction,
     algo::{is_cyclic_directed, toposort},
     graph::{DiGraph, NodeIndex},
-    Direction,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
