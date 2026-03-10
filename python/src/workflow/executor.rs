@@ -7,12 +7,15 @@
 //! - Detailed execution metrics and logging
 //! - Graceful error handling and recovery
 
+use futures::StreamExt;
+use graphbit_core::types::StreamEvent;
 use graphbit_core::workflow::WorkflowExecutor as CoreWorkflowExecutor;
 use graphbit_core::{DecodeContext, EncodeContext, Enforcer, GuardRail};
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyDict};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
+use tokio::sync::mpsc::{Receiver, Sender, channel};
 use tracing::{debug, error, info, instrument, warn};
 
 use super::{result::WorkflowResult, workflow::Workflow};
@@ -198,6 +201,7 @@ impl Executor {
                         workflow_clone,
                         config,
                         guardrail_enforcer,
+                        None,
                     )
                     .await
                 })
@@ -283,6 +287,7 @@ impl Executor {
                     workflow_clone,
                     config,
                     guardrail_enforcer,
+                    None,
                 )
                 .await
             })
@@ -424,6 +429,80 @@ impl Executor {
     fn get_execution_mode(&self) -> String {
         format!("{:?}", self.config.mode)
     }
+
+    /// Stream workflow execution events (Synchronous Generator)
+    #[instrument(skip(self, _py, workflow, policy), fields(workflow_name = %workflow.inner.name))]
+    #[pyo3(signature = (workflow, policy=None))]
+    fn stream(
+        &mut self,
+        _py: Python<'_>,
+        workflow: &Workflow,
+        policy: Option<&Bound<'_, GuardRailPolicyConfig>>,
+    ) -> PyResult<StreamIterator> {
+        let (tx, rx) = channel(100);
+        let llm_config = self.llm_config.inner.clone();
+        let workflow_clone = workflow.inner.clone();
+        let config = self.config.clone();
+        let guardrail_enforcer = policy.map(|p| {
+            let config = p.borrow().get_inner();
+            Arc::new(GuardRail::enforcer_for(
+                config,
+                workflow_clone.id.to_string(),
+            ))
+        });
+
+        get_runtime().spawn(async move {
+            let _ = Self::execute_workflow_internal(
+                llm_config,
+                workflow_clone,
+                config,
+                guardrail_enforcer,
+                Some(tx),
+            )
+            .await;
+        });
+
+        Ok(StreamIterator {
+            receiver: Arc::new(std::sync::Mutex::new(rx)),
+        })
+    }
+
+    /// Stream workflow execution events (Asynchronous Generator)
+    #[instrument(skip(self, _py, workflow, policy), fields(workflow_name = %workflow.inner.name))]
+    #[pyo3(signature = (workflow, policy=None))]
+    fn run_async_stream<'a>(
+        &mut self,
+        workflow: &Workflow,
+        _py: Python<'a>,
+        policy: Option<&Bound<'_, GuardRailPolicyConfig>>,
+    ) -> PyResult<AsyncStreamIterator> {
+        let (tx, rx) = channel(100);
+        let llm_config = self.llm_config.inner.clone();
+        let workflow_clone = workflow.inner.clone();
+        let config = self.config.clone();
+        let guardrail_enforcer = policy.map(|p| {
+            let config = p.borrow().get_inner();
+            Arc::new(GuardRail::enforcer_for(
+                config,
+                workflow_clone.id.to_string(),
+            ))
+        });
+
+        get_runtime().spawn(async move {
+            let _ = Self::execute_workflow_internal(
+                llm_config,
+                workflow_clone,
+                config,
+                guardrail_enforcer,
+                Some(tx),
+            )
+            .await;
+        });
+
+        Ok(AsyncStreamIterator {
+            receiver: Arc::new(tokio::sync::Mutex::new(rx)),
+        })
+    }
 }
 
 impl Executor {
@@ -435,6 +514,7 @@ impl Executor {
         workflow: graphbit_core::workflow::Workflow,
         config: ExecutionConfig,
         guardrail_enforcer: Option<Arc<Enforcer>>,
+        event_sender: Option<Sender<StreamEvent>>,
     ) -> Result<graphbit_core::types::WorkflowContext, graphbit_core::errors::GraphBitError> {
         let executor = match config.mode {
             ExecutionMode::Balanced => {
@@ -444,7 +524,11 @@ impl Executor {
 
         // Execute the workflow (core applies encode before LLM, decode after LLM when enforcer is Some)
         let mut context = executor
-            .execute(workflow.clone(), guardrail_enforcer.clone())
+            .execute(
+                workflow.clone(),
+                guardrail_enforcer.clone(),
+                event_sender.clone(),
+            )
             .await?;
 
         // Store LLM config in context metadata for tool call handling
@@ -465,6 +549,7 @@ impl Executor {
             context,
             &workflow,
             guardrail_enforcer.as_ref().map(|arc| arc.as_ref()),
+            event_sender,
         )
         .await?;
 
@@ -478,10 +563,11 @@ impl Executor {
         mut context: graphbit_core::types::WorkflowContext,
         workflow: &graphbit_core::workflow::Workflow,
         guardrail_enforcer: Option<&Enforcer>,
+        event_sender: Option<Sender<StreamEvent>>,
     ) -> Result<graphbit_core::types::WorkflowContext, graphbit_core::errors::GraphBitError> {
         use crate::workflow::node::execute_production_tool_calls;
         use graphbit_core::DecodeContext;
-        use graphbit_core::llm::{LlmProvider, LlmRequest};
+        use graphbit_core::llm::{FinishReason, LlmProvider, LlmRequest, LlmResponse, LlmUsage};
 
         // Check each node output for tool_calls_required responses
         let node_outputs = context.node_outputs.clone();
@@ -709,7 +795,11 @@ impl Executor {
                                     }));
 
                                     // Capture encoded payload only (no RULE signature) for metadata
-                                    encoded_final_payload_for_meta = encode_result.payload.as_str().unwrap_or_default().to_string();
+                                    encoded_final_payload_for_meta = encode_result
+                                        .payload
+                                        .as_str()
+                                        .unwrap_or_default()
+                                        .to_string();
 
                                     let encoded_str = format!(
                                         "{}{}",
@@ -813,7 +903,64 @@ impl Executor {
                                             let final_llm_timestamp = chrono::Utc::now();
                                             let final_llm_start = std::time::Instant::now();
 
-                                            match llm_provider.complete(final_request).await {
+                                            let final_response_result = if event_sender.is_some() {
+                                                // Handle streaming synthesis turn
+                                                let mut stream = llm_provider.stream(final_request).await?;
+                                                let mut full_content = String::new();
+                                                let mut final_usage = LlmUsage::default();
+                                                let mut final_id = None;
+                                                let mut final_model = String::new();
+                                                let mut final_finish_reason = FinishReason::Stop;
+
+                                                while let Some(chunk_result) = stream.next().await {
+                                                    let chunk = chunk_result?;
+                                                    if !chunk.content.is_empty() {
+                                                        full_content.push_str(&chunk.content);
+                                                        if let Some(ref sender) = event_sender {
+                                                            let _ = sender.send(StreamEvent::Token {
+                                                                node_id: node.id.clone(),
+                                                                text: chunk.content.clone(),
+                                                            }).await;
+                                                        }
+                                                    }
+                                                    if chunk.usage.total_tokens > 0 {
+                                                        final_usage = chunk.usage;
+                                                    }
+                                                    if chunk.id.is_some() {
+                                                        final_id = chunk.id;
+                                                    }
+                                                    if !chunk.model.is_empty() {
+                                                        final_model = chunk.model;
+                                                    }
+                                                    if let FinishReason::Stop = chunk.finish_reason {
+                                                        // Keep it as stop
+                                                    } else {
+                                                        final_finish_reason = chunk.finish_reason;
+                                                    }
+                                                }
+
+                                                // Emit final NodeFinish for the synthesis turn
+                                                if let Some(ref sender) = event_sender {
+                                                    let _ = sender.send(StreamEvent::NodeFinish {
+                                                        node_id: node.id.clone(),
+                                                        output: serde_json::Value::String(full_content.clone()),
+                                                    }).await;
+                                                }
+
+                                                Ok(LlmResponse {
+                                                    content: full_content,
+                                                    tool_calls: Vec::new(),
+                                                    usage: final_usage,
+                                                    metadata: std::collections::HashMap::new(),
+                                                    finish_reason: final_finish_reason,
+                                                    model: final_model,
+                                                    id: final_id,
+                                                })
+                                            } else {
+                                                llm_provider.complete(final_request).await
+                                            };
+
+                                            match final_response_result {
                                                 Ok(final_response) => {
                                                     let final_llm_duration_ms = final_llm_start.elapsed().as_secs_f64() * 1000.0;
                                                     let final_llm_end_timestamp = chrono::Utc::now();
@@ -862,29 +1009,28 @@ impl Executor {
                                                     });
                                                     executions.push(final_llm_call_entry);
 
-                                                    // Guardrail: decode after every LLM call so user sees rehydrated content
-                                                    let response_content = if let Some(ref enforcer) = guardrail_enforcer {
-                                                        let payload = serde_json::json!({
-                                                            "content": final_response.content
-                                                        });
-                                                        let decoded_result =
-                                                            enforcer.decode(payload, DecodeContext::LlmResponse);
+                                                        let response_content = if let Some(ref enforcer) = guardrail_enforcer {
+                                                            let payload = serde_json::json!({
+                                                                "content": final_response.content
+                                                            });
+                                                            let decoded_result =
+                                                                enforcer.decode(payload, DecodeContext::LlmResponse);
 
-                                                        // Record guardrail decode execution entry
-                                                        executions.push(serde_json::json!({
-                                                            "type": "guardrail_policy",
-                                                            "operation": "decode",
-                                                            "pii_rules_applied_count": decoded_result.rules_applied_count,
-                                                            "pii_rule_names": decoded_result.rule_names,
-                                                            "policy_name": decoded_result.policy_name
-                                                        }));
+                                                            // Record guardrail decode execution entry
+                                                            executions.push(serde_json::json!({
+                                                                "type": "guardrail_policy",
+                                                                "operation": "decode",
+                                                                "pii_rules_applied_count": decoded_result.rules_applied_count,
+                                                                "pii_rule_names": decoded_result.rule_names,
+                                                                "policy_name": decoded_result.policy_name
+                                                            }));
 
-                                                        let content = decoded_result
-                                                            .payload
-                                                            .get("content")
-                                                            .and_then(|v| v.as_str())
-                                                            .map(String::from)
-                                                            .unwrap_or_else(|| final_response.content.clone());
+                                                            let content = decoded_result
+                                                                .payload
+                                                                .get("content")
+                                                                .and_then(|v: &serde_json::Value| v.as_str())
+                                                                .map(String::from)
+                                                                .unwrap_or_else(|| final_response.content.clone());
                                                         tracing::info!("[GuardRail] final LLM response (after decode): {}", content);
                                                         content
                                                     } else {
@@ -1067,5 +1213,63 @@ impl Executor {
         // Update average duration (simple moving average)
         self.stats.average_duration_ms =
             self.stats.total_duration_ms as f64 / self.stats.total_executions as f64;
+    }
+}
+
+/// Synchronous yield from the workflow event channel
+#[pyclass]
+pub struct StreamIterator {
+    receiver: Arc<std::sync::Mutex<Receiver<StreamEvent>>>,
+}
+
+#[pymethods]
+impl StreamIterator {
+    fn __iter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
+        slf
+    }
+
+    fn __next__(slf: PyRef<'_, Self>, py: Python<'_>) -> PyResult<Option<PyObject>> {
+        let receiver = Arc::clone(&slf.receiver);
+        let event = py.allow_threads(move || {
+            let mut rx = receiver.lock().unwrap();
+            get_runtime().block_on(async { rx.recv().await })
+        });
+
+        match event {
+            Some(event) => {
+                let val = serde_json::to_value(&event).map_err(|e| to_py_runtime_error(e))?;
+                let py_val = crate::workflow::node::json_to_python_value(&val, py)?;
+                Ok(Some(py_val))
+            }
+            None => Ok(None),
+        }
+    }
+}
+
+/// Asynchronous yield from the workflow event channel
+#[pyclass]
+pub struct AsyncStreamIterator {
+    receiver: Arc<tokio::sync::Mutex<Receiver<StreamEvent>>>,
+}
+
+#[pymethods]
+impl AsyncStreamIterator {
+    fn __aiter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
+        slf
+    }
+
+    fn __anext__<'p>(&self, py: Python<'p>) -> PyResult<Bound<'p, PyAny>> {
+        let receiver = self.receiver.clone();
+        pyo3_async_runtimes::tokio::future_into_py(py, async move {
+            let mut guard = receiver.lock().await;
+            match guard.recv().await {
+                Some(event) => Python::with_gil(|py| {
+                    let val = serde_json::to_value(&event).map_err(|e| to_py_runtime_error(e))?;
+                    let py_val = crate::workflow::node::json_to_python_value(&val, py)?;
+                    Ok(py_val)
+                }),
+                None => Err(PyErr::new::<pyo3::exceptions::PyStopAsyncIteration, _>("")),
+            }
+        })
     }
 }

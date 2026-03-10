@@ -27,7 +27,7 @@ pub struct Node {
 #[pymethods]
 impl Node {
     #[staticmethod]
-    #[pyo3(signature = (name, prompt, agent_id=None, output_name=None, tools=None, system_prompt=None, llm_config=None, temperature=None, max_tokens=None))]
+    #[pyo3(signature = (name, prompt, agent_id=None, output_name=None, tools=None, system_prompt=None, llm_config=None, temperature=None, max_tokens=None, stream=None))]
     fn agent(
         name: String,
         prompt: String,
@@ -38,6 +38,7 @@ impl Node {
         llm_config: Option<LlmConfig>,
         temperature: Option<f32>,
         max_tokens: Option<u32>,
+        stream: Option<bool>,
     ) -> PyResult<Self> {
         // Validate required parameters
         if name.trim().is_empty() {
@@ -130,6 +131,12 @@ impl Node {
                 "max_tokens".to_string(),
                 serde_json::Value::Number(serde_json::Number::from(tokens)),
             );
+        }
+
+        // Store stream flag in metadata if provided
+        if let Some(stream_flag) = stream {
+            node.config
+                .insert("stream".to_string(), serde_json::Value::Bool(stream_flag));
         }
 
         // Store tools in metadata if provided
@@ -657,7 +664,10 @@ fn map_python_type_to_json_schema(type_str: &str) -> &'static str {
 }
 
 /// Convert JSON value to Python object
-fn json_to_python_value(value: &serde_json::Value, py: Python<'_>) -> PyResult<PyObject> {
+pub(crate) fn json_to_python_value(
+    value: &serde_json::Value,
+    py: Python<'_>,
+) -> PyResult<PyObject> {
     match value {
         serde_json::Value::Null => Ok(py.None()),
         serde_json::Value::Bool(b) => {
