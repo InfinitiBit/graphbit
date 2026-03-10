@@ -1071,7 +1071,7 @@ impl WorkflowExecutor {
                 "id": llm_response.id.clone().unwrap_or_default(),
                 "model": llm_response.model,
                 "provider": provider_name,
-                "input": resolved_prompt,
+                "input": if guardrail_enforcer.is_some() { encoded_payload_for_meta.clone() } else { resolved_prompt.clone() },
                 "output": llm_response.content,
                 "finish_reason": format!("{}", llm_response.finish_reason),
                 "tool_calls": [],
@@ -1389,7 +1389,7 @@ impl WorkflowExecutor {
             "id": llm_response.id.clone().unwrap_or_default(),
             "model": llm_response.model,
             "provider": provider_name,
-            "input": prompt,
+            "input": if guardrail_enforcer.is_some() { encoded_payload_for_meta.clone() } else { prompt.to_string() },
             "output": llm_response.content,
             "finish_reason": format!("{}", llm_response.finish_reason),
             "tool_calls": llm_tool_calls_for_metadata,
@@ -1537,10 +1537,13 @@ impl WorkflowExecutor {
             })?;
 
             // Return a structured response that the Python layer can interpret.
-            // When GuardRail is on, pass the encoded prompt so the final LLM never sees raw PII.
+            // When GuardRail is on, pass only the encoded payload (without the RULE signature
+            // injection text) so the executor can reconstruct the final prompt cleanly.
+            // The executor will re-encode the final prompt (adding a fresh RULE prefix) before
+            // the second LLM call; including the RULE here would cause it to appear in metadata.
             let original_prompt_for_response = guardrail_enforcer
                 .as_ref()
-                .map(|_| prompt_for_llm.clone())
+                .map(|_| encoded_payload_for_meta.clone())
                 .unwrap_or_else(|| prompt.to_string());
             Ok(serde_json::json!({
                 "type": "tool_calls_required",
