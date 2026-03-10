@@ -686,6 +686,7 @@ impl Executor {
                                 );
 
                                 // Guardrail: encode final prompt before LLM call
+                                let mut encoded_final_payload_for_meta = String::new();
                                 let prompt_for_final_llm = if let Some(ref enforcer) =
                                     guardrail_enforcer
                                 {
@@ -706,6 +707,9 @@ impl Executor {
                                         "pii_rule_names": encode_result.rule_names,
                                         "policy_name": encode_result.policy_name
                                     }));
+
+                                    // Capture encoded payload only (no RULE signature) for metadata
+                                    encoded_final_payload_for_meta = encode_result.payload.as_str().unwrap_or_default().to_string();
 
                                     let encoded_str = format!(
                                         "{}{}",
@@ -832,7 +836,7 @@ impl Executor {
                                                         "id": final_response.id.clone().unwrap_or_default(),
                                                         "model": final_response.model,
                                                         "provider": llm_config.provider_name(),
-                                                        "input": final_prompt,
+                                                        "input": if guardrail_enforcer.is_some() { encoded_final_payload_for_meta.clone() } else { final_prompt.clone() },
                                                         "output": final_response.content,
                                                         "finish_reason": format!("{}", final_response.finish_reason),
                                                         "tool_calls": [],
