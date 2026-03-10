@@ -623,4 +623,9 @@ impl LlmProvider {
     {
         self.inner.stream(request).await
     }
+
+    /// Check if the provider supports streaming
+    pub fn supports_streaming(&self) -> bool {
+        self.inner.supports_streaming()
+    }
 }
