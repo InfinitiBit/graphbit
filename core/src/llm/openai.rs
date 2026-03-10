@@ -429,7 +429,13 @@ impl LlmProviderTrait for OpenAiProvider {
                                             CHUNK_TIMEOUT
                                         ),
                                     )),
-                                    (byte_stream, buffer, true, consecutive_parse_errors, total_parse_errors),
+                                    (
+                                        byte_stream,
+                                        buffer,
+                                        true,
+                                        consecutive_parse_errors,
+                                        total_parse_errors,
+                                    ),
                                 ));
                             }
                         };
@@ -488,22 +494,74 @@ impl LlmProviderTrait for OpenAiProvider {
                                         consecutive_parse_errors = 0;
 
                                         if let Some(choice) = stream_chunk.choices.first() {
+                                            let mut response = LlmResponse::new("", &model)
+                                                .with_id(stream_chunk.id.clone());
+
+                                            let mut has_data = false;
+
+                                            // Text content delta
                                             if let Some(content) = &choice.delta.content {
                                                 if !content.is_empty() {
-                                                    let response =
-                                                        LlmResponse::new(content.clone(), &model)
-                                                            .with_id(stream_chunk.id);
-                                                    return Some((
-                                                        Ok(response),
-                                                        (
-                                                            byte_stream,
-                                                            buffer,
-                                                            false,
-                                                            consecutive_parse_errors,
-                                                            total_parse_errors,
-                                                        ),
-                                                    ));
+                                                    response.content = content.clone();
+                                                    has_data = true;
                                                 }
+                                            }
+
+                                            // Tool call deltas
+                                            if let Some(tool_calls) = &choice.delta.tool_calls {
+                                                let llm_tool_calls: Vec<LlmToolCall> = tool_calls
+                                                    .iter()
+                                                    .map(|tc| LlmToolCall {
+                                                        id: tc.id.clone().unwrap_or_default(),
+                                                        name: tc
+                                                            .function
+                                                            .name
+                                                            .clone()
+                                                            .unwrap_or_default(),
+                                                        parameters: serde_json::Value::String(
+                                                            tc.function
+                                                                .arguments
+                                                                .clone()
+                                                                .unwrap_or_default(),
+                                                        ),
+                                                    })
+                                                    .collect();
+
+                                                if !llm_tool_calls.is_empty() {
+                                                    response =
+                                                        response.with_tool_calls(llm_tool_calls);
+                                                    has_data = true;
+                                                }
+                                            }
+
+                                            // Finish reason
+                                            if let Some(finish_reason) = &choice.finish_reason {
+                                                let reason = match finish_reason.as_str() {
+                                                    "stop" => FinishReason::Stop,
+                                                    "length" => FinishReason::Length,
+                                                    "tool_calls" => FinishReason::ToolCalls,
+                                                    "content_filter" => FinishReason::ContentFilter,
+                                                    _ => FinishReason::Other(finish_reason.clone()),
+                                                };
+                                                response =
+                                                    response.with_finish_reason(reason.clone());
+
+                                                // Always yield if we have a finish reason (even without content/tool_calls)
+                                                // This ensures the final state is captured.
+                                                has_data = true;
+                                            }
+
+                                            if has_data {
+                                                return Some((
+                                                    Ok(response),
+                                                    (
+                                                        byte_stream,
+                                                        buffer,
+                                                        false,
+                                                        consecutive_parse_errors,
+                                                        total_parse_errors,
+                                                    ),
+                                                ));
                                             }
                                         }
                                     }
@@ -531,11 +589,16 @@ impl LlmProviderTrait for OpenAiProvider {
                                                     format!(
                                                         "Stream corrupted: {} consecutive parse errors. \
                                                          Last error: {}. Data may be incomplete.",
-                                                        consecutive_parse_errors,
-                                                        e
+                                                        consecutive_parse_errors, e
                                                     ),
                                                 )),
-                                                (byte_stream, buffer, true, consecutive_parse_errors, total_parse_errors),
+                                                (
+                                                    byte_stream,
+                                                    buffer,
+                                                    true,
+                                                    consecutive_parse_errors,
+                                                    total_parse_errors,
+                                                ),
                                             ));
                                         }
 
@@ -678,7 +741,8 @@ struct OpenAiStreamChunk {
 #[derive(Debug, Deserialize)]
 struct OpenAiStreamChoice {
     delta: OpenAiDelta,
-    _finish_reason: Option<String>,
+    #[serde(default)]
+    finish_reason: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -687,4 +751,22 @@ struct OpenAiDelta {
     content: Option<String>,
     #[serde(default)]
     _role: Option<String>,
+    #[serde(default)]
+    tool_calls: Option<Vec<OpenAiStreamToolCall>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct OpenAiStreamToolCall {
+    id: Option<String>,
+    #[serde(default)]
+    _type: Option<String>,
+    function: OpenAiStreamFunction,
+}
+
+#[derive(Debug, Deserialize)]
+struct OpenAiStreamFunction {
+    #[serde(default)]
+    name: Option<String>,
+    #[serde(default)]
+    arguments: Option<String>,
 }
