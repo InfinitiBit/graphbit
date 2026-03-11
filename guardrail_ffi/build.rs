@@ -25,22 +25,31 @@ fn main() {
 
     if !lib_path.exists() {
         eprintln!(
-            "cargo:warning=GuardRail lib dir not found: {} (set GUARDRAIL_LIB_DIR or add vendor/guardrail/)",
+            "cargo:warning=GuardRail lib dir not found: {} (set GUARDRAIL_LIB_DIR or populate vendor/guardrail/)",
             lib_dir
         );
         return;
     }
 
-    println!("cargo:rustc-link-search=native={}", lib_path.display());
     println!("cargo:rerun-if-changed=../vendor/guardrail/");
 
     match target_os.as_str() {
-        "windows" => println!("cargo:rustc-link-lib=dylib=guardrail_ffi"),
-        "linux"   => {
+        "windows" => {
+            println!("cargo:rustc-link-search=native={}", lib_path.display());
             println!("cargo:rustc-link-lib=dylib=guardrail_ffi");
-            // embed rpath so the loader finds libguardrail_ffi.so next to graphbit.abi3.so
+        }
+        "linux" => {
+            println!(
+                "cargo:rustc-link-search=native={}",
+                lib_path.canonicalize().unwrap().display()
+            );
+            println!("cargo:rustc-link-lib=dylib=guardrail_ffi");
             println!("cargo:rustc-link-arg=-Wl,-rpath,$ORIGIN");
         }
-        _         => println!("cargo:rustc-link-lib=static=guardrail_ffi"), // macOS
+        _ => {
+            // macOS
+            println!("cargo:rustc-link-search=native={}", lib_path.display());
+            println!("cargo:rustc-link-lib=static=guardrail_ffi");
+        }
     }
 }
