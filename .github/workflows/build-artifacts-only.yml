@@ -106,6 +106,20 @@ jobs:
           cp vendor/guardrail/aarch64-unknown-linux-gnu/libguardrail_ffi.so \
              vendor/guardrail/libguardrail_ffi.so
         fi
+        
+    - name: Set SONAME on guardrail .so (Linux only)
+      if: matrix.platform.runner == 'ubuntu-22.04'
+      shell: bash
+      run: |
+        sudo apt-get install -y patchelf
+        if [[ "${{ matrix.platform.target }}" == "x86_64" ]]; then
+          patchelf --set-soname libguardrail_ffi.so \
+            vendor/guardrail/x86_64-unknown-linux-gnu/libguardrail_ffi.so
+        elif [[ "${{ matrix.platform.target }}" == "aarch64" ]]; then
+          patchelf --set-soname libguardrail_ffi.so \
+            vendor/guardrail/aarch64-unknown-linux-gnu/libguardrail_ffi.so
+        fi
+
     - name: Build wheels
       uses: messense/maturin-action@v1
       with:
