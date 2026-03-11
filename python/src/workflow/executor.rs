@@ -709,7 +709,11 @@ impl Executor {
                                     }));
 
                                     // Capture encoded payload only (no RULE signature) for metadata
-                                    encoded_final_payload_for_meta = encode_result.payload.as_str().unwrap_or_default().to_string();
+                                    encoded_final_payload_for_meta = encode_result
+                                        .payload
+                                        .as_str()
+                                        .unwrap_or_default()
+                                        .to_string();
 
                                     let encoded_str = format!(
                                         "{}{}",
