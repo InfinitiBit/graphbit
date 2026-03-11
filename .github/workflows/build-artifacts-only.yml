@@ -103,6 +103,7 @@ jobs:
         sccache: ${{ matrix.platform.runner != 'ubuntu-22.04' }}
         manylinux: ${{ matrix.platform.manylinux }}
         working-directory: python
+        docker-options: ${{ matrix.platform.runner == 'ubuntu-22.04' && format('-v {0}/vendor:/project/vendor', github.workspace) || '' }}
         
 
     - name: Verify wheel contents
