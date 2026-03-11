@@ -684,11 +684,13 @@ impl WorkflowExecutor {
                 NodeType::Agent {
                     agent_id,
                     prompt_template,
+                    conversational_context,
                 } => {
                     Self::execute_agent_node_static(
                         &node.id,
                         agent_id,
                         prompt_template,
+                        conversational_context.as_deref(),
                         &node.config,
                         context.clone(),
                         agents.clone(),
@@ -806,6 +808,7 @@ impl WorkflowExecutor {
         current_node_id: &NodeId,
         agent_id: &crate::types::AgentId,
         prompt_template: &str,
+        conversational_context: Option<&str>,
         node_config: &std::collections::HashMap<String, serde_json::Value>,
         context: Arc<Mutex<WorkflowContext>>,
         agents: Arc<RwLock<HashMap<crate::types::AgentId, Arc<dyn AgentTrait>>>>,
@@ -820,7 +823,7 @@ impl WorkflowExecutor {
         drop(agents_guard); // Release the lock early
 
         // Build implicit preamble from upstream (parent) node outputs, then resolve templates
-        let resolved_prompt = {
+        let (resolved_prompt, resolved_context, metadata_input_raw) = {
             let ctx = context.lock().await;
 
             // Extract dependency map and name map from metadata
@@ -926,17 +929,24 @@ impl WorkflowExecutor {
                 sections.join("\n\n") + "\n\n"
             };
 
-            let combined = format!("{implicit_preamble}{prompt_template}");
-            let resolved = Self::resolve_template_variables(&combined, &ctx);
-            // Debug log the resolved prompt (trimmed) to verify implicit context presence
-            let preview: String = resolved.chars().take(400).collect();
+            let combined_for_llm = format!("{implicit_preamble}{prompt_template}");
+            let resolved_prompt = Self::resolve_template_variables(&combined_for_llm, &ctx);
+
+            let resolved_context = conversational_context
+                .map(|ctx_template| Self::resolve_template_variables(ctx_template, &ctx));
+
+            // Use only the prompt part for cleaner metadata logging
+            let metadata_input_raw = Self::resolve_template_variables(prompt_template, &ctx);
+
+            // Debug log the resolved prompt (trimmed)
+            let preview: String = resolved_prompt.chars().take(400).collect();
             tracing::debug!(
                 current_node_id = %cur_id_str,
                 parent_count = parent_ids.len(),
                 preview = %preview,
                 "Resolved prompt preview with implicit parent context"
             );
-            resolved
+            (resolved_prompt, resolved_context, metadata_input_raw)
         };
 
         // Check if this node has tools configured
@@ -971,6 +981,8 @@ impl WorkflowExecutor {
             let result = Self::execute_agent_with_tools(
                 agent_id,
                 &resolved_prompt,
+                resolved_context.as_deref(),
+                &metadata_input_raw,
                 node_config,
                 agent,
                 current_node_id,
@@ -988,44 +1000,67 @@ impl WorkflowExecutor {
             // Build the executions array for metadata
             let mut executions: Vec<serde_json::Value> = Vec::new();
 
-            // Guardrail: encode prompt before sending to LLM; combine injection text + payload
-            let mut encoded_payload_for_meta = String::new();
+            // Guardrail: encode context and prompt separately before sending to LLM
+            let mut masked_input_for_meta = metadata_input_raw.clone();
             let prompt_for_llm = if let Some(ref enforcer) = guardrail_enforcer {
-                tracing::debug!(
-                    "Guardrail: encoding prompt before LLM call (sensitive data will be masked)"
-                );
-                let encode_result = enforcer.encode(
+                tracing::debug!("Guardrail: encoding prompt and context before LLM call");
+
+                // 1. Encode context if present
+                let (masked_context, signature_ctx) = if let Some(ctx) = resolved_context {
+                    let enc = enforcer.encode(serde_json::Value::String(ctx), EncodeContext::Llm);
+                    (
+                        enc.payload.as_str().unwrap_or_default().to_string(),
+                        enc.signature_injection_text,
+                    )
+                } else {
+                    (String::new(), String::new())
+                };
+
+                // 2. Encode prompt
+                let enc_prompt = enforcer.encode(
                     serde_json::Value::String(resolved_prompt.clone()),
                     EncodeContext::Llm,
                 );
-                tracing::debug!(
-                    "Guardrail: prompt encoded for LLM (payload only): {}",
-                    encode_result.payload.as_str().unwrap_or("")
+
+                // 3. Encode metadata input specifically for clean logging
+                let enc_meta = enforcer.encode(
+                    serde_json::Value::String(metadata_input_raw.clone()),
+                    EncodeContext::Llm,
                 );
-                tracing::debug!(
-                    "[GuardRail] encoded prompt (sent to LLM, payload only): {}",
-                    encode_result.payload.as_str().unwrap_or("")
-                );
+                masked_input_for_meta = enc_meta.payload.as_str().unwrap_or_default().to_string();
 
                 // Record guardrail encode execution entry
                 executions.push(serde_json::json!({
                     "type": "guardrail_policy",
                     "operation": "encode",
-                    "pii_rules_applied_count": encode_result.rules_applied_count,
-                    "pii_rule_names": encode_result.rule_names,
-                    "policy_name": encode_result.policy_name
+                    "pii_rules_applied_count": enc_prompt.rules_applied_count,
+                    "pii_rule_names": enc_prompt.rule_names,
+                    "policy_name": enc_prompt.policy_name
                 }));
 
-                // Capture encoded payload (without signature) for metadata user_input
-                encoded_payload_for_meta = encode_result.payload.as_str().unwrap_or("").to_string();
+                // Combine for LLM: Use the prompt's signature (or context's if prompt doesn't have one, though it should)
+                let final_signature = if !enc_prompt.signature_injection_text.is_empty() {
+                    enc_prompt.signature_injection_text
+                } else {
+                    signature_ctx
+                };
 
                 format!(
-                    "{}{}",
-                    encode_result.signature_injection_text,
-                    encode_result.payload.as_str().unwrap_or("")
+                    "{}{}{}",
+                    final_signature,
+                    if !masked_context.is_empty() {
+                        format!("{}\n\n", masked_context)
+                    } else {
+                        String::new()
+                    },
+                    enc_prompt.payload.as_str().unwrap_or("")
                 )
             } else {
-                resolved_prompt.clone()
+                if let Some(ctx) = resolved_context {
+                    format!("{}\n\n{}", ctx, resolved_prompt)
+                } else {
+                    resolved_prompt.clone()
+                }
             };
 
             // Call LLM provider directly to capture metadata
@@ -1071,7 +1106,7 @@ impl WorkflowExecutor {
                 "id": llm_response.id.clone().unwrap_or_default(),
                 "model": llm_response.model,
                 "provider": provider_name,
-                "input": if guardrail_enforcer.is_some() { encoded_payload_for_meta.clone() } else { resolved_prompt.clone() },
+                "input": if guardrail_enforcer.is_some() { masked_input_for_meta.clone() } else { metadata_input_raw.clone() },
                 "output": llm_response.content,
                 "finish_reason": format!("{}", llm_response.finish_reason),
                 "tool_calls": [],
@@ -1165,7 +1200,7 @@ impl WorkflowExecutor {
                     "node_type": "Agent",
                     // When GR active: user_input = masked prompt, final_output = raw LLM content
                     // When GR inactive: user_input = original prompt, final_output = decoded content
-                    "user_input": if guardrail_enforcer.is_some() { encoded_payload_for_meta.clone() } else { resolved_prompt.clone() },
+                    "user_input": if guardrail_enforcer.is_some() { masked_input_for_meta.clone() } else { metadata_input_raw.clone() },
                     "tools_available": [],
                     "total_tools_available": 0,
                     "start_time": execution_timestamp.to_rfc3339(),
@@ -1225,6 +1260,8 @@ impl WorkflowExecutor {
     async fn execute_agent_with_tools(
         _agent_id: &crate::types::AgentId,
         prompt: &str,
+        conversational_context: Option<&str>,
+        metadata_input: &str,
         node_config: &std::collections::HashMap<String, serde_json::Value>,
         agent: Arc<dyn AgentTrait>,
         node_id: &NodeId,
@@ -1238,44 +1275,70 @@ impl WorkflowExecutor {
         // Build the executions array for metadata
         let mut executions: Vec<serde_json::Value> = Vec::new();
 
-        // Guardrail: encode prompt before sending to LLM; combine injection text + payload
-        let mut encoded_payload_for_meta = String::new();
+        // Guardrail: encode prompt and context individually before sending to LLM
+        let mut masked_input_for_meta = metadata_input.to_string();
         let prompt_for_llm = if let Some(ref enforcer) = guardrail_enforcer {
-            tracing::debug!(
-                "Guardrail: encoding prompt before LLM call (tool path; sensitive data masked)"
-            );
-            let encode_result = enforcer.encode(
+            tracing::debug!("Guardrail: encoding prompt and context before LLM call (tool path)");
+
+            // 1. Encode context if present
+            let (masked_context, signature_ctx) = if let Some(ctx) = conversational_context {
+                let enc = enforcer.encode(
+                    serde_json::Value::String(ctx.to_string()),
+                    EncodeContext::Llm,
+                );
+                (
+                    enc.payload.as_str().unwrap_or_default().to_string(),
+                    enc.signature_injection_text,
+                )
+            } else {
+                (String::new(), String::new())
+            };
+
+            // 2. Encode prompt
+            let enc_prompt = enforcer.encode(
                 serde_json::Value::String(prompt.to_string()),
                 EncodeContext::Llm,
             );
-            tracing::debug!(
-                "Guardrail: prompt encoded for LLM (payload only): {}",
-                encode_result.payload.as_str().unwrap_or_default()
+
+            // 3. Encode metadata input specifically
+            let enc_meta = enforcer.encode(
+                serde_json::Value::String(metadata_input.to_string()),
+                EncodeContext::Llm,
             );
-            tracing::debug!(
-                "[GuardRail] encoded prompt (sent to LLM, payload only): {}",
-                encode_result.payload.as_str().unwrap_or_default()
-            );
+            masked_input_for_meta = enc_meta.payload.as_str().unwrap_or_default().to_string();
 
             // Record guardrail encode execution entry
             executions.push(serde_json::json!({
                 "type": "guardrail_policy",
                 "operation": "encode",
-                "pii_rules_applied_count": encode_result.rules_applied_count,
-                "pii_rule_names": encode_result.rule_names,
-                "policy_name": encode_result.policy_name
+                "pii_rules_applied_count": enc_prompt.rules_applied_count,
+                "pii_rule_names": enc_prompt.rule_names,
+                "policy_name": enc_prompt.policy_name
             }));
 
-            // Capture encoded payload (without signature) for metadata user_input
-            encoded_payload_for_meta = encode_result.payload.as_str().unwrap_or_default().to_string();
+            // Combine for LLM
+            let final_signature = if !enc_prompt.signature_injection_text.is_empty() {
+                enc_prompt.signature_injection_text
+            } else {
+                signature_ctx
+            };
 
             format!(
-                "{}{}",
-                encode_result.signature_injection_text,
-                encode_result.payload.as_str().unwrap_or_default()
+                "{}{}{}",
+                final_signature,
+                if !masked_context.is_empty() {
+                    format!("{}\n\n", masked_context)
+                } else {
+                    String::new()
+                },
+                enc_prompt.payload.as_str().unwrap_or_default()
             )
         } else {
-            prompt.to_string()
+            if let Some(ctx) = conversational_context {
+                format!("{}\n\n{}", ctx, prompt)
+            } else {
+                prompt.to_string()
+            }
         };
 
         // Extract tool schemas from node config
@@ -1389,7 +1452,7 @@ impl WorkflowExecutor {
             "id": llm_response.id.clone().unwrap_or_default(),
             "model": llm_response.model,
             "provider": provider_name,
-            "input": if guardrail_enforcer.is_some() { encoded_payload_for_meta.clone() } else { prompt.to_string() },
+            "input": if guardrail_enforcer.is_some() { masked_input_for_meta.clone() } else { metadata_input.to_string() },
             "output": llm_response.content,
             "finish_reason": format!("{}", llm_response.finish_reason),
             "tool_calls": llm_tool_calls_for_metadata,
@@ -1467,7 +1530,7 @@ impl WorkflowExecutor {
             "node_type": "Agent",
             // When GR active: user_input = masked prompt, final_output = raw LLM content
             // When GR inactive: user_input = original prompt, final_output = decoded content
-            "user_input": if guardrail_enforcer.is_some() { encoded_payload_for_meta.clone() } else { prompt.to_string() },
+            "user_input": if guardrail_enforcer.is_some() { masked_input_for_meta.clone() } else { metadata_input.to_string() },
             "tools_available": tool_names,
             "total_tools_available": tool_names.len(),
             "start_time": execution_timestamp.to_rfc3339(),
@@ -1543,8 +1606,8 @@ impl WorkflowExecutor {
             // the second LLM call; including the RULE here would cause it to appear in metadata.
             let original_prompt_for_response = guardrail_enforcer
                 .as_ref()
-                .map(|_| encoded_payload_for_meta.clone())
-                .unwrap_or_else(|| prompt.to_string());
+                .map(|_| masked_input_for_meta.clone())
+                .unwrap_or_else(|| metadata_input.to_string());
             Ok(serde_json::json!({
                 "type": "tool_calls_required",
                 "content": llm_response.content,
