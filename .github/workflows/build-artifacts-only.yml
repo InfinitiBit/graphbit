@@ -89,12 +89,12 @@ jobs:
           ~/.cargo/registry/cache/
           ~/.cargo/git/db/
           target/
-        key: ${{ runner.os }}-cargo-build-${{ matrix.platform.target }}-${{ hashFiles('**/Cargo.lock') }}
+        key: ${{ runner.os }}-cargo-build-v2-${{ matrix.platform.target }}-${{ hashFiles('**/Cargo.lock') }}
         restore-keys: |
-          ${{ runner.os }}-cargo-build-${{ matrix.platform.target }}-
-          ${{ runner.os }}-cargo-build-
-          ${{ runner.os }}-cargo-
-          
+          ${{ runner.os }}-cargo-build-v2-${{ matrix.platform.target }}-
+          ${{ runner.os }}-cargo-build-v2-
+          ${{ runner.os }}-cargo-v2-
+
     - name: Copy guardrail .so for auditwheel (Linux only)
       if: matrix.platform.runner == 'ubuntu-22.04'
       shell: bash
