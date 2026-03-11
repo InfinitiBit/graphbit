@@ -94,7 +94,18 @@ jobs:
           ${{ runner.os }}-cargo-build-${{ matrix.platform.target }}-
           ${{ runner.os }}-cargo-build-
           ${{ runner.os }}-cargo-
-
+          
+    - name: Copy guardrail .so for auditwheel (Linux only)
+      if: matrix.platform.runner == 'ubuntu-22.04'
+      shell: bash
+      run: |
+        if [[ "${{ matrix.platform.target }}" == "x86_64" ]]; then
+          cp vendor/guardrail/x86_64-unknown-linux-gnu/libguardrail_ffi.so \
+             vendor/guardrail/libguardrail_ffi.so
+        elif [[ "${{ matrix.platform.target }}" == "aarch64" ]]; then
+          cp vendor/guardrail/aarch64-unknown-linux-gnu/libguardrail_ffi.so \
+             vendor/guardrail/libguardrail_ffi.so
+        fi
     - name: Build wheels
       uses: messense/maturin-action@v1
       with:
@@ -103,7 +114,7 @@ jobs:
         sccache: ${{ matrix.platform.runner != 'ubuntu-22.04' }}
         manylinux: ${{ matrix.platform.manylinux }}
         working-directory: python
-        docker-options: ${{ matrix.platform.runner == 'ubuntu-22.04' && format('-v {0}/vendor:/project/vendor', github.workspace) || '' }}
+        docker-options: ${{ matrix.platform.runner == 'ubuntu-22.04' && format('-v {0}/vendor:/project/vendor -e LD_LIBRARY_PATH=/project/vendor/guardrail', github.workspace) || '' }}
         
 
     - name: Verify wheel contents

@@ -32,9 +32,15 @@ fn main() {
     }
 
     println!("cargo:rustc-link-search=native={}", lib_path.display());
+    println!("cargo:rerun-if-changed=../vendor/guardrail/");
 
     match target_os.as_str() {
         "windows" => println!("cargo:rustc-link-lib=dylib=guardrail_ffi"),
-        _         => println!("cargo:rustc-link-lib=static=guardrail_ffi"), // macOS + Linux
+        "linux"   => {
+            println!("cargo:rustc-link-lib=dylib=guardrail_ffi");
+            // embed rpath so the loader finds libguardrail_ffi.so next to graphbit.abi3.so
+            println!("cargo:rustc-link-arg=-Wl,-rpath,$ORIGIN");
+        }
+        _         => println!("cargo:rustc-link-lib=static=guardrail_ffi"), // macOS
     }
 }
