@@ -1,8 +1,8 @@
 //! LLM configuration for GraphBit Python bindings
 
 use crate::validation::validate_api_key;
-use graphbit_core::llm::providers::{register_python_instance, unregister_python_instance};
 use graphbit_core::llm::LlmConfig as CoreLlmConfig;
+use graphbit_core::llm::providers::{register_python_instance, unregister_python_instance};
 use pyo3::prelude::*;
 use uuid::Uuid;
 
