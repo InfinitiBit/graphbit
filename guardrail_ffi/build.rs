@@ -39,9 +39,18 @@ fn main() {
             println!("cargo:rustc-link-lib=dylib=guardrail_ffi");
         }
         "linux" => {
+            // Use path relative to workspace root so no absolute build path gets embedded
+            // in the binary (avoids runtime "cannot open shared object file" on other machines).
+            let link_search = Path::new("vendor")
+                .join("guardrail")
+                .join(match target_arch.as_str() {
+                    "x86_64" => "x86_64-unknown-linux-gnu",
+                    "aarch64" => "aarch64-unknown-linux-gnu",
+                    other => panic!("unsupported Linux arch: {other}"),
+                });
             println!(
                 "cargo:rustc-link-search=native={}",
-                lib_path.canonicalize().unwrap().display()
+                link_search.display()
             );
             println!("cargo:rustc-link-lib=dylib=guardrail_ffi");
         }
