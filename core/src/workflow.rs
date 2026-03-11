@@ -1006,14 +1006,18 @@ impl WorkflowExecutor {
                 tracing::debug!("Guardrail: encoding prompt and context before LLM call");
 
                 // 1. Encode context if present
-                let (masked_context, signature_ctx) = if let Some(ctx) = resolved_context {
+                let (masked_context, signature_ctx, ctx_rules, ctx_count) = if let Some(ctx) =
+                    resolved_context
+                {
                     let enc = enforcer.encode(serde_json::Value::String(ctx), EncodeContext::Llm);
                     (
                         enc.payload.as_str().unwrap_or_default().to_string(),
                         enc.signature_injection_text,
+                        enc.rule_names,
+                        enc.rules_applied_count,
                     )
                 } else {
-                    (String::new(), String::new())
+                    (String::new(), String::new(), Vec::new(), 0)
                 };
 
                 // 2. Encode prompt
@@ -1029,12 +1033,20 @@ impl WorkflowExecutor {
                 );
                 masked_input_for_meta = enc_meta.payload.as_str().unwrap_or_default().to_string();
 
-                // Record guardrail encode execution entry
+                // Cumulative Metadata: Combine rule names from context and prompt
+                let mut all_rule_names = ctx_rules;
+                for rule in enc_prompt.rule_names {
+                    if !all_rule_names.contains(&rule) {
+                        all_rule_names.push(rule);
+                    }
+                }
+
+                // Record guardrail encode execution entry with cumulative stats
                 executions.push(serde_json::json!({
                     "type": "guardrail_policy",
                     "operation": "encode",
-                    "pii_rules_applied_count": enc_prompt.rules_applied_count,
-                    "pii_rule_names": enc_prompt.rule_names,
+                    "pii_rules_applied_count": ctx_count + enc_prompt.rules_applied_count,
+                    "pii_rule_names": all_rule_names,
                     "policy_name": enc_prompt.policy_name
                 }));
 
@@ -1281,18 +1293,21 @@ impl WorkflowExecutor {
             tracing::debug!("Guardrail: encoding prompt and context before LLM call (tool path)");
 
             // 1. Encode context if present
-            let (masked_context, signature_ctx) = if let Some(ctx) = conversational_context {
-                let enc = enforcer.encode(
-                    serde_json::Value::String(ctx.to_string()),
-                    EncodeContext::Llm,
-                );
-                (
-                    enc.payload.as_str().unwrap_or_default().to_string(),
-                    enc.signature_injection_text,
-                )
-            } else {
-                (String::new(), String::new())
-            };
+            let (masked_context, signature_ctx, ctx_rules, ctx_count) =
+                if let Some(ctx) = conversational_context {
+                    let enc = enforcer.encode(
+                        serde_json::Value::String(ctx.to_string()),
+                        EncodeContext::Llm,
+                    );
+                    (
+                        enc.payload.as_str().unwrap_or_default().to_string(),
+                        enc.signature_injection_text,
+                        enc.rule_names,
+                        enc.rules_applied_count,
+                    )
+                } else {
+                    (String::new(), String::new(), Vec::new(), 0)
+                };
 
             // 2. Encode prompt
             let enc_prompt = enforcer.encode(
@@ -1307,12 +1322,20 @@ impl WorkflowExecutor {
             );
             masked_input_for_meta = enc_meta.payload.as_str().unwrap_or_default().to_string();
 
+            // Cumulative Metadata
+            let mut all_rule_names = ctx_rules;
+            for rule in enc_prompt.rule_names {
+                if !all_rule_names.contains(&rule) {
+                    all_rule_names.push(rule);
+                }
+            }
+
             // Record guardrail encode execution entry
             executions.push(serde_json::json!({
                 "type": "guardrail_policy",
                 "operation": "encode",
-                "pii_rules_applied_count": enc_prompt.rules_applied_count,
-                "pii_rule_names": enc_prompt.rule_names,
+                "pii_rules_applied_count": ctx_count + enc_prompt.rules_applied_count,
+                "pii_rule_names": all_rule_names,
                 "policy_name": enc_prompt.policy_name
             }));
 
