@@ -1161,7 +1161,7 @@ impl WorkflowExecutor {
                 // Record guardrail decode execution entry
                 executions.push(serde_json::json!({
                     "type": "guardrail_policy",
-                    "operation": "decode",
+                    "operation": "rehydrate",
                     "pii_rules_applied_count": decoded_result.rules_applied_count,
                     "pii_rule_names": decoded_result.rule_names,
                     "policy_name": decoded_result.policy_name
@@ -1520,7 +1520,7 @@ impl WorkflowExecutor {
             // Record guardrail decode execution entry
             executions.push(serde_json::json!({
                 "type": "guardrail_policy",
-                "operation": "decode",
+                "operation": "rehydrate",
                 "pii_rules_applied_count": decoded_result.rules_applied_count,
                 "pii_rule_names": decoded_result.rule_names,
                 "policy_name": decoded_result.policy_name
