@@ -106,7 +106,7 @@ jobs:
           cp vendor/guardrail/aarch64-unknown-linux-gnu/libguardrail_ffi.so \
              vendor/guardrail/libguardrail_ffi.so
         fi
-        
+
     - name: Set SONAME on guardrail .so (Linux only)
       if: matrix.platform.runner == 'ubuntu-22.04'
       shell: bash
@@ -119,7 +119,16 @@ jobs:
           patchelf --set-soname libguardrail_ffi.so \
             vendor/guardrail/aarch64-unknown-linux-gnu/libguardrail_ffi.so
         fi
-
+    
+    - name: Debug vendor contents
+      if: matrix.platform.runner == 'ubuntu-22.04'
+      shell: bash
+      run: |
+        echo "=== vendor/guardrail/ ==="
+        ls -la vendor/guardrail/
+        echo "=== checking SONAME ==="
+        readelf -d vendor/guardrail/libguardrail_ffi.so | grep -E "SONAME|NEEDED" || echo "readelf not available"
+    
     - name: Build wheels
       uses: messense/maturin-action@v1
       with:
@@ -128,7 +137,10 @@ jobs:
         sccache: ${{ matrix.platform.runner != 'ubuntu-22.04' }}
         manylinux: ${{ matrix.platform.manylinux }}
         working-directory: python
-        docker-options: ${{ matrix.platform.runner == 'ubuntu-22.04' && format('-v {0}/vendor:/project/vendor -e LD_LIBRARY_PATH=/project/vendor/guardrail', github.workspace) || '' }}
+        docker-options: >-
+          ${{ matrix.platform.runner == 'ubuntu-22.04' &&
+          format('-v {0}/vendor:/project/vendor -e LD_LIBRARY_PATH=/project/vendor/guardrail', github.workspace)
+          || '' }}
         
 
     - name: Verify wheel contents
