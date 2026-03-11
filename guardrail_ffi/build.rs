@@ -35,7 +35,6 @@ fn main() {
 
     match target_os.as_str() {
         "windows" => println!("cargo:rustc-link-lib=dylib=guardrail_ffi"),
-        "linux"   => println!("cargo:rustc-link-lib=dylib=guardrail_ffi"),
-        _         => println!("cargo:rustc-link-lib=static=guardrail_ffi"), // macOS
+        _         => println!("cargo:rustc-link-lib=static=guardrail_ffi"), // macOS + Linux
     }
 }
