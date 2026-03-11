@@ -44,7 +44,6 @@ fn main() {
                 lib_path.canonicalize().unwrap().display()
             );
             println!("cargo:rustc-link-lib=dylib=guardrail_ffi");
-            println!("cargo:rustc-link-arg=-Wl,-rpath,$ORIGIN");
         }
         _ => {
             // macOS
