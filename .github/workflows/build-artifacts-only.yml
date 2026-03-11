@@ -139,10 +139,11 @@ jobs:
         sccache: ${{ matrix.platform.runner != 'ubuntu-22.04' }}
         manylinux: ${{ matrix.platform.manylinux }}
         working-directory: python
-        docker-options: >-
-          ${{ matrix.platform.runner == 'ubuntu-22.04' &&
-          format('-v {0}/vendor:/project/vendor -e LD_LIBRARY_PATH=/project/vendor/guardrail', github.workspace)
-          || '' }} 
+        before-script-linux: |
+          echo "=== Inside container: LD_LIBRARY_PATH=$LD_LIBRARY_PATH ==="
+          ls -la /project/vendor/guardrail/ || echo "vendor not mounted!"
+          file /project/vendor/guardrail/libguardrail_ffi.so || echo "file not found inside container!"
+        docker-options: ${{ matrix.platform.runner == 'ubuntu-22.04' && format('-v {0}/vendor:/project/vendor -e LD_LIBRARY_PATH=/project/vendor/guardrail', github.workspace) || '' }}
 
     - name: Verify wheel contents
       shell: bash
