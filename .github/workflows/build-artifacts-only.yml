@@ -115,9 +115,13 @@ jobs:
         if [[ "${{ matrix.platform.target }}" == "x86_64" ]]; then
           cp vendor/guardrail/x86_64-unknown-linux-gnu/libguardrail_ffi.so \
              vendor/guardrail/libguardrail_ffi.so
+          cp vendor/guardrail/x86_64-unknown-linux-gnu/libguardrail_ffi.so \
+             python/python-src/graphbit/libguardrail_ffi.so
         elif [[ "${{ matrix.platform.target }}" == "aarch64" ]]; then
           cp vendor/guardrail/aarch64-unknown-linux-gnu/libguardrail_ffi.so \
              vendor/guardrail/libguardrail_ffi.so
+          cp vendor/guardrail/aarch64-unknown-linux-gnu/libguardrail_ffi.so \
+             python/python-src/graphbit/libguardrail_ffi.so
         fi
 
     - name: Debug vendor contents
@@ -133,17 +137,15 @@ jobs:
 
     - name: Build wheels
       uses: messense/maturin-action@v1
+      env:
+        LD_LIBRARY_PATH: ${{ github.workspace }}/vendor/guardrail
       with:
         target: ${{ matrix.platform.target }}
-        args: --release --out dist --find-interpreter ${{ matrix.platform.runner == 'ubuntu-22.04' && '--zig' || '' }}
+        args: --release --out dist --find-interpreter ${{ matrix.platform.runner == 'ubuntu-22.04' && '--zig' || '' }} ${{ matrix.platform.runner == 'ubuntu-22.04' && '--skip-auditwheel' || '' }}
         sccache: ${{ matrix.platform.runner != 'ubuntu-22.04' }}
         manylinux: ${{ matrix.platform.manylinux }}
         working-directory: python
-        before-script-linux: |
-          echo "=== Inside container: LD_LIBRARY_PATH=$LD_LIBRARY_PATH ==="
-          ls -la /project/vendor/guardrail/ || echo "vendor not mounted!"
-          file /project/vendor/guardrail/libguardrail_ffi.so || echo "file not found inside container!"
-        docker-options: ${{ matrix.platform.runner == 'ubuntu-22.04' && format('-v {0}/vendor:/project/vendor -e LD_LIBRARY_PATH=/project/vendor/guardrail', github.workspace) || '' }}
+        docker-options: ''
 
     - name: Verify wheel contents
       shell: bash
