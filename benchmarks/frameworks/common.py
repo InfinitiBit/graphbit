@@ -110,6 +110,7 @@ class FrameworkType(Enum):
     LLAMAINDEX = "LlamaIndex"
     CREWAI = "CrewAI"
     AUTOGEN = "AutoGen"
+    AG2 = "ag2"
 
 
 class BenchmarkScenario(Enum):
