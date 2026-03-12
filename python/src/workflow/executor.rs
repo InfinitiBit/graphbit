@@ -660,23 +660,56 @@ impl Executor {
                                         .cloned()
                                         .unwrap_or(serde_json::json!(0.0));
 
+                                    let parameters =
+                                        tc.get("parameters").cloned().unwrap_or(serde_json::json!({}));
+
                                     if !tools_used.contains(&tool_name) {
                                         tools_used.push(tool_name.clone());
                                     }
 
-                                    executions.push(serde_json::json!({
+                                    // When GuardRail is active, store only masked parameters/output in metadata
+                                    // so any reader (get_* APIs or code that builds tool_calls/initial_response views) sees no PII.
+                                    let (params_for_meta, output_for_meta) = if let Some(enforcer) = guardrail_enforcer {
+                                        let parameters_masked = enforcer
+                                            .encode(parameters.clone(), EncodeContext::Llm)
+                                            .payload;
+                                        let parameters_masked = if parameters_masked.is_object() {
+                                            parameters_masked
+                                        } else {
+                                            serde_json::json!({})
+                                        };
+                                        let enc_output = enforcer.encode(
+                                            serde_json::Value::String(output.clone()),
+                                            EncodeContext::Llm,
+                                        );
+                                        let output_masked = enc_output
+                                            .payload
+                                            .as_str()
+                                            .map(String::from)
+                                            .unwrap_or_else(|| enc_output.payload.to_string());
+                                        (parameters_masked, output_masked)
+                                    } else {
+                                        (
+                                            parameters.clone(),
+                                            output.clone(),
+                                        )
+                                    };
+
+                                    let entry = serde_json::json!({
                                         "type": "tool_call",
                                         "id": tc.get("id").and_then(|v| v.as_str()).unwrap_or(""),
                                         "tool_name": tool_name,
-                                        "parameters": tc.get("parameters").cloned().unwrap_or(serde_json::json!({})),
-                                        "output": output,
+                                        "parameters": params_for_meta,
+                                        "output": output_for_meta,
                                         "success": success,
                                         "error": error,
                                         "start_time": start_time,
                                         "end_time": end_time,
                                         "latency_ms": latency_ms,
                                         "retries": []
-                                    }));
+                                    });
+
+                                    executions.push(entry);
                                 }
 
                                 // Build final prompt; when GuardRail is active encode it and debug-print.
@@ -949,7 +982,35 @@ impl Executor {
                                                                     "rejected_prediction_tokens": 0
                                                                 }
                                                             }));
-                                                            obj.insert("executions".to_string(), serde_json::json!(executions));
+                                                            obj.insert("executions".to_string(), serde_json::json!(executions.clone()));
+
+                                                            // Build top-level tool_calls and initial_response from executions so any consumer
+                                                            // that reads these keys (e.g. API/frontend) sees the same masked data as in executions.
+                                                            let tool_calls_for_node: Vec<serde_json::Value> = executions
+                                                                .iter()
+                                                                .filter(|e| e.get("type").and_then(|t| t.as_str()) == Some("tool_call"))
+                                                                .map(|e| {
+                                                                    let mut tc = e.clone();
+                                                                    // Normalize to common shape: id, name, parameters, output (already masked)
+                                                                    if let Some(o) = tc.as_object_mut() {
+                                                                        if o.get("tool_name").is_some() && o.get("name").is_none() {
+                                                                            if let Some(name) = o.remove("tool_name") {
+                                                                                o.insert("name".to_string(), name);
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                    tc
+                                                                })
+                                                                .collect();
+                                                            obj.insert("tool_calls".to_string(), serde_json::json!(tool_calls_for_node));
+
+                                                            let initial_response = executions
+                                                                .iter()
+                                                                .find(|e| e.get("type").and_then(|t| t.as_str()) == Some("llm_call"))
+                                                                .cloned();
+                                                            if let Some(ir) = initial_response {
+                                                                obj.insert("initial_response".to_string(), ir);
+                                                            }
                                                         }
 
                                                         // Store by node ID
