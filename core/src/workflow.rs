@@ -1453,17 +1453,31 @@ impl WorkflowExecutor {
             );
         }
 
-        // Build tool_calls array for the llm_call execution entry (raw from LLM response)
+        // Build tool_calls array for the llm_call execution entry.
+        // When GuardRail is on, store encoded (masked) parameters so metadata never exposes PII.
         let llm_tool_calls_for_metadata: Vec<serde_json::Value> = llm_response
             .tool_calls
             .iter()
             .map(|tc| {
+                let params_for_meta = if let Some(ref enforcer) = guardrail_enforcer {
+                    let enc = enforcer.encode(tc.parameters.clone(), EncodeContext::Llm);
+                    if enc.payload.is_object() {
+                        enc.payload
+                    } else {
+                        tc.parameters.clone()
+                    }
+                } else {
+                    tc.parameters.clone()
+                };
+                let args_str = serde_json::to_string(&params_for_meta).unwrap_or_default();
                 serde_json::json!({
                     "id": tc.id,
                     "type": "function",
+                    "name": tc.name,
+                    "parameters": params_for_meta,
                     "function": {
                         "name": tc.name,
-                        "arguments": serde_json::to_string(&tc.parameters).unwrap_or_default()
+                        "arguments": args_str
                     }
                 })
             })
