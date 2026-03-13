@@ -8,13 +8,16 @@
 //! - Graceful error handling and recovery
 
 use graphbit_core::workflow::WorkflowExecutor as CoreWorkflowExecutor;
+use graphbit_core::{DecodeContext, EncodeContext, GuardRail, Enforcer};
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyDict};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tracing::{debug, error, info, instrument, warn};
 
 use super::{result::WorkflowResult, workflow::Workflow};
 use crate::errors::{timeout_error, to_py_runtime_error, validation_error};
+use crate::guardrail::GuardRailPolicyConfig;
 use crate::llm::config::LlmConfig;
 use crate::runtime::get_runtime;
 
@@ -90,10 +93,11 @@ pub struct Executor {
 #[pymethods]
 impl Executor {
     #[new]
-    #[pyo3(signature = (config, _lightweight_mode=None, timeout_seconds=None, debug=None))]
+    #[pyo3(signature = (config, lightweight_mode=None, timeout_seconds=None, debug=None))]
+    #[allow(unused_variables)]
     fn new(
         config: LlmConfig,
-        _lightweight_mode: Option<bool>,
+        lightweight_mode: Option<bool>,
         timeout_seconds: Option<u64>,
         debug: Option<bool>,
     ) -> PyResult<Self> {
@@ -132,9 +136,18 @@ impl Executor {
         })
     }
 
-    /// Execute a workflow with comprehensive error handling and monitoring
-    #[instrument(skip(self, py, workflow), fields(workflow_name = %workflow.inner.name))]
-    fn execute(&mut self, py: Python<'_>, workflow: &Workflow) -> PyResult<WorkflowResult> {
+    /// Execute a workflow with comprehensive error handling and monitoring.
+    ///
+    /// `policy` is optional. When provided: encode before every LLM call, decode after every LLM call;
+    /// before tool usage decode (so tools see real PII); after tool usage do nothing (no encode).
+    #[instrument(skip(self, py, workflow, policy), fields(workflow_name = %workflow.inner.name))]
+    #[pyo3(signature = (workflow, policy=None))]
+    fn execute(
+        &mut self,
+        py: Python<'_>,
+        workflow: &Workflow,
+        policy: Option<&Bound<'_, GuardRailPolicyConfig>>,
+    ) -> PyResult<WorkflowResult> {
         let start_time = Instant::now();
 
         // Validate workflow
@@ -161,6 +174,14 @@ impl Executor {
         let timeout_duration = config.timeout;
         let debug = config.enable_tracing; // Capture debug flag
 
+        // Build optional guardrail enforcer from policy (for encode/decode at LLM and tool boundaries)
+        let guardrail_enforcer = policy.map(|p| {
+            let config = p.borrow().get_inner();
+            Arc::new(
+                GuardRail::enforcer_for(config, workflow_clone.id.to_string()),
+            )
+        });
+
         if debug {
             debug!("Starting workflow execution with mode: {:?}", config.mode);
         }
@@ -171,7 +192,13 @@ impl Executor {
             get_runtime().block_on(async move {
                 // Apply timeout to the entire execution
                 tokio::time::timeout(timeout_duration, async move {
-                    Self::execute_workflow_internal(llm_config, workflow_clone, config).await
+                    Self::execute_workflow_internal(
+                        llm_config,
+                        workflow_clone,
+                        config,
+                        guardrail_enforcer,
+                    )
+                    .await
                 })
                 .await
             })
@@ -210,8 +237,14 @@ impl Executor {
     }
 
     /// Async execution with enhanced performance optimizations
-    #[instrument(skip(self, workflow, py), fields(workflow_name = %workflow.inner.name))]
-    fn run_async<'a>(&mut self, workflow: &Workflow, py: Python<'a>) -> PyResult<Bound<'a, PyAny>> {
+    #[instrument(skip(self, workflow, py, policy), fields(workflow_name = %workflow.inner.name))]
+    #[pyo3(signature = (workflow, policy=None))]
+    fn run_async<'a>(
+        &mut self,
+        workflow: &Workflow,
+        py: Python<'a>,
+        policy: Option<&Bound<'_, GuardRailPolicyConfig>>,
+    ) -> PyResult<Bound<'a, PyAny>> {
         // Validate workflow
         if let Err(e) = workflow.inner.validate() {
             return Err(validation_error(
@@ -226,7 +259,13 @@ impl Executor {
         let config = self.config.clone();
         let timeout_duration = config.timeout;
         let start_time = Instant::now();
-        let debug = config.enable_tracing; // Capture debug flag
+        let debug = config.enable_tracing;
+        let guardrail_enforcer = policy.map(|p| {
+            let config = p.borrow().get_inner();
+            Arc::new(
+                GuardRail::enforcer_for(config, workflow_clone.id.to_string()),
+            )
+        });
 
         if debug {
             debug!(
@@ -236,9 +275,14 @@ impl Executor {
         }
 
         pyo3_async_runtimes::tokio::future_into_py(py, async move {
-            // Apply timeout to the entire execution
             let result = tokio::time::timeout(timeout_duration, async move {
-                Self::execute_workflow_internal(llm_config, workflow_clone, config).await
+                Self::execute_workflow_internal(
+                    llm_config,
+                    workflow_clone,
+                    config,
+                    guardrail_enforcer,
+                )
+                .await
             })
             .await;
 
@@ -381,19 +425,24 @@ impl Executor {
 }
 
 impl Executor {
-    /// Internal workflow execution with mode-specific optimizations and tool call handling
+    /// Internal workflow execution with mode-specific optimizations and tool call handling.
+    /// When `guardrail_enforcer` is `Some`, the core encodes before LLM and decodes after LLM;
+    /// we decode before tool usage only (no encode after tool).
     async fn execute_workflow_internal(
         llm_config: graphbit_core::llm::LlmConfig,
         workflow: graphbit_core::workflow::Workflow,
         config: ExecutionConfig,
+        guardrail_enforcer: Option<Arc<Enforcer>>,
     ) -> Result<graphbit_core::types::WorkflowContext, graphbit_core::errors::GraphBitError> {
         let executor = match config.mode {
             ExecutionMode::Balanced => CoreWorkflowExecutor::new()
                 .with_default_llm_config(llm_config.clone()),
         };
 
-        // Execute the workflow
-        let mut context = executor.execute(workflow.clone()).await?;
+        // Execute the workflow (core applies encode before LLM, decode after LLM when enforcer is Some)
+        let mut context = executor
+            .execute(workflow.clone(), guardrail_enforcer.clone())
+            .await?;
 
         // Store LLM config in context metadata for tool call handling
         if let Ok(llm_config_json) = serde_json::to_value(&llm_config) {
@@ -403,16 +452,25 @@ impl Executor {
         }
 
         // Check if any node outputs contain tool_calls_required responses and handle them
-        context = Self::handle_tool_calls_in_context(context, &workflow).await?;
+        context = Self::handle_tool_calls_in_context(
+            context,
+            &workflow,
+            guardrail_enforcer.as_ref().map(|arc| arc.as_ref()),
+        )
+        .await?;
 
         Ok(context)
     }
 
-    /// Handle tool calls in workflow context by executing them and updating the context
+    /// Handle tool calls in workflow context by executing them and updating the context.
+    /// When `guardrail_enforcer` is `Some`, decodes tool-call parameters before execution only;
+    /// after tool execution we do nothing (no encode of tool results).
     async fn handle_tool_calls_in_context(
         mut context: graphbit_core::types::WorkflowContext,
         workflow: &graphbit_core::workflow::Workflow,
+        guardrail_enforcer: Option<&Enforcer>,
     ) -> Result<graphbit_core::types::WorkflowContext, graphbit_core::errors::GraphBitError> {
+        use graphbit_core::DecodeContext;
         use crate::workflow::node::execute_production_tool_calls;
         use graphbit_core::llm::{LlmProvider, LlmRequest};
 
@@ -447,22 +505,35 @@ impl Executor {
                                     })
                                     .unwrap_or_default();
 
-                                // Convert tool calls to the format expected by Python layer
+                                // Convert tool calls to the format expected by Python layer.
+                                // Guardrail: decode parameters before tool execution so tools see real PII.
+                                if guardrail_enforcer.is_some() {
+                                    tracing::debug!(
+                                        "[GuardRail] tool call parameters from LLM (before decode): {:?}",
+                                        tool_calls
+                                    );
+                                }
                                 let python_tool_calls: Vec<serde_json::Value> =
                                     if let Some(tool_calls_array) = tool_calls.as_array() {
                                         tool_calls_array
                                             .iter()
                                             .map(|tc| {
-                                                // Extract name and parameters from the tool call object
                                                 let name = tc
                                                     .get("name")
                                                     .and_then(|v| v.as_str())
                                                     .unwrap_or("unknown");
-                                                let parameters = tc
+                                                let mut parameters = tc
                                                     .get("parameters")
                                                     .cloned()
                                                     .unwrap_or(serde_json::json!({}));
-
+                                                if let Some(enforcer) = guardrail_enforcer {
+                                                    tracing::debug!(
+                                                        "Guardrail: decoding tool call parameters (tool boundary — tool will receive real PII)"
+                                                    );
+                                                    let decoded_result =
+                                                        enforcer.decode(parameters, DecodeContext::ToolBoundary);
+                                                    parameters = decoded_result.payload;
+                                                }
                                                 serde_json::json!({
                                                     "tool_name": name,
                                                     "parameters": parameters
@@ -524,11 +595,30 @@ impl Executor {
                                     summary_lines.join("\n")
                                 };
 
-                                // Create final prompt with tool results summary
+                                // Guardrail: before tool we decode; after tool we do nothing (no encode of results).
+                                let summary_for_llm = tool_results_summary.clone();
+
+                                // Build final prompt; when GuardRail is active encode it and debug-print.
                                 let final_prompt = format!(
                                     "{}\n\nTool execution results:\n{}\n\nPlease provide a comprehensive response based on the tool results.",
-                                    original_prompt, tool_results_summary
+                                    original_prompt, summary_for_llm
                                 );
+                                let prompt_for_final_llm = if let Some(ref enforcer) = guardrail_enforcer {
+                                    tracing::info!("[GuardRail] final prompt (before encode): {}", final_prompt);
+                                    let result = enforcer.encode(
+                                        serde_json::Value::String(final_prompt.clone()),
+                                        EncodeContext::Llm,
+                                    );
+                                    let encoded_str = format!(
+                                        "{}{}",
+                                        result.signature_injection_text,
+                                        result.payload.as_str().unwrap_or_default()
+                                    );
+                                    tracing::info!("[GuardRail] final prompt (after encode, sent to LLM, payload only): {}", result.payload.as_str().unwrap_or_default());
+                                    encoded_str
+                                } else {
+                                    final_prompt.clone()
+                                };
 
                                 // Get LLM provider from node configuration and make final call
                                 if let graphbit_core::graph::NodeType::Agent { .. } =
@@ -553,8 +643,8 @@ impl Executor {
                                             let llm_provider =
                                                 LlmProvider::new(provider_trait, llm_config);
 
-                                            // Create final request and apply node configuration parameters
-                                            let mut final_request = LlmRequest::new(final_prompt.clone());
+                                            // Create final request (with encoded prompt when GuardRail is on)
+                                            let mut final_request = LlmRequest::new(prompt_for_final_llm);
 
                                             // CUMULATIVE TOKEN BUDGET TRACKING
                                             // Extract initial tokens used and max_tokens to calculate remaining budget
@@ -616,6 +706,11 @@ impl Executor {
 
                                             match llm_provider.complete(final_request).await {
                                                 Ok(final_response) => {
+                                                    tracing::info!(
+                                                        "[GuardRail] final LLM response (GuardRail active={}); before decode: {}",
+                                                        guardrail_enforcer.is_some(),
+                                                        final_response.content
+                                                    );
                                                     tracing::debug!(
                                                         "Final LLM response received - content: '{}', tokens: {}, finish_reason: {:?}",
                                                         final_response.content,
@@ -623,9 +718,24 @@ impl Executor {
                                                         final_response.finish_reason
                                                     );
 
-                                                    // Clone the content to avoid borrow checker issues
-                                                    let response_content =
-                                                        final_response.content.clone();
+                                                    // Guardrail: decode after every LLM call so user sees rehydrated content
+                                                    let response_content = if let Some(ref enforcer) = guardrail_enforcer {
+                                                        let payload = serde_json::json!({
+                                                            "content": final_response.content
+                                                        });
+                                                        let decoded_result =
+                                                            enforcer.decode(payload, DecodeContext::LlmResponse);
+                                                        let content = decoded_result
+                                                            .payload
+                                                            .get("content")
+                                                            .and_then(|v| v.as_str())
+                                                            .map(String::from)
+                                                            .unwrap_or_else(|| final_response.content.clone());
+                                                        tracing::info!("[GuardRail] final LLM response (after decode): {}", content);
+                                                        content
+                                                    } else {
+                                                        final_response.content.clone()
+                                                    };
 
                                                     // Store full LLM response metadata in context
                                                     // This enables observability tools to capture complete LLM metadata

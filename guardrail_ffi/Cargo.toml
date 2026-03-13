@@ -1,0 +1,12 @@
+[package]
+name = "guardrail_ffi"
+version = "0.1.0"
+edition = "2024"
+description = "GraphBit wrapper for prebuilt GuardRail C ABI (libguardrail_ffi.a)"
+
+[dependencies]
+serde_json = "1.0"
+reqwest = { version = "0.13", default-features = false, features = ["json", "rustls", "blocking"] }
+
+[lints.rust]
+unsafe_code = "allow"
