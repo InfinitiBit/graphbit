@@ -126,20 +126,22 @@ impl WorkflowResult {
             .collect()
     }
 
-    /// Get LLM response metadata for a specific node
+    /// Get node execution metadata for a specific node
     ///
-    /// Returns a dictionary containing the full LLM response metadata including:
-    /// - content: The generated text
-    /// - usage: Token usage statistics (prompt_tokens, completion_tokens, total_tokens)
-    /// - finish_reason: Why the LLM stopped generating
-    /// - model: The model used
-    /// - metadata: Additional provider-specific metadata
+    /// Returns the full node-level metadata object containing:
+    /// - node_id, node_name, node_type, user_input, final_output
+    /// - tools_available, total_tools_available
+    /// - start_time, end_time, duration_ms, success, error
+    /// - total_iterations, max_iterations, exit_reason
+    /// - total_usage (aggregated token usage)
+    /// - total_tool_calls, total_retries, tools_used
+    /// - executions: chronological array of llm_call, tool_call, guardrail_policy entries
     ///
     /// # Arguments
     /// * `node_id` - Node ID or node name
     ///
     /// # Returns
-    /// Dictionary with LLM response metadata, or None if not found
+    /// Dictionary with node execution metadata, or None if not found
     fn get_node_response_metadata(
         &self,
         py: Python<'_>,
@@ -156,32 +158,142 @@ impl WorkflowResult {
         }
     }
 
-    /// Get all node LLM response metadata
+    /// Get complete workflow execution metadata
     ///
-    /// Returns a dictionary mapping node IDs/names to their LLM response metadata.
-    /// Each metadata entry contains:
-    /// - content: The generated text
-    /// - usage: Token usage statistics (prompt_tokens, completion_tokens, total_tokens)
-    /// - finish_reason: Why the LLM stopped generating
-    /// - model: The model used
-    /// - metadata: Additional provider-specific metadata
+    /// Returns the full workflow-level schema containing:
+    /// - workflow_id, workflow_name
+    /// - start_time, end_time, duration_ms
+    /// - user_input, final_output (from first/last nodes)
+    /// - workflow_state: completed/failed/cancelled/paused
+    /// - nodes: array of per-node metadata objects (each with executions array)
+    /// - total_usage: aggregated token usage across all nodes
+    /// - total_tool_calls: sum of tool calls across all nodes
     ///
     /// # Returns
-    /// Dictionary mapping node IDs/names to their LLM response metadata
+    /// Dictionary with the complete workflow-level metadata
     fn get_all_node_response_metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
-        use pyo3::types::PyDict;
-
-        let result_dict = PyDict::new(py);
+        // Collect node metadata entries (by node ID only, skip name duplicates)
+        let mut nodes: Vec<serde_json::Value> = Vec::new();
+        let mut seen_node_ids: std::collections::HashSet<String> = std::collections::HashSet::new();
 
         for (k, v) in self.inner.metadata.iter() {
-            // Only include keys that start with "node_response_"
-            if k.starts_with("node_response_") {
-                let node_id = k.strip_prefix("node_response_").unwrap();
-                let py_value = pythonize::pythonize(py, v)?;
-                result_dict.set_item(node_id, py_value)?;
+            if let Some(node_id) = k.strip_prefix("node_response_") {
+                // Skip if this is a name-based duplicate (node names are typically not UUIDs)
+                // We include if the node_id is a UUID format or if the value has a node_id field matching
+                if let Some(stored_node_id) = v.get("node_id").and_then(|v| v.as_str()) {
+                    if seen_node_ids.contains(stored_node_id) {
+                        continue;
+                    }
+                    seen_node_ids.insert(stored_node_id.to_string());
+                } else if seen_node_ids.contains(node_id) {
+                    continue;
+                } else {
+                    seen_node_ids.insert(node_id.to_string());
+                }
+                nodes.push(v.clone());
             }
         }
 
-        Ok(result_dict.into())
+        // Aggregate total_usage and total_tool_calls across all nodes
+        let mut total_prompt_tokens: u64 = 0;
+        let mut total_completion_tokens: u64 = 0;
+        let mut total_tokens: u64 = 0;
+        let mut total_tool_calls: u64 = 0;
+
+        for node in &nodes {
+            if let Some(usage) = node.get("total_usage") {
+                total_prompt_tokens += usage
+                    .get("prompt_tokens")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+                total_completion_tokens += usage
+                    .get("completion_tokens")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+                total_tokens += usage
+                    .get("total_tokens")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+            }
+            total_tool_calls += node
+                .get("total_tool_calls")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+        }
+
+        // Determine user_input (from first node) and final_output (from last node)
+        let user_input = nodes
+            .first()
+            .and_then(|n| n.get("user_input"))
+            .cloned()
+            .unwrap_or(serde_json::Value::String(String::new()));
+        let final_output = nodes
+            .last()
+            .and_then(|n| n.get("final_output"))
+            .cloned()
+            .unwrap_or(serde_json::Value::String(String::new()));
+
+        // Determine workflow_state from context state
+        let workflow_state = match &self.inner.state {
+            WorkflowState::Completed => "completed",
+            WorkflowState::Failed { .. } => "failed",
+            WorkflowState::Cancelled => "cancelled",
+            WorkflowState::Paused { .. } => "paused",
+            WorkflowState::Running { .. } => "running",
+            WorkflowState::Pending => "pending",
+        };
+
+        // Get workflow name from metadata (stored during execution)
+        let workflow_name = self
+            .inner
+            .metadata
+            .get("workflow_name")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+
+        // Build timing fields
+        let start_time = self.inner.started_at.to_rfc3339();
+        let end_time = self
+            .inner
+            .completed_at
+            .map(|t| t.to_rfc3339())
+            .unwrap_or_default();
+        let duration_ms = self.inner.execution_duration_ms().unwrap_or(0) as f64;
+
+        // Build the workflow-level metadata object
+        let workflow_metadata = serde_json::json!({
+            "workflow_id": self.inner.workflow_id.to_string(),
+            "workflow_name": workflow_name,
+            "start_time": start_time,
+            "end_time": end_time,
+            "duration_ms": duration_ms,
+            "user_input": user_input,
+            // TODO: Remove these placeholder fields in a future release
+            "user_input_masked": "",
+            "final_output": final_output,
+            "final_output_masked": "",
+            "workflow_state": workflow_state,
+            "nodes": nodes,
+            "total_usage": {
+                "prompt_tokens": total_prompt_tokens,
+                "completion_tokens": total_completion_tokens,
+                "total_tokens": total_tokens,
+                "prompt_tokens_details": {
+                    "cached_tokens": 0,
+                    "audio_tokens": 0
+                },
+                "completion_tokens_details": {
+                    "reasoning_tokens": 0,
+                    "audio_tokens": 0,
+                    "accepted_prediction_tokens": 0,
+                    "rejected_prediction_tokens": 0
+                }
+            },
+            "total_tool_calls": total_tool_calls
+        });
+
+        let py_obj = pythonize::pythonize(py, &workflow_metadata)?;
+        Ok(py_obj.into())
     }
 }

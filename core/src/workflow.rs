@@ -7,12 +7,12 @@ use crate::agents::AgentTrait;
 use crate::document_loader::DocumentLoader;
 use crate::errors::{GraphBitError, GraphBitResult};
 use crate::graph::{NodeType, WorkflowGraph, WorkflowNode};
-use crate::{DecodeContext, EncodeContext, Enforcer};
 use crate::types::{
     AgentId, AgentMessage, CircuitBreaker, CircuitBreakerConfig, ConcurrencyConfig,
     ConcurrencyManager, ConcurrencyStats, MessageContent, NodeExecutionResult, NodeId, RetryConfig,
     TaskInfo, WorkflowContext, WorkflowExecutionStats, WorkflowId, WorkflowState,
 };
+use crate::{DecodeContext, EncodeContext, Enforcer};
 use futures::future::join_all;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -20,8 +20,8 @@ use std::collections::HashMap;
 use std::sync::{Arc, LazyLock};
 use tokio::sync::{Mutex, RwLock};
 
-
-static NODE_REF_PATTERN: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\{\{node\.([a-zA-Z0-9_\-\.]+)\}\}").unwrap());
+static NODE_REF_PATTERN: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\{\{node\.([a-zA-Z0-9_\-\.]+)\}\}").unwrap());
 
 /// A complete workflow definition
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -245,7 +245,9 @@ impl WorkflowExecutor {
         }
 
         // 3. No default fallback - require explicit configuration as requested by user
-        tracing::error!("No LLM configuration found - neither node-level nor executor-level config provided. System requires explicit configuration.");
+        tracing::error!(
+            "No LLM configuration found - neither node-level nor executor-level config provided. System requires explicit configuration."
+        );
         crate::llm::LlmConfig::Unconfigured {
             message: "No LLM configuration provided. The system requires explicit configuration from program or user input rather than hardcoded defaults.".to_string()
         }
@@ -983,19 +985,44 @@ impl WorkflowExecutor {
             // Execute agent without tools (original behavior)
             tracing::info!("NO TOOLS DETECTED - using standard agent execution");
 
+            // Build the executions array for metadata
+            let mut executions: Vec<serde_json::Value> = Vec::new();
+
             // Guardrail: encode prompt before sending to LLM; combine injection text + payload
+            let mut encoded_payload_for_meta = String::new();
             let prompt_for_llm = if let Some(ref enforcer) = guardrail_enforcer {
-                tracing::debug!("Guardrail: encoding prompt before LLM call (sensitive data will be masked)");
-                let result = enforcer.encode(
+                tracing::debug!(
+                    "Guardrail: encoding prompt before LLM call (sensitive data will be masked)"
+                );
+                let encode_result = enforcer.encode(
                     serde_json::Value::String(resolved_prompt.clone()),
                     EncodeContext::Llm,
                 );
-                tracing::debug!("Guardrail: prompt encoded for LLM (payload only): {}", result.payload.as_str().unwrap_or(""));
-                tracing::debug!("[GuardRail] encoded prompt (sent to LLM, payload only): {}", result.payload.as_str().unwrap_or(""));
+                tracing::debug!(
+                    "Guardrail: prompt encoded for LLM (payload only): {}",
+                    encode_result.payload.as_str().unwrap_or("")
+                );
+                tracing::debug!(
+                    "[GuardRail] encoded prompt (sent to LLM, payload only): {}",
+                    encode_result.payload.as_str().unwrap_or("")
+                );
+
+                // Record guardrail encode execution entry
+                executions.push(serde_json::json!({
+                    "type": "guardrail_policy",
+                    "operation": "encode",
+                    "pii_rules_applied_count": encode_result.rules_applied_count,
+                    "pii_rule_names": encode_result.rule_names,
+                    "policy_name": encode_result.policy_name
+                }));
+
+                // Capture encoded payload (without signature) for metadata user_input
+                encoded_payload_for_meta = encode_result.payload.as_str().unwrap_or("").to_string();
+
                 format!(
                     "{}{}",
-                    result.signature_injection_text,
-                    result.payload.as_str().unwrap_or("")
+                    encode_result.signature_injection_text,
+                    encode_result.payload.as_str().unwrap_or("")
                 )
             } else {
                 resolved_prompt.clone()
@@ -1023,7 +1050,13 @@ impl WorkflowExecutor {
             let llm_start = std::time::Instant::now();
             let llm_response = agent.llm_provider().complete(request).await?;
             let llm_duration_ms = llm_start.elapsed().as_secs_f64() * 1000.0;
+            let llm_end_timestamp = chrono::Utc::now();
 
+            // Get provider name for metadata
+            let provider_name = agent.llm_provider().config().provider_name().to_string();
+
+            // Capture raw LLM content before decode for metadata
+            let raw_llm_content = llm_response.content.clone();
             if guardrail_enforcer.is_some() {
                 tracing::debug!(
                     "[GuardRail] raw LLM response (before decode): content={:?}, tool_calls={:?}",
@@ -1032,9 +1065,44 @@ impl WorkflowExecutor {
                 );
             }
 
+            // Build the llm_call execution entry (before decode, captures raw LLM output)
+            let llm_call_entry = serde_json::json!({
+                "type": "llm_call",
+                "id": llm_response.id.clone().unwrap_or_default(),
+                "model": llm_response.model,
+                "provider": provider_name,
+                "input": if guardrail_enforcer.is_some() { encoded_payload_for_meta.clone() } else { resolved_prompt.clone() },
+                "output": llm_response.content,
+                "finish_reason": format!("{}", llm_response.finish_reason),
+                "tool_calls": [],
+                "start_time": execution_timestamp.to_rfc3339(),
+                "end_time": llm_end_timestamp.to_rfc3339(),
+                "duration_ms": llm_duration_ms,
+                "usage": {
+                    "prompt_tokens": llm_response.usage.prompt_tokens,
+                    "completion_tokens": llm_response.usage.completion_tokens,
+                    "total_tokens": llm_response.usage.total_tokens,
+                    "prompt_tokens_details": {
+                        "cached_tokens": 0,
+                        "audio_tokens": 0
+                    },
+                    "completion_tokens_details": {
+                        "reasoning_tokens": 0,
+                        "audio_tokens": 0,
+                        "accepted_prediction_tokens": 0,
+                        "rejected_prediction_tokens": 0
+                    }
+                },
+                "retries": []
+            });
+            executions.push(llm_call_entry);
+
             // Guardrail: decode LLM output before storing in context
             let llm_response = if let Some(ref enforcer) = guardrail_enforcer {
-                tracing::debug!("Guardrail: decoding LLM response (rehydrating for context) llm_response.content: {}", llm_response.content);
+                tracing::debug!(
+                    "Guardrail: decoding LLM response (rehydrating for context) llm_response.content: {}",
+                    llm_response.content
+                );
                 tracing::debug!("Guardrail: decoding LLM response (rehydrating for context)");
                 let payload = serde_json::json!({
                     "content": llm_response.content,
@@ -1042,6 +1110,16 @@ impl WorkflowExecutor {
                 });
                 let decoded_result = enforcer.decode(payload, DecodeContext::LlmResponse);
                 tracing::debug!("Guardrail: LLM response decoded");
+
+                // Record guardrail decode execution entry
+                executions.push(serde_json::json!({
+                    "type": "guardrail_policy",
+                    "operation": "decode",
+                    "pii_rules_applied_count": decoded_result.rules_applied_count,
+                    "pii_rule_names": decoded_result.rule_names,
+                    "policy_name": decoded_result.policy_name
+                }));
+
                 let content = decoded_result
                     .payload
                     .get("content")
@@ -1062,8 +1140,7 @@ impl WorkflowExecutor {
                 llm_response
             };
 
-            // Store LLM response metadata AND request prompt in context for observability
-            // When GuardRail is on, store the encoded prompt so PII is never written to metadata.
+            // Build the node-level metadata with executions array
             {
                 // First, get the node name before mutable borrow
                 let node_name = {
@@ -1077,40 +1154,60 @@ impl WorkflowExecutor {
                         .unwrap_or_else(|| "unknown".to_string())
                 };
 
-                let prompt_for_metadata = guardrail_enforcer
-                    .as_ref()
-                    .map(|_| prompt_for_llm.clone())
-                    .unwrap_or_else(|| resolved_prompt.clone());
+                let max_iterations = node_config
+                    .get("max_iterations")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(5) as u32;
+
+                let node_metadata = serde_json::json!({
+                    "node_id": current_node_id.to_string(),
+                    "node_name": node_name,
+                    "node_type": "Agent",
+                    // When GR active: user_input = masked prompt, final_output = raw LLM content
+                    // When GR inactive: user_input = original prompt, final_output = decoded content
+                    "user_input": if guardrail_enforcer.is_some() { encoded_payload_for_meta.clone() } else { resolved_prompt.clone() },
+                    "tools_available": [],
+                    "total_tools_available": 0,
+                    "start_time": execution_timestamp.to_rfc3339(),
+                    "end_time": llm_end_timestamp.to_rfc3339(),
+                    "duration_ms": llm_duration_ms,
+                    "success": true,
+                    "error": serde_json::Value::Null,
+                    "final_output": if guardrail_enforcer.is_some() { raw_llm_content } else { llm_response.content.clone() },
+                    "total_iterations": 0,
+                    "max_iterations": max_iterations,
+                    "exit_reason": llm_response.finish_reason,
+                    "total_usage": {
+                        "prompt_tokens": llm_response.usage.prompt_tokens,
+                        "completion_tokens": llm_response.usage.completion_tokens,
+                        "total_tokens": llm_response.usage.total_tokens,
+                        "prompt_tokens_details": {
+                            "cached_tokens": 0,
+                            "audio_tokens": 0
+                        },
+                        "completion_tokens_details": {
+                            "reasoning_tokens": 0,
+                            "audio_tokens": 0,
+                            "accepted_prediction_tokens": 0,
+                            "rejected_prediction_tokens": 0
+                        }
+                    },
+                    "total_tool_calls": 0,
+                    "total_retries": 0,
+                    "tools_used": [],
+                    "executions": executions
+                });
 
                 // Now store the metadata
                 let mut ctx = context.lock().await;
-                if let Ok(mut response_metadata) = serde_json::to_value(&llm_response) {
-                    if let Some(obj) = response_metadata.as_object_mut() {
-                        obj.insert(
-                            "prompt".to_string(),
-                            serde_json::Value::String(prompt_for_metadata),
-                        );
-                        // Add LLM call duration for accurate latency tracking
-                        obj.insert(
-                            "duration_ms".to_string(),
-                            serde_json::json!(llm_duration_ms),
-                        );
-                        // Add execution timestamp for chronological ordering
-                        obj.insert(
-                            "execution_timestamp".to_string(),
-                            serde_json::json!(execution_timestamp.to_rfc3339()),
-                        );
-                    }
-
-                    // Store by node ID
-                    ctx.metadata.insert(
-                        format!("node_response_{current_node_id}"),
-                        response_metadata.clone(),
-                    );
-                    // Store by node name
-                    ctx.metadata
-                        .insert(format!("node_response_{node_name}"), response_metadata);
-                }
+                // Store by node ID
+                ctx.metadata.insert(
+                    format!("node_response_{current_node_id}"),
+                    node_metadata.clone(),
+                );
+                // Store by node name
+                ctx.metadata
+                    .insert(format!("node_response_{node_name}"), node_metadata);
             }
 
             // Return the content as JSON value
@@ -1138,19 +1235,44 @@ impl WorkflowExecutor {
         tracing::info!("Starting execute_agent_with_tools for agent: {_agent_id}");
         use crate::llm::{LlmRequest, LlmTool};
 
+        // Build the executions array for metadata
+        let mut executions: Vec<serde_json::Value> = Vec::new();
+
         // Guardrail: encode prompt before sending to LLM; combine injection text + payload
+        let mut encoded_payload_for_meta = String::new();
         let prompt_for_llm = if let Some(ref enforcer) = guardrail_enforcer {
-            tracing::debug!("Guardrail: encoding prompt before LLM call (tool path; sensitive data masked)");
-            let result = enforcer.encode(
+            tracing::debug!(
+                "Guardrail: encoding prompt before LLM call (tool path; sensitive data masked)"
+            );
+            let encode_result = enforcer.encode(
                 serde_json::Value::String(prompt.to_string()),
                 EncodeContext::Llm,
             );
-            tracing::debug!("Guardrail: prompt encoded for LLM (payload only): {}", result.payload.as_str().unwrap_or_default());
-            tracing::debug!("[GuardRail] encoded prompt (sent to LLM, payload only): {}", result.payload.as_str().unwrap_or_default());
+            tracing::debug!(
+                "Guardrail: prompt encoded for LLM (payload only): {}",
+                encode_result.payload.as_str().unwrap_or_default()
+            );
+            tracing::debug!(
+                "[GuardRail] encoded prompt (sent to LLM, payload only): {}",
+                encode_result.payload.as_str().unwrap_or_default()
+            );
+
+            // Record guardrail encode execution entry
+            executions.push(serde_json::json!({
+                "type": "guardrail_policy",
+                "operation": "encode",
+                "pii_rules_applied_count": encode_result.rules_applied_count,
+                "pii_rule_names": encode_result.rule_names,
+                "policy_name": encode_result.policy_name
+            }));
+
+            // Capture encoded payload (without signature) for metadata user_input
+            encoded_payload_for_meta = encode_result.payload.as_str().unwrap_or_default().to_string();
+
             format!(
                 "{}{}",
-                result.signature_injection_text,
-                result.payload.as_str().unwrap_or_default()
+                encode_result.signature_injection_text,
+                encode_result.payload.as_str().unwrap_or_default()
             )
         } else {
             prompt.to_string()
@@ -1163,6 +1285,12 @@ impl WorkflowExecutor {
             .ok_or_else(|| GraphBitError::validation("node_config", "Missing tool_schemas"))?;
 
         tracing::info!("Found {} tool schemas", tool_schemas.len());
+
+        // Collect tool names for metadata
+        let tool_names: Vec<String> = tool_schemas
+            .iter()
+            .filter_map(|s| s.get("name").and_then(|v| v.as_str()).map(String::from))
+            .collect();
 
         // Convert tool schemas to LlmTool objects
         let mut tools = Vec::new();
@@ -1224,7 +1352,13 @@ impl WorkflowExecutor {
         let llm_start = std::time::Instant::now();
         let mut llm_response = agent.llm_provider().complete(request).await?;
         let llm_duration_ms = llm_start.elapsed().as_secs_f64() * 1000.0;
+        let llm_end_timestamp = chrono::Utc::now();
 
+        // Get provider name for metadata
+        let provider_name = agent.llm_provider().config().provider_name().to_string();
+
+        // Capture raw LLM content before decode for metadata
+        let raw_llm_content = llm_response.content.clone();
         if guardrail_enforcer.is_some() {
             tracing::debug!(
                 "[GuardRail] raw LLM response (before decode): content={:?}, tool_calls={:?}",
@@ -1233,17 +1367,84 @@ impl WorkflowExecutor {
             );
         }
 
+        // Build tool_calls array for the llm_call execution entry (raw from LLM response)
+        let llm_tool_calls_for_metadata: Vec<serde_json::Value> = llm_response
+            .tool_calls
+            .iter()
+            .map(|tc| {
+                serde_json::json!({
+                    "id": tc.id,
+                    "type": "function",
+                    "function": {
+                        "name": tc.name,
+                        "arguments": serde_json::to_string(&tc.parameters).unwrap_or_default()
+                    }
+                })
+            })
+            .collect();
+
+        // Build the llm_call execution entry
+        let llm_call_entry = serde_json::json!({
+            "type": "llm_call",
+            "id": llm_response.id.clone().unwrap_or_default(),
+            "model": llm_response.model,
+            "provider": provider_name,
+            "input": if guardrail_enforcer.is_some() { encoded_payload_for_meta.clone() } else { prompt.to_string() },
+            "output": llm_response.content,
+            "finish_reason": format!("{}", llm_response.finish_reason),
+            "tool_calls": llm_tool_calls_for_metadata,
+            "start_time": execution_timestamp.to_rfc3339(),
+            "end_time": llm_end_timestamp.to_rfc3339(),
+            "duration_ms": llm_duration_ms,
+            "usage": {
+                "prompt_tokens": llm_response.usage.prompt_tokens,
+                "completion_tokens": llm_response.usage.completion_tokens,
+                "total_tokens": llm_response.usage.total_tokens,
+                "prompt_tokens_details": {
+                    "cached_tokens": 0,
+                    "audio_tokens": 0
+                },
+                "completion_tokens_details": {
+                    "reasoning_tokens": 0,
+                    "audio_tokens": 0,
+                    "accepted_prediction_tokens": 0,
+                    "rejected_prediction_tokens": 0
+                }
+            },
+            "retries": []
+        });
+        executions.push(llm_call_entry);
+
         // Guardrail: decode LLM output before storing in context
         if let Some(ref enforcer) = guardrail_enforcer {
-            tracing::debug!("Guardrail: decoding LLM response (tool path; rehydrating for context) llm_response.content: {}", llm_response.content);
-            tracing::debug!("Guardrail: decoding LLM response (tool path; rehydrating for context)");
+            tracing::debug!(
+                "Guardrail: decoding LLM response (tool path; rehydrating for context) llm_response.content: {}",
+                llm_response.content
+            );
+            tracing::debug!(
+                "Guardrail: decoding LLM response (tool path; rehydrating for context)"
+            );
             let payload = serde_json::json!({
                 "content": llm_response.content,
                 "tool_calls": llm_response.tool_calls
             });
             let decoded_result = enforcer.decode(payload, DecodeContext::LlmResponse);
             tracing::debug!("Guardrail: LLM response decoded");
-            if let Some(c) = decoded_result.payload.get("content").and_then(|v| v.as_str()) {
+
+            // Record guardrail decode execution entry
+            executions.push(serde_json::json!({
+                "type": "guardrail_policy",
+                "operation": "decode",
+                "pii_rules_applied_count": decoded_result.rules_applied_count,
+                "pii_rule_names": decoded_result.rule_names,
+                "policy_name": decoded_result.policy_name
+            }));
+
+            if let Some(c) = decoded_result
+                .payload
+                .get("content")
+                .and_then(|v| v.as_str())
+            {
                 llm_response.content = c.to_string();
             }
             if let Some(tc) = decoded_result.payload.get("tool_calls") {
@@ -1253,37 +1454,59 @@ impl WorkflowExecutor {
             }
         }
 
-        // Store LLM response metadata AND request prompt in context for observability
-        // When GuardRail is on, store the encoded prompt so PII is never written to metadata.
+        // Build the initial node-level metadata with executions array
+        // The Python layer (handle_tool_calls_in_context) will extend this with tool_call and subsequent llm_call entries
+        let max_iterations = node_config
+            .get("max_iterations")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(5) as u32;
+
+        let node_metadata = serde_json::json!({
+            "node_id": node_id.to_string(),
+            "node_name": node_name,
+            "node_type": "Agent",
+            // When GR active: user_input = masked prompt, final_output = raw LLM content
+            // When GR inactive: user_input = original prompt, final_output = decoded content
+            "user_input": if guardrail_enforcer.is_some() { encoded_payload_for_meta.clone() } else { prompt.to_string() },
+            "tools_available": tool_names,
+            "total_tools_available": tool_names.len(),
+            "start_time": execution_timestamp.to_rfc3339(),
+            "end_time": llm_end_timestamp.to_rfc3339(),
+            "duration_ms": llm_duration_ms,
+            "success": true,
+            "error": serde_json::Value::Null,
+            "final_output": if guardrail_enforcer.is_some() { raw_llm_content.clone() } else { llm_response.content.clone() },
+            "total_iterations": 0,
+            "max_iterations": max_iterations,
+            "exit_reason": format!("{}", llm_response.finish_reason),
+            "total_usage": {
+                "prompt_tokens": llm_response.usage.prompt_tokens,
+                "completion_tokens": llm_response.usage.completion_tokens,
+                "total_tokens": llm_response.usage.total_tokens,
+                "prompt_tokens_details": {
+                    "cached_tokens": 0,
+                    "audio_tokens": 0
+                },
+                "completion_tokens_details": {
+                    "reasoning_tokens": 0,
+                    "audio_tokens": 0,
+                    "accepted_prediction_tokens": 0,
+                    "rejected_prediction_tokens": 0
+                }
+            },
+            "total_tool_calls": 0,
+            "total_retries": 0,
+            "tools_used": [],
+            "executions": executions
+        });
+
+        // Store the metadata
         {
             let mut ctx = context.lock().await;
-            if let Ok(mut response_metadata) = serde_json::to_value(&llm_response) {
-                if let Some(obj) = response_metadata.as_object_mut() {
-                    let prompt_for_metadata = guardrail_enforcer
-                        .as_ref()
-                        .map(|_| prompt_for_llm.clone())
-                        .unwrap_or_else(|| prompt.to_string());
-                    obj.insert(
-                        "prompt".to_string(),
-                        serde_json::Value::String(prompt_for_metadata),
-                    );
-                    obj.insert(
-                        "duration_ms".to_string(),
-                        serde_json::json!(llm_duration_ms),
-                    );
-                    obj.insert(
-                        "execution_timestamp".to_string(),
-                        serde_json::json!(execution_timestamp.to_rfc3339()),
-                    );
-                }
-
-                ctx.metadata.insert(
-                    format!("node_response_{node_id}"),
-                    response_metadata.clone(),
-                );
-                ctx.metadata
-                    .insert(format!("node_response_{node_name}"), response_metadata);
-            }
+            ctx.metadata
+                .insert(format!("node_response_{node_id}"), node_metadata.clone());
+            ctx.metadata
+                .insert(format!("node_response_{node_name}"), node_metadata);
         }
 
         // DEBUG: Log LLM response details
@@ -1314,10 +1537,13 @@ impl WorkflowExecutor {
             })?;
 
             // Return a structured response that the Python layer can interpret.
-            // When GuardRail is on, pass the encoded prompt so the final LLM never sees raw PII.
+            // When GuardRail is on, pass only the encoded payload (without the RULE signature
+            // injection text) so the executor can reconstruct the final prompt cleanly.
+            // The executor will re-encode the final prompt (adding a fresh RULE prefix) before
+            // the second LLM call; including the RULE here would cause it to appear in metadata.
             let original_prompt_for_response = guardrail_enforcer
                 .as_ref()
-                .map(|_| prompt_for_llm.clone())
+                .map(|_| encoded_payload_for_meta.clone())
                 .unwrap_or_else(|| prompt.to_string());
             Ok(serde_json::json!({
                 "type": "tool_calls_required",
