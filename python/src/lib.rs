@@ -44,13 +44,13 @@ mod workflow;
 // Re-export all public types and functions
 pub use document_loader::{PyDocumentContent, PyDocumentLoader, PyDocumentLoaderConfig};
 pub use embeddings::{EmbeddingClient, EmbeddingConfig};
+pub use guardrail::GuardRailPolicyConfig;
 pub use llm::{LlmClient, LlmConfig, PyFinishReason, PyLlmResponse, PyLlmToolCall, PyLlmUsage};
 pub use text_splitter::{
     CharacterSplitter, RecursiveSplitter, SentenceSplitter, TextChunk, TextSplitterConfig,
     TokenSplitter,
 };
 pub use tools::{ToolDecorator, ToolExecutor, ToolRegistry, ToolResult};
-pub use guardrail::GuardRailPolicyConfig;
 pub use workflow::{Executor, Node, Workflow, WorkflowContext, WorkflowResult};
 
 /// Global initialization flag to ensure init is called only once

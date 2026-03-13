@@ -709,7 +709,11 @@ impl Executor {
                                     }));
 
                                     // Capture encoded payload only (no RULE signature) for metadata
-                                    encoded_final_payload_for_meta = encode_result.payload.as_str().unwrap_or_default().to_string();
+                                    encoded_final_payload_for_meta = encode_result
+                                        .payload
+                                        .as_str()
+                                        .unwrap_or_default()
+                                        .to_string();
 
                                     let encoded_str = format!(
                                         "{}{}",
@@ -873,7 +877,7 @@ impl Executor {
                                                         // Record guardrail decode execution entry
                                                         executions.push(serde_json::json!({
                                                             "type": "guardrail_policy",
-                                                            "operation": "decode",
+                                                            "operation": "rehydrate",
                                                             "pii_rules_applied_count": decoded_result.rules_applied_count,
                                                             "pii_rule_names": decoded_result.rule_names,
                                                             "policy_name": decoded_result.policy_name
