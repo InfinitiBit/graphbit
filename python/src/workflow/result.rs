@@ -11,6 +11,58 @@ pub struct WorkflowResult {
     pub(crate) inner: WorkflowContext,
 }
 
+/// Sanitize a single tool-call-like object: use parameters_masked as parameters and
+/// output_masked as output when present, then remove the _masked keys.
+fn sanitize_tool_call_entry(entry: &mut serde_json::Value) {
+    if let Some(obj) = entry.as_object_mut() {
+        if let Some(pm) = obj.remove("parameters_masked") {
+            obj.insert("parameters".to_string(), pm);
+        }
+        if let Some(om) = obj.remove("output_masked") {
+            obj.insert("output".to_string(), om);
+        }
+    }
+}
+
+/// Sanitize a node so that tool call parameters and output exposed in metadata are masked.
+/// Applies to executions[].type=="tool_call", node["tool_calls"], and node["initial_response"]["tool_calls"].
+fn sanitize_node_metadata(node: &mut serde_json::Value) {
+    let obj = match node.as_object_mut() {
+        Some(o) => o,
+        None => return,
+    };
+    // Sanitize executions array
+    if let Some(executions) = obj.get_mut("executions") {
+        if let Some(execs_arr) = executions.as_array_mut() {
+            for entry in execs_arr.iter_mut() {
+                if entry.get("type").and_then(|t| t.as_str()) == Some("tool_call") {
+                    sanitize_tool_call_entry(entry);
+                }
+            }
+        }
+    }
+    // Sanitize top-level tool_calls if present (e.g. flattened view)
+    if let Some(tool_calls) = obj.get_mut("tool_calls") {
+        if let Some(arr) = tool_calls.as_array_mut() {
+            for entry in arr.iter_mut() {
+                sanitize_tool_call_entry(entry);
+            }
+        }
+    }
+    // Sanitize initial_response.tool_calls if present
+    if let Some(initial_response) = obj.get_mut("initial_response") {
+        if let Some(ir_obj) = initial_response.as_object_mut() {
+            if let Some(tc) = ir_obj.get_mut("tool_calls") {
+                if let Some(arr) = tc.as_array_mut() {
+                    for entry in arr.iter_mut() {
+                        sanitize_tool_call_entry(entry);
+                    }
+                }
+            }
+        }
+    }
+}
+
 impl WorkflowResult {
     /// Create a new workflow result
     pub fn new(context: WorkflowContext) -> Self {
@@ -150,8 +202,9 @@ impl WorkflowResult {
         let key = format!("node_response_{}", node_id);
         match self.inner.metadata.get(&key) {
             Some(value) => {
-                // Use pythonize to convert serde_json::Value to Python object
-                let py_obj = pythonize::pythonize(py, value)?;
+                let mut node = value.clone();
+                sanitize_node_metadata(&mut node);
+                let py_obj = pythonize::pythonize(py, &node)?;
                 Ok(Some(py_obj.into()))
             }
             None => Ok(None),
@@ -190,7 +243,11 @@ impl WorkflowResult {
                 } else {
                     seen_node_ids.insert(node_id.to_string());
                 }
-                nodes.push(v.clone());
+                // Sanitize node: expose parameters_masked as parameters and output_masked as output
+                // so the returned metadata does not leak real PII (executions, tool_calls, initial_response.tool_calls).
+                let mut node = v.clone();
+                sanitize_node_metadata(&mut node);
+                nodes.push(node);
             }
         }
 
