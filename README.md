@@ -156,7 +156,7 @@ export ANTHROPIC_API_KEY=your_anthropic_api_key_here
 ```python
 import os
 
-from graphbit import LlmConfig, Executor, Workflow, Node, tool
+from graphbit import LlmConfig, Executor, Workflow, Node, tool, GuardRailPolicyConfig
 
 # Initialize and configure
 config = LlmConfig.openai(os.getenv("OPENAI_API_KEY"), "gpt-4o-mini")
@@ -200,7 +200,9 @@ id1 = workflow.add_node(smart_agent)
 id2 = workflow.add_node(processor)
 workflow.connect(id1, id2)
 
+# Run (optionally with a guardrail policy for PII masking/mapping)
 result = executor.execute(workflow)
+# Or with policy: result = executor.execute(workflow, policy=GuardRailPolicyConfig.from_json('{"guardrail_policy": {"pii_rules": [...]}}'))
 print(f"Workflow completed: {result.is_success()}")
 print("\nSmart Agent Output: \n", result.get_node_output("Smart Agent"))
 print("\nData Processor Output: \n", result.get_node_output("Data Processor"))

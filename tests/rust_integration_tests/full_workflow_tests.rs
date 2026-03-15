@@ -593,7 +593,7 @@ async fn test_real_llm_workflow_execution() {
             let workflow = builder.build().expect("Failed to build workflow");
 
             // Try to execute the workflow
-            let result = executor.execute(workflow).await;
+            let result = executor.execute(workflow, None).await;
             match result {
                 Ok(context) => {
                     println!("Real LLM workflow executed successfully");
@@ -721,7 +721,7 @@ async fn test_workflow_error_propagation() {
 
     // Try to execute - should fail gracefully
     let executor = WorkflowExecutor::new();
-    let result = executor.execute(workflow).await;
+    let result = executor.execute(workflow, None).await;
 
     // Should handle gracefully (may succeed or fail depending on implementation)
     match result {
@@ -802,7 +802,7 @@ async fn test_multi_provider_workflow_execution() {
 
             let workflow = builder.build().expect("Failed to build workflow");
 
-            let result = executor.execute(workflow).await;
+            let result = executor.execute(workflow, None).await;
             match result {
                 Ok(context) => {
                     println!("{provider_name} workflow executed successfully");
@@ -936,7 +936,7 @@ async fn test_comprehensive_real_api_workflow() {
         .expect("Failed to build workflow");
 
     // Execute workflow
-    let result = executor.execute(workflow).await;
+    let result = executor.execute(workflow, None).await;
     match result {
         Ok(context) => {
             println!("Comprehensive real API workflow executed successfully");
@@ -981,7 +981,7 @@ async fn test_workflow_timeout_handling() {
     // Execute with timeout
     let executor = WorkflowExecutor::new().with_max_node_execution_time(2000); // 2 second max
     let start = std::time::Instant::now();
-    let result = executor.execute(workflow).await;
+    let result = executor.execute(workflow, None).await;
     let duration = start.elapsed();
 
     // Should complete quickly due to timeout, not wait full 10 seconds

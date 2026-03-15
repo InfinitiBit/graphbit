@@ -191,7 +191,7 @@ async fn test_workflow_execute_with_dummy_agent_success() {
     let exec = WorkflowExecutor::new();
     exec.register_agent(agent).await;
 
-    let ctx = exec.execute(wf).await.expect("workflow should execute");
+    let ctx = exec.execute(wf, None).await.expect("workflow should execute");
     assert!(matches!(ctx.state, WorkflowState::Completed));
     let stats = ctx.stats.expect("stats present");
     assert!(stats.total_nodes >= 3);
@@ -233,7 +233,7 @@ async fn test_workflow_execute_fail_fast_on_error() {
     exec.register_agent(agent).await;
 
     let ctx = exec
-        .execute(wf)
+        .execute(wf, None)
         .await
         .expect("execution should return context");
     // Current executor records node failure but continues; ensure at least one failed node counted
@@ -454,7 +454,7 @@ async fn test_workflow_with_llm() {
         .expect("Failed to build agent");
 
     executor.register_agent(Arc::new(agent)).await;
-    let result = executor.execute(workflow).await;
+    let result = executor.execute(workflow, None).await;
     assert!(result.is_ok());
 }
 
@@ -497,7 +497,7 @@ async fn test_workflow_with_anthropic() {
         .expect("Failed to build agent");
 
     executor.register_agent(Arc::new(agent)).await;
-    let result = executor.execute(workflow).await;
+    let result = executor.execute(workflow, None).await;
     assert!(result.is_ok());
 }
 
@@ -542,7 +542,7 @@ async fn test_workflow_with_ollama() {
         .expect("Failed to build agent");
 
     executor.register_agent(Arc::new(agent)).await;
-    let result = executor.execute(workflow).await;
+    let result = executor.execute(workflow, None).await;
     assert!(result.is_ok());
 }
 

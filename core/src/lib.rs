@@ -61,6 +61,11 @@ pub use types::{
 pub use validation::ValidationResult;
 pub use workflow::{Workflow, WorkflowBuilder, WorkflowExecutor};
 
+// Re-export guardrail types (from prebuilt libguardrail_ffi.a via guardrail_ffi crate)
+pub use guardrail_ffi::{
+    DecodeContext, DecodeResult, EncodeContext, EncodeResult, Enforcer, GuardRail, GuardRailConfig,
+};
+
 /// Version information
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 

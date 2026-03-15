@@ -1,5 +1,7 @@
 [dependencies]
 pyo3 = {workspace = true, optional = true}
+# GuardRail: prebuilt libguardrail_ffi.a only (see vendor/guardrail/README.md).
+guardrail_ffi = { path = "../guardrail_ffi" }
 anyhow.workspace = true
 async-trait.workspace = true
 calamine.workspace = true

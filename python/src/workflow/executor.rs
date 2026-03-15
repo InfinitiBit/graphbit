@@ -8,13 +8,16 @@
 //! - Graceful error handling and recovery
 
 use graphbit_core::workflow::WorkflowExecutor as CoreWorkflowExecutor;
+use graphbit_core::{DecodeContext, EncodeContext, Enforcer, GuardRail};
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyDict};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tracing::{debug, error, info, instrument, warn};
 
 use super::{result::WorkflowResult, workflow::Workflow};
 use crate::errors::{timeout_error, to_py_runtime_error, validation_error};
+use crate::guardrail::GuardRailPolicyConfig;
 use crate::llm::config::LlmConfig;
 use crate::runtime::get_runtime;
 
@@ -90,10 +93,11 @@ pub struct Executor {
 #[pymethods]
 impl Executor {
     #[new]
-    #[pyo3(signature = (config, _lightweight_mode=None, timeout_seconds=None, debug=None))]
+    #[pyo3(signature = (config, lightweight_mode=None, timeout_seconds=None, debug=None))]
+    #[allow(unused_variables)]
     fn new(
         config: LlmConfig,
-        _lightweight_mode: Option<bool>,
+        lightweight_mode: Option<bool>,
         timeout_seconds: Option<u64>,
         debug: Option<bool>,
     ) -> PyResult<Self> {
@@ -132,9 +136,18 @@ impl Executor {
         })
     }
 
-    /// Execute a workflow with comprehensive error handling and monitoring
-    #[instrument(skip(self, py, workflow), fields(workflow_name = %workflow.inner.name))]
-    fn execute(&mut self, py: Python<'_>, workflow: &Workflow) -> PyResult<WorkflowResult> {
+    /// Execute a workflow with comprehensive error handling and monitoring.
+    ///
+    /// `policy` is optional. When provided: encode before every LLM call, decode after every LLM call;
+    /// before tool usage decode (so tools see real PII); after tool usage do nothing (no encode).
+    #[instrument(skip(self, py, workflow, policy), fields(workflow_name = %workflow.inner.name))]
+    #[pyo3(signature = (workflow, policy=None))]
+    fn execute(
+        &mut self,
+        py: Python<'_>,
+        workflow: &Workflow,
+        policy: Option<&Bound<'_, GuardRailPolicyConfig>>,
+    ) -> PyResult<WorkflowResult> {
         let start_time = Instant::now();
 
         // Validate workflow
@@ -161,6 +174,15 @@ impl Executor {
         let timeout_duration = config.timeout;
         let debug = config.enable_tracing; // Capture debug flag
 
+        // Build optional guardrail enforcer from policy (for encode/decode at LLM and tool boundaries)
+        let guardrail_enforcer = policy.map(|p| {
+            let config = p.borrow().get_inner();
+            Arc::new(GuardRail::enforcer_for(
+                config,
+                workflow_clone.id.to_string(),
+            ))
+        });
+
         if debug {
             debug!("Starting workflow execution with mode: {:?}", config.mode);
         }
@@ -171,7 +193,13 @@ impl Executor {
             get_runtime().block_on(async move {
                 // Apply timeout to the entire execution
                 tokio::time::timeout(timeout_duration, async move {
-                    Self::execute_workflow_internal(llm_config, workflow_clone, config).await
+                    Self::execute_workflow_internal(
+                        llm_config,
+                        workflow_clone,
+                        config,
+                        guardrail_enforcer,
+                    )
+                    .await
                 })
                 .await
             })
@@ -210,8 +238,14 @@ impl Executor {
     }
 
     /// Async execution with enhanced performance optimizations
-    #[instrument(skip(self, workflow, py), fields(workflow_name = %workflow.inner.name))]
-    fn run_async<'a>(&mut self, workflow: &Workflow, py: Python<'a>) -> PyResult<Bound<'a, PyAny>> {
+    #[instrument(skip(self, workflow, py, policy), fields(workflow_name = %workflow.inner.name))]
+    #[pyo3(signature = (workflow, policy=None))]
+    fn run_async<'a>(
+        &mut self,
+        workflow: &Workflow,
+        py: Python<'a>,
+        policy: Option<&Bound<'_, GuardRailPolicyConfig>>,
+    ) -> PyResult<Bound<'a, PyAny>> {
         // Validate workflow
         if let Err(e) = workflow.inner.validate() {
             return Err(validation_error(
@@ -226,7 +260,14 @@ impl Executor {
         let config = self.config.clone();
         let timeout_duration = config.timeout;
         let start_time = Instant::now();
-        let debug = config.enable_tracing; // Capture debug flag
+        let debug = config.enable_tracing;
+        let guardrail_enforcer = policy.map(|p| {
+            let config = p.borrow().get_inner();
+            Arc::new(GuardRail::enforcer_for(
+                config,
+                workflow_clone.id.to_string(),
+            ))
+        });
 
         if debug {
             debug!(
@@ -236,9 +277,14 @@ impl Executor {
         }
 
         pyo3_async_runtimes::tokio::future_into_py(py, async move {
-            // Apply timeout to the entire execution
             let result = tokio::time::timeout(timeout_duration, async move {
-                Self::execute_workflow_internal(llm_config, workflow_clone, config).await
+                Self::execute_workflow_internal(
+                    llm_config,
+                    workflow_clone,
+                    config,
+                    guardrail_enforcer,
+                )
+                .await
             })
             .await;
 
@@ -381,11 +427,14 @@ impl Executor {
 }
 
 impl Executor {
-    /// Internal workflow execution with mode-specific optimizations and tool call handling
+    /// Internal workflow execution with mode-specific optimizations and tool call handling.
+    /// When `guardrail_enforcer` is `Some`, the core encodes before LLM and decodes after LLM;
+    /// we decode before tool usage only (no encode after tool).
     async fn execute_workflow_internal(
         llm_config: graphbit_core::llm::LlmConfig,
         workflow: graphbit_core::workflow::Workflow,
         config: ExecutionConfig,
+        guardrail_enforcer: Option<Arc<Enforcer>>,
     ) -> Result<graphbit_core::types::WorkflowContext, graphbit_core::errors::GraphBitError> {
         let executor = match config.mode {
             ExecutionMode::Balanced => {
@@ -393,8 +442,10 @@ impl Executor {
             }
         };
 
-        // Execute the workflow
-        let mut context = executor.execute(workflow.clone()).await?;
+        // Execute the workflow (core applies encode before LLM, decode after LLM when enforcer is Some)
+        let mut context = executor
+            .execute(workflow.clone(), guardrail_enforcer.clone())
+            .await?;
 
         // Store LLM config in context metadata for tool call handling
         if let Ok(llm_config_json) = serde_json::to_value(&llm_config) {
@@ -403,8 +454,19 @@ impl Executor {
                 .insert("llm_config".to_string(), llm_config_json);
         }
 
+        // Store workflow name in context metadata for result schema
+        context.metadata.insert(
+            "workflow_name".to_string(),
+            serde_json::Value::String(workflow.name.clone()),
+        );
+
         // Check if any node outputs contain tool_calls_required responses and handle them
-        context = Self::handle_tool_calls_in_context(context, &workflow).await?;
+        context = Self::handle_tool_calls_in_context(
+            context,
+            &workflow,
+            guardrail_enforcer.as_ref().map(|arc| arc.as_ref()),
+        )
+        .await?;
 
         Ok(context)
     }
@@ -419,9 +481,13 @@ impl Executor {
     ///
     /// This enables multi-step reasoning where the agent can chain dependent tool calls
     /// across multiple iterations (e.g., "add 2+3, then multiply the result by 4").
+    /// Handle tool calls in workflow context by executing them and updating the context.
+    /// When `guardrail_enforcer` is `Some`, decodes tool-call parameters before execution only;
+    /// after tool execution we do nothing (no encode of tool results).
     async fn handle_tool_calls_in_context(
         mut context: graphbit_core::types::WorkflowContext,
         workflow: &graphbit_core::workflow::Workflow,
+        guardrail_enforcer: Option<&Enforcer>,
     ) -> Result<graphbit_core::types::WorkflowContext, graphbit_core::errors::GraphBitError> {
         use crate::workflow::node::execute_production_tool_calls;
         use graphbit_core::llm::{LlmMessage, LlmProvider, LlmRequest, LlmTool, LlmToolCall};
@@ -530,7 +596,7 @@ impl Executor {
                                     llm_config.clone(),
                                 ) {
                                     Ok(provider_trait) => {
-                                        LlmProvider::new(provider_trait, llm_config)
+                                        LlmProvider::new(provider_trait, llm_config.clone())
                                     }
                                     Err(e) => {
                                         tracing::error!(
@@ -565,14 +631,23 @@ impl Executor {
 
                             // Tracking for observability
                             let mut all_tool_executions: Vec<serde_json::Value> = Vec::new();
-                            let mut total_tokens_used: u32 = response_obj
-                                .get("initial_tokens_used")
-                                .and_then(|v| v.as_u64())
-                                .unwrap_or(0)
-                                as u32;
                             let mut iteration: usize = 0;
+                            let mut llm_calls_in_loop: usize = 0;
                             let mut final_content = current_content.clone();
+                            let mut final_finish_reason = "tool_calls_required".to_string();
+                            let mut final_raw_output_for_meta = final_content.clone();
                             let overall_start = std::time::Instant::now();
+                            let existing_node_metadata = context
+                                .metadata
+                                .get(&format!("node_response_{}", node.id))
+                                .cloned();
+                            let mut executions: Vec<serde_json::Value> = existing_node_metadata
+                                .as_ref()
+                                .and_then(|m| m.get("executions"))
+                                .and_then(|e| e.as_array())
+                                .cloned()
+                                .unwrap_or_default();
+                            let mut tools_used: Vec<String> = Vec::new();
 
                             loop {
                                 // Safety check: max iterations (check BEFORE incrementing)
@@ -632,11 +707,20 @@ impl Executor {
                                             .get("name")
                                             .and_then(|v| v.as_str())
                                             .unwrap_or("unknown");
-                                        let parameters = tc
+                                        let mut parameters = tc
                                             .get("parameters")
                                             .cloned()
                                             .unwrap_or(serde_json::json!({}));
+                                        if let Some(enforcer) = guardrail_enforcer {
+                                            tracing::debug!(
+                                                "Guardrail: decoding tool call parameters (tool boundary)"
+                                            );
+                                            let decoded_result =
+                                                enforcer.decode(parameters, DecodeContext::ToolBoundary);
+                                            parameters = decoded_result.payload;
+                                        }
                                         serde_json::json!({
+                                            "id": tc.get("id").and_then(|v| v.as_str()).unwrap_or(""),
                                             "tool_name": name,
                                             "parameters": parameters
                                         })
@@ -729,6 +813,86 @@ impl Executor {
                                 }
 
                                 // ---- Step 4: Call LLM again WITH tools to let it decide next action ----
+                                for (i, tc) in python_tool_calls.iter().enumerate() {
+                                    let tool_name = tc
+                                        .get("tool_name")
+                                        .and_then(|v| v.as_str())
+                                        .unwrap_or("unknown")
+                                        .to_string();
+                                    let tool_result = tool_execution_results.get(i);
+                                    let success = tool_result
+                                        .and_then(|r| r.get("success").and_then(|v| v.as_bool()))
+                                        .unwrap_or(false);
+                                    let output = tool_result
+                                        .and_then(|r| r.get("output").and_then(|v| v.as_str()))
+                                        .unwrap_or("")
+                                        .to_string();
+                                    let error = tool_result
+                                        .and_then(|r| r.get("error").and_then(|v| v.as_str()))
+                                        .map(|e| serde_json::Value::String(e.to_string()))
+                                        .unwrap_or(serde_json::Value::Null);
+                                    let start_time = tool_result
+                                        .and_then(|r| r.get("start_time"))
+                                        .cloned()
+                                        .unwrap_or(serde_json::Value::Null);
+                                    let end_time = tool_result
+                                        .and_then(|r| r.get("end_time"))
+                                        .cloned()
+                                        .unwrap_or(serde_json::Value::Null);
+                                    let latency_ms = tool_result
+                                        .and_then(|r| r.get("latency_ms"))
+                                        .cloned()
+                                        .unwrap_or(serde_json::json!(0.0));
+                                    let parameters = tc
+                                        .get("parameters")
+                                        .cloned()
+                                        .unwrap_or(serde_json::json!({}));
+
+                                    if !tools_used.contains(&tool_name) {
+                                        tools_used.push(tool_name.clone());
+                                    }
+
+                                    let (params_for_meta, output_for_meta) = if let Some(enforcer) =
+                                        guardrail_enforcer
+                                    {
+                                        let parameters_masked = enforcer
+                                            .encode(parameters.clone(), EncodeContext::Llm)
+                                            .payload;
+                                        let parameters_masked = if parameters_masked.is_object() {
+                                            parameters_masked
+                                        } else {
+                                            serde_json::json!({})
+                                        };
+                                        let enc_output = enforcer.encode(
+                                            serde_json::Value::String(output.clone()),
+                                            EncodeContext::Llm,
+                                        );
+                                        let output_masked = enc_output
+                                            .payload
+                                            .as_str()
+                                            .map(String::from)
+                                            .unwrap_or_else(|| enc_output.payload.to_string());
+                                        (parameters_masked, output_masked)
+                                    } else {
+                                        (parameters.clone(), output.clone())
+                                    };
+
+                                    let entry = serde_json::json!({
+                                        "type": "tool_call",
+                                        "id": tc.get("id").and_then(|v| v.as_str()).unwrap_or(""),
+                                        "tool_name": tool_name,
+                                        "parameters": params_for_meta,
+                                        "output": output_for_meta,
+                                        "success": success,
+                                        "error": error,
+                                        "start_time": start_time,
+                                        "end_time": end_time,
+                                        "latency_ms": latency_ms,
+                                        "retries": []
+                                    });
+                                    executions.push(entry);
+                                }
+
                                 let mut next_request = LlmRequest::with_messages(messages.clone());
                                 for tool in &llm_tools {
                                     next_request = next_request.with_tool(tool.clone());
@@ -774,9 +938,12 @@ impl Executor {
                                             })
                                             .collect();
                                         final_content = fallback.join("\n");
+                                        final_raw_output_for_meta = final_content.clone();
+                                        final_finish_reason = "error".to_string();
                                         break;
                                     }
                                 };
+                                llm_calls_in_loop += 1;
                                 let llm_duration_ms = llm_start.elapsed().as_secs_f64() * 1000.0;
 
                                 tracing::info!(
@@ -787,28 +954,138 @@ impl Executor {
                                     llm_duration_ms
                                 );
 
-                                total_tokens_used += next_response.usage.completion_tokens;
+                                let tool_results_summary = tool_execution_results
+                                    .iter()
+                                    .map(|result| {
+                                        let tool_name = result
+                                            .get("tool_name")
+                                            .and_then(|v| v.as_str())
+                                            .unwrap_or("unknown");
+                                        let success = result
+                                            .get("success")
+                                            .and_then(|v| v.as_bool())
+                                            .unwrap_or(false);
+                                        if success {
+                                            let output = result
+                                                .get("output")
+                                                .and_then(|v| v.as_str())
+                                                .unwrap_or("");
+                                            format!("{}: {}", tool_name, output)
+                                        } else {
+                                            let err = result
+                                                .get("error")
+                                                .and_then(|v| v.as_str())
+                                                .unwrap_or("Tool execution failed");
+                                            format!("{}: ERROR - {}", tool_name, err)
+                                        }
+                                    })
+                                    .collect::<Vec<String>>()
+                                    .join("\n");
+                                let llm_input_prompt_for_meta = format!(
+                                    "{}\n\nTool execution results:\n{}\n\nPlease provide a comprehensive response based on the tool results.",
+                                    original_prompt, tool_results_summary
+                                );
+                                let llm_input_for_meta = if let Some(enforcer) = guardrail_enforcer
+                                {
+                                    let encoded = enforcer.encode(
+                                        serde_json::Value::String(llm_input_prompt_for_meta),
+                                        EncodeContext::Llm,
+                                    );
+                                    encoded.payload.as_str().unwrap_or_default().to_string()
+                                } else {
+                                    llm_input_prompt_for_meta
+                                };
+
+                                let mut next_content = next_response.content.clone();
+                                let mut next_tool_calls = next_response.tool_calls.clone();
+                                if let Some(enforcer) = guardrail_enforcer {
+                                    let payload = serde_json::json!({
+                                        "content": next_response.content.clone(),
+                                        "tool_calls": next_response.tool_calls.clone(),
+                                    });
+                                    let decoded_result =
+                                        enforcer.decode(payload, DecodeContext::LlmResponse);
+                                    executions.push(serde_json::json!({
+                                        "type": "guardrail_policy",
+                                        "operation": "rehydrate",
+                                        "pii_rules_applied_count": decoded_result.rules_applied_count,
+                                        "pii_rule_names": decoded_result.rule_names,
+                                        "policy_name": decoded_result.policy_name
+                                    }));
+                                    if let Some(content) = decoded_result
+                                        .payload
+                                        .get("content")
+                                        .and_then(|v| v.as_str())
+                                    {
+                                        next_content = content.to_string();
+                                    }
+                                    if let Some(tc) = decoded_result.payload.get("tool_calls") {
+                                        if let Ok(parsed) =
+                                            serde_json::from_value::<Vec<LlmToolCall>>(tc.clone())
+                                        {
+                                            next_tool_calls = parsed;
+                                        }
+                                    }
+                                }
+
+                                let llm_call_tool_calls_meta = if guardrail_enforcer.is_some() {
+                                    serde_json::json!([])
+                                } else {
+                                    serde_json::to_value(&next_tool_calls)
+                                        .unwrap_or(serde_json::json!([]))
+                                };
+                                let llm_end_timestamp = chrono::Utc::now();
+                                executions.push(serde_json::json!({
+                                    "type": "llm_call",
+                                    "id": next_response.id.clone().unwrap_or_default(),
+                                    "model": next_response.model,
+                                    "provider": llm_config.provider_name(),
+                                    "input": llm_input_for_meta,
+                                    "output": next_response.content,
+                                    "finish_reason": format!("{}", next_response.finish_reason),
+                                    "tool_calls": llm_call_tool_calls_meta,
+                                    "start_time": (llm_end_timestamp - chrono::Duration::milliseconds(llm_duration_ms as i64)).to_rfc3339(),
+                                    "end_time": llm_end_timestamp.to_rfc3339(),
+                                    "duration_ms": llm_duration_ms,
+                                    "usage": {
+                                        "prompt_tokens": next_response.usage.prompt_tokens,
+                                        "completion_tokens": next_response.usage.completion_tokens,
+                                        "total_tokens": next_response.usage.total_tokens,
+                                        "prompt_tokens_details": {
+                                            "cached_tokens": 0,
+                                            "audio_tokens": 0
+                                        },
+                                        "completion_tokens_details": {
+                                            "reasoning_tokens": 0,
+                                            "audio_tokens": 0,
+                                            "accepted_prediction_tokens": 0,
+                                            "rejected_prediction_tokens": 0
+                                        }
+                                    },
+                                    "retries": []
+                                }));
+                                final_finish_reason = format!("{}", next_response.finish_reason);
+                                final_raw_output_for_meta = next_response.content.clone();
 
                                 // ---- Step 5: Check if LLM wants more tools or is done ----
-                                if next_response.tool_calls.is_empty() {
+                                if next_tool_calls.is_empty() {
                                     // No more tool calls — LLM produced a final answer
                                     tracing::info!(
                                         "Agent loop completed after {} iteration(s) for node '{}' - final answer produced",
                                         iteration,
                                         node_name
                                     );
-                                    final_content = next_response.content.clone();
+                                    final_content = next_content.clone();
                                     break;
                                 }
 
                                 // LLM wants to call more tools — update state and continue loop
-                                current_content = next_response.content.clone();
-                                current_tool_calls =
-                                    serde_json::to_value(&next_response.tool_calls)
-                                        .and_then(|v| {
-                                            serde_json::from_value::<Vec<serde_json::Value>>(v)
-                                        })
-                                        .unwrap_or_default();
+                                current_content = next_content;
+                                current_tool_calls = serde_json::to_value(&next_tool_calls)
+                                    .and_then(|v| {
+                                        serde_json::from_value::<Vec<serde_json::Value>>(v)
+                                    })
+                                    .unwrap_or_default();
                             }
 
                             // ============================================================
@@ -817,54 +1094,145 @@ impl Executor {
 
                             let overall_duration_ms =
                                 overall_start.elapsed().as_secs_f64() * 1000.0;
+                            tracing::info!(
+                                "Completed iterative loop for node '{}' with {} additional LLM call(s)",
+                                node_name,
+                                llm_calls_in_loop
+                            );
 
-                            // Build rich observability metadata
-                            let execution_metadata = serde_json::json!({
-                                "content": final_content,
-                                "iterations": iteration,
-                                "max_iterations": max_iterations,
-                                "total_tokens_used": total_tokens_used,
-                                "total_duration_ms": overall_duration_ms,
-                                "tool_calls": all_tool_executions,
-                                "prompt": original_prompt,
-                            });
-
-                            // Merge with any existing metadata from the initial LLM call
-                            let existing_metadata = context
-                                .metadata
-                                .get(&format!("node_response_{}", node.id))
-                                .cloned();
-
-                            let mut final_metadata = execution_metadata.clone();
-                            if let Some(existing) = &existing_metadata {
-                                if let (Some(final_obj), Some(existing_obj)) =
-                                    (final_metadata.as_object_mut(), existing.as_object())
-                                {
-                                    // Preserve execution_timestamp from initial call
-                                    if let Some(ts) = existing_obj.get("execution_timestamp") {
-                                        final_obj
-                                            .insert("execution_timestamp".to_string(), ts.clone());
+                            // Aggregate usage from all LLM executions (initial + iterative)
+                            let mut total_prompt_tokens: u32 = 0;
+                            let mut total_completion_tokens: u32 = 0;
+                            let mut total_tokens: u32 = 0;
+                            for exec in &executions {
+                                if exec.get("type").and_then(|v| v.as_str()) == Some("llm_call") {
+                                    if let Some(usage) = exec.get("usage") {
+                                        total_prompt_tokens += usage
+                                            .get("prompt_tokens")
+                                            .and_then(|v| v.as_u64())
+                                            .unwrap_or(0)
+                                            as u32;
+                                        total_completion_tokens += usage
+                                            .get("completion_tokens")
+                                            .and_then(|v| v.as_u64())
+                                            .unwrap_or(0)
+                                            as u32;
+                                        total_tokens += usage
+                                            .get("total_tokens")
+                                            .and_then(|v| v.as_u64())
+                                            .unwrap_or(0)
+                                            as u32;
                                     }
-                                    // Preserve initial response metadata
-                                    let mut initial = existing.clone();
-                                    if let Some(obj) = initial.as_object_mut() {
-                                        obj.remove("content");
-                                        obj.remove("metadata");
-                                    }
-                                    final_obj.insert("initial_response".to_string(), initial);
                                 }
                             }
 
-                            // Store metadata by node ID and name
-                            context.metadata.insert(
-                                format!("node_response_{}", node.id),
-                                final_metadata.clone(),
-                            );
+                            let llm_call_count = executions
+                                .iter()
+                                .filter(|e| {
+                                    e.get("type").and_then(|v| v.as_str()) == Some("llm_call")
+                                })
+                                .count() as u64;
+                            let total_iterations = llm_call_count.saturating_sub(1);
+                            let total_tool_calls = executions
+                                .iter()
+                                .filter(|e| {
+                                    e.get("type").and_then(|v| v.as_str()) == Some("tool_call")
+                                })
+                                .count() as u64;
+
+                            let mut node_meta = existing_node_metadata
+                                .clone()
+                                .unwrap_or_else(|| serde_json::json!({}));
+                            if let Some(obj) = node_meta.as_object_mut() {
+                                let end_time = chrono::Utc::now();
+                                obj.insert(
+                                    "end_time".to_string(),
+                                    serde_json::json!(end_time.to_rfc3339()),
+                                );
+                                if let Some(start_str) =
+                                    obj.get("start_time").and_then(|v| v.as_str())
+                                {
+                                    if let Ok(start_dt) =
+                                        chrono::DateTime::parse_from_rfc3339(start_str)
+                                    {
+                                        let total_duration = (end_time
+                                            - start_dt.with_timezone(&chrono::Utc))
+                                        .num_milliseconds()
+                                            as f64;
+                                        obj.insert(
+                                            "duration_ms".to_string(),
+                                            serde_json::json!(total_duration),
+                                        );
+                                    } else {
+                                        obj.insert(
+                                            "duration_ms".to_string(),
+                                            serde_json::json!(overall_duration_ms),
+                                        );
+                                    }
+                                } else {
+                                    obj.insert(
+                                        "duration_ms".to_string(),
+                                        serde_json::json!(overall_duration_ms),
+                                    );
+                                }
+                                if !obj.contains_key("max_iterations") {
+                                    obj.insert(
+                                        "max_iterations".to_string(),
+                                        serde_json::json!(max_iterations),
+                                    );
+                                }
+                                obj.insert(
+                                    "final_output".to_string(),
+                                    serde_json::Value::String(if guardrail_enforcer.is_some() {
+                                        final_raw_output_for_meta.clone()
+                                    } else {
+                                        final_content.clone()
+                                    }),
+                                );
+                                obj.insert(
+                                    "exit_reason".to_string(),
+                                    serde_json::json!(final_finish_reason.clone()),
+                                );
+                                obj.insert(
+                                    "total_iterations".to_string(),
+                                    serde_json::json!(total_iterations),
+                                );
+                                obj.insert(
+                                    "total_tool_calls".to_string(),
+                                    serde_json::json!(total_tool_calls),
+                                );
+                                obj.insert("tools_used".to_string(), serde_json::json!(tools_used));
+                                obj.insert(
+                                    "total_usage".to_string(),
+                                    serde_json::json!({
+                                        "prompt_tokens": total_prompt_tokens,
+                                        "completion_tokens": total_completion_tokens,
+                                        "total_tokens": total_tokens,
+                                        "prompt_tokens_details": {
+                                            "cached_tokens": 0,
+                                            "audio_tokens": 0
+                                        },
+                                        "completion_tokens_details": {
+                                            "reasoning_tokens": 0,
+                                            "audio_tokens": 0,
+                                            "accepted_prediction_tokens": 0,
+                                            "rejected_prediction_tokens": 0
+                                        }
+                                    }),
+                                );
+                                obj.insert(
+                                    "executions".to_string(),
+                                    serde_json::json!(executions.clone()),
+                                );
+                            }
+
                             context
                                 .metadata
-                                .insert(format!("node_response_{}", node_name), final_metadata);
+                                .insert(format!("node_response_{}", node.id), node_meta.clone());
+                            context
+                                .metadata
+                                .insert(format!("node_response_{}", node_name), node_meta);
 
-                            // Update context with final response content
                             let final_value = serde_json::Value::String(final_content.clone());
                             context.set_node_output(&node.id, final_value.clone());
                             context.set_node_output_by_name(&node_name, final_value.clone());
