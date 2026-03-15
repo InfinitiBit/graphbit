@@ -893,7 +893,32 @@ impl Executor {
                                     executions.push(entry);
                                 }
 
-                                let mut next_request = LlmRequest::with_messages(messages.clone());
+                                let mut messages_for_llm = messages.clone();
+                                if let Some(enforcer) = guardrail_enforcer {
+                                    let payload = serde_json::to_value(&messages_for_llm)
+                                        .unwrap_or(serde_json::json!([]));
+                                    let decoded_result =
+                                        enforcer.decode(payload, DecodeContext::LlmResponse);
+                                    if decoded_result.rules_applied_count > 0 {
+                                        executions.push(serde_json::json!({
+                                            "type": "guardrail_policy",
+                                            "operation": "decode",
+                                            "pii_rules_applied_count": decoded_result.rules_applied_count,
+                                            "pii_rule_names": decoded_result.rule_names,
+                                            "policy_name": decoded_result.policy_name
+                                        }));
+                                    }
+                                    if let Ok(decoded_messages) =
+                                        serde_json::from_value::<Vec<LlmMessage>>(
+                                            decoded_result.payload,
+                                        )
+                                    {
+                                        messages_for_llm = decoded_messages;
+                                    }
+                                }
+
+                                let mut next_request =
+                                    LlmRequest::with_messages(messages_for_llm.clone());
                                 for tool in &llm_tools {
                                     next_request = next_request.with_tool(tool.clone());
                                 }
@@ -998,20 +1023,24 @@ impl Executor {
 
                                 let mut next_content = next_response.content.clone();
                                 let mut next_tool_calls = next_response.tool_calls.clone();
+                                let is_final_llm_call = next_response.tool_calls.is_empty();
                                 if let Some(enforcer) = guardrail_enforcer {
+                                    if !is_final_llm_call {
                                     let payload = serde_json::json!({
                                         "content": next_response.content.clone(),
                                         "tool_calls": next_response.tool_calls.clone(),
                                     });
                                     let decoded_result =
                                         enforcer.decode(payload, DecodeContext::LlmResponse);
-                                    executions.push(serde_json::json!({
-                                        "type": "guardrail_policy",
-                                        "operation": "rehydrate",
-                                        "pii_rules_applied_count": decoded_result.rules_applied_count,
-                                        "pii_rule_names": decoded_result.rule_names,
-                                        "policy_name": decoded_result.policy_name
-                                    }));
+                                        if decoded_result.rules_applied_count > 0 {
+                                            executions.push(serde_json::json!({
+                                                "type": "guardrail_policy",
+                                                "operation": "rehydrate",
+                                                "pii_rules_applied_count": decoded_result.rules_applied_count,
+                                                "pii_rule_names": decoded_result.rule_names,
+                                                "policy_name": decoded_result.policy_name
+                                            }));
+                                        }
                                     if let Some(content) = decoded_result
                                         .payload
                                         .get("content")
@@ -1025,6 +1054,7 @@ impl Executor {
                                         {
                                             next_tool_calls = parsed;
                                         }
+                                    }
                                     }
                                 }
 
