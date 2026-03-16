@@ -31,6 +31,8 @@ The benchmark suite measures and compares:
 - PydanticAI
 - LlamaIndex
 - CrewAI
+- AutoGen (Microsoft fork — `autogen-agentchat`)
+- AG2 (community fork — `ag2`)
 
 ---
 
@@ -71,6 +73,21 @@ source .venv/bin/activate # .venv\bin\activate for windows
 poetry install
 poetry env activate
 ```
+
+### AG2 (community-maintained fork)
+
+```bash
+pip install "ag2[openai,anthropic,ollama]>=0.11.0"
+```
+
+Run AG2 benchmark:
+```bash
+python run_benchmark.py --framework ag2 --provider openai --model gpt-4o-mini
+```
+
+> **Note:** `ag2` and `autogen-agentchat` are separate packages with incompatible APIs.
+> `autogen-agentchat` is Microsoft's fork; `ag2` is maintained by the original AutoGen
+> contributors. Both are benchmarked independently.
 
 ---
 

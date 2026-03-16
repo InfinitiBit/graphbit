@@ -8,8 +8,8 @@ use pyo3::types::PyDict;
 use std::collections::HashMap;
 
 use graphbit_core::{
-    document_loader::{DocumentContent, DocumentLoader, DocumentLoaderConfig},
     GraphBitResult,
+    document_loader::{DocumentContent, DocumentLoader, DocumentLoaderConfig},
 };
 
 use crate::errors::to_py_error;

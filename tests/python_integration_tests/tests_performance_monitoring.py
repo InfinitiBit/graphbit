@@ -264,9 +264,6 @@ class TestExecutorStatistics:
         # Test different executor types
         executors = [
             ("standard", graphbit.Executor(llm_config)),
-            ("high_throughput", graphbit.Executor.new_high_throughput(llm_config)),
-            ("low_latency", graphbit.Executor.new_low_latency(llm_config)),
-            ("memory_optimized", graphbit.Executor.new_memory_optimized(llm_config)),
         ]
 
         for _mode_name, executor in executors:

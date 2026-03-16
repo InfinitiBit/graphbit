@@ -5,12 +5,13 @@ use crate::llm::{LlmRequest, LlmResponse};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::sync::LazyLock;
+#[cfg(feature = "python")]
+use std::sync::{Arc, Mutex};
 
 #[cfg(feature = "python")]
-#[cfg(feature = "python")]
-lazy_static::lazy_static! {
-    static ref PYTHON_INSTANCE_REGISTRY: std::sync::Mutex<HashMap<String, std::sync::Arc<pyo3::PyObject>>> = std::sync::Mutex::new(HashMap::new());
-}
+static PYTHON_INSTANCE_REGISTRY: LazyLock<Mutex<HashMap<String, Arc<pyo3::PyObject>>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
 
 /// Register a Python LLM instance in the global registry
 ///
@@ -195,6 +196,15 @@ pub enum LlmConfig {
         /// API key for authentication
         api_key: String,
         /// Model name to use
+        model: String,
+        /// Optional custom base URL
+        base_url: Option<String>,
+    },
+    /// `Google Gemini` LLM provider configuration
+    Gemini {
+        /// API key for authentication
+        api_key: String,
+        /// Model name to use (e.g., "gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash")
         model: String,
         /// Optional custom base URL
         base_url: Option<String>,
@@ -434,6 +444,15 @@ impl LlmConfig {
         }
     }
 
+    /// Create `Google Gemini` configuration
+    pub fn gemini(api_key: impl Into<String>, model: impl Into<String>) -> Self {
+        Self::Gemini {
+            api_key: api_key.into(),
+            model: model.into(),
+            base_url: None,
+        }
+    }
+
     /// Create `Ollama` configuration
     pub fn ollama(model: impl Into<String>) -> Self {
         Self::Ollama {
@@ -468,6 +487,7 @@ impl LlmConfig {
             Self::Xai { .. } => "xai",
             Self::Ai21 { .. } => "ai21",
             Self::MistralAI { .. } => "mistralai",
+            Self::Gemini { .. } => "gemini",
             #[cfg(feature = "python")]
             Self::PythonBridge { .. } => "python_bridge",
             Self::Custom { provider_type, .. } => provider_type,
@@ -495,6 +515,7 @@ impl LlmConfig {
             Self::Xai { model, .. } => model,
             Self::Ai21 { model, .. } => model,
             Self::MistralAI { model, .. } => model,
+            Self::Gemini { model, .. } => model,
             #[cfg(feature = "python")]
             Self::PythonBridge { model, .. } => model,
             Self::Custom { config, .. } => config

@@ -6,9 +6,9 @@
 use crate::errors::{GraphBitError, GraphBitResult};
 use crate::types::{NodeId, RetryConfig};
 use petgraph::{
+    Direction,
     algo::{is_cyclic_directed, toposort},
     graph::{DiGraph, NodeIndex},
-    Direction,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -625,6 +625,8 @@ pub enum NodeType {
         agent_id: crate::types::AgentId,
         /// Template for the prompt to send to the agent
         prompt_template: String,
+        /// Optional conversational context template
+        conversational_context: Option<String>,
     },
     /// Conditional branching node
     Condition {

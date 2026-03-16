@@ -678,7 +678,7 @@ struct OpenAiStreamChunk {
 #[derive(Debug, Deserialize)]
 struct OpenAiStreamChoice {
     delta: OpenAiDelta,
-    finish_reason: Option<String>,
+    _finish_reason: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -686,5 +686,5 @@ struct OpenAiDelta {
     #[serde(default)]
     content: Option<String>,
     #[serde(default)]
-    role: Option<String>,
+    _role: Option<String>,
 }

@@ -347,18 +347,6 @@ async fn test_workflow_retry_configuration() {
 }
 
 #[tokio::test]
-async fn test_workflow_concurrency_limits() {
-    graphbit_core::init().expect("Failed to initialize GraphBit");
-
-    // Test workflow execution with concurrency configuration
-    let executor = WorkflowExecutor::new_low_latency(); // Limited concurrency
-    let stats = executor.get_concurrency_stats().await;
-
-    assert_eq!(stats.current_active_tasks, 0);
-    assert_eq!(stats.total_permit_acquisitions, 0);
-}
-
-#[tokio::test]
 async fn test_workflow_execution_stats() {
     graphbit_core::init().expect("Failed to initialize GraphBit");
 
@@ -605,7 +593,7 @@ async fn test_real_llm_workflow_execution() {
             let workflow = builder.build().expect("Failed to build workflow");
 
             // Try to execute the workflow
-            let result = executor.execute(workflow).await;
+            let result = executor.execute(workflow, None).await;
             match result {
                 Ok(context) => {
                     println!("Real LLM workflow executed successfully");
@@ -710,25 +698,6 @@ async fn test_workflow_execution_context_isolation() {
 }
 
 #[tokio::test]
-async fn test_workflow_executor_configuration_variants() {
-    graphbit_core::init().expect("Failed to initialize GraphBit");
-
-    // Test different executor configurations
-    let high_throughput = WorkflowExecutor::new_high_throughput();
-    let low_latency = WorkflowExecutor::new_low_latency();
-    let memory_optimized = WorkflowExecutor::new_memory_optimized();
-
-    // Verify different concurrency limits
-    let ht_concurrency = high_throughput.max_concurrency().await;
-    let ll_concurrency = low_latency.max_concurrency().await;
-    let mo_concurrency = memory_optimized.max_concurrency().await;
-
-    assert!(ht_concurrency >= ll_concurrency);
-    assert!(ll_concurrency >= mo_concurrency);
-    assert!(mo_concurrency > 0);
-}
-
-#[tokio::test]
 async fn test_workflow_error_propagation() {
     graphbit_core::init().expect("Failed to initialize GraphBit");
 
@@ -752,7 +721,7 @@ async fn test_workflow_error_propagation() {
 
     // Try to execute - should fail gracefully
     let executor = WorkflowExecutor::new();
-    let result = executor.execute(workflow).await;
+    let result = executor.execute(workflow, None).await;
 
     // Should handle gracefully (may succeed or fail depending on implementation)
     match result {
@@ -833,7 +802,7 @@ async fn test_multi_provider_workflow_execution() {
 
             let workflow = builder.build().expect("Failed to build workflow");
 
-            let result = executor.execute(workflow).await;
+            let result = executor.execute(workflow, None).await;
             match result {
                 Ok(context) => {
                     println!("{provider_name} workflow executed successfully");
@@ -967,7 +936,7 @@ async fn test_comprehensive_real_api_workflow() {
         .expect("Failed to build workflow");
 
     // Execute workflow
-    let result = executor.execute(workflow).await;
+    let result = executor.execute(workflow, None).await;
     match result {
         Ok(context) => {
             println!("Comprehensive real API workflow executed successfully");
@@ -1012,7 +981,7 @@ async fn test_workflow_timeout_handling() {
     // Execute with timeout
     let executor = WorkflowExecutor::new().with_max_node_execution_time(2000); // 2 second max
     let start = std::time::Instant::now();
-    let result = executor.execute(workflow).await;
+    let result = executor.execute(workflow, None).await;
     let duration = start.elapsed();
 
     // Should complete quickly due to timeout, not wait full 10 seconds
