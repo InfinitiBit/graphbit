@@ -57,7 +57,6 @@ module-name = "graphbit"
 profile = "release"
 python-source = "python-src"
 skip-auditwheel = false
-strip = true
 
 # # Post-build script - shows license notice after build
 # [tool.maturin.scripts]
