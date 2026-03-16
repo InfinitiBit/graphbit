@@ -1,0 +1,16 @@
+{
+  "policy_name": "phone_mask_policy",
+  "policy_version": "1.0.0",
+  "active": true,
+  "guardrail_policy": {
+    "pii_rules": [
+      {
+        "type": "regex",
+        "name": "PHONE_NUMBER",
+        "pattern": "\\d{3}-\\d{4}"
+      }
+    ],
+    "masking": true,
+    "mapping": true
+  }
+}

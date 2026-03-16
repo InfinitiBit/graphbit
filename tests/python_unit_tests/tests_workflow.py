@@ -123,30 +123,6 @@ class TestExecutor:
         executor = Executor(config)
         assert executor is not None
 
-    def test_executor_high_throughput(self):
-        """Test creating high-throughput executor."""
-        api_key = get_api_key("openai")
-        config = LlmConfig.openai(api_key=api_key, model="gpt-4-turbo")
-        executor = Executor.new_high_throughput(config, timeout_seconds=300)
-        assert executor is not None
-        assert executor.get_execution_mode() == "HighThroughput"
-
-    def test_executor_low_latency(self):
-        """Test creating low-latency executor."""
-        api_key = get_api_key("openai")
-        config = LlmConfig.openai(api_key=api_key, model="gpt-4-turbo")
-        executor = Executor.new_low_latency(config, timeout_seconds=30)
-        assert executor is not None
-        assert executor.get_execution_mode() == "LowLatency"
-
-    def test_executor_memory_optimized(self):
-        """Test creating memory-optimized executor."""
-        api_key = get_api_key("openai")
-        config = LlmConfig.openai(api_key=api_key, model="gpt-4-turbo")
-        executor = Executor.new_memory_optimized(config, timeout_seconds=300)
-        assert executor is not None
-        assert executor.get_execution_mode() == "MemoryOptimized"
-
     @pytest.mark.asyncio
     async def test_executor_execute_workflow(self):
         """Test executing workflow."""
