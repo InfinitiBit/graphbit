@@ -9,6 +9,7 @@ pub mod store;
 pub mod types;
 pub mod vector;
 
+pub use service::MemoryService;
 pub use types::{
     Memory, MemoryAction, MemoryConfig, MemoryDecision, MemoryHistory, MemoryId, MemoryScope,
     ScoredMemory,
