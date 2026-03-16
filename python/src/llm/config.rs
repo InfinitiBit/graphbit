@@ -1,8 +1,8 @@
 //! LLM configuration for GraphBit Python bindings
 
 use crate::validation::validate_api_key;
-use graphbit_core::llm::providers::{register_python_instance, unregister_python_instance};
 use graphbit_core::llm::LlmConfig as CoreLlmConfig;
+use graphbit_core::llm::providers::{register_python_instance, unregister_python_instance};
 use pyo3::prelude::*;
 use uuid::Uuid;
 
@@ -241,6 +241,19 @@ impl LlmConfig {
             inner: CoreLlmConfig::mistralai(
                 api_key,
                 model.unwrap_or_else(|| "mistral-large-latest".to_string()),
+            ),
+        })
+    }
+
+    #[staticmethod]
+    #[pyo3(signature = (api_key, model=None))]
+    fn gemini(api_key: String, model: Option<String>) -> PyResult<Self> {
+        validate_api_key(&api_key, "Gemini")?;
+
+        Ok(Self {
+            inner: CoreLlmConfig::gemini(
+                api_key,
+                model.unwrap_or_else(|| "gemini-2.5-flash".to_string()),
             ),
         })
     }

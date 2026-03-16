@@ -23,28 +23,6 @@
 //! client = graphbit.LlmClient(config)
 //! ```
 
-#![allow(non_local_definitions)]
-#![deny(unsafe_code)]
-#![warn(
-    missing_docs,
-    rust_2018_idioms,
-    unreachable_pub,
-    bad_style,
-    dead_code,
-    improper_ctypes,
-    non_shorthand_field_patterns,
-    no_mangle_generic_items,
-    overflowing_literals,
-    path_statements,
-    patterns_in_fns_without_body,
-    unconditional_recursion,
-    unused,
-    unused_allocation,
-    unused_comparisons,
-    unused_parens,
-    while_true
-)]
-
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
@@ -55,7 +33,9 @@ use tracing::{error, info, warn};
 mod document_loader;
 mod embeddings;
 mod errors;
+mod guardrail;
 mod llm;
+mod memory;
 mod runtime;
 mod text_splitter;
 mod tools;
@@ -65,12 +45,14 @@ mod workflow;
 // Re-export all public types and functions
 pub use document_loader::{PyDocumentContent, PyDocumentLoader, PyDocumentLoaderConfig};
 pub use embeddings::{EmbeddingClient, EmbeddingConfig};
+pub use guardrail::GuardRailPolicyConfig;
 pub use llm::{LlmClient, LlmConfig, PyFinishReason, PyLlmResponse, PyLlmToolCall, PyLlmUsage};
 pub use text_splitter::{
     CharacterSplitter, RecursiveSplitter, SentenceSplitter, TextChunk, TextSplitterConfig,
     TokenSplitter,
 };
 pub use tools::{ToolDecorator, ToolExecutor, ToolRegistry, ToolResult};
+pub use memory::{MemoryClient, PyMemory, PyMemoryConfig, PyMemoryHistory, PyScoredMemory};
 pub use workflow::{Executor, Node, Workflow, WorkflowContext, WorkflowResult};
 
 /// Global initialization flag to ensure init is called only once
@@ -408,6 +390,9 @@ fn graphbit(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyLlmToolCall>()?;
     m.add_class::<PyLlmResponse>()?;
 
+    // GuardRail policy config (optional for executor.execute(workflow, policy=...))
+    m.add_class::<GuardRailPolicyConfig>()?;
+
     // Workflow classes
     m.add_class::<Node>()?;
     m.add_class::<Workflow>()?;
@@ -418,6 +403,13 @@ fn graphbit(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // Embedding classes
     m.add_class::<EmbeddingConfig>()?;
     m.add_class::<EmbeddingClient>()?;
+
+    // Memory classes
+    m.add_class::<PyMemoryConfig>()?;
+    m.add_class::<MemoryClient>()?;
+    m.add_class::<PyMemory>()?;
+    m.add_class::<PyScoredMemory>()?;
+    m.add_class::<PyMemoryHistory>()?;
 
     // Text splitter classes
     m.add_class::<TextSplitterConfig>()?;

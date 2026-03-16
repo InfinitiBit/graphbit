@@ -10,7 +10,6 @@ from .graphbit import (
     configure_runtime,
     shutdown,
 )
-
 # Document loader classes
 from .graphbit import (
     DocumentLoaderConfig,
@@ -30,6 +29,7 @@ from .graphbit import (
 
 # Workflow classes
 from .graphbit import (
+    GuardRailPolicyConfig,
     Node,
     Workflow,
     WorkflowContext,
@@ -41,6 +41,15 @@ from .graphbit import (
 from .graphbit import (
     EmbeddingConfig,
     EmbeddingClient,
+)
+
+# Memory classes
+from .graphbit import (
+    MemoryConfig,
+    MemoryClient,
+    PyMemory,
+    PyScoredMemory,
+    PyMemoryHistory,
 )
 
 # Text splitter classes
@@ -99,6 +108,8 @@ __all__ = [
     "FinishReason",
     "LlmToolCall",
     "LlmResponse",
+    # GuardRail
+    "GuardRailPolicyConfig",
     # Workflow
     "Node",
     "Workflow",
@@ -108,6 +119,12 @@ __all__ = [
     # Embeddings
     "EmbeddingConfig",
     "EmbeddingClient",
+    # Memory
+    "MemoryConfig",
+    "MemoryClient",
+    "PyMemory",
+    "PyScoredMemory",
+    "PyMemoryHistory",
     # Text splitter
     "TextSplitterConfig",
     "TextChunk",
