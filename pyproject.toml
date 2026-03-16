@@ -127,8 +127,6 @@ profile = "release"
 python-source = "python/python-src"
 # Enable auditwheel for proper PyPI compatibility
 skip-auditwheel = false
-# Build optimizations
-strip = true
 
 [tool.mypy]
 check_untyped_defs = true

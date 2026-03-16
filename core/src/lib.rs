@@ -36,6 +36,7 @@ pub mod embeddings;
 pub mod errors;
 pub mod graph;
 pub mod llm;
+pub mod memory;
 pub mod text_splitter;
 pub mod types;
 pub mod validation;
@@ -50,6 +51,9 @@ pub use embeddings::{
 pub use errors::{GraphBitError, GraphBitResult};
 pub use graph::{NodeType, WorkflowEdge, WorkflowGraph, WorkflowNode};
 pub use llm::{LlmConfig, LlmProvider, LlmResponse};
+pub use memory::{
+    Memory, MemoryConfig, MemoryHistory, MemoryId, MemoryScope, MemoryService, ScoredMemory,
+};
 pub use text_splitter::{
     CharacterSplitter, RecursiveSplitter, SentenceSplitter, SplitterStrategy, TextChunk,
     TextSplitterConfig, TextSplitterFactory, TextSplitterTrait, TokenSplitter,
