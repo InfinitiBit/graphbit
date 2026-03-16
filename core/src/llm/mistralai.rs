@@ -72,27 +72,6 @@ impl MistralAiProvider {
 
     /// Convert `GraphBit` message to `MistralAI` message format
     fn convert_message(message: &LlmMessage) -> MistralAiMessage {
-        let (content, tool_call_id) = if message.role == LlmRole::Tool {
-            // For tool messages, extract tool_call_id from content
-            // GraphBit format: "Tool call {tool_call_id} result: {actual_result}"
-            let content_str = &message.content;
-            if let Some(start) = content_str.find("Tool call ") {
-                if let Some(end) = content_str.find(" result: ") {
-                    let tool_call_id = content_str[start + 10..end].to_string();
-                    let actual_result = content_str[end + 9..].to_string();
-                    (actual_result, Some(tool_call_id))
-                } else {
-                    // Fallback: use the entire content as result
-                    (content_str.clone(), None)
-                }
-            } else {
-                // Fallback: use the entire content as result
-                (content_str.clone(), None)
-            }
-        } else {
-            (message.content.clone(), None)
-        };
-
         MistralAiMessage {
             role: match message.role {
                 LlmRole::User => "user".to_string(),
@@ -104,7 +83,7 @@ impl MistralAiProvider {
                 // Assistant messages with tool calls should have empty content
                 None
             } else {
-                Some(content)
+                Some(message.content.clone())
             },
             tool_calls: if message.tool_calls.is_empty() {
                 None
@@ -125,7 +104,7 @@ impl MistralAiProvider {
                         .collect(),
                 )
             },
-            tool_call_id,
+            tool_call_id: message.tool_call_id.clone(),
         }
     }
 
@@ -483,7 +462,13 @@ impl LlmProviderTrait for MistralAiProvider {
                                                         consecutive_parse_errors, e
                                                     ),
                                                 )),
-                                                (byte_stream, buffer, true, consecutive_parse_errors, total_parse_errors),
+                                                (
+                                                    byte_stream,
+                                                    buffer,
+                                                    true,
+                                                    consecutive_parse_errors,
+                                                    total_parse_errors,
+                                                ),
                                             ));
                                         }
                                     }
@@ -517,7 +502,13 @@ impl LlmProviderTrait for MistralAiProvider {
                                             CHUNK_TIMEOUT
                                         ),
                                     )),
-                                    (byte_stream, buffer, true, consecutive_parse_errors, total_parse_errors),
+                                    (
+                                        byte_stream,
+                                        buffer,
+                                        true,
+                                        consecutive_parse_errors,
+                                        total_parse_errors,
+                                    ),
                                 ));
                             }
                         };

@@ -536,7 +536,13 @@ impl LlmProviderTrait for OllamaProvider {
                                                     consecutive_parse_errors, e
                                                 ),
                                             )),
-                                            (byte_stream, buffer, true, consecutive_parse_errors, total_parse_errors),
+                                            (
+                                                byte_stream,
+                                                buffer,
+                                                true,
+                                                consecutive_parse_errors,
+                                                total_parse_errors,
+                                            ),
                                         ));
                                     }
                                 }
@@ -569,7 +575,13 @@ impl LlmProviderTrait for OllamaProvider {
                                             CHUNK_TIMEOUT
                                         ),
                                     )),
-                                    (byte_stream, buffer, true, consecutive_parse_errors, total_parse_errors),
+                                    (
+                                        byte_stream,
+                                        buffer,
+                                        true,
+                                        consecutive_parse_errors,
+                                        total_parse_errors,
+                                    ),
                                 ));
                             }
                         };

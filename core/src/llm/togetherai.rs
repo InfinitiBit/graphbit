@@ -95,6 +95,7 @@ impl TogetherAiProvider {
                         .collect(),
                 )
             },
+            tool_call_id: message.tool_call_id.clone(),
         }
     }
 
@@ -310,6 +311,8 @@ struct TogetherAiMessage {
     content: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     tool_calls: Option<Vec<TogetherAiToolCall>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tool_call_id: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
