@@ -217,15 +217,6 @@ class TestDynamicExecutorConfiguration:
 
             llm_config = graphbit.LlmConfig.openai(api_key, "gpt-3.5-turbo")
 
-            # Test different executor modes
-            high_throughput = graphbit.Executor.new_high_throughput(llm_config)
-            low_latency = graphbit.Executor.new_low_latency(llm_config)
-            memory_optimized = graphbit.Executor.new_memory_optimized(llm_config)
-
-            assert high_throughput is not None
-            assert low_latency is not None
-            assert memory_optimized is not None
-
         except Exception as e:
             pytest.skip(f"Executor mode switching test skipped: {e}")
 

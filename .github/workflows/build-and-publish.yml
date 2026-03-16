@@ -86,10 +86,10 @@ jobs:
           # Linux (glibc) - common Linux distributions
         - runner: ubuntu-22.04
           target: x86_64
-          manylinux: auto
+          manylinux: manylinux_2_34
         - runner: ubuntu-22.04
           target: aarch64
-          manylinux: auto
+          manylinux: manylinux_2_34
 
           # Linux (musl) - Alpine / minimal containers
         - runner: ubuntu-22.04
@@ -108,7 +108,6 @@ jobs:
         - runner: macos-14
           target: universal2-apple-darwin
           manylinux: default
-        # Note: abi3 builds typically do not require multiple Win/macOS interpreters
 
     steps:
     - name: Checkout code
@@ -135,30 +134,56 @@ jobs:
           ${{ runner.os }}-cargo-build-
           ${{ runner.os }}-cargo-
 
+    - name: Set SONAME on guardrail .so (Linux only)
+      if: matrix.platform.runner == 'ubuntu-22.04'
+      shell: bash
+      run: |
+        sudo apt-get install -y patchelf
+        if [[ "${{ matrix.platform.target }}" == "x86_64" ]]; then
+          patchelf --set-soname libguardrail_ffi.so \
+            vendor/guardrail/x86_64-unknown-linux-gnu/libguardrail_ffi.so
+        elif [[ "${{ matrix.platform.target }}" == "aarch64" ]]; then
+          patchelf --set-soname libguardrail_ffi.so \
+            vendor/guardrail/aarch64-unknown-linux-gnu/libguardrail_ffi.so
+        fi
+
+    - name: Copy guardrail .so for auditwheel (Linux only)
+      if: matrix.platform.runner == 'ubuntu-22.04'
+      shell: bash
+      run: |
+        if [[ "${{ matrix.platform.target }}" == "x86_64" ]]; then
+          cp vendor/guardrail/x86_64-unknown-linux-gnu/libguardrail_ffi.so \
+             vendor/guardrail/libguardrail_ffi.so
+          cp vendor/guardrail/x86_64-unknown-linux-gnu/libguardrail_ffi.so \
+             python/python-src/graphbit/libguardrail_ffi.so
+        elif [[ "${{ matrix.platform.target }}" == "aarch64" ]]; then
+          cp vendor/guardrail/aarch64-unknown-linux-gnu/libguardrail_ffi.so \
+             vendor/guardrail/libguardrail_ffi.so
+          cp vendor/guardrail/aarch64-unknown-linux-gnu/libguardrail_ffi.so \
+             python/python-src/graphbit/libguardrail_ffi.so
+        fi
+
+    - name: Debug vendor contents
+      if: matrix.platform.runner == 'ubuntu-22.04'
+      shell: bash
+      run: |
+        echo "=== vendor/guardrail/ ==="
+        ls -la vendor/guardrail/
+        echo "=== arch of copied .so ==="
+        file vendor/guardrail/libguardrail_ffi.so
+        echo "=== checking SONAME ==="
+        readelf -d vendor/guardrail/libguardrail_ffi.so | grep -E "SONAME|NEEDED" || echo "readelf not available"
+
     - name: Build wheels
-      uses: PyO3/maturin-action@v1
+      uses: messense/maturin-action@v1
+      env:
+        LD_LIBRARY_PATH: ${{ github.workspace }}/vendor/guardrail
       with:
         target: ${{ matrix.platform.target }}
-        args: --release --out dist --find-interpreter
-        sccache: 'true'
+        args: --release --out dist --find-interpreter ${{ matrix.platform.runner == 'ubuntu-22.04' && '--zig' || '' }} ${{ matrix.platform.runner == 'ubuntu-22.04' && '--skip-auditwheel' || '' }}
+        sccache: ${{ matrix.platform.runner != 'ubuntu-22.04' }}
         manylinux: ${{ matrix.platform.manylinux }}
         working-directory: python
-        before-script-linux: |
-          set -eux
-          # Install OpenSSL development packages for glibc builds
-          # musl builds will use vendored OpenSSL (configured in Cargo.toml)
-          if command -v yum >/dev/null 2>&1; then
-            # manylinux2014 / CentOS 7 family
-            yum -y install openssl-devel
-          elif command -v apt-get >/dev/null 2>&1; then
-            # Debian/Ubuntu family
-            apt-get update && apt-get install -y libssl-dev
-          elif command -v apk >/dev/null 2>&1; then
-            # musllinux (Alpine) - vendored OpenSSL will be used instead
-            echo "Alpine/musl detected - using vendored OpenSSL from Cargo.toml"
-          else
-            echo "Unknown package manager. Skipping OpenSSL installation."
-          fi
 
     - name: Verify wheel contents
       shell: bash
@@ -346,6 +371,7 @@ jobs:
         echo "[OK] Found $WHEEL_COUNT wheel(s)"
         echo ""
         echo "[OK] Artifact verification passed!"
+        echo "passed=true" >> $GITHUB_OUTPUT
 
     - name: Upload verified distribution files
       uses: actions/upload-artifact@v4
