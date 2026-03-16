@@ -82,7 +82,7 @@ async fn test_workflow_executor() {
     assert!(workflow.metadata.contains_key("test_key"));
 
     let executor = WorkflowExecutor::new();
-    let result = executor.execute(workflow).await;
+    let result = executor.execute(workflow, None).await;
 
     // Empty workflows may fail execution, which is expected behavior
     // Let's check what the actual result is
@@ -109,7 +109,7 @@ async fn test_workflow_integration() {
         .unwrap();
 
     let executor = WorkflowExecutor::new();
-    let result = executor.execute(workflow).await;
+    let result = executor.execute(workflow, None).await;
 
     // Empty workflows may fail execution, which is expected behavior
     match result {

@@ -1,0 +1,7 @@
+# RPATH $ORIGIN so libgraphbit.so finds libguardrail_ffi.so in the same dir at runtime
+# (used when bundling libguardrail_ffi.so in the wheel via python-src for manylinux)
+[target.x86_64-unknown-linux-gnu]
+rustflags = ["-C", "link-arg=-Wl,-rpath,$ORIGIN"]
+
+[target.aarch64-unknown-linux-gnu]
+rustflags = ["-C", "link-arg=-Wl,-rpath,$ORIGIN"]

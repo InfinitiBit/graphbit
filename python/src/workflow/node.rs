@@ -27,10 +27,11 @@ pub struct Node {
 #[pymethods]
 impl Node {
     #[staticmethod]
-    #[pyo3(signature = (name, prompt, agent_id=None, output_name=None, tools=None, system_prompt=None, llm_config=None, temperature=None, max_tokens=None))]
+    #[pyo3(signature = (name, prompt, context=None, agent_id=None, output_name=None, tools=None, system_prompt=None, llm_config=None, temperature=None, max_tokens=None))]
     fn agent(
         name: String,
         prompt: String,
+        context: Option<String>,
         agent_id: Option<String>,
         output_name: Option<String>,
         tools: Option<&Bound<'_, PyList>>,
@@ -68,6 +69,7 @@ impl Node {
                     PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Invalid ID: {}", e))
                 })?,
                 prompt_template: prompt,
+                conversational_context: context,
             },
         );
 

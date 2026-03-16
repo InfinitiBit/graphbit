@@ -592,6 +592,6 @@ struct StreamDelta {
 #[derive(Debug, Deserialize)]
 struct StreamError {
     #[serde(rename = "type")]
-    r#type: String,
+    _type: String,
     message: String,
 }

@@ -10,7 +10,6 @@ from .graphbit import (
     configure_runtime,
     shutdown,
 )
-
 # Document loader classes
 from .graphbit import (
     DocumentLoaderConfig,
@@ -30,6 +29,7 @@ from .graphbit import (
 
 # Workflow classes
 from .graphbit import (
+    GuardRailPolicyConfig,
     Node,
     Workflow,
     WorkflowContext,
@@ -99,6 +99,8 @@ __all__ = [
     "FinishReason",
     "LlmToolCall",
     "LlmResponse",
+    # GuardRail
+    "GuardRailPolicyConfig",
     # Workflow
     "Node",
     "Workflow",

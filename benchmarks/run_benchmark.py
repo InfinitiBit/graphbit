@@ -49,6 +49,7 @@ from frameworks.langgraph_benchmark import LangGraphBenchmark
 from frameworks.llamaindex_benchmark import LlamaIndexBenchmark
 from frameworks.pydantic_ai_benchmark import PydanticAIBenchmark
 from frameworks.autogen_benchmark import AutogenBenchmark
+from frameworks.ag2_benchmark import AG2Benchmark
 
 if sys.platform == "win32" or sys.platform == "darwin":
 
@@ -169,6 +170,13 @@ class ComprehensiveBenchmarkRunner:
                 "results": {},
                 "errors": {},
                 "color": "#C73E1D",
+            },
+            FrameworkType.AG2: {
+                "name": "AG2 (formerly AutoGen)",
+                "benchmark": AG2Benchmark(self.config, num_runs=self.num_runs),
+                "results": {},
+                "errors": {},
+                "color": "#1B998B",
             },
             FrameworkType.AUTOGEN: {
                 "name": "AutoGen",
@@ -698,6 +706,7 @@ def main(
                     "llama_index": FrameworkType.LLAMAINDEX,
                     "crewai": FrameworkType.CREWAI,
                     "crew_ai": FrameworkType.CREWAI,
+                    "ag2": FrameworkType.AG2,
                     "auto_gen": FrameworkType.AUTOGEN,
                     "autogen": FrameworkType.AUTOGEN,
                 }

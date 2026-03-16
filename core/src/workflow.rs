@@ -12,17 +12,16 @@ use crate::types::{
     ConcurrencyManager, ConcurrencyStats, MessageContent, NodeExecutionResult, NodeId, RetryConfig,
     TaskInfo, WorkflowContext, WorkflowExecutionStats, WorkflowId, WorkflowState,
 };
+use crate::{DecodeContext, EncodeContext, Enforcer};
 use futures::future::join_all;
-use lazy_static::lazy_static;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 use tokio::sync::{Mutex, RwLock};
 
-lazy_static! {
-    static ref NODE_REF_PATTERN: Regex = Regex::new(r"\{\{node\.([a-zA-Z0-9_\-\.]+)\}\}").unwrap();
-}
+static NODE_REF_PATTERN: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\{\{node\.([a-zA-Z0-9_\-\.]+)\}\}").unwrap());
 
 /// A complete workflow definition
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -70,6 +69,7 @@ impl Workflow {
 
     /// Validate the workflow
     pub fn validate(&self) -> GraphBitResult<()> {
+        tracing::debug!("Workflow '{:#?}' validated successfully", self.graph);
         self.graph.validate()
     }
 
@@ -166,57 +166,6 @@ impl WorkflowExecutor {
         }
     }
 
-    /// Create a workflow executor optimized for high throughput
-    pub fn new_high_throughput() -> Self {
-        let concurrency_config = ConcurrencyConfig::high_throughput();
-        let concurrency_manager = Arc::new(ConcurrencyManager::new(concurrency_config));
-
-        Self {
-            agents: Arc::new(RwLock::new(HashMap::with_capacity(16))),
-            concurrency_manager,
-            max_node_execution_time_ms: None,
-            fail_fast: false,
-            default_retry_config: Some(RetryConfig::default()),
-            circuit_breakers: Arc::new(RwLock::new(HashMap::with_capacity(8))),
-            circuit_breaker_config: CircuitBreakerConfig::default(),
-            default_llm_config: None,
-        }
-    }
-
-    /// Create a workflow executor optimized for low latency
-    pub fn new_low_latency() -> Self {
-        let concurrency_config = ConcurrencyConfig::low_latency();
-        let concurrency_manager = Arc::new(ConcurrencyManager::new(concurrency_config));
-
-        Self {
-            agents: Arc::new(RwLock::new(HashMap::with_capacity(16))),
-            concurrency_manager,
-            max_node_execution_time_ms: None,
-            fail_fast: true,            // Fail fast for low latency
-            default_retry_config: None, // No retries for low latency
-            circuit_breakers: Arc::new(RwLock::new(HashMap::with_capacity(8))),
-            circuit_breaker_config: CircuitBreakerConfig::default(),
-            default_llm_config: None,
-        }
-    }
-
-    /// Create a workflow executor optimized for memory usage
-    pub fn new_memory_optimized() -> Self {
-        let concurrency_config = ConcurrencyConfig::memory_optimized();
-        let concurrency_manager = Arc::new(ConcurrencyManager::new(concurrency_config));
-
-        Self {
-            agents: Arc::new(RwLock::new(HashMap::with_capacity(8))),
-            concurrency_manager,
-            max_node_execution_time_ms: None,
-            fail_fast: false,
-            default_retry_config: Some(RetryConfig::default()),
-            circuit_breakers: Arc::new(RwLock::new(HashMap::with_capacity(4))),
-            circuit_breaker_config: CircuitBreakerConfig::default(),
-            default_llm_config: None,
-        }
-    }
-
     /// Register an agent with the executor
     pub async fn register_agent(&self, agent: Arc<dyn AgentTrait>) {
         let agent_id = agent.id().clone();
@@ -296,7 +245,9 @@ impl WorkflowExecutor {
         }
 
         // 3. No default fallback - require explicit configuration as requested by user
-        tracing::error!("No LLM configuration found - neither node-level nor executor-level config provided. System requires explicit configuration.");
+        tracing::error!(
+            "No LLM configuration found - neither node-level nor executor-level config provided. System requires explicit configuration."
+        );
         crate::llm::LlmConfig::Unconfigured {
             message: "No LLM configuration provided. The system requires explicit configuration from program or user input rather than hardcoded defaults.".to_string()
         }
@@ -333,8 +284,15 @@ impl WorkflowExecutor {
         self.concurrency_manager.get_available_permits().await
     }
 
-    /// Execute a workflow with enhanced performance monitoring
-    pub async fn execute(&self, workflow: Workflow) -> GraphBitResult<WorkflowContext> {
+    /// Execute a workflow with enhanced performance monitoring.
+    ///
+    /// When `guardrail_enforcer` is `Some`, PII is encoded before each LLM call and
+    /// decoded on LLM output; tool-call boundaries are handled by the executor layer.
+    pub async fn execute(
+        &self,
+        workflow: Workflow,
+        guardrail_enforcer: Option<Arc<Enforcer>>,
+    ) -> GraphBitResult<WorkflowContext> {
         let start_time = std::time::Instant::now();
 
         // Initialize workflow context with simple constructor
@@ -525,6 +483,7 @@ impl WorkflowExecutor {
                 let circuit_breaker_config = self.circuit_breaker_config.clone();
                 let retry_config = self.default_retry_config.clone();
                 let concurrency_manager = self.concurrency_manager.clone();
+                let guardrail_enforcer = guardrail_enforcer.clone();
 
                 // Use lightweight task spawning without unnecessary permit acquisition overhead
                 let task = tokio::spawn(async move {
@@ -556,6 +515,7 @@ impl WorkflowExecutor {
                         circuit_breakers_clone,
                         circuit_breaker_config,
                         retry_config,
+                        guardrail_enforcer,
                     )
                     .await
                 });
@@ -686,6 +646,7 @@ impl WorkflowExecutor {
         circuit_breakers: Arc<RwLock<HashMap<crate::types::AgentId, CircuitBreaker>>>,
         circuit_breaker_config: CircuitBreakerConfig,
         retry_config: Option<RetryConfig>,
+        guardrail_enforcer: Option<Arc<Enforcer>>,
     ) -> GraphBitResult<NodeExecutionResult> {
         let start_time = std::time::Instant::now();
         let mut attempt = 0;
@@ -723,25 +684,19 @@ impl WorkflowExecutor {
                 NodeType::Agent {
                     agent_id,
                     prompt_template,
+                    conversational_context,
                 } => {
                     Self::execute_agent_node_static(
                         &node.id,
                         agent_id,
                         prompt_template,
+                        conversational_context.as_deref(),
                         &node.config,
                         context.clone(),
                         agents.clone(),
+                        guardrail_enforcer.clone(),
                     )
                     .await
-                }
-                NodeType::Condition { expression } => {
-                    Self::execute_condition_node_static(expression).await
-                }
-                NodeType::Transform { transformation } => {
-                    Self::execute_transform_node_static(transformation, context.clone()).await
-                }
-                NodeType::Delay { duration_seconds } => {
-                    Self::execute_delay_node_static(*duration_seconds).await
                 }
                 NodeType::DocumentLoader {
                     document_type,
@@ -847,14 +802,17 @@ impl WorkflowExecutor {
         }
     }
 
-    /// Execute an agent node (static version)
+    /// Execute an agent node (static version).
+    /// When `guardrail_enforcer` is `Some`, encodes prompt before LLM and decodes response after.
     async fn execute_agent_node_static(
         current_node_id: &NodeId,
         agent_id: &crate::types::AgentId,
         prompt_template: &str,
+        conversational_context: Option<&str>,
         node_config: &std::collections::HashMap<String, serde_json::Value>,
         context: Arc<Mutex<WorkflowContext>>,
         agents: Arc<RwLock<HashMap<crate::types::AgentId, Arc<dyn AgentTrait>>>>,
+        guardrail_enforcer: Option<Arc<Enforcer>>,
     ) -> GraphBitResult<serde_json::Value> {
         // Use read lock for better performance
         let agents_guard = agents.read().await;
@@ -865,7 +823,7 @@ impl WorkflowExecutor {
         drop(agents_guard); // Release the lock early
 
         // Build implicit preamble from upstream (parent) node outputs, then resolve templates
-        let resolved_prompt = {
+        let (resolved_prompt, resolved_context, metadata_input_raw) = {
             let ctx = context.lock().await;
 
             // Extract dependency map and name map from metadata
@@ -971,17 +929,24 @@ impl WorkflowExecutor {
                 sections.join("\n\n") + "\n\n"
             };
 
-            let combined = format!("{implicit_preamble}{prompt_template}");
-            let resolved = Self::resolve_template_variables(&combined, &ctx);
-            // Debug log the resolved prompt (trimmed) to verify implicit context presence
-            let preview: String = resolved.chars().take(400).collect();
+            let combined_for_llm = format!("{implicit_preamble}{prompt_template}");
+            let resolved_prompt = Self::resolve_template_variables(&combined_for_llm, &ctx);
+
+            let resolved_context = conversational_context
+                .map(|ctx_template| Self::resolve_template_variables(ctx_template, &ctx));
+
+            // Use only the prompt part for cleaner metadata logging
+            let metadata_input_raw = Self::resolve_template_variables(prompt_template, &ctx);
+
+            // Debug log the resolved prompt (trimmed)
+            let preview: String = resolved_prompt.chars().take(400).collect();
             tracing::debug!(
                 current_node_id = %cur_id_str,
                 parent_count = parent_ids.len(),
                 preview = %preview,
                 "Resolved prompt preview with implicit parent context"
             );
-            resolved
+            (resolved_prompt, resolved_context, metadata_input_raw)
         };
 
         // Check if this node has tools configured
@@ -1016,11 +981,14 @@ impl WorkflowExecutor {
             let result = Self::execute_agent_with_tools(
                 agent_id,
                 &resolved_prompt,
+                resolved_context.as_deref(),
+                &metadata_input_raw,
                 node_config,
                 agent,
                 current_node_id,
                 &node_name,
                 context.clone(),
+                guardrail_enforcer.clone(),
             )
             .await;
             tracing::info!("Agent with tools execution result: {:?}", result);
@@ -1029,9 +997,87 @@ impl WorkflowExecutor {
             // Execute agent without tools (original behavior)
             tracing::info!("NO TOOLS DETECTED - using standard agent execution");
 
+            // Build the executions array for metadata
+            let mut executions: Vec<serde_json::Value> = Vec::new();
+
+            // Guardrail: encode context and prompt separately before sending to LLM
+            let mut masked_input_for_meta = metadata_input_raw.clone();
+            let prompt_for_llm = if let Some(ref enforcer) = guardrail_enforcer {
+                tracing::debug!("Guardrail: encoding prompt and context before LLM call");
+
+                // 1. Encode context if present
+                let (masked_context, signature_ctx, ctx_rules, ctx_count) = if let Some(ctx) =
+                    resolved_context
+                {
+                    let enc = enforcer.encode(serde_json::Value::String(ctx), EncodeContext::Llm);
+                    (
+                        enc.payload.as_str().unwrap_or_default().to_string(),
+                        enc.signature_injection_text,
+                        enc.rule_names,
+                        enc.rules_applied_count,
+                    )
+                } else {
+                    (String::new(), String::new(), Vec::new(), 0)
+                };
+
+                // 2. Encode prompt
+                let enc_prompt = enforcer.encode(
+                    serde_json::Value::String(resolved_prompt.clone()),
+                    EncodeContext::Llm,
+                );
+
+                // 3. Encode metadata input specifically for clean logging
+                let enc_meta = enforcer.encode(
+                    serde_json::Value::String(metadata_input_raw.clone()),
+                    EncodeContext::Llm,
+                );
+                masked_input_for_meta = enc_meta.payload.as_str().unwrap_or_default().to_string();
+
+                // Cumulative Metadata: Combine rule names from context and prompt
+                let mut all_rule_names = ctx_rules;
+                for rule in enc_prompt.rule_names {
+                    if !all_rule_names.contains(&rule) {
+                        all_rule_names.push(rule);
+                    }
+                }
+
+                // Record guardrail encode execution entry with cumulative stats
+                executions.push(serde_json::json!({
+                    "type": "guardrail_policy",
+                    "operation": "encode",
+                    "pii_rules_applied_count": ctx_count + enc_prompt.rules_applied_count,
+                    "pii_rule_names": all_rule_names,
+                    "policy_name": enc_prompt.policy_name
+                }));
+
+                // Combine for LLM: Use the prompt's signature (or context's if prompt doesn't have one, though it should)
+                let final_signature = if !enc_prompt.signature_injection_text.is_empty() {
+                    enc_prompt.signature_injection_text
+                } else {
+                    signature_ctx
+                };
+
+                format!(
+                    "{}{}{}",
+                    final_signature,
+                    if !masked_context.is_empty() {
+                        format!("{}\n\n", masked_context)
+                    } else {
+                        String::new()
+                    },
+                    enc_prompt.payload.as_str().unwrap_or("")
+                )
+            } else {
+                if let Some(ctx) = resolved_context {
+                    format!("{}\n\n{}", ctx, resolved_prompt)
+                } else {
+                    resolved_prompt.clone()
+                }
+            };
+
             // Call LLM provider directly to capture metadata
             use crate::llm::LlmRequest;
-            let mut request = LlmRequest::new(resolved_prompt.clone());
+            let mut request = LlmRequest::new(prompt_for_llm.clone());
 
             // Apply node-level configuration overrides (temperature, max_tokens, etc.)
             if let Some(temp_value) = node_config.get("temperature") {
@@ -1051,8 +1097,97 @@ impl WorkflowExecutor {
             let llm_start = std::time::Instant::now();
             let llm_response = agent.llm_provider().complete(request).await?;
             let llm_duration_ms = llm_start.elapsed().as_secs_f64() * 1000.0;
+            let llm_end_timestamp = chrono::Utc::now();
 
-            // Store LLM response metadata AND request prompt in context for observability
+            // Get provider name for metadata
+            let provider_name = agent.llm_provider().config().provider_name().to_string();
+
+            // Capture raw LLM content before decode for metadata
+            let raw_llm_content = llm_response.content.clone();
+            if guardrail_enforcer.is_some() {
+                tracing::debug!(
+                    "[GuardRail] raw LLM response (before decode): content={:?}, tool_calls={:?}",
+                    llm_response.content,
+                    llm_response.tool_calls
+                );
+            }
+
+            // Build the llm_call execution entry (before decode, captures raw LLM output)
+            let llm_call_entry = serde_json::json!({
+                "type": "llm_call",
+                "id": llm_response.id.clone().unwrap_or_default(),
+                "model": llm_response.model,
+                "provider": provider_name,
+                "input": if guardrail_enforcer.is_some() { masked_input_for_meta.clone() } else { metadata_input_raw.clone() },
+                "output": llm_response.content,
+                "finish_reason": format!("{}", llm_response.finish_reason),
+                "tool_calls": [],
+                "start_time": execution_timestamp.to_rfc3339(),
+                "end_time": llm_end_timestamp.to_rfc3339(),
+                "duration_ms": llm_duration_ms,
+                "usage": {
+                    "prompt_tokens": llm_response.usage.prompt_tokens,
+                    "completion_tokens": llm_response.usage.completion_tokens,
+                    "total_tokens": llm_response.usage.total_tokens,
+                    "prompt_tokens_details": {
+                        "cached_tokens": 0,
+                        "audio_tokens": 0
+                    },
+                    "completion_tokens_details": {
+                        "reasoning_tokens": 0,
+                        "audio_tokens": 0,
+                        "accepted_prediction_tokens": 0,
+                        "rejected_prediction_tokens": 0
+                    }
+                },
+                "retries": []
+            });
+            executions.push(llm_call_entry);
+
+            // Guardrail: decode LLM output before storing in context
+            let llm_response = if let Some(ref enforcer) = guardrail_enforcer {
+                tracing::debug!(
+                    "Guardrail: decoding LLM response (rehydrating for context) llm_response.content: {}",
+                    llm_response.content
+                );
+                tracing::debug!("Guardrail: decoding LLM response (rehydrating for context)");
+                let payload = serde_json::json!({
+                    "content": llm_response.content,
+                    "tool_calls": llm_response.tool_calls
+                });
+                let decoded_result = enforcer.decode(payload, DecodeContext::LlmResponse);
+                tracing::debug!("Guardrail: LLM response decoded");
+
+                // Record guardrail decode execution entry
+                executions.push(serde_json::json!({
+                    "type": "guardrail_policy",
+                    "operation": "rehydrate",
+                    "pii_rules_applied_count": decoded_result.rules_applied_count,
+                    "pii_rule_names": decoded_result.rule_names,
+                    "policy_name": decoded_result.policy_name
+                }));
+
+                let content = decoded_result
+                    .payload
+                    .get("content")
+                    .and_then(|v| v.as_str())
+                    .map(String::from)
+                    .unwrap_or_else(|| llm_response.content.clone());
+                let tool_calls = decoded_result
+                    .payload
+                    .get("tool_calls")
+                    .and_then(|v| serde_json::from_value(v.clone()).ok())
+                    .unwrap_or_else(|| llm_response.tool_calls.clone());
+                crate::llm::LlmResponse {
+                    content,
+                    tool_calls,
+                    ..llm_response
+                }
+            } else {
+                llm_response
+            };
+
+            // Build the node-level metadata with executions array
             {
                 // First, get the node name before mutable borrow
                 let node_name = {
@@ -1066,36 +1201,60 @@ impl WorkflowExecutor {
                         .unwrap_or_else(|| "unknown".to_string())
                 };
 
+                let max_iterations = node_config
+                    .get("max_iterations")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(5) as u32;
+
+                let node_metadata = serde_json::json!({
+                    "node_id": current_node_id.to_string(),
+                    "node_name": node_name,
+                    "node_type": "Agent",
+                    // When GR active: user_input = masked prompt, final_output = raw LLM content
+                    // When GR inactive: user_input = original prompt, final_output = decoded content
+                    "user_input": if guardrail_enforcer.is_some() { masked_input_for_meta.clone() } else { metadata_input_raw.clone() },
+                    "tools_available": [],
+                    "total_tools_available": 0,
+                    "start_time": execution_timestamp.to_rfc3339(),
+                    "end_time": llm_end_timestamp.to_rfc3339(),
+                    "duration_ms": llm_duration_ms,
+                    "success": true,
+                    "error": serde_json::Value::Null,
+                    "final_output": if guardrail_enforcer.is_some() { raw_llm_content } else { llm_response.content.clone() },
+                    "total_iterations": 0,
+                    "max_iterations": max_iterations,
+                    "exit_reason": llm_response.finish_reason,
+                    "total_usage": {
+                        "prompt_tokens": llm_response.usage.prompt_tokens,
+                        "completion_tokens": llm_response.usage.completion_tokens,
+                        "total_tokens": llm_response.usage.total_tokens,
+                        "prompt_tokens_details": {
+                            "cached_tokens": 0,
+                            "audio_tokens": 0
+                        },
+                        "completion_tokens_details": {
+                            "reasoning_tokens": 0,
+                            "audio_tokens": 0,
+                            "accepted_prediction_tokens": 0,
+                            "rejected_prediction_tokens": 0
+                        }
+                    },
+                    "total_tool_calls": 0,
+                    "total_retries": 0,
+                    "tools_used": [],
+                    "executions": executions
+                });
+
                 // Now store the metadata
                 let mut ctx = context.lock().await;
-                if let Ok(mut response_metadata) = serde_json::to_value(&llm_response) {
-                    // Add the request prompt to the metadata
-                    if let Some(obj) = response_metadata.as_object_mut() {
-                        obj.insert(
-                            "prompt".to_string(),
-                            serde_json::Value::String(resolved_prompt.clone()),
-                        );
-                        // Add LLM call duration for accurate latency tracking
-                        obj.insert(
-                            "duration_ms".to_string(),
-                            serde_json::json!(llm_duration_ms),
-                        );
-                        // Add execution timestamp for chronological ordering
-                        obj.insert(
-                            "execution_timestamp".to_string(),
-                            serde_json::json!(execution_timestamp.to_rfc3339()),
-                        );
-                    }
-
-                    // Store by node ID
-                    ctx.metadata.insert(
-                        format!("node_response_{current_node_id}"),
-                        response_metadata.clone(),
-                    );
-                    // Store by node name
-                    ctx.metadata
-                        .insert(format!("node_response_{node_name}"), response_metadata);
-                }
+                // Store by node ID
+                ctx.metadata.insert(
+                    format!("node_response_{current_node_id}"),
+                    node_metadata.clone(),
+                );
+                // Store by node name
+                ctx.metadata
+                    .insert(format!("node_response_{node_name}"), node_metadata);
             }
 
             // Return the content as JSON value
@@ -1108,18 +1267,102 @@ impl WorkflowExecutor {
         }
     }
 
-    /// Execute an agent with tool calling orchestration
+    /// Execute an agent with tool calling orchestration.
+    /// When `guardrail_enforcer` is `Some`, encodes prompt before LLM and decodes response after.
     async fn execute_agent_with_tools(
         _agent_id: &crate::types::AgentId,
         prompt: &str,
+        conversational_context: Option<&str>,
+        metadata_input: &str,
         node_config: &std::collections::HashMap<String, serde_json::Value>,
         agent: Arc<dyn AgentTrait>,
         node_id: &NodeId,
         node_name: &str,
         context: Arc<Mutex<WorkflowContext>>,
+        guardrail_enforcer: Option<Arc<Enforcer>>,
     ) -> GraphBitResult<serde_json::Value> {
         tracing::info!("Starting execute_agent_with_tools for agent: {_agent_id}");
         use crate::llm::{LlmRequest, LlmTool};
+
+        // Build the executions array for metadata
+        let mut executions: Vec<serde_json::Value> = Vec::new();
+
+        // Guardrail: encode prompt and context individually before sending to LLM
+        let mut masked_input_for_meta = metadata_input.to_string();
+        let prompt_for_llm = if let Some(ref enforcer) = guardrail_enforcer {
+            tracing::debug!("Guardrail: encoding prompt and context before LLM call (tool path)");
+
+            // 1. Encode context if present
+            let (masked_context, signature_ctx, ctx_rules, ctx_count) =
+                if let Some(ctx) = conversational_context {
+                    let enc = enforcer.encode(
+                        serde_json::Value::String(ctx.to_string()),
+                        EncodeContext::Llm,
+                    );
+                    (
+                        enc.payload.as_str().unwrap_or_default().to_string(),
+                        enc.signature_injection_text,
+                        enc.rule_names,
+                        enc.rules_applied_count,
+                    )
+                } else {
+                    (String::new(), String::new(), Vec::new(), 0)
+                };
+
+            // 2. Encode prompt
+            let enc_prompt = enforcer.encode(
+                serde_json::Value::String(prompt.to_string()),
+                EncodeContext::Llm,
+            );
+
+            // 3. Encode metadata input specifically
+            let enc_meta = enforcer.encode(
+                serde_json::Value::String(metadata_input.to_string()),
+                EncodeContext::Llm,
+            );
+            masked_input_for_meta = enc_meta.payload.as_str().unwrap_or_default().to_string();
+
+            // Cumulative Metadata
+            let mut all_rule_names = ctx_rules;
+            for rule in enc_prompt.rule_names {
+                if !all_rule_names.contains(&rule) {
+                    all_rule_names.push(rule);
+                }
+            }
+
+            // Record guardrail encode execution entry
+            executions.push(serde_json::json!({
+                "type": "guardrail_policy",
+                "operation": "encode",
+                "pii_rules_applied_count": ctx_count + enc_prompt.rules_applied_count,
+                "pii_rule_names": all_rule_names,
+                "policy_name": enc_prompt.policy_name
+            }));
+
+            // Combine for LLM
+            let final_signature = if !enc_prompt.signature_injection_text.is_empty() {
+                enc_prompt.signature_injection_text
+            } else {
+                signature_ctx
+            };
+
+            format!(
+                "{}{}{}",
+                final_signature,
+                if !masked_context.is_empty() {
+                    format!("{}\n\n", masked_context)
+                } else {
+                    String::new()
+                },
+                enc_prompt.payload.as_str().unwrap_or_default()
+            )
+        } else {
+            if let Some(ctx) = conversational_context {
+                format!("{}\n\n{}", ctx, prompt)
+            } else {
+                prompt.to_string()
+            }
+        };
 
         // Extract tool schemas from node config
         let tool_schemas = node_config
@@ -1128,6 +1371,12 @@ impl WorkflowExecutor {
             .ok_or_else(|| GraphBitError::validation("node_config", "Missing tool_schemas"))?;
 
         tracing::info!("Found {} tool schemas", tool_schemas.len());
+
+        // Collect tool names for metadata
+        let tool_names: Vec<String> = tool_schemas
+            .iter()
+            .filter_map(|s| s.get("name").and_then(|v| v.as_str()).map(String::from))
+            .collect();
 
         // Convert tool schemas to LlmTool objects
         let mut tools = Vec::new();
@@ -1141,8 +1390,8 @@ impl WorkflowExecutor {
             }
         }
 
-        // Create initial LLM request with tools
-        let mut request = LlmRequest::new(prompt);
+        // Create initial LLM request with tools (using encoded prompt when guardrail is active)
+        let mut request = LlmRequest::new(prompt_for_llm.clone());
         for tool in &tools {
             request = request.with_tool(tool.clone());
         }
@@ -1187,40 +1436,177 @@ impl WorkflowExecutor {
         // Measure LLM call duration and capture execution timestamp
         let execution_timestamp = chrono::Utc::now();
         let llm_start = std::time::Instant::now();
-        let llm_response = agent.llm_provider().complete(request).await?;
+        let mut llm_response = agent.llm_provider().complete(request).await?;
         let llm_duration_ms = llm_start.elapsed().as_secs_f64() * 1000.0;
+        let llm_end_timestamp = chrono::Utc::now();
 
-        // Store LLM response metadata AND request prompt in context for observability
+        // Get provider name for metadata
+        let provider_name = agent.llm_provider().config().provider_name().to_string();
+
+        // Capture raw LLM content before decode for metadata
+        let raw_llm_content = llm_response.content.clone();
+        if guardrail_enforcer.is_some() {
+            tracing::debug!(
+                "[GuardRail] raw LLM response (before decode): content={:?}, tool_calls={:?}",
+                llm_response.content,
+                llm_response.tool_calls
+            );
+        }
+
+        // Build tool_calls array for the llm_call execution entry.
+        // When GuardRail is on, store encoded (masked) parameters so metadata never exposes PII.
+        let llm_tool_calls_for_metadata: Vec<serde_json::Value> = llm_response
+            .tool_calls
+            .iter()
+            .map(|tc| {
+                let params_for_meta = if let Some(ref enforcer) = guardrail_enforcer {
+                    let enc = enforcer.encode(tc.parameters.clone(), EncodeContext::Llm);
+                    if enc.payload.is_object() {
+                        enc.payload
+                    } else {
+                        tc.parameters.clone()
+                    }
+                } else {
+                    tc.parameters.clone()
+                };
+                let args_str = serde_json::to_string(&params_for_meta).unwrap_or_default();
+                serde_json::json!({
+                    "id": tc.id,
+                    "type": "function",
+                    "name": tc.name,
+                    "parameters": params_for_meta,
+                    "function": {
+                        "name": tc.name,
+                        "arguments": args_str
+                    }
+                })
+            })
+            .collect();
+
+        // Build the llm_call execution entry
+        let llm_call_entry = serde_json::json!({
+            "type": "llm_call",
+            "id": llm_response.id.clone().unwrap_or_default(),
+            "model": llm_response.model,
+            "provider": provider_name,
+            "input": if guardrail_enforcer.is_some() { masked_input_for_meta.clone() } else { metadata_input.to_string() },
+            "output": llm_response.content,
+            "finish_reason": format!("{}", llm_response.finish_reason),
+            "tool_calls": llm_tool_calls_for_metadata,
+            "start_time": execution_timestamp.to_rfc3339(),
+            "end_time": llm_end_timestamp.to_rfc3339(),
+            "duration_ms": llm_duration_ms,
+            "usage": {
+                "prompt_tokens": llm_response.usage.prompt_tokens,
+                "completion_tokens": llm_response.usage.completion_tokens,
+                "total_tokens": llm_response.usage.total_tokens,
+                "prompt_tokens_details": {
+                    "cached_tokens": 0,
+                    "audio_tokens": 0
+                },
+                "completion_tokens_details": {
+                    "reasoning_tokens": 0,
+                    "audio_tokens": 0,
+                    "accepted_prediction_tokens": 0,
+                    "rejected_prediction_tokens": 0
+                }
+            },
+            "retries": []
+        });
+        executions.push(llm_call_entry);
+
+        // Guardrail: decode LLM output before storing in context
+        if let Some(ref enforcer) = guardrail_enforcer {
+            tracing::debug!(
+                "Guardrail: decoding LLM response (tool path; rehydrating for context) llm_response.content: {}",
+                llm_response.content
+            );
+            tracing::debug!(
+                "Guardrail: decoding LLM response (tool path; rehydrating for context)"
+            );
+            let payload = serde_json::json!({
+                "content": llm_response.content,
+                "tool_calls": llm_response.tool_calls
+            });
+            let decoded_result = enforcer.decode(payload, DecodeContext::LlmResponse);
+            tracing::debug!("Guardrail: LLM response decoded");
+
+            // Record guardrail decode execution entry
+            executions.push(serde_json::json!({
+                "type": "guardrail_policy",
+                "operation": "rehydrate",
+                "pii_rules_applied_count": decoded_result.rules_applied_count,
+                "pii_rule_names": decoded_result.rule_names,
+                "policy_name": decoded_result.policy_name
+            }));
+
+            if let Some(c) = decoded_result
+                .payload
+                .get("content")
+                .and_then(|v| v.as_str())
+            {
+                llm_response.content = c.to_string();
+            }
+            if let Some(tc) = decoded_result.payload.get("tool_calls") {
+                if let Ok(parsed) = serde_json::from_value(tc.clone()) {
+                    llm_response.tool_calls = parsed;
+                }
+            }
+        }
+
+        // Build the initial node-level metadata with executions array
+        // The Python layer (handle_tool_calls_in_context) will extend this with tool_call and subsequent llm_call entries
+        let max_iterations = node_config
+            .get("max_iterations")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(5) as u32;
+
+        let node_metadata = serde_json::json!({
+            "node_id": node_id.to_string(),
+            "node_name": node_name,
+            "node_type": "Agent",
+            // When GR active: user_input = masked prompt, final_output = raw LLM content
+            // When GR inactive: user_input = original prompt, final_output = decoded content
+            "user_input": if guardrail_enforcer.is_some() { masked_input_for_meta.clone() } else { metadata_input.to_string() },
+            "tools_available": tool_names,
+            "total_tools_available": tool_names.len(),
+            "start_time": execution_timestamp.to_rfc3339(),
+            "end_time": llm_end_timestamp.to_rfc3339(),
+            "duration_ms": llm_duration_ms,
+            "success": true,
+            "error": serde_json::Value::Null,
+            "final_output": if guardrail_enforcer.is_some() { raw_llm_content.clone() } else { llm_response.content.clone() },
+            "total_iterations": 0,
+            "max_iterations": max_iterations,
+            "exit_reason": format!("{}", llm_response.finish_reason),
+            "total_usage": {
+                "prompt_tokens": llm_response.usage.prompt_tokens,
+                "completion_tokens": llm_response.usage.completion_tokens,
+                "total_tokens": llm_response.usage.total_tokens,
+                "prompt_tokens_details": {
+                    "cached_tokens": 0,
+                    "audio_tokens": 0
+                },
+                "completion_tokens_details": {
+                    "reasoning_tokens": 0,
+                    "audio_tokens": 0,
+                    "accepted_prediction_tokens": 0,
+                    "rejected_prediction_tokens": 0
+                }
+            },
+            "total_tool_calls": 0,
+            "total_retries": 0,
+            "tools_used": [],
+            "executions": executions
+        });
+
+        // Store the metadata
         {
             let mut ctx = context.lock().await;
-            if let Ok(mut response_metadata) = serde_json::to_value(&llm_response) {
-                // Add the request prompt to the metadata
-                if let Some(obj) = response_metadata.as_object_mut() {
-                    obj.insert(
-                        "prompt".to_string(),
-                        serde_json::Value::String(prompt.to_string()),
-                    );
-                    // Add LLM call duration for accurate latency tracking
-                    obj.insert(
-                        "duration_ms".to_string(),
-                        serde_json::json!(llm_duration_ms),
-                    );
-                    // Add execution timestamp for chronological ordering
-                    obj.insert(
-                        "execution_timestamp".to_string(),
-                        serde_json::json!(execution_timestamp.to_rfc3339()),
-                    );
-                }
-
-                // Store by node ID
-                ctx.metadata.insert(
-                    format!("node_response_{node_id}"),
-                    response_metadata.clone(),
-                );
-                // Store by node name
-                ctx.metadata
-                    .insert(format!("node_response_{node_name}"), response_metadata);
-            }
+            ctx.metadata
+                .insert(format!("node_response_{node_id}"), node_metadata.clone());
+            ctx.metadata
+                .insert(format!("node_response_{node_name}"), node_metadata);
         }
 
         // DEBUG: Log LLM response details
@@ -1250,13 +1636,20 @@ impl WorkflowExecutor {
                 GraphBitError::workflow_execution(format!("Failed to serialize tool calls: {e}"))
             })?;
 
-            // Return a structured response that the Python layer can interpret
-            // Include token usage for budget tracking
+            // Return a structured response that the Python layer can interpret.
+            // When GuardRail is on, pass only the encoded payload (without the RULE signature
+            // injection text) so the executor can reconstruct the final prompt cleanly.
+            // The executor will re-encode the final prompt (adding a fresh RULE prefix) before
+            // the second LLM call; including the RULE here would cause it to appear in metadata.
+            let original_prompt_for_response = guardrail_enforcer
+                .as_ref()
+                .map(|_| masked_input_for_meta.clone())
+                .unwrap_or_else(|| metadata_input.to_string());
             Ok(serde_json::json!({
                 "type": "tool_calls_required",
                 "content": llm_response.content,
                 "tool_calls": tool_calls_json,
-                "original_prompt": prompt,
+                "original_prompt": original_prompt_for_response,
                 "initial_tokens_used": llm_response.usage.completion_tokens,
                 "max_tokens_configured": node_config.get("max_tokens").and_then(|v| v.as_u64()),
                 "message": "Tool execution should be handled by Python layer with proper tool registry"
@@ -1269,29 +1662,6 @@ impl WorkflowExecutor {
             );
             Ok(serde_json::Value::String(llm_response.content))
         }
-    }
-
-    /// Execute a condition node (static version)
-    async fn execute_condition_node_static(_expression: &str) -> GraphBitResult<serde_json::Value> {
-        // Simple condition evaluation (in a real implementation, you'd use a proper expression evaluator)
-        Ok(serde_json::Value::Bool(true))
-    }
-
-    /// Execute a transform node (static version)
-    async fn execute_transform_node_static(
-        _transformation: &str,
-        _context: Arc<Mutex<WorkflowContext>>,
-    ) -> GraphBitResult<serde_json::Value> {
-        // Simple transformation (in a real implementation, you'd use a proper transformation engine)
-        Ok(serde_json::Value::String("transformed".to_string()))
-    }
-
-    /// Execute a delay node (static version)
-    async fn execute_delay_node_static(duration_seconds: u64) -> GraphBitResult<serde_json::Value> {
-        tokio::time::sleep(tokio::time::Duration::from_secs(duration_seconds)).await;
-        Ok(serde_json::Value::String(format!(
-            "Delayed for {duration_seconds} seconds",
-        )))
     }
 
     /// Execute a document loader node (static version)

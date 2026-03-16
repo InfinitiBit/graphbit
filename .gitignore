@@ -187,3 +187,6 @@ $RECYCLE.BIN/
 #.idea/
 .flake8
 .zed/
+
+# allow vendor so
+!vendor/**/*.so
