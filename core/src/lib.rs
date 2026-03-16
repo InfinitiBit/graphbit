@@ -51,6 +51,9 @@ pub use embeddings::{
 pub use errors::{GraphBitError, GraphBitResult};
 pub use graph::{NodeType, WorkflowEdge, WorkflowGraph, WorkflowNode};
 pub use llm::{LlmConfig, LlmProvider, LlmResponse};
+pub use memory::{
+    Memory, MemoryConfig, MemoryHistory, MemoryId, MemoryScope, MemoryService, ScoredMemory,
+};
 pub use text_splitter::{
     CharacterSplitter, RecursiveSplitter, SentenceSplitter, SplitterStrategy, TextChunk,
     TextSplitterConfig, TextSplitterFactory, TextSplitterTrait, TokenSplitter,

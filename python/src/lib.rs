@@ -35,6 +35,7 @@ mod embeddings;
 mod errors;
 mod guardrail;
 mod llm;
+mod memory;
 mod runtime;
 mod text_splitter;
 mod tools;
@@ -51,6 +52,7 @@ pub use text_splitter::{
     TokenSplitter,
 };
 pub use tools::{ToolDecorator, ToolExecutor, ToolRegistry, ToolResult};
+pub use memory::{MemoryClient, PyMemory, PyMemoryConfig, PyMemoryHistory, PyScoredMemory};
 pub use workflow::{Executor, Node, Workflow, WorkflowContext, WorkflowResult};
 
 /// Global initialization flag to ensure init is called only once
@@ -401,6 +403,13 @@ fn graphbit(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // Embedding classes
     m.add_class::<EmbeddingConfig>()?;
     m.add_class::<EmbeddingClient>()?;
+
+    // Memory classes
+    m.add_class::<PyMemoryConfig>()?;
+    m.add_class::<MemoryClient>()?;
+    m.add_class::<PyMemory>()?;
+    m.add_class::<PyScoredMemory>()?;
+    m.add_class::<PyMemoryHistory>()?;
 
     // Text splitter classes
     m.add_class::<TextSplitterConfig>()?;

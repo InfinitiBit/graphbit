@@ -43,6 +43,15 @@ from .graphbit import (
     EmbeddingClient,
 )
 
+# Memory classes
+from .graphbit import (
+    MemoryConfig,
+    MemoryClient,
+    PyMemory,
+    PyScoredMemory,
+    PyMemoryHistory,
+)
+
 # Text splitter classes
 from .graphbit import (
     TextSplitterConfig,
@@ -110,6 +119,12 @@ __all__ = [
     # Embeddings
     "EmbeddingConfig",
     "EmbeddingClient",
+    # Memory
+    "MemoryConfig",
+    "MemoryClient",
+    "PyMemory",
+    "PyScoredMemory",
+    "PyMemoryHistory",
     # Text splitter
     "TextSplitterConfig",
     "TextChunk",
