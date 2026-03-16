@@ -8,9 +8,9 @@ num_cpus.workspace = true
 reqwest.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+temp-env.workspace = true
 tempfile.workspace = true
 tokio.workspace = true
-temp-env.workspace = true
 
 [dev-dependencies]
 pyo3 = {workspace = true, features = ["auto-initialize"]}
@@ -96,10 +96,6 @@ resolver = "2"
 # Core dependencies with consistent versions
 anyhow = "1.0"
 async-trait = "0.1.88"
-# NAPI-RS bindings for JavaScript
-napi = { version = "2", features = ["async", "serde-json", "napi6"] }
-napi-derive = "2"
-napi-build = "2"
 # Excel parsing (including XLSB support)
 calamine = "0.26"
 chrono = {version = "0.4", features = ["serde"]}
@@ -115,6 +111,10 @@ jemallocator = "0.5"
 # Utilities
 lopdf = "0.32"
 mimalloc = {version = "0.1", default-features = false}
+# NAPI-RS bindings for JavaScript
+napi = {version = "2", features = ["async", "serde-json", "napi6"]}
+napi-build = "2"
+napi-derive = "2"
 num_cpus = "1.16"
 pdf-extract = "0.10"
 # Graph and algorithms
@@ -127,6 +127,7 @@ quick-xml = {version = "0.36", features = ["serialize"]}
 rand = "0.9"
 regex = "1.10"
 reqwest = {version = "0.13", default-features = false, features = ["json", "stream", "rustls"]}
+rusqlite = {version = "0.31", features = ["bundled"]}
 # HTML parsing
 scraper = "0.25"
 serde = {version = "1.0", features = ["derive"]}
@@ -145,74 +146,61 @@ uuid = {version = "1.8", features = ["v4", "v5", "serde"]}
 [workspace.lints.clippy]
 # Set lint groups with proper priority hierarchy
 all = {level = "warn", priority = -1}
+# Async-specific
+async_yields_async = "warn"
 cargo = {level = "warn", priority = -1}
-nursery = {level = "warn", priority = -1}
-pedantic = {level = "warn", priority = -1}
-
+# Common correctness issues
+inefficient_to_string = "warn"
+# Performance
+large_futures = "warn"
+large_stack_arrays = "warn"
+# Error handling hygiene
+map_unwrap_or = "warn"  # use map_or instead
+match_wildcard_for_single_variants = "warn"
 # Individual lint overrides (higher priority)
 missing_errors_doc = "allow"
 missing_panics_doc = "allow"
-
 # Allow some pedantic lints that are too strict for this project
 module_name_repetitions = "allow"
-
-# The unwrap problem you mentioned
-unwrap_used = "warn"       
-panic = "warn"           
-
-# Error handling hygiene
-map_unwrap_or = "warn"            # use map_or instead
-
-# Common correctness issues
-inefficient_to_string = "warn"
-match_wildcard_for_single_variants = "warn"
-unnecessary_unwrap = "warn"  
-
-# Performance
-large_futures = "warn" 
-large_stack_arrays = "warn"
-unnecessary_box_returns = "warn"
-
 # API design (important for open source)
 must_use_candidate = "warn"
-
-# Async-specific
-async_yields_async = "warn"
+nursery = {level = "warn", priority = -1}
+panic = "warn"
+pedantic = {level = "warn", priority = -1}
 redundant_async_block = "warn"
-
+unnecessary_box_returns = "warn"
+unnecessary_unwrap = "warn"
+# The unwrap problem you mentioned
+unwrap_used = "warn"
 
 # Workspace-wide lints configuration
 [workspace.lints.rust]
-# unsafe warnings
-unsafe_code = "forbid"
-unconditional_recursion = "warn"
-unused_allocation = "warn"
-unused_comparisons = "warn"
-overflowing_literals = "warn"
-improper_ctypes = "warn"
-patterns_in_fns_without_body = "warn"
-
-# styling / naming patterns
-non_camel_case_types = "warn"
-non_snake_case = "warn"
-non_upper_case_globals = "warn"
-
 # dead / unreachable code
 dead_code = "warn"
-unused = "warn"
-unused_imports = "warn"
-unused_variables = "warn"
-unused_parens = "warn"
-path_statements = "warn"
-while_true = "warn"
-
+improper_ctypes = "warn"
 # api hygiene
 missing_docs = "warn"
-unreachable_pub = "warn"
-non_local_definitions = "allow"
-
 # FFI correctness
 no_mangle_generic_items = "warn"
+# styling / naming patterns
+non_camel_case_types = "warn"
+non_local_definitions = "allow"
+non_snake_case = "warn"
+non_upper_case_globals = "warn"
+overflowing_literals = "warn"
+path_statements = "warn"
+patterns_in_fns_without_body = "warn"
+unconditional_recursion = "warn"
+unreachable_pub = "warn"
+# unsafe warnings
+unsafe_code = "forbid"
+unused = "warn"
+unused_allocation = "warn"
+unused_comparisons = "warn"
+unused_imports = "warn"
+unused_parens = "warn"
+unused_variables = "warn"
+while_true = "warn"
 
 # Workspace metadata for better tooling support
 [workspace.metadata.docs.rs]
