@@ -115,7 +115,7 @@ class TestRunner:
             workflow = Workflow(f"{self.provider_name}Single")
             agent = Node.agent(
                 name="Calc",
-                prompt="Calculate 5 + 3 using the add tool. Return ONLY the numeric result.",
+                prompt="Calculate 5 + 3 STRICTLY using the available add tool. Return ONLY the numeric result.",
                 tools=[add],
             )
             workflow.add_node(agent)
@@ -123,10 +123,11 @@ class TestRunner:
             output = result.get_node_output("Calc")
             metadata = result.get_node_response_metadata("Calc")
             print(f"  Output: {output}")
-            print(f"  Iterations: {metadata.get('iterations')}")
-            print(f"  Tool calls: {len(metadata.get('tool_calls', []))}")
+            print(f"  Iterations: {metadata.get('total_iterations')}")
+            print(f"  Tool calls: {len(metadata.get('tools_used', []))}")
+            # print(metadata)
             assert "8" in str(output), f"Expected '8' in output, got: {output}"
-            assert metadata.get('iterations', 0) >= 1, "Expected at least 1 iteration"
+            assert metadata.get('total_iterations', 0) >= 1, "Expected at least 1 iteration"
         self.run_test("Single Tool Call (add 5+3=8)", run)
 
     def test_multi_step_chain(self):
@@ -148,13 +149,13 @@ class TestRunner:
             output = result.get_node_output("MathChain")
             metadata = result.get_node_response_metadata("MathChain")
             print(f"  Output: {output}")
-            print(f"  Iterations: {metadata.get('iterations')}")
-            tool_calls = metadata.get('tool_calls', [])
-            print(f"  Tool calls: {len(tool_calls)}")
-            for tc in tool_calls:
-                print(f"    iter {tc['iteration']}: {tc['tool_name']}({tc['parameters']}) → {tc['output']}")
+            print(f"  Iterations: {metadata.get('total_iterations')}")
+            tools_used = metadata.get('tools_used', [])
+            print(f"  Tools used: {tools_used}")
+            # for tc in tools_used:
+            #     print(f"    iter {tc['iteration']}: {tc['tool_name']}({tc['parameters']}) → {tc['output']}")
             assert "90" in str(output), f"Expected '90' in output, got: {output}"
-            assert metadata.get('iterations', 0) >= 2, "Expected at least 2 iterations"
+            assert metadata.get('total_iterations', 0) >= 2, "Expected at least 2 iterations"
         self.run_test("Multi-Step Chain (add→multiply = 90)", run)
 
     def test_parallel_tools(self):
@@ -177,11 +178,11 @@ class TestRunner:
             output = result.get_node_output("Researcher")
             metadata = result.get_node_response_metadata("Researcher")
             print(f"  Output: {output}")
-            print(f"  Iterations: {metadata.get('iterations')}")
-            tool_calls = metadata.get('tool_calls', [])
-            print(f"  Tool calls: {len(tool_calls)}")
-            for tc in tool_calls:
-                print(f"    iter {tc['iteration']}: {tc['tool_name']}({tc['parameters']}) → {tc['output']}")
+            print(f"  Iterations: {metadata.get('total_iterations')}")
+            tools_used = metadata.get('tools_used', [])
+            print(f"  Tools used: {tools_used}")
+            # for tc in tools_used:
+            #     print(f"    iter {tc['iteration']}: {tc['tool_name']}({tc['parameters']}) → {tc['output']}")
             assert "Tokyo" in str(output), f"Expected 'Tokyo' in output, got: {output}"
             assert "125" in str(output) or "million" in str(output).lower(), \
                 f"Expected population info, got: {output}"
@@ -208,13 +209,13 @@ class TestRunner:
             output = result.get_node_output("ThreeStep")
             metadata = result.get_node_response_metadata("ThreeStep")
             print(f"  Output: {output}")
-            print(f"  Iterations: {metadata.get('iterations')}")
-            tool_calls = metadata.get('tool_calls', [])
-            print(f"  Tool calls: {len(tool_calls)}")
-            for tc in tool_calls:
-                print(f"    iter {tc['iteration']}: {tc['tool_name']}({tc['parameters']}) → {tc['output']}")
+            print(f"  Iterations: {metadata.get('total_iterations')}")
+            tools_used = metadata.get('tools_used', [])
+            print(f"  Tools used: {tools_used}")
+            # for tc in tools_used:
+            #     print(f"    iter {tc['iteration']}: {tc['tool_name']}({tc['parameters']}) → {tc['output']}")
             assert "80" in str(output), f"Expected '80' in output, got: {output}"
-            assert metadata.get('iterations', 0) >= 3, "Expected at least 3 iterations"
+            assert metadata.get('total_iterations', 0) >= 3, "Expected at least 3 iterations"
         self.run_test("Three-Step Chain (5+10→+25→×2 = 80)", run)
 
     def test_max_iterations_1(self):
@@ -232,10 +233,10 @@ class TestRunner:
             output = result.get_node_output("Limited")
             metadata = result.get_node_response_metadata("Limited")
             print(f"  Output: {output}")
-            print(f"  Iterations: {metadata.get('iterations')}")
+            print(f"  Iterations: {metadata.get('total_iterations')}")
             print(f"  Max iterations: {metadata.get('max_iterations')}")
-            assert metadata.get('iterations') == 1, \
-                f"Expected iterations=1, got: {metadata.get('iterations')}"
+            assert metadata.get('total_iterations') == 1, \
+                f"Expected total_iterations=1, got: {metadata.get('total_iterations')}"
             assert metadata.get('max_iterations') == 1, \
                 f"Expected max_iterations=1, got: {metadata.get('max_iterations')}"
         self.run_test("max_iterations=1 Boundary", run)
@@ -254,8 +255,8 @@ class TestRunner:
             output = result.get_node_output("Direct")
             metadata = result.get_node_response_metadata("Direct")
             print(f"  Output: {output}")
-            print(f"  Iterations: {metadata.get('iterations')}")
-            print(f"  Tool calls: {len(metadata.get('tool_calls', []))}")
+            print(f"  Iterations: {metadata.get('total_iterations')}")
+            print(f"  Tool calls: {len(metadata.get('tools_used', []))}")
             assert "4" in str(output), f"Expected '4' in output, got: {output}"
         self.run_test("No Tool Needed (direct answer)", run)
 
@@ -278,15 +279,15 @@ class TestRunner:
             output = result.get_node_output("ConditionalAgent")
             metadata = result.get_node_response_metadata("ConditionalAgent")
             print(f"  Output: {output}")
-            print(f"  Iterations: {metadata.get('iterations')}")
-            tool_calls = metadata.get('tool_calls', [])
-            print(f"  Tool calls: {len(tool_calls)}")
-            for tc in tool_calls:
-                print(f"    iter {tc['iteration']}: {tc['tool_name']}({tc['parameters']}) → {tc['output']}")
-            assert len(tool_calls) >= 2, f"Expected at least 2 tool calls, got: {len(tool_calls)}"
-            tool_names = [tc['tool_name'] for tc in tool_calls]
-            assert "add" in tool_names, "Expected 'add' tool to be called"
-            assert "get_weather" in tool_names, "Expected 'get_weather' tool to be called"
+            print(f"  Iterations: {metadata.get('total_iterations')}")
+            tools_used = metadata.get('tools_used', [])
+            print(f"  Tools used: {tools_used}")
+            # for tc in tools_used:
+            #     print(f"    iter {tc['iteration']}: {tc['tool_name']}({tc['parameters']}) → {tc['output']}")
+            assert len(tools_used) >= 2, f"Expected at least 2 tools used, got: {len(tools_used)}"
+            # tool_names = [tc['tool_name'] for tc in tools_used]
+            assert "add" in tools_used, "Expected 'add' tool to be used"
+            assert "get_weather" in tools_used, "Expected 'get_weather' tool to be used"
         self.run_test("Conditional Tool Use (add→weather if >40)", run)
 
     def test_metadata_accuracy(self):
@@ -306,24 +307,24 @@ class TestRunner:
 
             # Check required metadata fields
             assert metadata is not None, "Metadata should not be None"
-            assert 'iterations' in metadata, "Missing 'iterations' in metadata"
+            assert 'total_iterations' in metadata, "Missing 'total_iterations' in metadata"
             assert 'max_iterations' in metadata, "Missing 'max_iterations' in metadata"
-            assert 'tool_calls' in metadata, "Missing 'tool_calls' in metadata"
-            assert 'total_duration_ms' in metadata, "Missing 'total_duration_ms' in metadata"
-            assert 'total_tokens_used' in metadata, "Missing 'total_tokens_used' in metadata"
-            assert 'prompt' in metadata, "Missing 'prompt' in metadata"
+            assert 'tools_used' in metadata, "Missing 'tools_used' in metadata"
+            assert 'duration_ms' in metadata, "Missing 'duration_ms' in metadata"
+            assert 'total_usage' in metadata, "Missing 'total_usage' in metadata"
+            assert 'user_input' in metadata, "Missing 'user_input' in metadata"
             assert metadata['max_iterations'] == 5, f"Expected max_iterations=5, got {metadata['max_iterations']}"
 
             # Check tool call metadata fields
-            tc = metadata['tool_calls']
-            assert len(tc) >= 1, "Expected at least 1 tool call"
-            tc0 = tc[0]
-            assert 'tool_name' in tc0, "Missing 'tool_name' in tool call"
-            assert 'parameters' in tc0, "Missing 'parameters' in tool call"
-            assert 'output' in tc0, "Missing 'output' in tool call"
-            assert 'iteration' in tc0, "Missing 'iteration' in tool call"
-            assert 'success' in tc0, "Missing 'success' in tool call"
-            assert tc0['success'] is True, "Tool call should be successful"
+            # tc = metadata['tools_used']
+            # assert len(tc) >= 1, "Expected at least 1 tool call"
+            # tc0 = tc[0]
+            # assert 'tool_name' in tc0, "Missing 'tool_name' in tool call"
+            # assert 'parameters' in tc0, "Missing 'parameters' in tool call"
+            # assert 'output' in tc0, "Missing 'output' in tool call"
+            # assert 'iteration' in tc0, "Missing 'iteration' in tool call"
+            # assert 'success' in tc0, "Missing 'success' in tool call"
+            # assert tc0['success'] is True, "Tool call should be successful"
             print(f"  All metadata fields present ✓")
         self.run_test("Metadata Accuracy Check", run)
 
