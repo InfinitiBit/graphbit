@@ -136,8 +136,11 @@ pub struct LlmMessage {
     pub role: LlmRole,
     /// Content of the message
     pub content: String,
-    /// Optional tool calls in this message
+    /// Optional tool calls in this message (for assistant messages requesting tool execution)
     pub tool_calls: Vec<LlmToolCall>,
+    /// Optional tool call ID this message responds to (for tool result messages)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool_call_id: Option<String>,
 }
 
 impl LlmMessage {
@@ -147,6 +150,7 @@ impl LlmMessage {
             role: LlmRole::User,
             content: content.into(),
             tool_calls: Vec::new(),
+            tool_call_id: None,
         }
     }
 
@@ -156,6 +160,7 @@ impl LlmMessage {
             role: LlmRole::Assistant,
             content: content.into(),
             tool_calls: Vec::new(),
+            tool_call_id: None,
         }
     }
 
@@ -165,19 +170,18 @@ impl LlmMessage {
             role: LlmRole::System,
             content: content.into(),
             tool_calls: Vec::new(),
+            tool_call_id: None,
         }
     }
 
     /// Create a tool message (for tool call results)
     pub fn tool(tool_call_id: impl Into<String>, result: impl Into<String>) -> Self {
+        let id = tool_call_id.into();
         Self {
             role: LlmRole::Tool,
-            content: format!(
-                "Tool call {} result: {}",
-                tool_call_id.into(),
-                result.into()
-            ),
+            content: result.into(),
             tool_calls: Vec::new(),
+            tool_call_id: Some(id),
         }
     }
 
