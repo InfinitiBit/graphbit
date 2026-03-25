@@ -1,3 +1,44 @@
+## [0.6.6] - 2026-03-25
+
+### ✨ New Features
+
+- **Integrating GuardRail into Graphbit** by @annur-infinitibit in [#470](https://github.com/InfinitiBit/graphbit/pull/470)
+- **GuardRail Build and Publish Workflow** by @annur-infinitibit in [#480](https://github.com/InfinitiBit/graphbit/pull/480)
+- **Implement Hierarchical Workflow Execution Metadata Schema** by @JunaidHossain04 in [#477](https://github.com/InfinitiBit/graphbit/pull/477)
+- **Implement Separated Conversational Context for Agent Nodes** by @JunaidHossain04 in [#478](https://github.com/InfinitiBit/graphbit/pull/478)
+- **Iterative Agent Tool Calling Loop** by @JunaidHossain04 in [#469](https://github.com/InfinitiBit/graphbit/pull/469)
+- **Add Core Memory Types, Errors, and Vector Index** by @humayrakhanom in [#445](https://github.com/InfinitiBit/graphbit/pull/445)
+- **Memory Layer Processor Service** by @humayrakhanom in [#447](https://github.com/InfinitiBit/graphbit/pull/447)
+- **Memory Layer Python Bindings** by @humayrakhanom in [#448](https://github.com/InfinitiBit/graphbit/pull/448)
+- **Memory Layer JavaScript Bindings** by @humayrakhanom in [#449](https://github.com/InfinitiBit/graphbit/pull/449)
+- **Standard Rust & Clippy Linting Rules** by @annur-infinitibit in [#456](https://github.com/InfinitiBit/graphbit/pull/456)
+- **Add AG2 Benchmark (ag2>=0.11.0) alongside existing autogen-agentchat benchmark** by @VasiliyRad in [#474](https://github.com/InfinitiBit/graphbit/pull/474)
+
+### 🔒 Security & Enhancement
+
+- **Tool Params/Outputs Masked** by @annur-infinitibit in [#479](https://github.com/InfinitiBit/graphbit/pull/479)
+
+### 🐛 Bug Fixes
+
+- **CI/CD - Use Native-TLS for Cross Compilation** by @annur-infinitibit in [#460](https://github.com/InfinitiBit/graphbit/pull/460)
+- **Native TLS to Rustls-TLS** by @annur-infinitibit in [#461](https://github.com/InfinitiBit/graphbit/pull/461)
+- **Updated Scraper to Latest Stable** by @annur-infinitibit in [#462](https://github.com/InfinitiBit/graphbit/pull/462)
+- **Pinned Manylinux Versions in Github Workflows** by @annur-infinitibit in [#464](https://github.com/InfinitiBit/graphbit/pull/464)
+- **Using Full Triplets for Target** by @annur-infinitibit in [#465](https://github.com/InfinitiBit/graphbit/pull/465)
+- **Manylinux Updated to 2_34** by @annur-infinitibit in [#466](https://github.com/InfinitiBit/graphbit/pull/466)
+- **Removed LiteLLM as Dependency** by @annur-infinitibit in [#484](https://github.com/InfinitiBit/graphbit/pull/484)
+
+### 🔧 Maintenance
+
+- **Update Build Artifact Workflow** by @JunaidHossain04 in [#463](https://github.com/InfinitiBit/graphbit/pull/463)
+- **CI/CD Workflow Updated OpenSSL Configs and Zig Compiler** by @annur-infinitibit in [#467](https://github.com/InfinitiBit/graphbit/pull/467)
+- **Fix Maturin Develop Conflict by Removing Redundant Strip Setting** by @JunaidHossain04 in [#481](https://github.com/InfinitiBit/graphbit/pull/481)
+- **Fix Build Dependency** by @JunaidHossain04 in [#482](https://github.com/InfinitiBit/graphbit/pull/482)
+
+---
+**Total Changes**: 23
+**Changes by Category**: ✨ New Features: 11 | 🔒 Security & Enhancement: 1 | 🐛 Bug Fixes: 7 | 🔧 Maintenance: 4
+
 ## [0.6.5] - 2026-02-18
 
 ### ✨ New Features
