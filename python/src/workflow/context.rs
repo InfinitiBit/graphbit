@@ -124,7 +124,7 @@ impl WorkflowContext {
 }
 
 /// Helper function to convert JSON values to Python objects
-fn json_to_python(value: &JsonValue, py: Python<'_>) -> PyResult<PyObject> {
+pub(crate) fn json_to_python(value: &JsonValue, py: Python<'_>) -> PyResult<PyObject> {
     match value {
         JsonValue::String(s) => Ok(s.clone().into_pyobject(py)?.into_any().unbind()),
         JsonValue::Number(n) => {

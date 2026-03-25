@@ -136,6 +136,7 @@ print("Result:", result.variables())
 - Real-time web search with Perplexity (`simple_task_perplexity.py`)
 - Memory-optimized large prompt tasks (`memory_task_local_model.py`)
 - Multi-step and dependency-based workflows (`sequential_task_local_model.py`, `complex_workflow_local_model.py`)
+- Conditional branching — personal financial advisor (balance intake + tiered advisors) (`conditional_branch_local_model.py`)
 
 *For more details, see the [GraphBit Python API documentation](../docs/index.md).*
 
@@ -154,6 +155,10 @@ _Requires Ollama running locally._
 **complex_workflow_local_model.py**  
 *Complex, multi-step workflow with explicit dependencies between tasks, covering a comprehensive IP protection strategy.*  
 _Requires Ollama running locally._
+
+**conditional_branch_local_model.py**
+*Condition node after an **intake agent** calls `get_financial_details()` (stub balance **`DEMO_ACCOUNT_BALANCE`** in the script); a Python handler **routes by balance** so exactly one of three advisors runs — **Budget Planner** (<$1k), **Small Investment Advisor** ($1k–$50k), **Large Investment Advisor** (>$50k) — each with different tools and tone. Loads **`.env`** for API keys; **OpenAI** if `OPENAI_API_KEY` else **Ollama** (tool calling is easier on OpenAI).*
+_Requires either `OPENAI_API_KEY` or Ollama._
 
 **memory_task_local_model.py**  
 *Memory-intensive, single-agent task with a large prompt, using Llama 3.2 via Ollama. Provides a deep legal/technical analysis.*  
