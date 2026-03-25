@@ -833,7 +833,7 @@ dependencies = [
 
 [[package]]
 name = "graphbit"
-version = "0.6.5"
+version = "0.6.6"
 dependencies = [
  "chrono",
  "futures",
@@ -855,7 +855,7 @@ dependencies = [
 
 [[package]]
 name = "graphbit-core"
-version = "0.6.5"
+version = "0.6.6"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -888,7 +888,7 @@ dependencies = [
 
 [[package]]
 name = "graphbit-lib"
-version = "0.6.5"
+version = "0.6.6"
 dependencies = [
  "anyhow",
  "async-trait",
