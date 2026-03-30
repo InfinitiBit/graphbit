@@ -4,7 +4,7 @@
 // without using simulated agents.
 
 use graphbit_core::{
-    errors::GraphBitResult, graph::NodeType, llm::LlmConfig, types::AgentId, AgentConfig,
+    errors::GraphBitResult, graph::{AgentNodeConfig, NodeType}, llm::LlmConfig, types::AgentId, AgentConfig,
     WorkflowBuilder, WorkflowEdge, WorkflowNode,
 };
 
@@ -42,8 +42,12 @@ async fn test_simple_workflow_creation() -> GraphBitResult<()> {
         "Agent 1",
         "First agent",
         NodeType::Agent {
-            agent_id: agent_config.id.clone(),
-            prompt_template: agent_config.system_prompt.clone(),
+            config: AgentNodeConfig {
+                agent_id: agent_config.id.clone(),
+                prompt_template: agent_config.system_prompt.clone(),
+                conversational_context: None,
+                system_prompt_override: None,
+            },
         },
     );
 
@@ -92,8 +96,12 @@ async fn test_multi_node_workflow() -> GraphBitResult<()> {
         "Agent 1",
         "First agent",
         NodeType::Agent {
-            agent_id: agent_config1.id.clone(),
-            prompt_template: agent_config1.system_prompt.clone(),
+            config: AgentNodeConfig {
+                agent_id: agent_config1.id.clone(),
+                prompt_template: agent_config1.system_prompt.clone(),
+                conversational_context: None,
+                system_prompt_override: None,
+            },
         },
     );
 
@@ -101,8 +109,12 @@ async fn test_multi_node_workflow() -> GraphBitResult<()> {
         "Agent 2",
         "Second agent",
         NodeType::Agent {
-            agent_id: agent_config2.id.clone(),
-            prompt_template: agent_config2.system_prompt.clone(),
+            config: AgentNodeConfig {
+                agent_id: agent_config2.id.clone(),
+                prompt_template: agent_config2.system_prompt.clone(),
+                conversational_context: None,
+                system_prompt_override: None,
+            },
         },
     );
 
@@ -153,8 +165,12 @@ async fn test_workflow_with_connections() -> GraphBitResult<()> {
         "Agent 1",
         "First agent",
         NodeType::Agent {
-            agent_id: agent_config1.id.clone(),
-            prompt_template: agent_config1.system_prompt.clone(),
+            config: AgentNodeConfig {
+                agent_id: agent_config1.id.clone(),
+                prompt_template: agent_config1.system_prompt.clone(),
+                conversational_context: None,
+                system_prompt_override: None,
+            },
         },
     );
 
@@ -162,8 +178,12 @@ async fn test_workflow_with_connections() -> GraphBitResult<()> {
         "Agent 2",
         "Second agent",
         NodeType::Agent {
-            agent_id: agent_config2.id.clone(),
-            prompt_template: agent_config2.system_prompt.clone(),
+            config: AgentNodeConfig {
+                agent_id: agent_config2.id.clone(),
+                prompt_template: agent_config2.system_prompt.clone(),
+                conversational_context: None,
+                system_prompt_override: None,
+            },
         },
     );
 
@@ -191,8 +211,12 @@ async fn test_workflow_complex_graph() {
         "Start",
         "Starting node",
         NodeType::Agent {
-            agent_id: AgentId::new(),
-            prompt_template: "Start processing".to_string(),
+            config: AgentNodeConfig {
+                agent_id: AgentId::new(),
+                prompt_template: "Start processing".to_string(),
+                conversational_context: None,
+                system_prompt_override: None,
+            },
         },
     );
 
@@ -201,8 +225,12 @@ async fn test_workflow_complex_graph() {
         "Left",
         "Left branch",
         NodeType::Agent {
-            agent_id: AgentId::new(),
-            prompt_template: "Process left branch".to_string(),
+            config: AgentNodeConfig {
+                agent_id: AgentId::new(),
+                prompt_template: "Process left branch".to_string(),
+                conversational_context: None,
+                system_prompt_override: None,
+            },
         },
     );
 
@@ -211,8 +239,12 @@ async fn test_workflow_complex_graph() {
         "Right",
         "Right branch",
         NodeType::Agent {
-            agent_id: AgentId::new(),
-            prompt_template: "Process right branch".to_string(),
+            config: AgentNodeConfig {
+                agent_id: AgentId::new(),
+                prompt_template: "Process right branch".to_string(),
+                conversational_context: None,
+                system_prompt_override: None,
+            },
         },
     );
 
@@ -221,8 +253,12 @@ async fn test_workflow_complex_graph() {
         "End",
         "Merging node",
         NodeType::Agent {
-            agent_id: AgentId::new(),
-            prompt_template: "Merge results".to_string(),
+            config: AgentNodeConfig {
+                agent_id: AgentId::new(),
+                prompt_template: "Merge results".to_string(),
+                conversational_context: None,
+                system_prompt_override: None,
+            },
         },
     );
 
@@ -269,8 +305,12 @@ async fn test_workflow_metadata_preservation() {
         "Node 1",
         "First node",
         NodeType::Agent {
-            agent_id: AgentId::new(),
-            prompt_template: "Test prompt".to_string(),
+            config: AgentNodeConfig {
+                agent_id: AgentId::new(),
+                prompt_template: "Test prompt".to_string(),
+                conversational_context: None,
+                system_prompt_override: None,
+            },
         },
     );
 
@@ -314,8 +354,12 @@ async fn test_workflow_validation_cycles() {
         "Node 1",
         "First node",
         NodeType::Agent {
-            agent_id: AgentId::new(),
-            prompt_template: "Test prompt".to_string(),
+            config: AgentNodeConfig {
+                agent_id: AgentId::new(),
+                prompt_template: "Test prompt".to_string(),
+                conversational_context: None,
+                system_prompt_override: None,
+            },
         },
     );
 

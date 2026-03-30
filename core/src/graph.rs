@@ -4,7 +4,7 @@
 //! agentic workflows with proper dependency management and parallel execution.
 
 use crate::errors::{GraphBitError, GraphBitResult};
-use crate::types::{NodeId, RetryConfig};
+use crate::types::{AgentId, NodeId, RetryConfig};
 use petgraph::{
     Direction,
     algo::{is_cyclic_directed, toposort},
@@ -369,9 +369,9 @@ impl WorkflowGraph {
             use std::collections::HashMap;
             let mut agent_index: HashMap<String, Vec<(NodeId, String)>> = HashMap::new();
             for node in self.nodes.values() {
-                if let NodeType::Agent { agent_id, .. } = &node.node_type {
+                if let NodeType::Agent { config } = &node.node_type {
                     agent_index
-                        .entry(agent_id.to_string())
+                        .entry(config.agent_id.to_string())
                         .or_default()
                         .push((node.id.clone(), node.name.clone()));
                 }
@@ -503,6 +503,30 @@ pub struct WorkflowNode {
     pub tags: Vec<String>,
 }
 
+impl AgentNodeConfig {
+    /// Create a new agent node configuration with required fields
+    pub fn new(agent_id: AgentId, prompt_template: impl Into<String>) -> Self {
+        Self {
+            agent_id,
+            prompt_template: prompt_template.into(),
+            conversational_context: None,
+            system_prompt_override: None,
+        }
+    }
+
+    /// Add conversational context string to the configuration
+    pub fn with_context(mut self, context: impl Into<String>) -> Self {
+        self.conversational_context = Some(context.into());
+        self
+    }
+
+    /// Add a system prompt override to the configuration
+    pub fn with_system_prompt_override(mut self, system_prompt: impl Into<String>) -> Self {
+        self.system_prompt_override = Some(system_prompt.into());
+        self
+    }
+}
+
 impl WorkflowNode {
     /// Create a new workflow node
     pub fn new(
@@ -564,11 +588,20 @@ impl WorkflowNode {
     pub fn validate(&self) -> GraphBitResult<()> {
         // Validate node type specific requirements
         match &self.node_type {
-            NodeType::Agent { agent_id, .. } => {
-                if agent_id.to_string().is_empty() {
+            NodeType::Agent { config } => {
+                if config.agent_id.to_string().is_empty() {
                     return Err(GraphBitError::graph(
                         "Agent node must have a valid agent_id",
                     ));
+                }
+
+                // Production-grade validation for prompt templates
+                Self::validate_template_syntax(&config.prompt_template, "prompt_template")?;
+                if let Some(ctx) = &config.conversational_context {
+                    Self::validate_template_syntax(ctx, "conversational_context")?;
+                }
+                if let Some(sys) = &config.system_prompt_override {
+                    Self::validate_template_syntax(sys, "system_prompt_override")?;
                 }
             }
             NodeType::Condition { expression } => {
@@ -613,6 +646,51 @@ impl WorkflowNode {
 
         Ok(())
     }
+
+    /// Basic syntax validation for template strings (checks for balanced braces)
+    fn validate_template_syntax(template: &str, field_name: &str) -> GraphBitResult<()> {
+        let mut brace_level = 0;
+        let bytes = template.as_bytes();
+        let mut i = 0;
+
+        while i < bytes.len() {
+            if i + 1 < bytes.len() && bytes[i] == b'{' && bytes[i + 1] == b'{' {
+                brace_level += 1;
+                i += 2;
+            } else if i + 1 < bytes.len() && bytes[i] == b'}' && bytes[i + 1] == b'}' {
+                brace_level -= 1;
+                i += 2;
+                if brace_level < 0 {
+                    return Err(GraphBitError::graph(format!(
+                        "Invalid template syntax in {field_name}: unexpected closing braces '}}' at byte offset {i}"
+                    )));
+                }
+            } else {
+                i += 1;
+            }
+        }
+
+        if brace_level != 0 {
+            return Err(GraphBitError::graph(format!(
+                "Invalid template syntax in {field_name}: unbalanced braces (level {brace_level})"
+            )));
+        }
+
+        Ok(())
+    }
+}
+
+/// Configuration for an Agent execution node
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentNodeConfig {
+    /// Unique identifier for the agent
+    pub agent_id: crate::types::AgentId,
+    /// Template for the prompt to send to the agent
+    pub prompt_template: String,
+    /// Optional conversational context template
+    pub conversational_context: Option<String>,
+    /// Optional system prompt override (Node-level wins over Agent-level)
+    pub system_prompt_override: Option<String>,
 }
 
 /// Types of workflow nodes
@@ -621,12 +699,9 @@ impl WorkflowNode {
 pub enum NodeType {
     /// Agent execution node
     Agent {
-        /// Unique identifier for the agent
-        agent_id: crate::types::AgentId,
-        /// Template for the prompt to send to the agent
-        prompt_template: String,
-        /// Optional conversational context template
-        conversational_context: Option<String>,
+        /// Flatten into the outer object to maintain JSON backwards compatibility
+        #[serde(flatten)]
+        config: AgentNodeConfig,
     },
     /// Conditional branching node
     Condition {

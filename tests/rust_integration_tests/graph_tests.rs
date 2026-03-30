@@ -3,7 +3,11 @@
 //! Tests for workflow graph functionality including node management,
 //! edge creation, graph validation, and traversal algorithms.
 
-use graphbit_core::{graph::NodeType, types::AgentId, WorkflowEdge, WorkflowGraph, WorkflowNode};
+use graphbit_core::{
+    graph::{AgentNodeConfig, NodeType},
+    types::AgentId,
+    WorkflowEdge, WorkflowGraph, WorkflowNode,
+};
 
 #[tokio::test]
 async fn test_create_empty_graph() {
@@ -20,8 +24,7 @@ async fn test_add_single_node() {
         "test-node",
         "A test node",
         NodeType::Agent {
-            agent_id: AgentId::new(),
-            prompt_template: "Test prompt".to_string(),
+            config: AgentNodeConfig::new(AgentId::new(), "Test prompt"),
         },
     );
 
@@ -40,8 +43,7 @@ async fn test_add_multiple_nodes() {
         "Node 1",
         "First node",
         NodeType::Agent {
-            agent_id: AgentId::new(),
-            prompt_template: "First prompt".to_string(),
+            config: AgentNodeConfig::new(AgentId::new(), "First prompt"),
         },
     );
 
@@ -72,8 +74,7 @@ async fn test_duplicate_node_id() {
         "Test Node",
         "A test node",
         NodeType::Agent {
-            agent_id: AgentId::new(),
-            prompt_template: "Test prompt".to_string(),
+            config: AgentNodeConfig::new(AgentId::new(), "Test prompt"),
         },
     );
 
@@ -96,8 +97,7 @@ async fn test_remove_node() {
         "Existing Node",
         "A node that exists",
         NodeType::Agent {
-            agent_id: AgentId::new(),
-            prompt_template: "Test prompt".to_string(),
+            config: AgentNodeConfig::new(AgentId::new(), "Test prompt"),
         },
     );
 
@@ -119,8 +119,7 @@ async fn test_add_edge() {
         "Node 1",
         "First node",
         NodeType::Agent {
-            agent_id: AgentId::new(),
-            prompt_template: "First prompt".to_string(),
+            config: AgentNodeConfig::new(AgentId::new(), "First prompt"),
         },
     );
 
@@ -153,8 +152,7 @@ async fn test_get_single_node_no_edges() {
         "Single Node",
         "A single node graph",
         NodeType::Agent {
-            agent_id: AgentId::new(),
-            prompt_template: "Test prompt".to_string(),
+            config: AgentNodeConfig::new(AgentId::new(), "Test prompt"),
         },
     );
 
@@ -174,8 +172,7 @@ async fn test_get_multiple_nodes_with_edges() {
         "Node 1",
         "First node",
         NodeType::Agent {
-            agent_id: AgentId::new(),
-            prompt_template: "First prompt".to_string(),
+            config: AgentNodeConfig::new(AgentId::new(), "First prompt"),
         },
     );
 
@@ -215,8 +212,7 @@ async fn test_large_graph() {
             format!("Node {i}"),
             format!("Node {i} description"),
             NodeType::Agent {
-                agent_id: AgentId::new(),
-                prompt_template: format!("Prompt {i}"),
+                config: AgentNodeConfig::new(AgentId::new(), format!("Prompt {i}")),
             },
         );
 
@@ -244,8 +240,7 @@ async fn test_self_loop() {
         "Self Loop Node",
         "A node with self loop",
         NodeType::Agent {
-            agent_id: AgentId::new(),
-            prompt_template: "Self loop prompt".to_string(),
+            config: AgentNodeConfig::new(AgentId::new(), "Self loop prompt"),
         },
     );
 
@@ -275,8 +270,7 @@ async fn test_complex_graph() {
             format!("Node {}", names[i]),
             format!("Node {} description", names[i]),
             NodeType::Agent {
-                agent_id: AgentId::new(),
-                prompt_template: format!("Prompt for {}", names[i]),
+                config: AgentNodeConfig::new(AgentId::new(), format!("Prompt for {}", names[i])),
             },
         );
 
@@ -316,8 +310,7 @@ async fn test_node_with_config() {
         "Configured Node",
         "A node with configuration",
         NodeType::Agent {
-            agent_id: AgentId::new(),
-            prompt_template: "Test prompt".to_string(),
+            config: AgentNodeConfig::new(AgentId::new(), "Test prompt"),
         },
     )
     .with_config("priority".to_string(), serde_json::json!(1))
@@ -345,8 +338,7 @@ async fn test_edge_with_metadata() {
         "Node 1",
         "First node",
         NodeType::Agent {
-            agent_id: AgentId::new(),
-            prompt_template: "First prompt".to_string(),
+            config: AgentNodeConfig::new(AgentId::new(), "First prompt"),
         },
     );
 
