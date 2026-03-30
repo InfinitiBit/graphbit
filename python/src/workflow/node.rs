@@ -3,7 +3,7 @@
 use crate::llm::LlmConfig;
 use crate::tools::ToolExecutor;
 use graphbit_core::{
-    graph::{NodeType, WorkflowNode},
+    graph::{AgentNodeConfig, NodeType, WorkflowNode},
     types::AgentId,
 };
 use pyo3::prelude::*;
@@ -62,15 +62,26 @@ impl Node {
                     .as_nanos()
             )
         });
+        let mut agent_config = AgentNodeConfig::new(
+            AgentId::from_string(&id).map_err(|e| {
+                PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Invalid ID: {}", e))
+            })?,
+            prompt,
+        );
+        
+        if let Some(ctx) = context {
+            agent_config = agent_config.with_context(ctx);
+        }
+        
+        if let Some(sys) = system_prompt.clone() {
+            agent_config = agent_config.with_system_prompt_override(sys);
+        }
+
         let mut node = WorkflowNode::new(
             name.clone(),
             format!("Agent: {}", name),
             NodeType::Agent {
-                agent_id: AgentId::from_string(&id).map_err(|e| {
-                    PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Invalid ID: {}", e))
-                })?,
-                prompt_template: prompt,
-                conversational_context: context,
+                config: agent_config,
             },
         );
 

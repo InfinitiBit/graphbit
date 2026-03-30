@@ -14,8 +14,7 @@ async fn test_workflow_validation_errors() {
         "Node 1",
         "First node",
         graph::NodeType::Agent {
-            agent_id: types::AgentId::new(),
-            prompt_template: "Test prompt".to_string(),
+            config: graph::AgentNodeConfig::new(types::AgentId::new(), "Test prompt"),
         },
     );
 
@@ -23,8 +22,7 @@ async fn test_workflow_validation_errors() {
         "Node 2",
         "Second node with same ID",
         graph::NodeType::Agent {
-            agent_id: types::AgentId::new(),
-            prompt_template: "Test prompt".to_string(),
+            config: graph::AgentNodeConfig::new(types::AgentId::new(), "Test prompt"),
         },
     );
 
@@ -43,8 +41,7 @@ async fn test_workflow_validation_errors() {
         "Valid Node",
         "A valid node",
         graph::NodeType::Agent {
-            agent_id: types::AgentId::new(),
-            prompt_template: "Test prompt".to_string(),
+            config: graph::AgentNodeConfig::new(types::AgentId::new(), "Test prompt"),
         },
     );
 
@@ -72,8 +69,7 @@ async fn test_circular_dependency_detection() {
         "Node 1",
         "First node",
         graph::NodeType::Agent {
-            agent_id: types::AgentId::new(),
-            prompt_template: "Test prompt".to_string(),
+            config: graph::AgentNodeConfig::new(types::AgentId::new(), "Test prompt"),
         },
     );
 
@@ -81,8 +77,7 @@ async fn test_circular_dependency_detection() {
         "Node 2",
         "Second node",
         graph::NodeType::Agent {
-            agent_id: types::AgentId::new(),
-            prompt_template: "Test prompt".to_string(),
+            config: graph::AgentNodeConfig::new(types::AgentId::new(), "Test prompt"),
         },
     );
 
@@ -90,8 +85,7 @@ async fn test_circular_dependency_detection() {
         "Node 3",
         "Third node",
         graph::NodeType::Agent {
-            agent_id: types::AgentId::new(),
-            prompt_template: "Test prompt".to_string(),
+            config: graph::AgentNodeConfig::new(types::AgentId::new(), "Test prompt"),
         },
     );
 
@@ -183,8 +177,7 @@ async fn test_error_propagation_chain() {
         "Error Node",
         "A node that will cause errors",
         graph::NodeType::Agent {
-            agent_id: types::AgentId::new(),
-            prompt_template: "Test prompt".to_string(),
+            config: graph::AgentNodeConfig::new(types::AgentId::new(), "Test prompt"),
         },
     );
 

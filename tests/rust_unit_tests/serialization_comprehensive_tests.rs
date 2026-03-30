@@ -5,7 +5,7 @@
 
 use graphbit_core::{
     errors::GraphBitError,
-    graph::{EdgeType, NodeType, WorkflowEdge, WorkflowGraph, WorkflowNode},
+    graph::{AgentNodeConfig, EdgeType, NodeType, WorkflowEdge, WorkflowGraph, WorkflowNode},
     types::{
         AgentId, AgentMessage, MessageContent, NodeId, RetryConfig, WorkflowContext, WorkflowId,
         WorkflowState,
@@ -23,8 +23,7 @@ fn test_workflow_graph_serialization_roundtrip() {
         "Agent",
         "AI Agent",
         NodeType::Agent {
-            agent_id: AgentId::new(),
-            prompt_template: "Process: {input}".to_string(),
+            config: AgentNodeConfig::new(AgentId::new(), "Process: {input}"),
         },
     )
     .with_config("temperature".to_string(), json!(0.7))

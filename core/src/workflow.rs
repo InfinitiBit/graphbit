@@ -6,7 +6,7 @@
 use crate::agents::AgentTrait;
 use crate::document_loader::DocumentLoader;
 use crate::errors::{GraphBitError, GraphBitResult};
-use crate::graph::{NodeType, WorkflowGraph, WorkflowNode};
+use crate::graph::{AgentNodeConfig, NodeType, WorkflowGraph, WorkflowNode};
 use crate::types::{
     AgentId, AgentMessage, CircuitBreaker, CircuitBreakerConfig, ConcurrencyConfig,
     ConcurrencyManager, ConcurrencyStats, MessageContent, NodeExecutionResult, NodeId, RetryConfig,
@@ -336,14 +336,12 @@ impl WorkflowExecutor {
                         });
 
                     for node in workflow.graph.get_nodes().values() {
-                        if let NodeType::Agent {
-                            agent_id: node_agent_id,
-                            ..
-                        } = &node.node_type
-                        {
-                            if node_agent_id == &agent_id {
-                                // Extract system_prompt from node config if available
-                                if let Some(prompt_value) = node.config.get("system_prompt") {
+                        if let NodeType::Agent { config } = &node.node_type {
+                            if config.agent_id == agent_id {
+                                // Extract system_prompt: Priority is AgentNodeConfig.system_prompt_override > node.config["system_prompt"]
+                                if let Some(sys_override) = &config.system_prompt_override {
+                                    system_prompt = sys_override.clone();
+                                } else if let Some(prompt_value) = node.config.get("system_prompt") {
                                     if let Some(prompt_str) = prompt_value.as_str() {
                                         system_prompt = prompt_str.to_string();
                                     }
@@ -652,7 +650,8 @@ impl WorkflowExecutor {
         let mut attempt = 0;
 
         // Get circuit breaker for agent nodes
-        let mut circuit_breaker = if let NodeType::Agent { agent_id, .. } = &node.node_type {
+        let mut circuit_breaker = if let NodeType::Agent { config } = &node.node_type {
+            let agent_id = &config.agent_id;
             let mut breakers = circuit_breakers.write().await;
             Some(
                 breakers
@@ -681,16 +680,10 @@ impl WorkflowExecutor {
 
             // Attempt to execute the node
             let result = match &node.node_type {
-                NodeType::Agent {
-                    agent_id,
-                    prompt_template,
-                    conversational_context,
-                } => {
+                NodeType::Agent { config } => {
                     Self::execute_agent_node_static(
                         &node.id,
-                        agent_id,
-                        prompt_template,
-                        conversational_context.as_deref(),
+                        config,
                         &node.config,
                         context.clone(),
                         agents.clone(),
@@ -753,7 +746,8 @@ impl WorkflowExecutor {
                     // Record success in circuit breaker
                     if let Some(ref mut breaker) = circuit_breaker {
                         breaker.record_success();
-                        if let NodeType::Agent { agent_id, .. } = &node.node_type {
+                        if let NodeType::Agent { config } = &node.node_type {
+                            let agent_id = &config.agent_id;
                             let mut breakers = circuit_breakers.write().await;
                             breakers.insert(agent_id.clone(), breaker.clone());
                         }
@@ -768,7 +762,8 @@ impl WorkflowExecutor {
                     // Record failure in circuit breaker
                     if let Some(ref mut breaker) = circuit_breaker {
                         breaker.record_failure();
-                        if let NodeType::Agent { agent_id, .. } = &node.node_type {
+                        if let NodeType::Agent { config } = &node.node_type {
+                            let agent_id = &config.agent_id;
                             let mut breakers = circuit_breakers.write().await;
                             breakers.insert(agent_id.clone(), breaker.clone());
                         }
@@ -806,14 +801,15 @@ impl WorkflowExecutor {
     /// When `guardrail_enforcer` is `Some`, encodes prompt before LLM and decodes response after.
     async fn execute_agent_node_static(
         current_node_id: &NodeId,
-        agent_id: &crate::types::AgentId,
-        prompt_template: &str,
-        conversational_context: Option<&str>,
+        agent_node_config: &AgentNodeConfig,
         node_config: &std::collections::HashMap<String, serde_json::Value>,
         context: Arc<Mutex<WorkflowContext>>,
         agents: Arc<RwLock<HashMap<crate::types::AgentId, Arc<dyn AgentTrait>>>>,
         guardrail_enforcer: Option<Arc<Enforcer>>,
     ) -> GraphBitResult<serde_json::Value> {
+        let agent_id = &agent_node_config.agent_id;
+        let prompt_template = &agent_node_config.prompt_template;
+        let conversational_context = agent_node_config.conversational_context.as_deref();
         // Use read lock for better performance
         let agents_guard = agents.read().await;
         let agent = agents_guard
@@ -980,6 +976,7 @@ impl WorkflowExecutor {
 
             let result = Self::execute_agent_with_tools(
                 agent_id,
+                agent_node_config,
                 &resolved_prompt,
                 resolved_context.as_deref(),
                 &metadata_input_raw,
@@ -1076,8 +1073,25 @@ impl WorkflowExecutor {
             };
 
             // Call LLM provider directly to capture metadata
-            use crate::llm::LlmRequest;
-            let mut request = LlmRequest::new(prompt_for_llm.clone());
+            use crate::llm::{LlmMessage, LlmRequest};
+
+            // Resolve system prompt: Priority is Node Override > Agent Default
+            let system_prompt = if let Some(sys_override) = &agent_node_config.system_prompt_override {
+                Some(sys_override.clone())
+            } else if !agent.config().system_prompt.is_empty() {
+                Some(agent.config().system_prompt.clone())
+            } else {
+                None
+            };
+
+            // Build messages array
+            let mut messages = Vec::with_capacity(2);
+            if let Some(content) = system_prompt {
+                messages.push(LlmMessage::system(content));
+            }
+            messages.push(LlmMessage::user(prompt_for_llm.clone()));
+
+            let mut request = LlmRequest::with_messages(messages);
 
             // Apply node-level configuration overrides (temperature, max_tokens, etc.)
             if let Some(temp_value) = node_config.get("temperature") {
@@ -1271,6 +1285,7 @@ impl WorkflowExecutor {
     /// When `guardrail_enforcer` is `Some`, encodes prompt before LLM and decodes response after.
     async fn execute_agent_with_tools(
         _agent_id: &crate::types::AgentId,
+        agent_node_config: &AgentNodeConfig,
         prompt: &str,
         conversational_context: Option<&str>,
         metadata_input: &str,
@@ -1282,7 +1297,9 @@ impl WorkflowExecutor {
         guardrail_enforcer: Option<Arc<Enforcer>>,
     ) -> GraphBitResult<serde_json::Value> {
         tracing::info!("Starting execute_agent_with_tools for agent: {_agent_id}");
-        use crate::llm::{LlmRequest, LlmTool};
+        use crate::llm::{LlmMessage, LlmRequest, LlmTool};
+
+        // ... (rest of tool calling logic, but with LlmRequest::with_messages handled correctly below)
 
         // Build the executions array for metadata
         let mut executions: Vec<serde_json::Value> = Vec::new();
@@ -1390,8 +1407,23 @@ impl WorkflowExecutor {
             }
         }
 
+        // Resolve system prompt: Priority is Node Override > Agent Default
+        let system_prompt = if let Some(sys_override) = &agent_node_config.system_prompt_override {
+            Some(sys_override.clone())
+        } else if !agent.config().system_prompt.is_empty() {
+            Some(agent.config().system_prompt.clone())
+        } else {
+            None
+        };
+
         // Create initial LLM request with tools (using encoded prompt when guardrail is active)
-        let mut request = LlmRequest::new(prompt_for_llm.clone());
+        let mut messages = Vec::with_capacity(2);
+        if let Some(content) = system_prompt {
+            messages.push(LlmMessage::system(content));
+        }
+        messages.push(LlmMessage::user(prompt_for_llm.clone()));
+
+        let mut request = LlmRequest::with_messages(messages);
         for tool in &tools {
             request = request.with_tool(tool.clone());
         }
@@ -2006,8 +2038,8 @@ fn extract_agent_ids_from_workflow(workflow: &Workflow) -> Vec<String> {
     let mut agent_ids = std::collections::HashSet::new();
 
     for node in workflow.graph.get_nodes().values() {
-        if let NodeType::Agent { agent_id, .. } = &node.node_type {
-            agent_ids.insert(agent_id.to_string());
+        if let NodeType::Agent { config } = &node.node_type {
+            agent_ids.insert(config.agent_id.to_string());
         }
     }
 
