@@ -12,6 +12,7 @@ mod llm_provider_tests;
 mod llm_tests;
 mod python_bindings_tests;
 mod serialization_comprehensive_tests;
+mod stream_tests;
 mod text_splitter_tests;
 mod type_tests;
 mod types_comprehensive_tests;
