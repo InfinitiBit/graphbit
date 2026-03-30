@@ -50,7 +50,7 @@ pub use embeddings::{
     EmbeddingConfig, EmbeddingProvider, EmbeddingRequest, EmbeddingResponse, EmbeddingService,
 };
 pub use errors::{GraphBitError, GraphBitResult};
-pub use graph::{NodeType, WorkflowEdge, WorkflowGraph, WorkflowNode};
+pub use graph::{AgentNodeConfig, NodeType, WorkflowEdge, WorkflowGraph, WorkflowNode};
 pub use llm::{LlmConfig, LlmProvider, LlmResponse};
 pub use memory::{
     Memory, MemoryConfig, MemoryHistory, MemoryId, MemoryScope, MemoryService, ScoredMemory,

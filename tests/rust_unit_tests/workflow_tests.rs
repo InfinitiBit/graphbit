@@ -157,8 +157,12 @@ async fn test_workflow_execute_with_dummy_agent_success() {
         "agent",
         "agent node",
         NodeType::Agent {
-            agent_id: agent_id.clone(),
-            prompt_template: "Say hello".to_string(),
+            config: AgentNodeConfig {
+                agent_id: agent_id.clone(),
+                prompt_template: "Say hello".to_string(),
+                conversational_context: None,
+                system_prompt_override: None,
+            },
         },
     );
     let transform_node = WorkflowNode::new(
@@ -207,8 +211,12 @@ async fn test_workflow_execute_fail_fast_on_error() {
         "agent",
         "agent node",
         NodeType::Agent {
-            agent_id: agent_id.clone(),
-            prompt_template: "Hello".to_string(),
+            config: AgentNodeConfig {
+                agent_id: agent_id.clone(),
+                prompt_template: "Hello".to_string(),
+                conversational_context: None,
+                system_prompt_override: None,
+            },
         },
     );
     let bad_doc = WorkflowNode::new(
@@ -437,8 +445,12 @@ async fn test_workflow_with_llm() {
         "agent_node".to_string(),
         "Agent node".to_string(),
         NodeType::Agent {
-            agent_id: agent_id.clone(),
-            prompt_template: "What is 2+2?".to_string(),
+            config: AgentNodeConfig {
+                agent_id: agent_id.clone(),
+                prompt_template: "What is 2+2?".to_string(),
+                conversational_context: None,
+                system_prompt_override: None,
+            },
         },
     );
 
@@ -480,8 +492,12 @@ async fn test_workflow_with_anthropic() {
         "agent_node".to_string(),
         "Agent node".to_string(),
         NodeType::Agent {
-            agent_id: agent_id.clone(),
-            prompt_template: "What is 2+2?".to_string(),
+            config: AgentNodeConfig {
+                agent_id: agent_id.clone(),
+                prompt_template: "What is 2+2?".to_string(),
+                conversational_context: None,
+                system_prompt_override: None,
+            },
         },
     );
 
@@ -525,8 +541,12 @@ async fn test_workflow_with_ollama() {
         "agent_node".to_string(),
         "Agent node".to_string(),
         NodeType::Agent {
-            agent_id: agent_id.clone(),
-            prompt_template: "What is 2+2?".to_string(),
+            config: AgentNodeConfig {
+                agent_id: agent_id.clone(),
+                prompt_template: "What is 2+2?".to_string(),
+                conversational_context: None,
+                system_prompt_override: None,
+            },
         },
     );
 

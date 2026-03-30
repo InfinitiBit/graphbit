@@ -22,8 +22,7 @@ async fn test_simple_agent_workflow_execution() {
         "Agent Node",
         "Processes user input",
         NodeType::Agent {
-            agent_id: agent_config.id.clone(),
-            prompt_template: "Process this input: {{input}}".to_string(),
+            config: AgentNodeConfig::new(agent_config.id.clone(), "Process this input: {{input}}"),
         },
     );
 
@@ -58,8 +57,7 @@ async fn test_sequential_agent_workflow() {
         "Analyzer",
         "Analyzes input text",
         NodeType::Agent {
-            agent_id: agent1_config.id.clone(),
-            prompt_template: "Analyze: {{input}}".to_string(),
+            config: AgentNodeConfig::new(agent1_config.id.clone(), "Analyze: {{input}}"),
         },
     );
 
@@ -67,8 +65,7 @@ async fn test_sequential_agent_workflow() {
         "Summarizer",
         "Summarizes analysis",
         NodeType::Agent {
-            agent_id: agent2_config.id.clone(),
-            prompt_template: "Summarize: {{previous_output}}".to_string(),
+            config: AgentNodeConfig::new(agent2_config.id.clone(), "Summarize: {{previous_output}}"),
         },
     );
 
@@ -115,8 +112,7 @@ async fn test_parallel_agent_workflow() {
         "Sentiment Analysis",
         "Analyzes sentiment",
         NodeType::Agent {
-            agent_id: sentiment_agent.id.clone(),
-            prompt_template: "Sentiment of: {{input}}".to_string(),
+            config: AgentNodeConfig::new(sentiment_agent.id.clone(), "Sentiment of: {{input}}"),
         },
     );
 
@@ -124,8 +120,7 @@ async fn test_parallel_agent_workflow() {
         "Topic Extraction",
         "Extracts topics",
         NodeType::Agent {
-            agent_id: topic_agent.id.clone(),
-            prompt_template: "Topic of: {{input}}".to_string(),
+            config: AgentNodeConfig::new(topic_agent.id.clone(), "Topic of: {{input}}"),
         },
     );
 
@@ -133,8 +128,7 @@ async fn test_parallel_agent_workflow() {
         "Length Analysis",
         "Analyzes length",
         NodeType::Agent {
-            agent_id: length_agent.id.clone(),
-            prompt_template: "Length of: {{input}}".to_string(),
+            config: AgentNodeConfig::new(length_agent.id.clone(), "Length of: {{input}}"),
         },
     );
 
@@ -249,8 +243,7 @@ async fn test_workflow_with_document_loading() {
         "Text Processor",
         "Processes the loaded document",
         NodeType::Agent {
-            agent_id: agent_config.id.clone(),
-            prompt_template: "Summarize this text: {{document_content}}".to_string(),
+            config: AgentNodeConfig::new(agent_config.id.clone(), "Summarize this text: {{document_content}}"),
         },
     );
 
@@ -332,8 +325,7 @@ async fn test_workflow_retry_configuration() {
         "Retry Agent",
         "Agent with retry configuration",
         NodeType::Agent {
-            agent_id: AgentId::new(),
-            prompt_template: "Process with retry: {{input}}".to_string(),
+            config: AgentNodeConfig::new(AgentId::new(), "Process with retry: {{input}}"),
         },
     )
     .with_retry_config(retry_config);
@@ -389,8 +381,7 @@ async fn test_complex_branching_workflow() {
         "Input Classifier",
         "Classifies the input type",
         NodeType::Agent {
-            agent_id: classifier_agent.id.clone(),
-            prompt_template: "Classify: {{input}}".to_string(),
+            config: AgentNodeConfig::new(classifier_agent.id.clone(), "Classify: {{input}}"),
         },
     );
 
@@ -403,8 +394,7 @@ async fn test_complex_branching_workflow() {
         "Text Processor",
         "Processes text inputs",
         NodeType::Agent {
-            agent_id: text_processor.id.clone(),
-            prompt_template: "Process text: {{input}}".to_string(),
+            config: AgentNodeConfig::new(text_processor.id.clone(), "Process text: {{input}}"),
         },
     );
 
@@ -420,8 +410,7 @@ async fn test_complex_branching_workflow() {
         "Number Processor",
         "Processes numeric inputs",
         NodeType::Agent {
-            agent_id: number_processor.id.clone(),
-            prompt_template: "Process number: {{input}}".to_string(),
+            config: AgentNodeConfig::new(number_processor.id.clone(), "Process number: {{input}}"),
         },
     );
 
@@ -437,8 +426,7 @@ async fn test_complex_branching_workflow() {
         "Other Processor",
         "Processes other input types",
         NodeType::Agent {
-            agent_id: other_processor.id.clone(),
-            prompt_template: "Process other: {{input}}".to_string(),
+            config: AgentNodeConfig::new(other_processor.id.clone(), "Process other: {{input}}"),
         },
     );
 
@@ -450,8 +438,7 @@ async fn test_complex_branching_workflow() {
         "Result Aggregator",
         "Combines all processing results",
         NodeType::Agent {
-            agent_id: aggregator.id.clone(),
-            prompt_template: "Combine results: {{all_outputs}}".to_string(),
+            config: AgentNodeConfig::new(aggregator.id.clone(), "Combine results: {{all_outputs}}"),
         },
     );
 
@@ -581,8 +568,7 @@ async fn test_real_llm_workflow_execution() {
                 "Real LLM Node",
                 "Makes real LLM API calls",
                 NodeType::Agent {
-                    agent_id: agent_config.id.clone(),
-                    prompt_template: "Say hello briefly: {{input}}".to_string(),
+                    config: AgentNodeConfig::new(agent_config.id.clone(), "Say hello briefly: {{input}}"),
                 },
             );
 
@@ -708,8 +694,7 @@ async fn test_workflow_error_propagation() {
         "Invalid Agent Node",
         "References non-existent agent",
         NodeType::Agent {
-            agent_id: invalid_agent_id,
-            prompt_template: "This will fail".to_string(),
+            config: AgentNodeConfig::new(invalid_agent_id, "This will fail"),
         },
     );
 
@@ -791,8 +776,7 @@ async fn test_multi_provider_workflow_execution() {
                 format!("{provider_name} Node"),
                 format!("Node using {provider_name}"),
                 NodeType::Agent {
-                    agent_id: agent_config.id.clone(),
-                    prompt_template: "Say hello: {{input}}".to_string(),
+                    config: AgentNodeConfig::new(agent_config.id.clone(), "Say hello: {{input}}"),
                 },
             );
 
@@ -906,8 +890,7 @@ async fn test_comprehensive_real_api_workflow() {
         "Analyzer",
         "Analyzes input content",
         NodeType::Agent {
-            agent_id: analyzer_config.id.clone(),
-            prompt_template: "Analyze this: {{input}}".to_string(),
+            config: AgentNodeConfig::new(analyzer_config.id.clone(), "Analyze this: {{input}}"),
         },
     );
 
@@ -915,8 +898,7 @@ async fn test_comprehensive_real_api_workflow() {
         "Summarizer",
         "Summarizes analysis",
         NodeType::Agent {
-            agent_id: summarizer_config.id.clone(),
-            prompt_template: "Summarize: {{previous_output}}".to_string(),
+            config: AgentNodeConfig::new(summarizer_config.id.clone(), "Summarize: {{previous_output}}"),
         },
     );
 
