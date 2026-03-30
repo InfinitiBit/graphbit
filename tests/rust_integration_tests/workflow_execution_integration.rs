@@ -4,7 +4,7 @@
 //! graph validation, node execution, error handling, and state management.
 
 use graphbit_core::{
-    graph::{EdgeType, NodeType, WorkflowEdge, WorkflowGraph, WorkflowNode},
+    graph::{AgentNodeConfig, EdgeType, NodeType, WorkflowEdge, WorkflowGraph, WorkflowNode},
     types::{AgentId, NodeId, RetryConfig, WorkflowContext, WorkflowId, WorkflowState},
 };
 use serde_json::json;
@@ -328,8 +328,7 @@ async fn test_workflow_with_agent_nodes() {
         "Agent",
         "AI Agent",
         NodeType::Agent {
-            agent_id: agent_id.clone(),
-            prompt_template: "Process this data: {input}".to_string(),
+            config: AgentNodeConfig::new(agent_id.clone(), "Process this data: {input}"),
         },
     );
     let output_node = WorkflowNode::new(

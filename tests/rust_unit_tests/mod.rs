@@ -19,4 +19,5 @@ mod types_comprehensive_tests;
 mod validation_tests;
 mod workflow_tests;
 
+mod system_prompt_tests;
 mod test_helpers;

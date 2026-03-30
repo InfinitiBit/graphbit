@@ -4,7 +4,7 @@
 //! and edge cases not covered in basic graph tests.
 
 use graphbit_core::{
-    graph::{EdgeType, NodeType, WorkflowEdge, WorkflowGraph, WorkflowNode},
+    graph::{AgentNodeConfig, EdgeType, NodeType, WorkflowEdge, WorkflowGraph, WorkflowNode},
     types::{AgentId, NodeId, RetryConfig},
 };
 use serde_json::json;
@@ -134,8 +134,7 @@ fn test_graph_serialization_deserialization() {
         "Complex Node",
         "Description",
         NodeType::Agent {
-            agent_id: AgentId::new(),
-            prompt_template: "Test prompt".to_string(),
+            config: AgentNodeConfig::new(AgentId::new(), "Test prompt"),
         },
     );
     node1 = node1
@@ -324,8 +323,7 @@ fn test_graph_error_conditions() {
 fn test_node_type_variants() {
     // Test all NodeType variants
     let agent_node = NodeType::Agent {
-        agent_id: AgentId::new(),
-        prompt_template: "test".to_string(),
+        config: AgentNodeConfig::new(AgentId::new(), "test"),
     };
     let condition_node = NodeType::Condition {
         expression: "x > 0".to_string(),
