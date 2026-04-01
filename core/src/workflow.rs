@@ -1441,6 +1441,8 @@ impl WorkflowExecutor {
                 &node_name,
                 context.clone(),
                 guardrail_enforcer.clone(),
+                event_tx.clone(),
+                stream_mode,
             )
             .await;
             tracing::info!("Agent with tools execution result: {:?}", result);
@@ -1811,6 +1813,10 @@ impl WorkflowExecutor {
 
     /// Execute an agent with tool calling orchestration.
     /// When `guardrail_enforcer` is `Some`, encodes prompt before LLM and decodes response after.
+    /// When `stream_mode.emits_tool_events()` and `event_tx` is `Some`, emits `ToolCallStarted`
+    /// for each tool call requested by the LLM before returning the `tool_calls_required` response
+    /// to the Python layer (which handles actual execution and must emit `ToolCallCompleted` /
+    /// `ToolCallFailed`).
     async fn execute_agent_with_tools(
         _agent_id: &crate::types::AgentId,
         agent_node_config: &AgentNodeConfig,
@@ -1823,6 +1829,8 @@ impl WorkflowExecutor {
         node_name: &str,
         context: Arc<Mutex<WorkflowContext>>,
         guardrail_enforcer: Option<Arc<Enforcer>>,
+        event_tx: Option<tokio::sync::mpsc::Sender<crate::stream::StreamEvent>>,
+        stream_mode: crate::stream::StreamMode,
     ) -> GraphBitResult<serde_json::Value> {
         tracing::info!("Starting execute_agent_with_tools for agent: {_agent_id}");
         use crate::llm::{LlmMessage, LlmRequest, LlmTool};
@@ -2189,6 +2197,38 @@ impl WorkflowExecutor {
                 "LLM made {} tool calls - these should be executed by the Python layer",
                 llm_response.tool_calls.len()
             );
+
+            // ── Streaming: emit ToolCallStarted per requested tool call ──────────
+            // Parameters are masked when guardrail is active (use the encoded params
+            // from the metadata array which was built with encoding applied above).
+            if stream_mode.emits_tool_events() {
+                if let Some(ref tx) = event_tx {
+                    for tool_call in &llm_response.tool_calls {
+                        // Mask parameters if guardrail is active
+                        let params_for_event = if let Some(ref enforcer) = guardrail_enforcer {
+                            let enc =
+                                enforcer.encode(tool_call.parameters.clone(), EncodeContext::Llm);
+                            if enc.payload.is_object() {
+                                enc.payload
+                            } else {
+                                tool_call.parameters.clone()
+                            }
+                        } else {
+                            tool_call.parameters.clone()
+                        };
+
+                        let _ = tx
+                            .send(crate::stream::StreamEvent::ToolCallStarted {
+                                node_id: node_id.to_string(),
+                                node_name: node_name.to_string(),
+                                tool_name: tool_call.name.clone(),
+                                tool_call_id: tool_call.id.clone(),
+                                parameters: params_for_event,
+                            })
+                            .await;
+                    }
+                }
+            }
 
             // Instead of executing tools in Rust, return a structured response that indicates
             // tool calls need to be executed by the Python layer
