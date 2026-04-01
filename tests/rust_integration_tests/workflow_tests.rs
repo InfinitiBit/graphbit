@@ -455,7 +455,7 @@ async fn test_workflow_execution_with_conditions() {
         "Condition Node",
         "A conditional node",
         NodeType::Condition {
-            expression: "length > 5".to_string(),
+            handler_id: "length_gt_5".to_string(),
         },
     );
 

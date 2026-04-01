@@ -35,7 +35,7 @@ fn test_workflow_graph_serialization_roundtrip() {
         "Condition",
         "Check condition",
         NodeType::Condition {
-            expression: "value > 10".to_string(),
+            handler_id: "value_gt_10".to_string(),
         },
     );
 

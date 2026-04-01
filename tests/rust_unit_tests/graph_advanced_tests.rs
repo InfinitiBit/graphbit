@@ -326,7 +326,7 @@ fn test_node_type_variants() {
         config: AgentNodeConfig::new(AgentId::new(), "test"),
     };
     let condition_node = NodeType::Condition {
-        expression: "x > 0".to_string(),
+        handler_id: "x_gt_0".to_string(),
     };
     let transform_node = NodeType::Transform {
         transformation: "uppercase".to_string(),
