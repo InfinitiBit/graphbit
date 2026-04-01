@@ -670,6 +670,9 @@ impl WorkflowExecutor {
                 let node_parents = node_parents.clone();
                 let conditional_handlers = conditional_handlers.clone();
                 let workflow_graph = workflow_graph.clone();
+                // Clone the event channel sender for this task (cheap Arc clone inside Sender)
+                let task_event_tx = event_tx.clone();
+                let task_stream_mode = _stream_mode;
 
                 let task = tokio::spawn(async move {
                     let task_info = TaskInfo::from_node_type(&node.node_type, &node.id);
@@ -701,6 +704,8 @@ impl WorkflowExecutor {
                         node_parents,
                         conditional_handlers,
                         workflow_graph,
+                        task_event_tx,
+                        task_stream_mode,
                     )
                     .await
                 });
@@ -1075,6 +1080,8 @@ impl WorkflowExecutor {
         node_parents: Arc<HashMap<NodeId, Vec<NodeId>>>,
         conditional_handlers: Arc<HashMap<String, ConditionalRouteFn>>,
         workflow_graph: Arc<WorkflowGraph>,
+        event_tx: Option<tokio::sync::mpsc::Sender<crate::stream::StreamEvent>>,
+        stream_mode: crate::stream::StreamMode,
     ) -> GraphBitResult<NodeExecutionResult> {
         let start_time = std::time::Instant::now();
         let mut attempt = 0;
@@ -1118,6 +1125,8 @@ impl WorkflowExecutor {
                         context.clone(),
                         agents.clone(),
                         guardrail_enforcer.clone(),
+                        event_tx.clone(),
+                        stream_mode,
                     )
                     .await
                 }
@@ -1240,6 +1249,9 @@ impl WorkflowExecutor {
 
     /// Execute an agent node (static version).
     /// When `guardrail_enforcer` is `Some`, encodes prompt before LLM and decodes response after.
+    /// When `stream_mode.emits_tokens()` and the provider supports streaming, emits `Token`
+    /// events per chunk via `event_tx` and accumulates into a full response. Falls back to
+    /// `complete()` if the provider does not support streaming.
     async fn execute_agent_node_static(
         current_node_id: &NodeId,
         agent_node_config: &AgentNodeConfig,
@@ -1247,6 +1259,8 @@ impl WorkflowExecutor {
         context: Arc<Mutex<WorkflowContext>>,
         agents: Arc<RwLock<HashMap<crate::types::AgentId, Arc<dyn AgentTrait>>>>,
         guardrail_enforcer: Option<Arc<Enforcer>>,
+        event_tx: Option<tokio::sync::mpsc::Sender<crate::stream::StreamEvent>>,
+        stream_mode: crate::stream::StreamMode,
     ) -> GraphBitResult<serde_json::Value> {
         let agent_id = &agent_node_config.agent_id;
         let prompt_template = &agent_node_config.prompt_template;
@@ -1551,7 +1565,79 @@ impl WorkflowExecutor {
             // Measure LLM call duration and capture execution timestamp
             let execution_timestamp = chrono::Utc::now();
             let llm_start = std::time::Instant::now();
-            let llm_response = agent.llm_provider().complete(request).await?;
+
+            // ── Token-level streaming (stream_mode = Messages | All) ──────────────
+            // When the mode requests tokens AND the provider supports streaming,
+            // drive the stream and emit a Token event per chunk, accumulating the
+            // full content for metadata/context. Falls back to complete() transparently.
+            let llm_response = if stream_mode.emits_tokens()
+                && event_tx.is_some()
+                && agent.llm_provider().provider().supports_streaming()
+            {
+                use crate::stream::StreamEvent;
+                use futures::StreamExt;
+
+                // Get the node name for Token events (best-effort, doesn't block)
+                let token_node_name = {
+                    let ctx = context.lock().await;
+                    ctx.metadata
+                        .get("node_id_to_name")
+                        .and_then(|m| m.as_object())
+                        .and_then(|m| m.get(&current_node_id.to_string()))
+                        .and_then(|v| v.as_str())
+                        .map(str::to_string)
+                        .unwrap_or_else(|| "unknown".to_string())
+                };
+
+                // Drive the streaming response
+                // Pre-clone the request for the empty-stream fallback before moving into stream()
+                let fallback_request = request.clone();
+                let mut stream = agent.llm_provider().stream(request).await?;
+
+                // Accumulate content and keep the last full LlmResponse for metadata
+                let mut accumulated_content = String::new();
+                let mut last_response: Option<crate::llm::LlmResponse> = None;
+
+                while let Some(chunk_result) = stream.next().await {
+                    let chunk = chunk_result?;
+
+                    // Only emit non-empty content chunks as Token events
+                    if !chunk.content.is_empty() {
+                        if let Some(ref tx) = event_tx {
+                            let _ = tx
+                                .send(StreamEvent::Token {
+                                    node_id: current_node_id.to_string(),
+                                    node_name: token_node_name.clone(),
+                                    content: chunk.content.clone(),
+                                })
+                                .await;
+                        }
+                        accumulated_content.push_str(&chunk.content);
+                    }
+                    last_response = Some(chunk);
+                }
+
+                // Build a complete LlmResponse from the accumulated stream
+                match last_response {
+                    Some(mut final_resp) => {
+                        // Replace chunk content with the full accumulated content
+                        final_resp.content = accumulated_content;
+                        final_resp
+                    }
+                    None => {
+                        // Empty stream — fall back to complete() to get a proper response
+                        tracing::warn!(
+                            node_id = %current_node_id,
+                            "LLM stream returned 0 chunks; falling back to complete()"
+                        );
+                        agent.llm_provider().complete(fallback_request).await?
+                    }
+                }
+            } else {
+                // Standard (non-streaming) path — identical to previous behaviour
+                agent.llm_provider().complete(request).await?
+            };
+
             let llm_duration_ms = llm_start.elapsed().as_secs_f64() * 1000.0;
             let llm_end_timestamp = chrono::Utc::now();
 
