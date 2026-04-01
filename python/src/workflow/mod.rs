@@ -7,7 +7,7 @@ pub(crate) mod result;
 pub(crate) mod workflow;
 
 pub use context::WorkflowContext;
-pub use executor::Executor;
+pub use executor::{Executor, WorkflowStreamIterator};
 pub use node::Node;
 pub use result::WorkflowResult;
 pub use workflow::Workflow;

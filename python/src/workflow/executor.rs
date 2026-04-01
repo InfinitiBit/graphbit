@@ -7,11 +7,13 @@
 //! - Detailed execution metrics and logging
 //! - Graceful error handling and recovery
 
+use graphbit_core::stream::{StreamEvent, StreamMode};
 use graphbit_core::workflow::WorkflowExecutor as CoreWorkflowExecutor;
 use graphbit_core::{DecodeContext, EncodeContext, Enforcer, GuardRail};
+use pyo3::exceptions::PyStopIteration;
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyDict};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tracing::{debug, error, info, instrument, warn};
 
@@ -420,11 +422,117 @@ impl Executor {
         Ok(())
     }
 
-    /// Check execution mode
+    /// Get execution mode
     fn get_execution_mode(&self) -> String {
         format!("{:?}", self.config.mode)
     }
-}
+
+    /// Execute a workflow in streaming mode.
+    ///
+    /// Returns a `WorkflowStreamIterator` that yields one Python dict per
+    /// `StreamEvent`.  Iteration blocks until the next event is available,
+    /// releasing the GIL between receives so other Python threads can run.
+    ///
+    /// Example
+    /// -------
+    /// ```python
+    /// for event in executor.execute_streaming(workflow, stream_mode="updates"):
+    ///     print(event)
+    /// ```
+    #[pyo3(signature = (workflow, policy=None, stream_mode=None))]
+    fn execute_streaming(
+        &mut self,
+        workflow: &Workflow,
+        policy: Option<&Bound<'_, GuardRailPolicyConfig>>,
+        stream_mode: Option<&str>,
+    ) -> PyResult<WorkflowStreamIterator> {
+        // Validate workflow
+        if workflow.inner.graph.node_count() == 0 {
+            return Err(validation_error(
+                "workflow",
+                None,
+                "Workflow cannot be empty",
+            ));
+        }
+        if let Err(e) = workflow.inner.validate() {
+            return Err(validation_error(
+                "workflow",
+                None,
+                &format!("Invalid workflow: {}", e),
+            ));
+        }
+
+        // Parse stream mode (default: Updates)
+        let mode = stream_mode
+            .and_then(StreamMode::from_str_opt)
+            .unwrap_or(StreamMode::Updates);
+
+        let workflow_clone = workflow.inner.clone();
+        let llm_config = self.llm_config.inner.clone();
+        let config = self.config.clone();
+        let timeout_duration = config.timeout;
+        let guardrail_enforcer = policy.map(|p| {
+            let cfg = p.borrow().get_inner();
+            Arc::new(GuardRail::enforcer_for(cfg, workflow_clone.id.to_string()))
+        });
+
+        // Bounded channel: 256 events gives generous back-pressure headroom
+        let (event_tx, event_rx) = tokio::sync::mpsc::channel::<StreamEvent>(256);
+
+        // Spawn the streaming executor on the shared Tokio runtime
+        get_runtime().spawn(async move {
+            let conditional_handlers =
+                match crate::workflow::node::build_core_conditional_handlers(&workflow_clone) {
+                    Ok(h) => h,
+                    Err(e) => {
+                        let err_msg = e.to_string();
+                        let _ = event_tx
+                            .send(StreamEvent::WorkflowFailed {
+                                error: err_msg.clone(),
+                                error_type: graphbit_core::error_type_from_string(&err_msg),
+                            })
+                            .await;
+                        return;
+                    }
+                };
+
+            let executor = CoreWorkflowExecutor::new()
+                .with_default_llm_config(llm_config.clone())
+                .with_conditional_handlers(conditional_handlers);
+
+            let result = tokio::time::timeout(timeout_duration, async move {
+                executor
+                    .execute_streaming(
+                        workflow_clone.clone(),
+                        guardrail_enforcer,
+                        event_tx.clone(),
+                        mode,
+                    )
+                    .await
+            })
+            .await;
+
+            // The channel closes automatically when event_tx is dropped here,
+            // which signals the iterator that the stream is exhausted.
+            match result {
+                Ok(Ok(_)) => {} // WorkflowCompleted was already emitted by execute_streaming
+                Ok(Err(e)) => {
+                    // Should never happen (execute_streaming emits WorkflowFailed on errors),
+                    // but guard defensively.
+                    tracing::warn!("execute_streaming returned unexpected Err: {}", e);
+                }
+                Err(_elapsed) => {
+                    tracing::warn!("execute_streaming timed out after {:?}", timeout_duration);
+                }
+            }
+        });
+
+        Ok(WorkflowStreamIterator {
+            receiver: Arc::new(tokio::sync::Mutex::new(event_rx)),
+            done: false,
+        })
+    }
+} // end #[pymethods] impl Executor
 
 impl Executor {
     /// Internal workflow execution with mode-specific optimizations and tool call handling.
@@ -439,11 +547,9 @@ impl Executor {
         let conditional_handlers =
             crate::workflow::node::build_core_conditional_handlers(&workflow)?;
         let executor = match config.mode {
-            ExecutionMode::Balanced => {
-                CoreWorkflowExecutor::new()
-                    .with_default_llm_config(llm_config.clone())
-                    .with_conditional_handlers(conditional_handlers)
-            }
+            ExecutionMode::Balanced => CoreWorkflowExecutor::new()
+                .with_default_llm_config(llm_config.clone())
+                .with_conditional_handlers(conditional_handlers),
         };
 
         // Execute the workflow (core applies encode before LLM, decode after LLM when enforcer is Some)
@@ -1030,12 +1136,12 @@ impl Executor {
                                 let is_final_llm_call = next_response.tool_calls.is_empty();
                                 if let Some(enforcer) = guardrail_enforcer {
                                     if !is_final_llm_call {
-                                    let payload = serde_json::json!({
-                                        "content": next_response.content.clone(),
-                                        "tool_calls": next_response.tool_calls.clone(),
-                                    });
-                                    let decoded_result =
-                                        enforcer.decode(payload, DecodeContext::LlmResponse);
+                                        let payload = serde_json::json!({
+                                            "content": next_response.content.clone(),
+                                            "tool_calls": next_response.tool_calls.clone(),
+                                        });
+                                        let decoded_result =
+                                            enforcer.decode(payload, DecodeContext::LlmResponse);
                                         if decoded_result.rules_applied_count > 0 {
                                             executions.push(serde_json::json!({
                                                 "type": "guardrail_policy",
@@ -1045,20 +1151,22 @@ impl Executor {
                                                 "policy_name": decoded_result.policy_name
                                             }));
                                         }
-                                    if let Some(content) = decoded_result
-                                        .payload
-                                        .get("content")
-                                        .and_then(|v| v.as_str())
-                                    {
-                                        next_content = content.to_string();
-                                    }
-                                    if let Some(tc) = decoded_result.payload.get("tool_calls") {
-                                        if let Ok(parsed) =
-                                            serde_json::from_value::<Vec<LlmToolCall>>(tc.clone())
+                                        if let Some(content) = decoded_result
+                                            .payload
+                                            .get("content")
+                                            .and_then(|v| v.as_str())
                                         {
-                                            next_tool_calls = parsed;
+                                            next_content = content.to_string();
                                         }
-                                    }
+                                        if let Some(tc) = decoded_result.payload.get("tool_calls") {
+                                            if let Ok(parsed) =
+                                                serde_json::from_value::<Vec<LlmToolCall>>(
+                                                    tc.clone(),
+                                                )
+                                            {
+                                                next_tool_calls = parsed;
+                                            }
+                                        }
                                     }
                                 }
 
@@ -1300,5 +1408,236 @@ impl Executor {
         // Update average duration (simple moving average)
         self.stats.average_duration_ms =
             self.stats.total_duration_ms as f64 / self.stats.total_executions as f64;
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WorkflowStreamIterator
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Convert a `StreamEvent` into a Python dict.
+///
+/// The dict always has an `"event"` key with the event type name, plus
+/// all event fields as additional keys — matching the JSON serialisation
+/// defined in `core/src/stream.rs`.
+fn stream_event_to_dict<'py>(py: Python<'py>, event: StreamEvent) -> PyResult<Bound<'py, PyDict>> {
+    use graphbit_core::stream::StreamEvent::*;
+    let dict = PyDict::new(py);
+    match event {
+        WorkflowStarted {
+            workflow_id,
+            workflow_name,
+            total_nodes,
+        } => {
+            dict.set_item("event", "workflow_started")?;
+            dict.set_item("workflow_id", workflow_id)?;
+            dict.set_item("workflow_name", workflow_name)?;
+            dict.set_item("total_nodes", total_nodes)?;
+        }
+        NodeStarted { node_id, node_name } => {
+            dict.set_item("event", "node_started")?;
+            dict.set_item("node_id", node_id)?;
+            dict.set_item("node_name", node_name)?;
+        }
+        NodeCompleted {
+            node_id,
+            node_name,
+            output,
+        } => {
+            dict.set_item("event", "node_completed")?;
+            dict.set_item("node_id", node_id)?;
+            dict.set_item("node_name", node_name)?;
+            dict.set_item("output", serde_json::to_string(&output).unwrap_or_default())?;
+        }
+        NodeFailed {
+            node_id,
+            node_name,
+            error,
+            error_type,
+        } => {
+            dict.set_item("event", "node_failed")?;
+            dict.set_item("node_id", node_id)?;
+            dict.set_item("node_name", node_name)?;
+            dict.set_item("error", error)?;
+            dict.set_item("error_type", error_type)?;
+        }
+        Token {
+            node_id,
+            node_name,
+            content,
+        } => {
+            dict.set_item("event", "token")?;
+            dict.set_item("node_id", node_id)?;
+            dict.set_item("node_name", node_name)?;
+            dict.set_item("content", content)?;
+        }
+        ToolCallStarted {
+            node_id,
+            node_name,
+            tool_name,
+            tool_call_id,
+            parameters,
+        } => {
+            dict.set_item("event", "tool_call_started")?;
+            dict.set_item("node_id", node_id)?;
+            dict.set_item("node_name", node_name)?;
+            dict.set_item("tool_name", tool_name)?;
+            dict.set_item("tool_call_id", tool_call_id)?;
+            dict.set_item(
+                "parameters",
+                serde_json::to_string(&parameters).unwrap_or_default(),
+            )?;
+        }
+        ToolCallCompleted {
+            node_id,
+            node_name,
+            tool_name,
+            tool_call_id,
+            output,
+            duration_ms,
+        } => {
+            dict.set_item("event", "tool_call_completed")?;
+            dict.set_item("node_id", node_id)?;
+            dict.set_item("node_name", node_name)?;
+            dict.set_item("tool_name", tool_name)?;
+            dict.set_item("tool_call_id", tool_call_id)?;
+            dict.set_item("output", serde_json::to_string(&output).unwrap_or_default())?;
+            dict.set_item("duration_ms", duration_ms)?;
+        }
+        ToolCallFailed {
+            node_id,
+            node_name,
+            tool_name,
+            tool_call_id,
+            error,
+            error_type,
+        } => {
+            dict.set_item("event", "tool_call_failed")?;
+            dict.set_item("node_id", node_id)?;
+            dict.set_item("node_name", node_name)?;
+            dict.set_item("tool_name", tool_name)?;
+            dict.set_item("tool_call_id", tool_call_id)?;
+            dict.set_item("error", error)?;
+            dict.set_item("error_type", error_type)?;
+        }
+        WorkflowCompleted { context } => {
+            dict.set_item("event", "workflow_completed")?;
+            dict.set_item(
+                "outputs",
+                serde_json::to_string(&context.node_outputs).unwrap_or_default(),
+            )?;
+        }
+        WorkflowFailed { error, error_type } => {
+            dict.set_item("event", "workflow_failed")?;
+            dict.set_item("error", error)?;
+            dict.set_item("error_type", error_type)?;
+        }
+    }
+    Ok(dict)
+}
+
+/// Synchronous iterator over streaming workflow events.
+///
+/// Each call to `__next__` blocks until the next `StreamEvent` arrives from
+/// the Tokio runtime (the GIL is released during the wait), then returns a
+/// Python `dict` describing the event.  Iteration ends automatically when the
+/// channel closes — i.e., after `WorkflowCompleted` or `WorkflowFailed`.
+///
+/// Usage
+/// -----
+/// ```python
+/// for event in executor.execute_streaming(workflow):
+///     if event["event"] == "token":
+///         print(event["content"], end="", flush=True)
+/// ```
+#[pyclass]
+pub struct WorkflowStreamIterator {
+    /// `tokio::sync::Mutex` so the guard is `Send` and can be held across `.await`.
+    receiver: Arc<tokio::sync::Mutex<tokio::sync::mpsc::Receiver<StreamEvent>>>,
+    /// Set to `true` after the channel has been fully drained.
+    done: bool,
+}
+
+#[pymethods]
+impl WorkflowStreamIterator {
+    /// Return `self` so the iterator protocol works for `for event in iterator`.
+    fn __iter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
+        slf
+    }
+
+    /// Yield the next event dict, or raise `StopIteration` when done.
+    ///
+    /// The GIL is released while waiting on the channel by using
+    /// `allow_threads`, so Python threads and the Tokio runtime can continue
+    /// executing concurrently.
+    fn __next__<'a>(&mut self, py: Python<'a>) -> PyResult<Bound<'a, PyDict>> {
+        if self.done {
+            return Err(PyStopIteration::new_err(()));
+        }
+
+        let receiver = self.receiver.clone();
+        // Block this thread (GIL released) until an event arrives or channel closes.
+        // `block_on` on the shared runtime drives the async recv to completion.
+        let maybe_event = py.allow_threads(move || {
+            get_runtime().block_on(async move {
+                let mut rx = receiver.lock().await;
+                rx.recv().await
+            })
+        });
+
+        match maybe_event {
+            Some(event) => {
+                // Mark done *after* returning the last real event so callers
+                // see WorkflowCompleted / WorkflowFailed before StopIteration.
+                if matches!(
+                    event,
+                    StreamEvent::WorkflowCompleted { .. } | StreamEvent::WorkflowFailed { .. }
+                ) {
+                    self.done = true;
+                }
+                stream_event_to_dict(py, event)
+            }
+            None => {
+                // Channel closed — stream is exhausted
+                self.done = true;
+                Err(PyStopIteration::new_err(()))
+            }
+        }
+    }
+
+    /// Async variant: return `self` for `async for event in iterator`.
+    fn __aiter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
+        slf
+    }
+
+    /// Async next: drives the channel receive inside a Tokio future so it
+    /// can be `await`ed from an async Python context.
+    /// Uses `tokio::sync::Mutex` so the guard is `Send` across the `.await` point.
+    fn __anext__<'py>(&mut self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+        if self.done {
+            return Err(pyo3::exceptions::PyStopAsyncIteration::new_err(()));
+        }
+
+        let receiver = self.receiver.clone();
+        pyo3_async_runtimes::tokio::future_into_py(py, async move {
+            let mut rx = receiver.lock().await;
+            let maybe_event = rx.recv().await;
+            drop(rx); // release the tokio Mutex before re-acquiring the GIL
+            match maybe_event {
+                Some(event) => Python::with_gil(|py| {
+                    stream_event_to_dict(py, event).map(|d| d.into_any().unbind())
+                }),
+                None => Err(pyo3::exceptions::PyStopAsyncIteration::new_err(())),
+            }
+        })
+    }
+
+    /// Human-readable repr for the REPL.
+    fn __repr__(&self) -> String {
+        if self.done {
+            "WorkflowStreamIterator(exhausted)".to_string()
+        } else {
+            "WorkflowStreamIterator(active)".to_string()
+        }
     }
 }
