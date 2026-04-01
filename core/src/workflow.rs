@@ -319,11 +319,63 @@ impl WorkflowExecutor {
     ///
     /// When `guardrail_enforcer` is `Some`, PII is encoded before each LLM call and
     /// decoded on LLM output; tool-call boundaries are handled by the executor layer.
+    ///
+    /// This is the non-streaming entry point. It delegates to [`execute_internal`]
+    /// with no event channel, so zero overhead is added to the hot path.
     pub async fn execute(
         &self,
         workflow: Workflow,
         guardrail_enforcer: Option<Arc<Enforcer>>,
     ) -> GraphBitResult<WorkflowContext> {
+        self.execute_internal(
+            workflow,
+            guardrail_enforcer,
+            None,
+            crate::stream::StreamMode::Updates,
+        )
+        .await
+    }
+
+    /// Execute a workflow with real-time streaming events.
+    ///
+    /// Identical to [`execute`] but emits [`StreamEvent`]s through `event_tx`
+    /// at every node boundary. The caller consumes events from the corresponding
+    /// `mpsc::Receiver` while this future runs (typically in a spawned task).
+    ///
+    /// # Arguments
+    /// * `workflow` — the workflow to execute
+    /// * `guardrail_enforcer` — optional PII masking enforcer
+    /// * `event_tx` — sender half of an `mpsc` channel for streaming events
+    /// * `stream_mode` — controls which event categories are emitted
+    ///
+    /// # Fire-and-forget semantics
+    /// If the receiver is dropped (e.g. the caller stops iterating early),
+    /// send failures are silently ignored — the workflow still runs to completion.
+    pub async fn execute_streaming(
+        &self,
+        workflow: Workflow,
+        guardrail_enforcer: Option<Arc<Enforcer>>,
+        event_tx: tokio::sync::mpsc::Sender<crate::stream::StreamEvent>,
+        stream_mode: crate::stream::StreamMode,
+    ) -> GraphBitResult<WorkflowContext> {
+        self.execute_internal(workflow, guardrail_enforcer, Some(event_tx), stream_mode)
+            .await
+    }
+
+    /// Shared execution engine used by both [`execute`] and [`execute_streaming`].
+    ///
+    /// When `event_tx` is `Some`, node-level [`StreamEvent`]s are emitted at every
+    /// milestone. When `None` (non-streaming path) no channel operations occur, so
+    /// performance is identical to the original `execute()`.
+    async fn execute_internal(
+        &self,
+        workflow: Workflow,
+        guardrail_enforcer: Option<Arc<Enforcer>>,
+        event_tx: Option<tokio::sync::mpsc::Sender<crate::stream::StreamEvent>>,
+        _stream_mode: crate::stream::StreamMode,
+    ) -> GraphBitResult<WorkflowContext> {
+        use crate::stream::{StreamEvent, error_type_from_graphbit_error, error_type_from_string};
+
         let start_time = std::time::Instant::now();
 
         // Initialize workflow context with simple constructor
@@ -335,15 +387,31 @@ impl WorkflowExecutor {
         };
 
         // Validate workflow before execution
-        workflow.validate()?;
+        if let Err(e) = workflow.validate() {
+            if let Some(ref tx) = event_tx {
+                let _ = tx
+                    .send(StreamEvent::WorkflowFailed {
+                        error: e.to_string(),
+                        error_type: error_type_from_graphbit_error(&e),
+                    })
+                    .await;
+            }
+            return Err(e);
+        }
 
         // PERFORMANCE FIX: Auto-register agents for all agent nodes found in workflow
         let agent_ids = extract_agent_ids_from_workflow(&workflow);
         if agent_ids.is_empty() {
-            return Err(GraphBitError::validation(
-                "workflow",
-                "No agents found in workflow",
-            ));
+            let err = GraphBitError::validation("workflow", "No agents found in workflow");
+            if let Some(ref tx) = event_tx {
+                let _ = tx
+                    .send(StreamEvent::WorkflowFailed {
+                        error: err.to_string(),
+                        error_type: error_type_from_graphbit_error(&err),
+                    })
+                    .await;
+            }
+            return Err(err);
         }
 
         // Auto-register missing agents to prevent lookup failures
@@ -372,7 +440,8 @@ impl WorkflowExecutor {
                                 // Extract system_prompt: Priority is AgentNodeConfig.system_prompt_override > node.config["system_prompt"]
                                 if let Some(sys_override) = &config.system_prompt_override {
                                     system_prompt = sys_override.clone();
-                                } else if let Some(prompt_value) = node.config.get("system_prompt") {
+                                } else if let Some(prompt_value) = node.config.get("system_prompt")
+                                {
                                     if let Some(prompt_str) = prompt_value.as_str() {
                                         system_prompt = prompt_str.to_string();
                                     }
@@ -432,9 +501,18 @@ impl WorkflowExecutor {
                             tracing::debug!("Auto-registered agent: {agent_id}");
                         }
                         Err(e) => {
-                            return Err(GraphBitError::workflow_execution(format!(
+                            let err = GraphBitError::workflow_execution(format!(
                                 "Failed to create agent '{agent_id_str}': {e}. This may be due to invalid API key or configuration.",
-                            )));
+                            ));
+                            if let Some(ref tx) = event_tx {
+                                let _ = tx
+                                    .send(StreamEvent::WorkflowFailed {
+                                        error: err.to_string(),
+                                        error_type: error_type_from_graphbit_error(&err),
+                                    })
+                                    .await;
+                            }
+                            return Err(err);
                         }
                     }
                 }
@@ -482,7 +560,26 @@ impl WorkflowExecutor {
         let nodes = Self::collect_executable_nodes(&workflow.graph)?;
         if nodes.is_empty() {
             context.complete();
+            // Streaming: emit WorkflowCompleted even for an empty workflow
+            if let Some(ref tx) = event_tx {
+                let _ = tx
+                    .send(StreamEvent::WorkflowCompleted {
+                        context: context.clone(),
+                    })
+                    .await;
+            }
             return Ok(context);
+        }
+
+        // ── Streaming: emit WorkflowStarted ──────────────────────────────────────
+        if let Some(ref tx) = event_tx {
+            let _ = tx
+                .send(StreamEvent::WorkflowStarted {
+                    workflow_id: workflow.id.to_string(),
+                    workflow_name: workflow.name.clone(),
+                    total_nodes: nodes.len(),
+                })
+                .await;
         }
 
         let mut total_executed = 0;
@@ -531,15 +628,33 @@ impl WorkflowExecutor {
                 .collect();
 
             if ready.is_empty() {
-                return Err(GraphBitError::workflow_execution(
-                    "No runnable nodes but workflow not finished (cycle or invalid scheduling state)"
-                        .to_string(),
-                ));
+                let err_msg = "No runnable nodes but workflow not finished (cycle or invalid scheduling state)".to_string();
+                if let Some(ref tx) = event_tx {
+                    let _ = tx
+                        .send(StreamEvent::WorkflowFailed {
+                            error: err_msg.clone(),
+                            error_type: "runtime_error".to_string(),
+                        })
+                        .await;
+                }
+                return Err(GraphBitError::workflow_execution(err_msg));
             }
 
             let batch_size = ready.len();
             let batch_ids: Vec<String> = ready.iter().map(|n| n.id.to_string()).collect();
             tracing::info!(batch_size, batch_node_ids = ?batch_ids, "Executing dynamic batch");
+
+            // ── Streaming: emit NodeStarted for each node about to run ────────────
+            if let Some(ref tx) = event_tx {
+                for node in &ready {
+                    let _ = tx
+                        .send(StreamEvent::NodeStarted {
+                            node_id: node.id.to_string(),
+                            node_name: node.name.clone(),
+                        })
+                        .await;
+                }
+            }
 
             let shared_context = Arc::new(Mutex::new(context));
             let mut tasks = Vec::with_capacity(batch_size);
@@ -605,6 +720,39 @@ impl WorkflowExecutor {
                             total_successful += 1;
                         }
                         resolved.insert(node_result.node_id.clone());
+
+                        // ── Streaming: emit NodeCompleted or NodeFailed ───────────────────
+                        if let Some(ref tx) = event_tx {
+                            let node_name = workflow
+                                .graph
+                                .get_node(&node_result.node_id)
+                                .map(|n| n.name.clone())
+                                .unwrap_or_default();
+
+                            if node_result.success {
+                                let _ = tx
+                                    .send(StreamEvent::NodeCompleted {
+                                        node_id: node_result.node_id.to_string(),
+                                        node_name,
+                                        output: node_result.output.clone(),
+                                    })
+                                    .await;
+                            } else {
+                                let error_msg = node_result
+                                    .error
+                                    .as_deref()
+                                    .unwrap_or("Unknown error")
+                                    .to_string();
+                                let _ = tx
+                                    .send(StreamEvent::NodeFailed {
+                                        node_id: node_result.node_id.to_string(),
+                                        node_name,
+                                        error: error_msg.clone(),
+                                        error_type: error_type_from_string(&error_msg),
+                                    })
+                                    .await;
+                            }
+                        }
 
                         {
                             let mut ctx = shared_context.lock().await;
@@ -741,9 +889,22 @@ impl WorkflowExecutor {
 
             if should_fail_fast {
                 let mut ctx = shared_context.lock().await;
-                ctx.fail(failure_message);
+                ctx.fail(failure_message.clone());
                 drop(ctx);
-                return Ok(Arc::try_unwrap(shared_context).unwrap().into_inner());
+                let final_ctx = Arc::try_unwrap(shared_context).unwrap().into_inner();
+
+                // ── Streaming: emit WorkflowFailed on fail-fast ──────────────────
+                if let Some(ref tx) = event_tx {
+                    let error_type = error_type_from_string(&failure_message);
+                    let _ = tx
+                        .send(StreamEvent::WorkflowFailed {
+                            error: failure_message,
+                            error_type,
+                        })
+                        .await;
+                }
+
+                return Ok(final_ctx);
             }
 
             context = Arc::try_unwrap(shared_context).unwrap().into_inner();
@@ -765,6 +926,15 @@ impl WorkflowExecutor {
 
         context.set_stats(stats);
         context.complete();
+
+        // ── Streaming: emit WorkflowCompleted ────────────────────────────────────
+        if let Some(ref tx) = event_tx {
+            let _ = tx
+                .send(StreamEvent::WorkflowCompleted {
+                    context: context.clone(),
+                })
+                .await;
+        }
 
         Ok(context)
     }
@@ -849,10 +1019,7 @@ impl WorkflowExecutor {
         handlers: Arc<HashMap<String, ConditionalRouteFn>>,
         graph: Arc<WorkflowGraph>,
     ) -> GraphBitResult<serde_json::Value> {
-        let parents = parents_map
-            .get(&node.id)
-            .cloned()
-            .unwrap_or_default();
+        let parents = parents_map.get(&node.id).cloned().unwrap_or_default();
         if parents.len() != 1 {
             return Err(GraphBitError::workflow_execution(format!(
                 "Condition node '{}' must have exactly one incoming dependency, found {}",
@@ -1350,13 +1517,14 @@ impl WorkflowExecutor {
             use crate::llm::{LlmMessage, LlmRequest};
 
             // Resolve system prompt: Priority is Node Override > Agent Default
-            let system_prompt = if let Some(sys_override) = &agent_node_config.system_prompt_override {
-                Some(sys_override.clone())
-            } else if !agent.config().system_prompt.is_empty() {
-                Some(agent.config().system_prompt.clone())
-            } else {
-                None
-            };
+            let system_prompt =
+                if let Some(sys_override) = &agent_node_config.system_prompt_override {
+                    Some(sys_override.clone())
+                } else if !agent.config().system_prompt.is_empty() {
+                    Some(agent.config().system_prompt.clone())
+                } else {
+                    None
+                };
 
             // Build messages array
             let mut messages = Vec::with_capacity(2);

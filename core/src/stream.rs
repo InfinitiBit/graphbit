@@ -275,5 +275,3 @@ pub fn error_type_from_string(error_msg: &str) -> String {
         "runtime_error".to_string()
     }
 }
-
-

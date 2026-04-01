@@ -55,7 +55,7 @@ pub use llm::{LlmConfig, LlmProvider, LlmResponse};
 pub use memory::{
     Memory, MemoryConfig, MemoryHistory, MemoryId, MemoryScope, MemoryService, ScoredMemory,
 };
-pub use stream::{StreamEvent, StreamMode, error_type_from_graphbit_error};
+pub use stream::{StreamEvent, StreamMode, error_type_from_graphbit_error, error_type_from_string};
 pub use text_splitter::{
     CharacterSplitter, RecursiveSplitter, SentenceSplitter, SplitterStrategy, TextChunk,
     TextSplitterConfig, TextSplitterFactory, TextSplitterTrait, TokenSplitter,
