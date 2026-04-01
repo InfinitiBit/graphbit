@@ -14,14 +14,22 @@
 //! ## Quick Start
 //!
 //! ```rust
-//! use graphbit_core::{WorkflowGraph, WorkflowNode, NodeType, AgentId};
+//! use graphbit_core::{WorkflowGraph, WorkflowNode, NodeType, AgentId, AgentNodeConfig};
 //!
 //! // Create a simple workflow
 //! let mut graph = WorkflowGraph::new();
 //! let node_type = NodeType::Agent {
-//!     agent_id: AgentId::new(),
-//!     prompt_template: "You are a helpful assistant".to_string(),
+//!    config: AgentNodeConfig {
+//!    /// Template for the prompt to send to the agent
+//!    agent_id: AgentId::new(),
+//!    prompt_template: "you are a helpful assistant".to_string(),
+//!    /// Optional conversational context template
+//!    conversational_context: None,
+//!    /// Optional system prompt override (Node-level wins over Agent-level)
+//!    system_prompt_override: None,
+//! },
 //! };
+
 //! let node = WorkflowNode::new("start", "A starting node", node_type);
 //! graph.add_node(node).unwrap();
 //! ```

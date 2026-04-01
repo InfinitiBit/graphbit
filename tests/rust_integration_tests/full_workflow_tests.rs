@@ -161,7 +161,7 @@ async fn test_workflow_with_conditions() {
         "Length Check",
         "Checks if text is long",
         NodeType::Condition {
-            expression: "input.length > 100".to_string(),
+            handler_id: "input_length_gt_100".to_string(),
         },
     );
 
