@@ -436,9 +436,13 @@ impl Executor {
         config: ExecutionConfig,
         guardrail_enforcer: Option<Arc<Enforcer>>,
     ) -> Result<graphbit_core::types::WorkflowContext, graphbit_core::errors::GraphBitError> {
+        let conditional_handlers =
+            crate::workflow::node::build_core_conditional_handlers(&workflow)?;
         let executor = match config.mode {
             ExecutionMode::Balanced => {
-                CoreWorkflowExecutor::new().with_default_llm_config(llm_config.clone())
+                CoreWorkflowExecutor::new()
+                    .with_default_llm_config(llm_config.clone())
+                    .with_conditional_handlers(conditional_handlers)
             }
         };
 

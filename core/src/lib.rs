@@ -63,7 +63,9 @@ pub use types::{
     WorkflowContext, WorkflowExecutionStats, WorkflowId, WorkflowState,
 };
 pub use validation::ValidationResult;
-pub use workflow::{Workflow, WorkflowBuilder, WorkflowExecutor};
+pub use workflow::{
+    ConditionRoutingInput, ConditionalRouteFn, Workflow, WorkflowBuilder, WorkflowExecutor,
+};
 
 // Re-export guardrail types (from prebuilt libguardrail_ffi.a via guardrail_ffi crate)
 pub use guardrail_ffi::{
