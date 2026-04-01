@@ -211,7 +211,7 @@ async fn test_conditional_workflow_execution() {
         "Condition",
         "Check condition",
         NodeType::Condition {
-            expression: "value > 10".to_string(),
+            handler_id: "value_gt_10".to_string(),
         },
     );
     let true_path_node = WorkflowNode::new(
@@ -539,7 +539,7 @@ async fn test_complex_workflow_validation() {
                         transformation: format!("transform{i}"),
                     },
                     2 => NodeType::Condition {
-                        expression: format!("condition{i}"),
+                        handler_id: format!("condition{i}"),
                     },
                     3 => NodeType::Join,
                     _ => unreachable!(),

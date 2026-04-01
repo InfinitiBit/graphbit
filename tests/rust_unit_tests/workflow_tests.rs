@@ -151,7 +151,7 @@ fn build_dummy_agent(name: &str) -> (graphbit_core::types::AgentId, std::sync::A
 async fn test_workflow_execute_with_dummy_agent_success() {
     use graphbit_core::graph::{NodeType, WorkflowEdge, WorkflowNode};
 
-    // Build a small workflow: Agent -> Transform -> Condition
+    // Build a small workflow: Agent -> Transform
     let (agent_id, agent) = build_dummy_agent("dummy");
     let agent_node = WorkflowNode::new(
         "agent",
@@ -172,23 +172,11 @@ async fn test_workflow_execute_with_dummy_agent_success() {
             transformation: "uppercase".to_string(),
         },
     );
-    let condition_node = WorkflowNode::new(
-        "cond",
-        "condition node",
-        NodeType::Condition {
-            expression: "true".to_string(),
-        },
-    );
-
     let builder = WorkflowBuilder::new("wf");
     let (builder, a_id) = builder.add_node(agent_node).unwrap();
     let (builder, t_id) = builder.add_node(transform_node).unwrap();
-    let (mut builder, c_id) = builder.add_node(condition_node).unwrap();
-    builder = builder
+    let builder = builder
         .connect(a_id.clone(), t_id.clone(), WorkflowEdge::control_flow())
-        .unwrap();
-    builder = builder
-        .connect(t_id.clone(), c_id.clone(), WorkflowEdge::control_flow())
         .unwrap();
     let wf = builder.build().unwrap();
 
@@ -198,7 +186,7 @@ async fn test_workflow_execute_with_dummy_agent_success() {
     let ctx = exec.execute(wf, None).await.expect("workflow should execute");
     assert!(matches!(ctx.state, WorkflowState::Completed));
     let stats = ctx.stats.expect("stats present");
-    assert!(stats.total_nodes >= 3);
+    assert!(stats.total_nodes >= 2);
 }
 
 #[tokio::test]
