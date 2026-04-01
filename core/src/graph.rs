@@ -11,7 +11,7 @@ use petgraph::{
     graph::{DiGraph, NodeIndex},
 };
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /// A workflow graph that defines the structure and execution flow
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -364,6 +364,25 @@ impl WorkflowGraph {
             node.validate()?;
         }
 
+        // Condition nodes: direct successors must have unique names (routing by name)
+        for node in self.nodes.values() {
+            if matches!(node.node_type, NodeType::Condition { .. }) {
+                let mut seen: HashSet<&str> = HashSet::new();
+                for (from, to, _) in &self.edges {
+                    if from == &node.id {
+                        if let Some(succ) = self.nodes.get(to) {
+                            if !seen.insert(succ.name.as_str()) {
+                                return Err(GraphBitError::graph(format!(
+                                    "Condition node '{}' has duplicate successor name '{}'",
+                                    node.name, succ.name
+                                )));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // Enforce unique agent IDs across all agent nodes
         {
             use std::collections::HashMap;
@@ -469,6 +488,29 @@ impl WorkflowGraph {
             .values()
             .find(|node| node.name == name)
             .map(|node| node.id.clone())
+    }
+
+    /// Direct successors along control/data edges (`from` → `to`).
+    pub fn direct_successors(&self, from: &NodeId) -> Vec<NodeId> {
+        self.edges
+            .iter()
+            .filter_map(|(a, b, _)| (a == from).then_some(b.clone()))
+            .collect()
+    }
+
+    /// All nodes reachable from `start` (including `start`) following outgoing edges.
+    pub fn forward_reachable_from(&self, start: &NodeId) -> HashSet<NodeId> {
+        let mut visited = HashSet::new();
+        let mut stack = vec![start.clone()];
+        while let Some(n) = stack.pop() {
+            if !visited.insert(n.clone()) {
+                continue;
+            }
+            for s in self.direct_successors(&n) {
+                stack.push(s);
+            }
+        }
+        visited
     }
 }
 
@@ -604,10 +646,10 @@ impl WorkflowNode {
                     Self::validate_template_syntax(sys, "system_prompt_override")?;
                 }
             }
-            NodeType::Condition { expression } => {
-                if expression.is_empty() {
+            NodeType::Condition { handler_id } => {
+                if handler_id.trim().is_empty() {
                     return Err(GraphBitError::graph(
-                        "Condition node must have an expression",
+                        "Condition node must have a non-empty handler_id",
                     ));
                 }
             }
@@ -703,10 +745,10 @@ pub enum NodeType {
         #[serde(flatten)]
         config: AgentNodeConfig,
     },
-    /// Conditional branching node
+    /// Conditional branch: parent output and workflow snapshot are passed to a runtime-registered handler; handler returns the next node name (string).
     Condition {
-        /// Boolean expression to evaluate
-        expression: String,
+        /// Opaque id matching an entry in `WorkflowExecutor`'s conditional handler map.
+        handler_id: String,
     },
     /// Data transformation node
     Transform {

@@ -16,12 +16,31 @@ use crate::{DecodeContext, EncodeContext, Enforcer};
 use futures::future::join_all;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, LazyLock};
 use tokio::sync::{Mutex, RwLock};
 
 static NODE_REF_PATTERN: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\{\{node\.([a-zA-Z0-9_\-\.]+)\}\}").unwrap());
+
+/// Snapshot passed to condition handlers: parent output plus shared workflow maps for routing.
+#[derive(Debug, Clone)]
+pub struct ConditionRoutingInput {
+    /// Immediate parent node id (single in-edge required for condition nodes).
+    pub parent_node_id: String,
+    /// JSON output of the parent node (same as `WorkflowContext::get_node_output` for that id).
+    pub parent_output: serde_json::Value,
+    /// Clone of workflow variables at condition evaluation time.
+    pub variables: HashMap<String, serde_json::Value>,
+    /// Clone of all node outputs at condition evaluation time.
+    pub node_outputs: HashMap<String, serde_json::Value>,
+    /// Clone of execution metadata at condition evaluation time.
+    pub metadata: HashMap<String, serde_json::Value>,
+}
+
+/// Handler for conditional nodes: routing input in -> next node **name** out.
+pub type ConditionalRouteFn =
+    Arc<dyn Fn(ConditionRoutingInput) -> GraphBitResult<String> + Send + Sync>;
 
 /// A complete workflow definition
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -146,6 +165,8 @@ pub struct WorkflowExecutor {
     circuit_breaker_config: CircuitBreakerConfig,
     /// Default LLM configuration for auto-generated agents
     default_llm_config: Option<crate::llm::LlmConfig>,
+    /// Runtime handlers for [`NodeType::Condition`] nodes (`handler_id` → callback).
+    conditional_handlers: Arc<HashMap<String, ConditionalRouteFn>>,
 }
 
 impl WorkflowExecutor {
@@ -163,6 +184,7 @@ impl WorkflowExecutor {
             circuit_breakers: Arc::new(RwLock::new(HashMap::with_capacity(8))),
             circuit_breaker_config: CircuitBreakerConfig::default(),
             default_llm_config: None,
+            conditional_handlers: Arc::new(HashMap::new()),
         }
     }
 
@@ -199,6 +221,15 @@ impl WorkflowExecutor {
     /// Set default LLM configuration for auto-generated agents
     pub fn with_default_llm_config(mut self, llm_config: crate::llm::LlmConfig) -> Self {
         self.default_llm_config = Some(llm_config);
+        self
+    }
+
+    /// Register handlers for [`NodeType::Condition`] nodes (e.g. from Python callables).
+    pub fn with_conditional_handlers(
+        mut self,
+        handlers: HashMap<String, ConditionalRouteFn>,
+    ) -> Self {
+        self.conditional_handlers = Arc::new(handlers);
         self
     }
 
@@ -454,27 +485,66 @@ impl WorkflowExecutor {
             return Ok(context);
         }
 
-        // Execute nodes in dependency-aware batches (parents before children)
-        let batches = Self::create_dependency_batches(&workflow.graph).await?;
-        tracing::info!(
-            batch_count = batches.len(),
-            "Planned dependency-aware batches"
-        );
         let mut total_executed = 0;
         let mut total_successful = 0;
 
-        for batch in batches {
-            let batch_size = batch.len();
-            let batch_ids: Vec<String> = batch.iter().map(|n| n.id.to_string()).collect();
-            tracing::info!(batch_size, batch_node_ids = ?batch_ids, "Executing batch");
+        // Parent map from the canonical `edges` list (same source Python `connect` uses).
+        // Using `get_dependencies` + petgraph/cache here has regressed to empty dependency lists
+        // for some graphs, which makes `parents.iter().all(...)` vacuously true and schedules
+        // condition successors (e.g. all advisor branches) in the same batch as the intake node.
+        let node_ids: Vec<NodeId> = workflow.graph.get_nodes().keys().cloned().collect();
+        let mut node_parents: HashMap<NodeId, Vec<NodeId>> = HashMap::new();
+        for nid in &node_ids {
+            let deps: Vec<NodeId> = workflow
+                .graph
+                .get_edges()
+                .iter()
+                .filter_map(|(from, to, _)| (to == nid).then_some(from.clone()))
+                .collect();
+            node_parents.insert(nid.clone(), deps);
+        }
+        let node_parents = Arc::new(node_parents);
+        let conditional_handlers = self.conditional_handlers.clone();
+        let workflow_graph = Arc::new(workflow.graph.clone());
 
-            // Execute batch concurrently with optimized spawning
+        let total_node_count = workflow.graph.node_count();
+        let mut resolved: HashSet<NodeId> = HashSet::new();
+        let mut skipped: HashSet<NodeId> = HashSet::new();
+
+        while resolved.len() + skipped.len() < total_node_count {
+            let ready: Vec<WorkflowNode> = workflow
+                .graph
+                .get_nodes()
+                .iter()
+                .filter(|(id, _)| !resolved.contains(*id) && !skipped.contains(*id))
+                .filter(|(id, _)| {
+                    node_parents
+                        .get(*id)
+                        .map(|parents| {
+                            parents
+                                .iter()
+                                .all(|p| resolved.contains(p) || skipped.contains(p))
+                        })
+                        .unwrap_or(false)
+                })
+                .map(|(_, n)| n.clone())
+                .collect();
+
+            if ready.is_empty() {
+                return Err(GraphBitError::workflow_execution(
+                    "No runnable nodes but workflow not finished (cycle or invalid scheduling state)"
+                        .to_string(),
+                ));
+            }
+
+            let batch_size = ready.len();
+            let batch_ids: Vec<String> = ready.iter().map(|n| n.id.to_string()).collect();
+            tracing::info!(batch_size, batch_node_ids = ?batch_ids, "Executing dynamic batch");
+
             let shared_context = Arc::new(Mutex::new(context));
-
-            // Pre-allocate tasks vector for better memory efficiency
             let mut tasks = Vec::with_capacity(batch_size);
 
-            for node in batch {
+            for node in ready {
                 let context_clone = shared_context.clone();
                 let agents_clone = self.agents.clone();
                 let circuit_breakers_clone = self.circuit_breakers.clone();
@@ -482,13 +552,13 @@ impl WorkflowExecutor {
                 let retry_config = self.default_retry_config.clone();
                 let concurrency_manager = self.concurrency_manager.clone();
                 let guardrail_enforcer = guardrail_enforcer.clone();
+                let node_parents = node_parents.clone();
+                let conditional_handlers = conditional_handlers.clone();
+                let workflow_graph = workflow_graph.clone();
 
-                // Use lightweight task spawning without unnecessary permit acquisition overhead
                 let task = tokio::spawn(async move {
-                    // Simplified concurrency control - just acquire basic permits
                     let task_info = TaskInfo::from_node_type(&node.node_type, &node.id);
 
-                    // Fast path: skip permit acquisition for simple nodes to reduce overhead
                     let _permits = if matches!(node.node_type, NodeType::Agent { .. }) {
                         Some(
                             concurrency_manager
@@ -502,10 +572,9 @@ impl WorkflowExecutor {
                                 })?,
                         )
                     } else {
-                        None // Skip permit system for non-agent nodes
+                        None
                     };
 
-                    // Execute the node with retry logic
                     Self::execute_node_with_retry(
                         node,
                         context_clone,
@@ -514,13 +583,15 @@ impl WorkflowExecutor {
                         circuit_breaker_config,
                         retry_config,
                         guardrail_enforcer,
+                        node_parents,
+                        conditional_handlers,
+                        workflow_graph,
                     )
                     .await
                 });
                 tasks.push(task);
             }
 
-            // Wait for all tasks in the batch to complete
             let results = join_all(tasks).await;
 
             let mut should_fail_fast = false;
@@ -533,39 +604,36 @@ impl WorkflowExecutor {
                         if node_result.success {
                             total_successful += 1;
                         }
+                        resolved.insert(node_result.node_id.clone());
 
-                        // Update context with results using meaningful variable names
-                        // 1) Populate node_outputs (JSON) by ID and by Name for automatic data flow
-                        // 2) Also populate variables with stringified output for backward compatibility
-                        let mut ctx = shared_context.lock().await;
-                        if let Some(node) = workflow.graph.get_node(&node_result.node_id) {
-                            // Store raw JSON output for data flow
-                            ctx.set_node_output(&node.id, node_result.output.clone());
-                            ctx.set_node_output_by_name(&node.name, node_result.output.clone());
+                        {
+                            let mut ctx = shared_context.lock().await;
+                            if let Some(node) = workflow.graph.get_node(&node_result.node_id) {
+                                ctx.set_node_output(&node.id, node_result.output.clone());
+                                ctx.set_node_output_by_name(&node.name, node_result.output.clone());
 
-                            // Debug: confirm keys present after store
-                            let keys_now: Vec<String> = ctx.node_outputs.keys().cloned().collect();
-                            tracing::debug!(
-                                stored_node_id = %node.id,
-                                stored_node_name = %node.name,
-                                node_output_keys_now = ?keys_now,
-                                "Stored node output in context.node_outputs"
-                            );
-
-                            // Back-compat: also set variables as strings
-                            if let Ok(output_str) = serde_json::to_string(&node_result.output) {
-                                ctx.set_variable(
-                                    node.name.clone(),
-                                    serde_json::Value::String(output_str.clone()),
+                                let keys_now: Vec<String> =
+                                    ctx.node_outputs.keys().cloned().collect();
+                                tracing::debug!(
+                                    stored_node_id = %node.id,
+                                    stored_node_name = %node.name,
+                                    node_output_keys_now = ?keys_now,
+                                    "Stored node output in context.node_outputs"
                                 );
-                                ctx.set_variable(
-                                    node.id.to_string(),
-                                    serde_json::Value::String(output_str),
-                                );
-                            }
-                        } else {
-                            // Fallback to generic naming if node not found (shouldn't happen)
-                            if let Ok(output_str) = serde_json::to_string(&node_result.output) {
+
+                                if let Ok(output_str) = serde_json::to_string(&node_result.output) {
+                                    ctx.set_variable(
+                                        node.name.clone(),
+                                        serde_json::Value::String(output_str.clone()),
+                                    );
+                                    ctx.set_variable(
+                                        node.id.to_string(),
+                                        serde_json::Value::String(output_str),
+                                    );
+                                }
+                            } else if let Ok(output_str) =
+                                serde_json::to_string(&node_result.output)
+                            {
                                 ctx.set_variable(
                                     format!("node_result_{total_executed}"),
                                     serde_json::Value::String(output_str),
@@ -576,9 +644,75 @@ impl WorkflowExecutor {
                                 );
                             }
                         }
+
+                        if node_result.success {
+                            if let Some(node) = workflow.graph.get_node(&node_result.node_id) {
+                                if matches!(node.node_type, NodeType::Condition { .. }) {
+                                    match Self::condition_output_branch_name(&node_result.output) {
+                                        Some(chosen_name) => {
+                                            match Self::resolve_condition_branch_target(
+                                                workflow_graph.as_ref(),
+                                                &node.id,
+                                                &chosen_name,
+                                            ) {
+                                                Ok(chosen_id) => {
+                                                    Self::expand_skips_from_condition(
+                                                        workflow_graph.as_ref(),
+                                                        &node.id,
+                                                        &chosen_id,
+                                                        &resolved,
+                                                        &mut skipped,
+                                                    );
+                                                }
+                                                Err(e) => {
+                                                    should_fail_fast = true;
+                                                    failure_message = format!(
+                                                        "Condition '{}': handler chose branch {:?} but it does not match exactly one direct successor node name: {}",
+                                                        node.name, chosen_name, e
+                                                    );
+                                                }
+                                            }
+                                        }
+                                        None => {
+                                            should_fail_fast = true;
+                                            failure_message = format!(
+                                                "Condition '{}': output must be a non-empty branch node name (String); got output={:?}",
+                                                node.name, node_result.output
+                                            );
+                                        }
+                                    }
+                                }
+                            } else {
+                                tracing::warn!(
+                                    node_id = %node_result.node_id,
+                                    "Workflow batch merge: executed node id not found in graph"
+                                );
+                                should_fail_fast = true;
+                                failure_message = format!(
+                                    "Workflow batch merge: executed node id {} not found in graph",
+                                    node_result.node_id
+                                );
+                            }
+                        } else if let Some(node) = workflow.graph.get_node(&node_result.node_id) {
+                            // A failed condition leaves every successor "ready" (parent resolved) but
+                            // never runs expand_skips_from_condition, so all branches would execute.
+                            // Treat condition failure like an unrecoverable routing error.
+                            if matches!(node.node_type, NodeType::Condition { .. }) {
+                                should_fail_fast = true;
+                                failure_message = node_result.error.clone().unwrap_or_else(|| {
+                                    format!(
+                                        "Condition '{}' failed (no branch chosen; successors were not skipped)",
+                                        node.name
+                                    )
+                                });
+                            }
+                        }
+
+                        if should_fail_fast {
+                            break;
+                        }
                     }
                     Ok(Err(e)) => {
-                        // Check for critical authentication/configuration errors that should always fail the workflow
                         let error_msg = e.to_string().to_lowercase();
                         let is_auth_error = error_msg.contains("auth")
                             || error_msg.contains("key")
@@ -605,11 +739,10 @@ impl WorkflowExecutor {
                 }
             }
 
-            // Handle fail fast outside the loop to avoid borrow conflicts
             if should_fail_fast {
                 let mut ctx = shared_context.lock().await;
                 ctx.fail(failure_message);
-                drop(ctx); // Explicitly drop the guard
+                drop(ctx);
                 return Ok(Arc::try_unwrap(shared_context).unwrap().into_inner());
             }
 
@@ -636,6 +769,133 @@ impl WorkflowExecutor {
         Ok(context)
     }
 
+    /// Validates `chosen_name` matches exactly one direct successor of the condition node.
+    fn resolve_condition_branch_target(
+        graph: &WorkflowGraph,
+        condition_id: &NodeId,
+        chosen_name: &str,
+    ) -> GraphBitResult<NodeId> {
+        let children = graph.direct_successors(condition_id);
+        if children.is_empty() {
+            return Err(GraphBitError::workflow_execution(
+                "Condition node has no outgoing edges to route to".to_string(),
+            ));
+        }
+        let mut matches: Vec<NodeId> = Vec::new();
+        for cid in children {
+            if let Some(n) = graph.get_node(&cid) {
+                if n.name.trim() == chosen_name.trim() {
+                    matches.push(cid);
+                }
+            }
+        }
+        match matches.len() {
+            0 => Err(GraphBitError::workflow_execution(format!(
+                "Condition routing: no direct successor named '{chosen_name}'"
+            ))),
+            1 => Ok(matches[0].clone()),
+            _ => Err(GraphBitError::workflow_execution(format!(
+                "Condition routing: ambiguous successor name '{chosen_name}'"
+            ))),
+        }
+    }
+
+    /// Mark nodes on non-chosen branches as skipped (diamond-join safe using `R_chosen`).
+    fn expand_skips_from_condition(
+        graph: &WorkflowGraph,
+        condition_id: &NodeId,
+        chosen_id: &NodeId,
+        resolved: &HashSet<NodeId>,
+        skipped: &mut HashSet<NodeId>,
+    ) {
+        let r_chosen = graph.forward_reachable_from(chosen_id);
+        for bad_id in graph.direct_successors(condition_id) {
+            if &bad_id == chosen_id {
+                continue;
+            }
+            for v in graph.forward_reachable_from(&bad_id) {
+                if !r_chosen.contains(&v) && !resolved.contains(&v) {
+                    skipped.insert(v);
+                }
+            }
+        }
+    }
+
+    /// Stringify a parent node's output for `Condition` handler input.
+    /// Extract the next-node name from a condition node's stored output value.
+    fn condition_output_branch_name(output: &serde_json::Value) -> Option<String> {
+        match output {
+            serde_json::Value::String(s) => {
+                let t = s.trim();
+                if t.is_empty() {
+                    None
+                } else {
+                    Some(t.to_string())
+                }
+            }
+            other => other
+                .as_str()
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .map(String::from),
+        }
+    }
+
+    async fn execute_condition_node(
+        node: &WorkflowNode,
+        handler_id: &str,
+        context: Arc<Mutex<WorkflowContext>>,
+        parents_map: Arc<HashMap<NodeId, Vec<NodeId>>>,
+        handlers: Arc<HashMap<String, ConditionalRouteFn>>,
+        graph: Arc<WorkflowGraph>,
+    ) -> GraphBitResult<serde_json::Value> {
+        let parents = parents_map
+            .get(&node.id)
+            .cloned()
+            .unwrap_or_default();
+        if parents.len() != 1 {
+            return Err(GraphBitError::workflow_execution(format!(
+                "Condition node '{}' must have exactly one incoming dependency, found {}",
+                node.name,
+                parents.len()
+            )));
+        }
+        let parent_id = parents[0].clone();
+        let parent_key = parent_id.to_string();
+        let routing_input = {
+            let ctx = context.lock().await;
+            let parent_output = ctx.get_node_output(&parent_key).ok_or_else(|| {
+                GraphBitError::workflow_execution(format!(
+                    "Condition node '{}': parent output not found for {}",
+                    node.name, parent_key
+                ))
+            })?;
+            ConditionRoutingInput {
+                parent_node_id: parent_key.clone(),
+                parent_output: parent_output.clone(),
+                variables: ctx.variables.clone(),
+                node_outputs: ctx.node_outputs.clone(),
+                metadata: ctx.metadata.clone(),
+            }
+        };
+        let handler = handlers.get(handler_id).ok_or_else(|| {
+            GraphBitError::workflow_execution(format!(
+                "Condition node '{}': no handler registered for handler_id '{handler_id}'",
+                node.name
+            ))
+        })?;
+        let out = handler(routing_input)?;
+        let trimmed = out.trim().to_string();
+        if trimmed.is_empty() {
+            return Err(GraphBitError::workflow_execution(format!(
+                "Condition handler returned an empty next-node name for node '{}'",
+                node.name
+            )));
+        }
+        Self::resolve_condition_branch_target(graph.as_ref(), &node.id, &trimmed)?;
+        Ok(serde_json::Value::String(trimmed))
+    }
+
     /// Execute a node with retry logic and circuit breaker
     async fn execute_node_with_retry(
         node: WorkflowNode,
@@ -645,6 +905,9 @@ impl WorkflowExecutor {
         circuit_breaker_config: CircuitBreakerConfig,
         retry_config: Option<RetryConfig>,
         guardrail_enforcer: Option<Arc<Enforcer>>,
+        node_parents: Arc<HashMap<NodeId, Vec<NodeId>>>,
+        conditional_handlers: Arc<HashMap<String, ConditionalRouteFn>>,
+        workflow_graph: Arc<WorkflowGraph>,
     ) -> GraphBitResult<NodeExecutionResult> {
         let start_time = std::time::Instant::now();
         let mut attempt = 0;
@@ -700,6 +963,17 @@ impl WorkflowExecutor {
                         document_type,
                         source_path,
                         context.clone(),
+                    )
+                    .await
+                }
+                NodeType::Condition { handler_id } => {
+                    Self::execute_condition_node(
+                        &node,
+                        handler_id,
+                        context.clone(),
+                        node_parents.clone(),
+                        conditional_handlers.clone(),
+                        workflow_graph.clone(),
                     )
                     .await
                 }
@@ -1952,72 +2226,6 @@ impl WorkflowExecutor {
         // Simple topological sort - can be enhanced for better parallelism
         let nodes: Vec<WorkflowNode> = graph.get_nodes().values().cloned().collect();
         Ok(nodes)
-    }
-
-    /// Helper method to create execution batches for optimal concurrency
-    #[allow(dead_code)]
-    async fn create_execution_batches(
-        &self,
-        nodes: Vec<WorkflowNode>,
-    ) -> GraphBitResult<Vec<Vec<WorkflowNode>>> {
-        // Simple batching strategy - execute all independent nodes in parallel
-        // This can be enhanced with dependency analysis for better batching
-        let batch_size = self.max_concurrency().await.min(nodes.len());
-        let mut batches = Vec::new();
-
-        for chunk in nodes.chunks(batch_size) {
-            batches.push(chunk.to_vec());
-        }
-
-        Ok(batches)
-    }
-
-    /// Create batches that strictly respect dependencies: only direct-ready nodes per layer
-    async fn create_dependency_batches(
-        graph: &WorkflowGraph,
-    ) -> GraphBitResult<Vec<Vec<WorkflowNode>>> {
-        use std::collections::HashSet;
-
-        let mut graph_clone = graph.clone();
-        let mut completed: HashSet<NodeId> = HashSet::new();
-        let mut remaining: HashSet<NodeId> = graph_clone.get_nodes().keys().cloned().collect();
-        let mut batches: Vec<Vec<WorkflowNode>> = Vec::new();
-
-        // Iterate until all nodes are scheduled
-        while !remaining.is_empty() {
-            // Select nodes whose dependencies are all completed
-            let mut ready_ids: Vec<NodeId> = Vec::new();
-            for nid in remaining.iter() {
-                let deps = graph_clone.get_dependencies(nid);
-                if deps.iter().all(|d| completed.contains(d)) {
-                    ready_ids.push(nid.clone());
-                }
-            }
-
-            if ready_ids.is_empty() {
-                // Cycle or unresolved dependency
-                return Err(GraphBitError::workflow_execution(
-                    "No dependency-ready nodes found; graph may be cyclic or invalid".to_string(),
-                ));
-            }
-
-            // Build the batch of WorkflowNode
-            let mut batch: Vec<WorkflowNode> = Vec::with_capacity(ready_ids.len());
-            for nid in &ready_ids {
-                if let Some(node) = graph_clone.get_nodes().get(nid) {
-                    batch.push(node.clone());
-                }
-            }
-            batches.push(batch);
-
-            // Update completed/remaining
-            for nid in ready_ids {
-                completed.insert(nid.clone());
-                remaining.remove(&nid);
-            }
-        }
-
-        Ok(batches)
     }
 
     /// Create with custom concurrency configuration

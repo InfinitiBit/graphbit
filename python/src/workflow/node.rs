@@ -6,15 +6,101 @@ use graphbit_core::{
     graph::{AgentNodeConfig, NodeType, WorkflowNode},
     types::AgentId,
 };
+use graphbit_core::errors::GraphBitError;
 use pyo3::prelude::*;
-use pyo3::types::{PyList, PyTuple};
+use pyo3::types::{PyAnyMethods, PyDict, PyList, PyTuple};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt::Write;
+use std::sync::{Arc, Mutex, OnceLock};
 
 // Global tool registry for storing Python tool functions
 thread_local! {
     static TOOL_REGISTRY: RefCell<HashMap<String, PyObject>> = RefCell::new(HashMap::new());
+}
+
+/// Process-wide registry so `Condition` handlers are visible from Tokio worker threads
+/// after `Python::allow_threads` (thread-local would be empty there).
+static CONDITION_HANDLER_REGISTRY: OnceLock<Mutex<HashMap<String, Arc<Py<PyAny>>>>> =
+    OnceLock::new();
+
+pub(crate) fn condition_handler_registry() -> &'static Mutex<HashMap<String, Arc<Py<PyAny>>>> {
+    CONDITION_HANDLER_REGISTRY.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+fn json_string_map_to_pydict(
+    py: Python<'_>,
+    m: &HashMap<String, serde_json::Value>,
+) -> PyResult<PyObject> {
+    let dict = PyDict::new(py);
+    for (k, v) in m {
+        dict.set_item(k, crate::workflow::context::json_to_python(v, py)?)?;
+    }
+    Ok(dict.into())
+}
+
+/// Build Rust callback map for [`graphbit_core::graph::NodeType::Condition`] nodes.
+pub(crate) fn build_core_conditional_handlers(
+    workflow: &graphbit_core::workflow::Workflow,
+) -> Result<HashMap<String, graphbit_core::workflow::ConditionalRouteFn>, GraphBitError> {
+    use graphbit_core::graph::NodeType;
+
+    let mut pairs: Vec<(String, Arc<Py<PyAny>>)> = Vec::new();
+    {
+        let registry = condition_handler_registry().lock().map_err(|_| {
+            GraphBitError::workflow_execution(
+                "Condition handler registry lock poisoned".to_string(),
+            )
+        })?;
+        for (_nid, node) in workflow.graph.get_nodes() {
+            if let NodeType::Condition { handler_id } = &node.node_type {
+                let py_callable = registry.get(handler_id).ok_or_else(|| {
+                    GraphBitError::workflow_execution(format!(
+                        "Condition node '{}' (handler_id='{}'): callable not registered",
+                        node.name, handler_id
+                    ))
+                })?;
+                pairs.push((handler_id.clone(), Arc::clone(py_callable)));
+            }
+        }
+    }
+
+    let mut map: HashMap<String, graphbit_core::workflow::ConditionalRouteFn> = HashMap::new();
+    for (handler_id, py_callable) in pairs {
+        let hid_err = handler_id.clone();
+        let py_callable = Arc::clone(&py_callable);
+        map.insert(
+            handler_id,
+            Arc::new(move |input: graphbit_core::workflow::ConditionRoutingInput| {
+                Python::with_gil(|py| {
+                    let state = PyDict::new(py);
+                    state.set_item("parent_node_id", input.parent_node_id.as_str())?;
+                    state.set_item(
+                        "parent_output",
+                        crate::workflow::context::json_to_python(&input.parent_output, py)?,
+                    )?;
+                    state.set_item(
+                        "variables",
+                        json_string_map_to_pydict(py, &input.variables)?,
+                    )?;
+                    state.set_item(
+                        "node_outputs",
+                        json_string_map_to_pydict(py, &input.node_outputs)?,
+                    )?;
+                    state.set_item(
+                        "metadata",
+                        json_string_map_to_pydict(py, &input.metadata)?,
+                    )?;
+                    let out = py_callable.call1(py, (state,))?;
+                    out.extract::<String>(py)
+                })
+                .map_err(|e| {
+                    GraphBitError::workflow_execution(format!("{hid_err}: {e}"))
+                })
+            }),
+        );
+    }
+    Ok(map)
 }
 
 /// A workflow node representing a single operation or step in a workflow
@@ -272,25 +358,38 @@ impl Node {
         })
     }
 
+    /// Condition node: `handler` receives one argument, a **dict** with keys
+    /// `parent_node_id`, `parent_output`, `variables`, `node_outputs`, `metadata` (routing snapshot),
+    /// and must return the next node **name** as `str`.
     #[staticmethod]
-    fn condition(name: String, expression: String) -> PyResult<Self> {
-        // Validate required parameters
+    #[pyo3(signature = (name, handler))]
+    fn condition(name: String, handler: &Bound<'_, PyAny>) -> PyResult<Self> {
         if name.trim().is_empty() {
             return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
                 "Condition name cannot be empty",
             ));
         }
-        if expression.trim().is_empty() {
-            return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
-                "Condition expression cannot be empty",
+        if !handler.is_callable() {
+            return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
+                "Condition handler must be callable",
             ));
         }
+        let handler_id = uuid::Uuid::new_v4().to_string();
+        let handler_py = handler.clone().unbind();
+        condition_handler_registry()
+            .lock()
+            .map_err(|e| {
+                PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+                    "Condition handler registry lock: {e}"
+                ))
+            })?
+            .insert(handler_id.clone(), Arc::new(handler_py));
 
         Ok(Self {
             inner: WorkflowNode::new(
                 name.clone(),
                 format!("Condition: {}", name),
-                NodeType::Condition { expression },
+                NodeType::Condition { handler_id },
             ),
         })
     }

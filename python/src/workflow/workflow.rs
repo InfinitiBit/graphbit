@@ -4,6 +4,7 @@ use super::node::Node;
 use crate::errors::to_py_runtime_error;
 use graphbit_core::{graph::WorkflowEdge, types::NodeId, workflow::Workflow as CoreWorkflow};
 use pyo3::prelude::*;
+use uuid::Uuid;
 
 /// A workflow definition containing nodes and their execution flow
 #[pyclass]
@@ -30,10 +31,13 @@ impl Workflow {
     }
 
     fn connect(&mut self, from_id: String, to_id: String) -> PyResult<()> {
-        // First try to look up by name, if that fails try to parse as UUID
-        let from_node_id = if let Some(id) = self.inner.graph.get_node_id_by_name(&from_id) {
-            id
-        } else if let Ok(id) = NodeId::from_string(&from_id) {
+        // If the string is a literal UUID (`add_node` return values), parse it first so a node
+        // *name* that equals another node's UUID cannot hijack resolution. Otherwise resolve by
+        // human-readable node name. (NodeId::from_string accepts any string via v5 — do not use
+        // that path for names.)
+        let from_node_id = if Uuid::parse_str(from_id.trim()).is_ok() {
+            NodeId::from_string(&from_id).map_err(to_py_runtime_error)?
+        } else if let Some(id) = self.inner.graph.get_node_id_by_name(&from_id) {
             id
         } else {
             return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
@@ -42,9 +46,9 @@ impl Workflow {
             )));
         };
 
-        let to_node_id = if let Some(id) = self.inner.graph.get_node_id_by_name(&to_id) {
-            id
-        } else if let Ok(id) = NodeId::from_string(&to_id) {
+        let to_node_id = if Uuid::parse_str(to_id.trim()).is_ok() {
+            NodeId::from_string(&to_id).map_err(to_py_runtime_error)?
+        } else if let Some(id) = self.inner.graph.get_node_id_by_name(&to_id) {
             id
         } else {
             return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(

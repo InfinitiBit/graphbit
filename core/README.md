@@ -440,7 +440,7 @@ pub enum NodeType {
         prompt_template: String,
     },
     Condition {
-        expression: String,
+        handler_id: String,
     },
     Transform {
         transformation: String,
