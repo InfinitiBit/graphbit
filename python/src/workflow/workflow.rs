@@ -79,6 +79,10 @@ impl Workflow {
         self.inner.name.clone()
     }
 
+    fn node_count(&self) -> usize {
+        self.inner.graph.node_count()
+    }
+
     /// Set graph-level metadata key to a boolean value
     /// Exposes core graph.set_metadata for Python tests and configuration
     fn set_graph_metadata(&mut self, key: String, value: bool) -> PyResult<()> {

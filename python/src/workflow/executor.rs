@@ -1522,6 +1522,7 @@ fn stream_event_to_dict<'py>(py: Python<'py>, event: StreamEvent) -> PyResult<Bo
         }
         WorkflowCompleted { context } => {
             dict.set_item("event", "workflow_completed")?;
+            dict.set_item("result", WorkflowResult::new(context.clone()))?;
             dict.set_item(
                 "outputs",
                 serde_json::to_string(&context.node_outputs).unwrap_or_default(),
