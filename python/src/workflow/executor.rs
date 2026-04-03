@@ -475,6 +475,7 @@ impl Executor {
             let cfg = p.borrow().get_inner();
             Arc::new(GuardRail::enforcer_for(cfg, workflow_clone.id.to_string()))
         });
+        let guardrail_for_iterator = guardrail_enforcer.clone();
 
         // Bounded channel: 256 events gives generous back-pressure headroom
         let (event_tx, event_rx) = tokio::sync::mpsc::channel::<StreamEvent>(256);
@@ -531,6 +532,9 @@ impl Executor {
             receiver: Arc::new(tokio::sync::Mutex::new(event_rx)),
             done: false,
             workflow_name: workflow.inner.name.clone(),
+            workflow: workflow.inner.clone(),
+            llm_config: self.llm_config.inner.clone(),
+            guardrail_enforcer: guardrail_for_iterator,
         })
     }
 } // end #[pymethods] impl Executor
@@ -1421,7 +1425,11 @@ impl Executor {
 /// The dict always has an `"event"` key with the event type name, plus
 /// all event fields as additional keys — matching the JSON serialisation
 /// defined in `core/src/stream.rs`.
-fn stream_event_to_dict<'py>(py: Python<'py>, event: StreamEvent, workflow_name: &str) -> PyResult<Bound<'py, PyDict>> {
+fn stream_event_to_dict<'py>(
+    py: Python<'py>,
+    event: StreamEvent,
+    workflow_name: &str,
+) -> PyResult<Bound<'py, PyDict>> {
     use graphbit_core::stream::StreamEvent::*;
     let dict = PyDict::new(py);
     match event {
@@ -1567,6 +1575,57 @@ pub struct WorkflowStreamIterator {
     /// The name of the workflow being streamed — injected into the terminal event context
     /// so that `WorkflowResult::get_all_node_response_metadata()` returns the correct name.
     workflow_name: String,
+    /// Full workflow needed to mirror non-streaming terminal tool-call handling.
+    workflow: graphbit_core::workflow::Workflow,
+    /// LLM config required by the iterative tool-call loop.
+    llm_config: graphbit_core::llm::LlmConfig,
+    /// Optional guardrail enforcer used at LLM/tool boundaries.
+    guardrail_enforcer: Option<Arc<Enforcer>>,
+}
+
+impl WorkflowStreamIterator {
+    /// Apply the same terminal tool-call loop used by non-streaming execution.
+    async fn apply_non_streaming_tool_loop(
+        event: StreamEvent,
+        workflow: graphbit_core::workflow::Workflow,
+        llm_config: graphbit_core::llm::LlmConfig,
+        guardrail_enforcer: Option<Arc<Enforcer>>,
+    ) -> StreamEvent {
+        match event {
+            StreamEvent::WorkflowCompleted { mut context } => {
+                // Mirror execute_workflow_internal preconditions.
+                if let Ok(llm_config_json) = serde_json::to_value(&llm_config) {
+                    context
+                        .metadata
+                        .insert("llm_config".to_string(), llm_config_json);
+                }
+                context.metadata.insert(
+                    "workflow_name".to_string(),
+                    serde_json::Value::String(workflow.name.clone()),
+                );
+
+                match Executor::handle_tool_calls_in_context(
+                    context,
+                    &workflow,
+                    guardrail_enforcer.as_deref(),
+                )
+                .await
+                {
+                    Ok(updated_context) => StreamEvent::WorkflowCompleted {
+                        context: updated_context,
+                    },
+                    Err(e) => {
+                        let err = e.to_string();
+                        StreamEvent::WorkflowFailed {
+                            error: err.clone(),
+                            error_type: graphbit_core::error_type_from_string(&err),
+                        }
+                    }
+                }
+            }
+            other => other,
+        }
+    }
 }
 
 #[pymethods]
@@ -1598,6 +1657,25 @@ impl WorkflowStreamIterator {
 
         match maybe_event {
             Some(event) => {
+                let event = if matches!(event, StreamEvent::WorkflowCompleted { .. }) {
+                    let workflow = self.workflow.clone();
+                    let llm_config = self.llm_config.clone();
+                    let guardrail_enforcer = self.guardrail_enforcer.clone();
+                    py.allow_threads(move || {
+                        get_runtime().block_on(async move {
+                            WorkflowStreamIterator::apply_non_streaming_tool_loop(
+                                event,
+                                workflow,
+                                llm_config,
+                                guardrail_enforcer,
+                            )
+                            .await
+                        })
+                    })
+                } else {
+                    event
+                };
+
                 // Mark done *after* returning the last real event so callers
                 // see WorkflowCompleted / WorkflowFailed before StopIteration.
                 if matches!(
@@ -1631,14 +1709,30 @@ impl WorkflowStreamIterator {
 
         let receiver = self.receiver.clone();
         let wf_name = self.workflow_name.clone();
+        let workflow = self.workflow.clone();
+        let llm_config = self.llm_config.clone();
+        let guardrail_enforcer = self.guardrail_enforcer.clone();
         pyo3_async_runtimes::tokio::future_into_py(py, async move {
             let mut rx = receiver.lock().await;
             let maybe_event = rx.recv().await;
             drop(rx); // release the tokio Mutex before re-acquiring the GIL
             match maybe_event {
-                Some(event) => Python::with_gil(|py| {
-                    stream_event_to_dict(py, event, &wf_name).map(|d| d.into_any().unbind())
-                }),
+                Some(event) => {
+                    let event = if matches!(event, StreamEvent::WorkflowCompleted { .. }) {
+                        WorkflowStreamIterator::apply_non_streaming_tool_loop(
+                            event,
+                            workflow,
+                            llm_config,
+                            guardrail_enforcer,
+                        )
+                        .await
+                    } else {
+                        event
+                    };
+                    Python::with_gil(|py| {
+                        stream_event_to_dict(py, event, &wf_name).map(|d| d.into_any().unbind())
+                    })
+                }
                 None => Err(pyo3::exceptions::PyStopAsyncIteration::new_err(())),
             }
         })
