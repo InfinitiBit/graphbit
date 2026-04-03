@@ -168,14 +168,7 @@ impl OpenAiProvider {
             })
             .collect();
 
-        let finish_reason = match choice.finish_reason.as_deref() {
-            Some("stop") => FinishReason::Stop,
-            Some("length") => FinishReason::Length,
-            Some("tool_calls") => FinishReason::ToolCalls,
-            Some("content_filter") => FinishReason::ContentFilter,
-            Some(other) => FinishReason::Other(other.to_string()),
-            None => FinishReason::Stop,
-        };
+        let finish_reason = parse_finish_reason(choice.finish_reason.as_deref());
 
         let usage = LlmUsage::new(
             response.usage.prompt_tokens,
@@ -225,6 +218,7 @@ impl LlmProviderTrait for OpenAiProvider {
                 None
             },
             stream: None, // Disable streaming for complete method
+            stream_options: None,
         };
 
         // Add extra parameters
@@ -306,6 +300,10 @@ impl LlmProviderTrait for OpenAiProvider {
                 None
             },
             stream: Some(true), // Enable streaming
+            // Request terminal usage chunk so workflow metadata token usage matches non-streaming.
+            stream_options: Some(OpenAiStreamOptions {
+                include_usage: true,
+            }),
         };
 
         // Add extra parameters
@@ -399,69 +397,76 @@ impl LlmProviderTrait for OpenAiProvider {
                     }
 
                     loop {
-                        // Apply timeout to each chunk read to prevent indefinite hanging
-                        let chunk_result = match timeout(CHUNK_TIMEOUT, byte_stream.next()).await {
-                            Ok(Some(result)) => result,
-                            Ok(None) => {
-                                // Stream naturally ended
-                                // Log if there were parse errors during the stream
-                                if total_parse_errors > 0 {
-                                    tracing::warn!(
-                                        "Stream ended with {} total parse errors. Some data may have been lost.",
-                                        total_parse_errors
-                                    );
+                        // If the buffer has no complete line yet, read more bytes.
+                        // This ensures we don't block waiting for network data while
+                        // already-buffered SSE lines (e.g. terminal usage chunk) are pending.
+                        if buffer.find('\n').is_none() {
+                            // Apply timeout to each chunk read to prevent indefinite hanging
+                            let chunk_result = match timeout(CHUNK_TIMEOUT, byte_stream.next())
+                                .await
+                            {
+                                Ok(Some(result)) => result,
+                                Ok(None) => {
+                                    // Stream naturally ended
+                                    // Log if there were parse errors during the stream
+                                    if total_parse_errors > 0 {
+                                        tracing::warn!(
+                                            "Stream ended with {} total parse errors. Some data may have been lost.",
+                                            total_parse_errors
+                                        );
+                                    }
+                                    return None;
                                 }
-                                return None;
-                            }
-                            Err(_) => {
-                                // Timeout occurred - OpenAI stopped responding
-                                // Return an error so user knows the response may be incomplete
-                                tracing::warn!(
-                                    "Stream chunk timeout after {:?} - OpenAI stopped responding. \
-                                     Response may be incomplete.",
-                                    CHUNK_TIMEOUT
-                                );
-                                // Return error to notify user, then end stream
-                                return Some((
-                                    Err(GraphBitError::llm_provider(
-                                        "openai",
-                                        format!(
-                                            "Stream timeout after {:?} - response may be incomplete",
-                                            CHUNK_TIMEOUT
+                                Err(_) => {
+                                    // Timeout occurred - OpenAI stopped responding
+                                    // Return an error so user knows the response may be incomplete
+                                    tracing::warn!(
+                                        "Stream chunk timeout after {:?} - OpenAI stopped responding. \
+                                             Response may be incomplete.",
+                                        CHUNK_TIMEOUT
+                                    );
+                                    // Return error to notify user, then end stream
+                                    return Some((
+                                        Err(GraphBitError::llm_provider(
+                                            "openai",
+                                            format!(
+                                                "Stream timeout after {:?} - response may be incomplete",
+                                                CHUNK_TIMEOUT
+                                            ),
+                                        )),
+                                        (
+                                            byte_stream,
+                                            buffer,
+                                            true,
+                                            consecutive_parse_errors,
+                                            total_parse_errors,
                                         ),
-                                    )),
-                                    (
-                                        byte_stream,
-                                        buffer,
-                                        true,
-                                        consecutive_parse_errors,
-                                        total_parse_errors,
-                                    ),
-                                ));
-                            }
-                        };
+                                    ));
+                                }
+                            };
 
-                        let chunk = match chunk_result {
-                            Ok(c) => c,
-                            Err(e) => {
-                                return Some((
-                                    Err(GraphBitError::llm_provider(
-                                        "openai",
-                                        format!("Stream error: {e}"),
-                                    )),
-                                    (
-                                        byte_stream,
-                                        buffer,
-                                        false,
-                                        consecutive_parse_errors,
-                                        total_parse_errors,
-                                    ),
-                                ));
-                            }
-                        };
+                            let chunk = match chunk_result {
+                                Ok(c) => c,
+                                Err(e) => {
+                                    return Some((
+                                        Err(GraphBitError::llm_provider(
+                                            "openai",
+                                            format!("Stream error: {e}"),
+                                        )),
+                                        (
+                                            byte_stream,
+                                            buffer,
+                                            false,
+                                            consecutive_parse_errors,
+                                            total_parse_errors,
+                                        ),
+                                    ));
+                                }
+                            };
 
-                        // Append new data to buffer
-                        buffer.push_str(&String::from_utf8_lossy(&chunk));
+                            // Append new data to buffer
+                            buffer.push_str(&String::from_utf8_lossy(&chunk));
+                        }
 
                         // Process complete lines using drain() to avoid allocations
                         while let Some(newline_pos) = buffer.find('\n') {
@@ -494,12 +499,30 @@ impl LlmProviderTrait for OpenAiProvider {
                                         // Reset consecutive error counter on success
                                         consecutive_parse_errors = 0;
 
-                                        if let Some(choice) = stream_chunk.choices.first() {
+                                        let OpenAiStreamChunk { id, choices, usage } = stream_chunk;
+                                        let usage = usage.map(|u| {
+                                            LlmUsage::new(u.prompt_tokens, u.completion_tokens)
+                                        });
+                                        let finish_reason = choices
+                                            .first()
+                                            .and_then(|c| c.finish_reason.as_deref())
+                                            .map(|reason| parse_finish_reason(Some(reason)));
+
+                                        if let Some(choice) = choices.first() {
                                             if let Some(content) = &choice.delta.content {
                                                 if !content.is_empty() {
-                                                    let response =
+                                                    let mut response =
                                                         LlmResponse::new(content.clone(), &model)
-                                                            .with_id(stream_chunk.id);
+                                                            .with_id(id.clone());
+                                                    if let Some(usage) = usage.clone() {
+                                                        response = response.with_usage(usage);
+                                                    }
+                                                    if let Some(finish_reason) =
+                                                        finish_reason.clone()
+                                                    {
+                                                        response = response
+                                                            .with_finish_reason(finish_reason);
+                                                    }
                                                     return Some((
                                                         Ok(response),
                                                         (
@@ -513,8 +536,90 @@ impl LlmProviderTrait for OpenAiProvider {
                                                 }
                                             }
                                         }
+
+                                        // Terminal usage chunks are often emitted without content.
+                                        // Surface them so caller can preserve usage in final metadata.
+                                        if usage.is_some() || finish_reason.is_some() {
+                                            let mut response =
+                                                LlmResponse::new(String::new(), &model).with_id(id);
+                                            if let Some(usage) = usage {
+                                                response = response.with_usage(usage);
+                                            }
+                                            if let Some(finish_reason) = finish_reason {
+                                                response =
+                                                    response.with_finish_reason(finish_reason);
+                                            }
+                                            return Some((
+                                                Ok(response),
+                                                (
+                                                    byte_stream,
+                                                    buffer,
+                                                    false,
+                                                    consecutive_parse_errors,
+                                                    total_parse_errors,
+                                                ),
+                                            ));
+                                        }
                                     }
                                     Err(e) => {
+                                        // Fallback: OpenAI may evolve chunk schema in ways our typed
+                                        // deserializer doesn't yet model. Try a best-effort JSON parse
+                                        // and extract terminal usage so workflow metadata remains accurate.
+                                        if let Ok(value) =
+                                            serde_json::from_str::<serde_json::Value>(data)
+                                        {
+                                            let prompt_tokens = value
+                                                .get("usage")
+                                                .and_then(|u| u.get("prompt_tokens"))
+                                                .and_then(|v| v.as_u64())
+                                                .unwrap_or(0)
+                                                as u32;
+                                            let completion_tokens = value
+                                                .get("usage")
+                                                .and_then(|u| u.get("completion_tokens"))
+                                                .and_then(|v| v.as_u64())
+                                                .unwrap_or(0)
+                                                as u32;
+
+                                            if prompt_tokens > 0 || completion_tokens > 0 {
+                                                let id = value
+                                                    .get("id")
+                                                    .and_then(|v| v.as_str())
+                                                    .unwrap_or_default()
+                                                    .to_string();
+                                                let finish_reason = value
+                                                    .get("choices")
+                                                    .and_then(|c| c.as_array())
+                                                    .and_then(|arr| arr.first())
+                                                    .and_then(|c| c.get("finish_reason"))
+                                                    .and_then(|v| v.as_str())
+                                                    .map(|r| parse_finish_reason(Some(r)));
+
+                                                let mut response = LlmResponse::new("", &model)
+                                                    .with_usage(LlmUsage::new(
+                                                        prompt_tokens,
+                                                        completion_tokens,
+                                                    ));
+                                                if !id.is_empty() {
+                                                    response = response.with_id(id);
+                                                }
+                                                if let Some(finish_reason) = finish_reason {
+                                                    response =
+                                                        response.with_finish_reason(finish_reason);
+                                                }
+                                                return Some((
+                                                    Ok(response),
+                                                    (
+                                                        byte_stream,
+                                                        buffer,
+                                                        false,
+                                                        consecutive_parse_errors,
+                                                        total_parse_errors,
+                                                    ),
+                                                ));
+                                            }
+                                        }
+
                                         // Track parse errors
                                         consecutive_parse_errors += 1;
                                         total_parse_errors += 1;
@@ -614,6 +719,13 @@ struct OpenAiRequest {
     tool_choice: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     stream: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    stream_options: Option<OpenAiStreamOptions>,
+}
+
+#[derive(Debug, Serialize)]
+struct OpenAiStreamOptions {
+    include_usage: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -687,12 +799,15 @@ where
 struct OpenAiStreamChunk {
     id: String,
     choices: Vec<OpenAiStreamChoice>,
+    #[serde(default)]
+    usage: Option<OpenAiUsage>,
 }
 
 #[derive(Debug, Deserialize)]
 struct OpenAiStreamChoice {
     delta: OpenAiDelta,
-    _finish_reason: Option<String>,
+    #[serde(default)]
+    finish_reason: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -701,4 +816,99 @@ struct OpenAiDelta {
     content: Option<String>,
     #[serde(default)]
     _role: Option<String>,
+}
+
+fn parse_finish_reason(reason: Option<&str>) -> FinishReason {
+    match reason {
+        Some("stop") => FinishReason::Stop,
+        Some("length") => FinishReason::Length,
+        Some("tool_calls") => FinishReason::ToolCalls,
+        Some("content_filter") => FinishReason::ContentFilter,
+        Some(other) => FinishReason::Other(other.to_string()),
+        None => FinishReason::Stop,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn stream_usage_chunk_parses_with_empty_choices() {
+        let chunk = r#"{
+            "id":"chatcmpl-test",
+            "object":"chat.completion.chunk",
+            "created":1775204971,
+            "model":"gpt-4o-mini-2024-07-18",
+            "choices":[],
+            "usage":{"prompt_tokens":15,"completion_tokens":14,"total_tokens":29}
+        }"#;
+
+        let parsed: OpenAiStreamChunk =
+            serde_json::from_str(chunk).expect("usage chunk should parse");
+        assert!(parsed.choices.is_empty());
+        let usage = parsed.usage.expect("usage should be present");
+        assert_eq!(usage.prompt_tokens, 15);
+        assert_eq!(usage.completion_tokens, 14);
+    }
+
+    #[test]
+    fn stream_request_serializes_include_usage_option() {
+        let req = OpenAiRequest {
+            model: "gpt-4o-mini".to_string(),
+            messages: vec![OpenAiMessage {
+                role: "user".to_string(),
+                content: "hello".to_string(),
+                tool_calls: None,
+                tool_call_id: None,
+            }],
+            max_completion_tokens: None,
+            temperature: None,
+            top_p: None,
+            tools: None,
+            tool_choice: None,
+            stream: Some(true),
+            stream_options: Some(OpenAiStreamOptions {
+                include_usage: true,
+            }),
+        };
+
+        let value = serde_json::to_value(req).expect("request should serialize");
+        assert_eq!(value.get("stream").and_then(|v| v.as_bool()), Some(true));
+        assert_eq!(
+            value
+                .get("stream_options")
+                .and_then(|v| v.get("include_usage"))
+                .and_then(|v| v.as_bool()),
+            Some(true)
+        );
+    }
+
+    #[test]
+    fn fallback_json_usage_extraction_shape_is_supported() {
+        let chunk = serde_json::json!({
+            "id": "chatcmpl-fallback",
+            "object": "chat.completion.chunk",
+            // Intentionally omit "choices" to mimic a schema variant that would fail typed parsing.
+            "usage": {
+                "prompt_tokens": 21,
+                "completion_tokens": 9,
+                "total_tokens": 30
+            }
+        });
+
+        let prompt_tokens = chunk
+            .get("usage")
+            .and_then(|u| u.get("prompt_tokens"))
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0) as u32;
+        let completion_tokens = chunk
+            .get("usage")
+            .and_then(|u| u.get("completion_tokens"))
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0) as u32;
+
+        assert_eq!(prompt_tokens, 21);
+        assert_eq!(completion_tokens, 9);
+    }
 }
