@@ -202,6 +202,14 @@ print(f"Node ID: {analyzer.id()}")
 print(f"Node Name: {analyzer.name()}")
 ```
 
+#### Control Flow Nodes
+
+Control flow nodes route execution between branches without calling an LLM.
+
+**Condition nodes** (`Node.condition`) run a Python handler that receives a routing snapshot (`parent_output`, `variables`, `node_outputs`, etc.) and returns the **name** of the next node to run. Non-selected branches are skipped.
+
+For details and examples, see the [Node Types reference](../api-reference/node-types.md) and the conditional branching section in the [Workflow Builder guide](workflow-builder.md).
+
 ---
 
 ## Workflow Execution

@@ -204,6 +204,45 @@ workflow.connect(quality_id, agg_id)
 workflow.validate()
 ```
 
+### Conditional Branching (Condition Node)
+
+Use a condition node when you need to **route execution** to exactly one of several downstream branches (an “if/else” style split).
+
+```python
+from graphbit import Node, Workflow
+
+def route_by_score(routing: dict) -> str:
+    # routing contains: parent_node_id, parent_output, variables, node_outputs, metadata
+    score = float(routing["variables"].get("score", 0))
+    return "HighScorePath" if score >= 0.8 else "LowScorePath"
+
+workflow = Workflow("Conditional Workflow")
+
+intake = Node.agent(
+    name="Intake",
+    prompt="Read the input and set variables.score as a number from 0.0 to 1.0.",
+)
+router = Node.condition(name="RouteByScore", handler=route_by_score)
+
+high_path = Node.agent(name="HighScorePath", prompt="Do the advanced flow for: {input}")
+low_path = Node.agent(name="LowScorePath", prompt="Do the safe flow for: {input}")
+
+intake_id = workflow.add_node(intake)
+router_id = workflow.add_node(router)
+high_id = workflow.add_node(high_path)
+low_id = workflow.add_node(low_path)
+
+workflow.connect(intake_id, router_id)
+workflow.connect(router_id, high_id)
+workflow.connect(router_id, low_id)
+workflow.validate()
+```
+
+**Notes:**
+- The condition `handler` must return the **exact node `name`** of one of the router’s outgoing neighbors.
+- Non-selected branches are **skipped** and do not execute.
+- For a complete example, see `examples/tasks_examples/conditional_branch_local_model.py`.
+
 ## Node Properties and Management
 
 ### Accessing Node Information
