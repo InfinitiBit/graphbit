@@ -5,6 +5,7 @@ GraphBit workflows are built using different types of nodes, each serving a spec
 ## Node Type Categories
 
 1. **Agent Nodes** - AI-powered processing nodes
+2. **Control Flow Nodes** - Nodes that route execution between branches
 
 ## Agent Nodes
 
@@ -440,3 +441,50 @@ bad_summarizer = Node.agent(
 ```
 
 Understanding these node types and their usage patterns enables you to build sophisticated, reliable workflows that handle complex AI processing tasks effectively. Choose the appropriate node type for each step in your workflow, and connect them in logical patterns to achieve your processing goals.
+
+## Control Flow Nodes
+
+Control flow nodes decide which downstream node(s) should execute next.
+
+### Condition Node (Branch / Router)
+
+A condition node is used for **conditional branching**. Instead of calling an LLM, it runs a Python handler that inspects the current workflow state and returns the **name** of the next node to execute.
+
+```python
+from graphbit import Node, Workflow
+
+def route(routing: dict) -> str:
+    # routing contains:
+    # - parent_node_id: str
+    # - parent_output: str | dict
+    # - variables: dict
+    # - node_outputs: dict[str, str]
+    # - metadata: dict
+    if routing["variables"].get("is_priority") is True:
+        return "PriorityHandler"
+    return "StandardHandler"
+
+condition = Node.condition(name="RouteRequest", handler=route)
+
+priority = Node.agent(name="PriorityHandler", prompt="Handle priority request: {input}")
+standard = Node.agent(name="StandardHandler", prompt="Handle standard request: {input}")
+
+workflow = Workflow("Conditional Branching")
+in_id = workflow.add_node(Node.agent(name="Intake", prompt="Classify request: {input}"))
+c_id = workflow.add_node(condition)
+p_id = workflow.add_node(priority)
+s_id = workflow.add_node(standard)
+
+workflow.connect(in_id, c_id)
+workflow.connect(c_id, p_id)
+workflow.connect(c_id, s_id)
+workflow.validate()
+```
+
+**Key rules:**
+- **Return value**: your `handler` must return the **exact node `name`** (string) of one of the condition node’s outgoing neighbors.
+- **Skipped branches**: non-selected outgoing branches are **skipped** (they are not scheduled and do not execute).
+- **Handler input**: `routing` is a snapshot dict. You can route based on `variables`, previous `node_outputs`, or `parent_output`.
+
+**Example (complete):**
+- See `examples/tasks_examples/conditional_branch_local_model.py` for a full conditional routing workflow (balance intake → route by balance → exactly one advisor branch runs).
