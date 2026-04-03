@@ -13,7 +13,7 @@ use graphbit_core::{DecodeContext, EncodeContext, Enforcer, GuardRail};
 use pyo3::exceptions::PyStopIteration;
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyDict};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tracing::{debug, error, info, instrument, warn};
 
@@ -530,6 +530,7 @@ impl Executor {
         Ok(WorkflowStreamIterator {
             receiver: Arc::new(tokio::sync::Mutex::new(event_rx)),
             done: false,
+            workflow_name: workflow.inner.name.clone(),
         })
     }
 } // end #[pymethods] impl Executor
@@ -1420,7 +1421,7 @@ impl Executor {
 /// The dict always has an `"event"` key with the event type name, plus
 /// all event fields as additional keys — matching the JSON serialisation
 /// defined in `core/src/stream.rs`.
-fn stream_event_to_dict<'py>(py: Python<'py>, event: StreamEvent) -> PyResult<Bound<'py, PyDict>> {
+fn stream_event_to_dict<'py>(py: Python<'py>, event: StreamEvent, workflow_name: &str) -> PyResult<Bound<'py, PyDict>> {
     use graphbit_core::stream::StreamEvent::*;
     let dict = PyDict::new(py);
     match event {
@@ -1520,7 +1521,13 @@ fn stream_event_to_dict<'py>(py: Python<'py>, event: StreamEvent) -> PyResult<Bo
             dict.set_item("error", error)?;
             dict.set_item("error_type", error_type)?;
         }
-        WorkflowCompleted { context } => {
+        WorkflowCompleted { mut context } => {
+            // Inject the workflow name into the context metadata so WorkflowResult
+            // picks it up via get_all_node_response_metadata() — matching non-streaming parity.
+            context.metadata.insert(
+                "workflow_name".to_string(),
+                serde_json::Value::String(workflow_name.to_string()),
+            );
             dict.set_item("event", "workflow_completed")?;
             dict.set_item("result", WorkflowResult::new(context.clone()))?;
             dict.set_item(
@@ -1557,6 +1564,9 @@ pub struct WorkflowStreamIterator {
     receiver: Arc<tokio::sync::Mutex<tokio::sync::mpsc::Receiver<StreamEvent>>>,
     /// Set to `true` after the channel has been fully drained.
     done: bool,
+    /// The name of the workflow being streamed — injected into the terminal event context
+    /// so that `WorkflowResult::get_all_node_response_metadata()` returns the correct name.
+    workflow_name: String,
 }
 
 #[pymethods]
@@ -1596,7 +1606,7 @@ impl WorkflowStreamIterator {
                 ) {
                     self.done = true;
                 }
-                stream_event_to_dict(py, event)
+                stream_event_to_dict(py, event, &self.workflow_name)
             }
             None => {
                 // Channel closed — stream is exhausted
@@ -1620,13 +1630,14 @@ impl WorkflowStreamIterator {
         }
 
         let receiver = self.receiver.clone();
+        let wf_name = self.workflow_name.clone();
         pyo3_async_runtimes::tokio::future_into_py(py, async move {
             let mut rx = receiver.lock().await;
             let maybe_event = rx.recv().await;
             drop(rx); // release the tokio Mutex before re-acquiring the GIL
             match maybe_event {
                 Some(event) => Python::with_gil(|py| {
-                    stream_event_to_dict(py, event).map(|d| d.into_any().unbind())
+                    stream_event_to_dict(py, event, &wf_name).map(|d| d.into_any().unbind())
                 }),
                 None => Err(pyo3::exceptions::PyStopAsyncIteration::new_err(())),
             }
