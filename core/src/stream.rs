@@ -15,8 +15,8 @@
 //! 1. **Node-level** (all modes): `WorkflowStarted`, `NodeStarted`, `NodeCompleted`,
 //!    `NodeFailed`, `WorkflowCompleted`, `WorkflowFailed`
 //! 2. **Token-level** (`Messages`/`All`): `Token`
-//! 3. **Tool call** (`Messages`/`All`): `ToolCallStarted`, `ToolCallCompleted`,
-//!    `ToolCallFailed`
+//! 3. **Execution-level**: `LlmCallStarted`, `LlmCallCompleted`, `ToolCallStarted`,
+//!    `ToolCallCompleted`, `ToolCallFailed`
 
 use crate::errors::GraphBitError;
 use crate::types::WorkflowContext;
@@ -161,6 +161,41 @@ pub enum StreamEvent {
         node_name: String,
         /// Token content (may be a single character or word fragment)
         content: String,
+    },
+
+    // ── Tool call events (Messages / All) ────────────────────────────────
+    /// An LLM call started within an agent node execution.
+    #[serde(rename = "llm_call_started")]
+    LlmCallStarted {
+        /// Node UUID
+        node_id: String,
+        /// Human-readable node name
+        node_name: String,
+        /// Unique identifier for this LLM call
+        llm_call_id: String,
+        /// 1-based call sequence number within the node execution timeline
+        iteration: u64,
+        /// Model used for this call
+        model: String,
+    },
+
+    /// An LLM call completed.
+    #[serde(rename = "llm_call_completed")]
+    LlmCallCompleted {
+        /// Node UUID
+        node_id: String,
+        /// Human-readable node name
+        node_name: String,
+        /// Unique identifier for this LLM call
+        llm_call_id: String,
+        /// 1-based call sequence number within the node execution timeline
+        iteration: u64,
+        /// Finish reason from the provider (e.g., stop, tool_calls)
+        finish_reason: String,
+        /// Full textual output produced by this specific LLM call
+        output: String,
+        /// Execution duration in milliseconds
+        duration_ms: f64,
     },
 
     // ── Tool call events (Messages / All) ────────────────────────────────

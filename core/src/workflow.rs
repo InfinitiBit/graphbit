@@ -372,7 +372,7 @@ impl WorkflowExecutor {
         workflow: Workflow,
         guardrail_enforcer: Option<Arc<Enforcer>>,
         event_tx: Option<tokio::sync::mpsc::Sender<crate::stream::StreamEvent>>,
-        _stream_mode: crate::stream::StreamMode,
+        stream_mode: crate::stream::StreamMode,
     ) -> GraphBitResult<WorkflowContext> {
         use crate::stream::{StreamEvent, error_type_from_graphbit_error, error_type_from_string};
 
@@ -672,7 +672,7 @@ impl WorkflowExecutor {
                 let workflow_graph = workflow_graph.clone();
                 // Clone the event channel sender for this task (cheap Arc clone inside Sender)
                 let task_event_tx = event_tx.clone();
-                let task_stream_mode = _stream_mode;
+                let task_stream_mode = stream_mode;
 
                 let task = tokio::spawn(async move {
                     let task_info = TaskInfo::from_node_type(&node.node_type, &node.id);
@@ -1830,7 +1830,7 @@ impl WorkflowExecutor {
         context: Arc<Mutex<WorkflowContext>>,
         guardrail_enforcer: Option<Arc<Enforcer>>,
         event_tx: Option<tokio::sync::mpsc::Sender<crate::stream::StreamEvent>>,
-        stream_mode: crate::stream::StreamMode,
+        _stream_mode: crate::stream::StreamMode,
     ) -> GraphBitResult<serde_json::Value> {
         tracing::info!("Starting execute_agent_with_tools for agent: {_agent_id}");
         use crate::llm::{LlmMessage, LlmRequest, LlmTool};
@@ -2001,12 +2001,40 @@ impl WorkflowExecutor {
             request.tools.len()
         );
 
+        // Emit live LLM call lifecycle events for the initial tool-selection call.
+        let initial_llm_call_id = format!("{}-llm-1", node_id);
+        if let Some(ref tx) = event_tx {
+            let _ = tx
+                .send(crate::stream::StreamEvent::LlmCallStarted {
+                    node_id: node_id.to_string(),
+                    node_name: node_name.to_string(),
+                    llm_call_id: initial_llm_call_id.clone(),
+                    iteration: 1,
+                    model: agent.llm_provider().config().model_name().to_string(),
+                })
+                .await;
+        }
+
         // Measure LLM call duration and capture execution timestamp
         let execution_timestamp = chrono::Utc::now();
         let llm_start = std::time::Instant::now();
         let mut llm_response = agent.llm_provider().complete(request).await?;
         let llm_duration_ms = llm_start.elapsed().as_secs_f64() * 1000.0;
         let llm_end_timestamp = chrono::Utc::now();
+
+        if let Some(ref tx) = event_tx {
+            let _ = tx
+                .send(crate::stream::StreamEvent::LlmCallCompleted {
+                    node_id: node_id.to_string(),
+                    node_name: node_name.to_string(),
+                    llm_call_id: llm_response.id.clone().unwrap_or(initial_llm_call_id),
+                    iteration: 1,
+                    finish_reason: format!("{}", llm_response.finish_reason),
+                    output: llm_response.content.clone(),
+                    duration_ms: llm_duration_ms,
+                })
+                .await;
+        }
 
         // Get provider name for metadata
         let provider_name = agent.llm_provider().config().provider_name().to_string();
@@ -2201,32 +2229,29 @@ impl WorkflowExecutor {
             // ── Streaming: emit ToolCallStarted per requested tool call ──────────
             // Parameters are masked when guardrail is active (use the encoded params
             // from the metadata array which was built with encoding applied above).
-            if stream_mode.emits_tool_events() {
-                if let Some(ref tx) = event_tx {
-                    for tool_call in &llm_response.tool_calls {
-                        // Mask parameters if guardrail is active
-                        let params_for_event = if let Some(ref enforcer) = guardrail_enforcer {
-                            let enc =
-                                enforcer.encode(tool_call.parameters.clone(), EncodeContext::Llm);
-                            if enc.payload.is_object() {
-                                enc.payload
-                            } else {
-                                tool_call.parameters.clone()
-                            }
+            if let Some(ref tx) = event_tx {
+                for tool_call in &llm_response.tool_calls {
+                    // Mask parameters if guardrail is active
+                    let params_for_event = if let Some(ref enforcer) = guardrail_enforcer {
+                        let enc = enforcer.encode(tool_call.parameters.clone(), EncodeContext::Llm);
+                        if enc.payload.is_object() {
+                            enc.payload
                         } else {
                             tool_call.parameters.clone()
-                        };
+                        }
+                    } else {
+                        tool_call.parameters.clone()
+                    };
 
-                        let _ = tx
-                            .send(crate::stream::StreamEvent::ToolCallStarted {
-                                node_id: node_id.to_string(),
-                                node_name: node_name.to_string(),
-                                tool_name: tool_call.name.clone(),
-                                tool_call_id: tool_call.id.clone(),
-                                parameters: params_for_event,
-                            })
-                            .await;
-                    }
+                    let _ = tx
+                        .send(crate::stream::StreamEvent::ToolCallStarted {
+                            node_id: node_id.to_string(),
+                            node_name: node_name.to_string(),
+                            tool_name: tool_call.name.clone(),
+                            tool_call_id: tool_call.id.clone(),
+                            parameters: params_for_event,
+                        })
+                        .await;
                 }
             }
 
