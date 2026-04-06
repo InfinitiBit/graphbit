@@ -22,6 +22,9 @@ pub struct WorkflowGraph {
     /// Mapping from `NodeId` to graph indices
     #[serde(skip)]
     node_map: HashMap<NodeId, NodeIndex>,
+    /// Reverse mapping from graph index to `NodeId`
+    #[serde(skip)]
+    index_to_id: HashMap<NodeIndex, NodeId>,
     /// Serializable representation of nodes
     nodes: HashMap<NodeId, WorkflowNode>,
     /// Serializable representation of edges
@@ -33,6 +36,15 @@ pub struct WorkflowGraph {
     dependencies_cache: HashMap<NodeId, Vec<NodeId>>,
     #[serde(skip)]
     dependents_cache: HashMap<NodeId, Vec<NodeId>>,
+    /// Cached outgoing adjacency lists (source -> successors)
+    #[serde(skip)]
+    outgoing: HashMap<NodeId, Vec<NodeId>>,
+    /// Cached incoming adjacency lists (target -> predecessors)
+    #[serde(skip)]
+    incoming: HashMap<NodeId, Vec<NodeId>>,
+    /// Cached node name lookup (first-wins when duplicate names exist)
+    #[serde(skip)]
+    name_to_id: HashMap<String, NodeId>,
     /// Cached root and leaf nodes
     #[serde(skip)]
     root_nodes_cache: Option<Vec<NodeId>>,
@@ -46,11 +58,15 @@ impl WorkflowGraph {
         Self {
             graph: DiGraph::new(),
             node_map: HashMap::with_capacity(16), // Pre-allocate capacity
+            index_to_id: HashMap::with_capacity(16),
             nodes: HashMap::with_capacity(16),    // Pre-allocate capacity
             edges: Vec::with_capacity(16),        // Pre-allocate capacity
             metadata: HashMap::new(),
             dependencies_cache: HashMap::with_capacity(16),
             dependents_cache: HashMap::with_capacity(16),
+            outgoing: HashMap::with_capacity(16),
+            incoming: HashMap::with_capacity(16),
+            name_to_id: HashMap::with_capacity(16),
             root_nodes_cache: None,
             leaf_nodes_cache: None,
         }
@@ -64,38 +80,77 @@ impl WorkflowGraph {
         self.leaf_nodes_cache = None;
     }
 
-    /// Rebuild the graph structure from serialized data
-    /// This must be called after deserialization since `graph` and `node_map` are not serialized
-    pub fn rebuild_graph(&mut self) -> GraphBitResult<()> {
-        // Clear existing graph structures
+    /// Refresh outgoing/incoming adjacency maps from canonical `edges`.
+    fn refresh_adjacency_from_edges(&mut self) {
+        self.outgoing.clear();
+        self.incoming.clear();
+        self.outgoing.reserve(self.nodes.len());
+        self.incoming.reserve(self.nodes.len());
+
+        for (from, to, _) in &self.edges {
+            self.outgoing
+                .entry(from.clone())
+                .or_default()
+                .push(to.clone());
+            self.incoming
+                .entry(to.clone())
+                .or_default()
+                .push(from.clone());
+        }
+    }
+
+    /// Rebuild `name_to_id` deterministically using first-wins semantics.
+    fn rebuild_name_map_from_nodes(&mut self) {
+        self.name_to_id.clear();
+        self.name_to_id.reserve(self.nodes.len());
+
+        let mut ordered: Vec<(&NodeId, &WorkflowNode)> = self.nodes.iter().collect();
+        ordered.sort_by(|(a, _), (b, _)| a.to_string().cmp(&b.to_string()));
+
+        for (id, node) in ordered {
+            self.name_to_id
+                .entry(node.name.clone())
+                .or_insert_with(|| id.clone());
+        }
+    }
+
+    /// Rebuild petgraph structures and node id/index maps from `nodes` + `edges`.
+    fn rebuild_petgraph_and_id_maps(&mut self) -> GraphBitResult<()> {
         self.graph = DiGraph::new();
         self.node_map.clear();
-        self.invalidate_caches();
+        self.index_to_id.clear();
 
-        // Pre-allocate capacity based on existing data
         self.node_map.reserve(self.nodes.len());
+        self.index_to_id.reserve(self.nodes.len());
 
-        // Re-add all nodes to the graph
         for (node_id, node) in &self.nodes {
             let graph_index = self.graph.add_node(node.clone());
             self.node_map.insert(node_id.clone(), graph_index);
+            self.index_to_id.insert(graph_index, node_id.clone());
         }
 
-        // Re-add all edges to the graph
         for (from, to, edge) in &self.edges {
             let from_index = self
                 .node_map
                 .get(from)
                 .ok_or_else(|| GraphBitError::graph(format!("Source node {from} not found")))?;
-
             let to_index = self
                 .node_map
                 .get(to)
                 .ok_or_else(|| GraphBitError::graph(format!("Target node {to} not found")))?;
-
             self.graph.add_edge(*from_index, *to_index, edge.clone());
         }
 
+        Ok(())
+    }
+
+    /// Rebuild the graph structure from serialized data
+    /// This must be called after deserialization since `graph` and `node_map` are not serialized
+    pub fn rebuild_graph(&mut self) -> GraphBitResult<()> {
+        self.rebuild_petgraph_and_id_maps()?;
+        self.refresh_adjacency_from_edges();
+        self.rebuild_name_map_from_nodes();
+        self.invalidate_caches();
         Ok(())
     }
 
@@ -117,6 +172,10 @@ impl WorkflowGraph {
 
         let graph_index = self.graph.add_node(node.clone());
         self.node_map.insert(node_id.clone(), graph_index);
+        self.index_to_id.insert(graph_index, node_id.clone());
+        self.name_to_id
+            .entry(node.name.clone())
+            .or_insert_with(|| node_id.clone());
         self.nodes.insert(node_id, node);
 
         // Invalidate caches since graph structure changed
@@ -138,7 +197,9 @@ impl WorkflowGraph {
             .ok_or_else(|| GraphBitError::graph(format!("Target node {to} not found")))?;
 
         self.graph.add_edge(*from_index, *to_index, edge.clone());
-        self.edges.push((from, to, edge));
+        self.edges.push((from.clone(), to.clone(), edge));
+        self.outgoing.entry(from.clone()).or_default().push(to.clone());
+        self.incoming.entry(to.clone()).or_default().push(from.clone());
 
         // Invalidate caches since graph structure changed
         self.invalidate_caches();
@@ -148,17 +209,42 @@ impl WorkflowGraph {
 
     /// Remove a node from the graph
     pub fn remove_node(&mut self, node_id: &NodeId) -> GraphBitResult<()> {
-        let graph_index = self
-            .node_map
-            .remove(node_id)
-            .ok_or_else(|| GraphBitError::graph(format!("Node {node_id} not found")))?;
-
-        self.graph.remove_node(graph_index);
-        self.nodes.remove(node_id);
+        if self.nodes.remove(node_id).is_none() {
+            return Err(GraphBitError::graph(format!("Node {node_id} not found")));
+        }
 
         // Remove edges involving this node
         self.edges
             .retain(|(from, to, _)| from != node_id && to != node_id);
+
+        // Update adjacency maps incrementally for the removed node.
+        // Remove any outgoing entries for this node and drop this node from predecessors.
+        if let Some(successors) = self.outgoing.remove(node_id) {
+            for successor in successors {
+                if let Some(predecessors) = self.incoming.get_mut(&successor) {
+                    predecessors.retain(|source| source != node_id);
+                    if predecessors.is_empty() {
+                        self.incoming.remove(&successor);
+                    }
+                }
+            }
+        }
+
+        // Remove any incoming entries for this node and drop this node from successors.
+        if let Some(predecessors) = self.incoming.remove(node_id) {
+            for predecessor in predecessors {
+                if let Some(successors) = self.outgoing.get_mut(&predecessor) {
+                    successors.retain(|target| target != node_id);
+                    if successors.is_empty() {
+                        self.outgoing.remove(&predecessor);
+                    }
+                }
+            }
+        }
+
+        // Rebuild full graph/index structures to avoid stale NodeIndex entries
+        self.rebuild_petgraph_and_id_maps()?;
+        self.rebuild_name_map_from_nodes();
 
         // Invalidate caches since graph structure changed
         self.invalidate_caches();
@@ -198,13 +284,13 @@ impl WorkflowGraph {
         // Pre-allocate with known capacity
         let mut sorted_nodes = Vec::with_capacity(sorted_indices.len());
         for index in sorted_indices {
-            // Find the NodeId for this graph index
-            for (node_id, &node_index) in &self.node_map {
-                if node_index == index {
-                    sorted_nodes.push(node_id.clone());
-                    break;
-                }
-            }
+            let node_id = self.index_to_id.get(&index).ok_or_else(|| {
+                GraphBitError::graph(format!(
+                    "Missing NodeId mapping for graph index {:?} during topological sort",
+                    index
+                ))
+            })?;
+            sorted_nodes.push(node_id.clone());
         }
 
         Ok(sorted_nodes)
@@ -225,12 +311,8 @@ impl WorkflowGraph {
                 .neighbors_directed(node_index, Direction::Incoming);
 
             for neighbor_index in incoming {
-                // Find the NodeId for this neighbor
-                for (neighbor_id, &idx) in &self.node_map {
-                    if idx == neighbor_index {
-                        dependencies.push(neighbor_id.clone());
-                        break;
-                    }
+                if let Some(neighbor_id) = self.index_to_id.get(&neighbor_index) {
+                    dependencies.push(neighbor_id.clone());
                 }
             }
         }
@@ -256,12 +338,8 @@ impl WorkflowGraph {
                 .neighbors_directed(node_index, Direction::Outgoing);
 
             for neighbor_index in outgoing {
-                // Find the NodeId for this neighbor
-                for (neighbor_id, &idx) in &self.node_map {
-                    if idx == neighbor_index {
-                        dependents.push(neighbor_id.clone());
-                        break;
-                    }
+                if let Some(neighbor_id) = self.index_to_id.get(&neighbor_index) {
+                    dependents.push(neighbor_id.clone());
                 }
             }
         }
@@ -482,20 +560,17 @@ impl WorkflowGraph {
         self.edges.len()
     }
 
-    /// Get node ID by name
+    /// Get node ID by node name in O(1).
+    ///
+    /// If duplicate node names exist, this returns the canonical first-wins
+    /// entry in the internal name index.
     pub fn get_node_id_by_name(&self, name: &str) -> Option<NodeId> {
-        self.nodes
-            .values()
-            .find(|node| node.name == name)
-            .map(|node| node.id.clone())
+        self.name_to_id.get(name).cloned()
     }
 
     /// Direct successors along control/data edges (`from` → `to`).
     pub fn direct_successors(&self, from: &NodeId) -> Vec<NodeId> {
-        self.edges
-            .iter()
-            .filter_map(|(a, b, _)| (a == from).then_some(b.clone()))
-            .collect()
+        self.outgoing.get(from).cloned().unwrap_or_default()
     }
 
     /// All nodes reachable from `start` (including `start`) following outgoing edges.
@@ -857,4 +932,195 @@ pub enum EdgeType {
     Conditional,
     /// Error handling edge
     ErrorHandling,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_forward_reachable_from_small_dag() {
+        let mut graph = WorkflowGraph::new();
+        let a = WorkflowNode::new(
+            "a",
+            "",
+            NodeType::Transform {
+                transformation: "a".to_string(),
+            },
+        );
+        let b = WorkflowNode::new(
+            "b",
+            "",
+            NodeType::Transform {
+                transformation: "b".to_string(),
+            },
+        );
+        let c = WorkflowNode::new(
+            "c",
+            "",
+            NodeType::Transform {
+                transformation: "c".to_string(),
+            },
+        );
+        let d = WorkflowNode::new(
+            "d",
+            "",
+            NodeType::Transform {
+                transformation: "d".to_string(),
+            },
+        );
+
+        let a_id = a.id.clone();
+        let b_id = b.id.clone();
+        let c_id = c.id.clone();
+        let d_id = d.id.clone();
+
+        graph.add_node(a).expect("add node a");
+        graph.add_node(b).expect("add node b");
+        graph.add_node(c).expect("add node c");
+        graph.add_node(d).expect("add node d");
+
+        graph
+            .add_edge(a_id.clone(), b_id.clone(), WorkflowEdge::data_flow())
+            .expect("add edge a->b");
+        graph
+            .add_edge(a_id.clone(), c_id.clone(), WorkflowEdge::data_flow())
+            .expect("add edge a->c");
+        graph
+            .add_edge(c_id.clone(), d_id.clone(), WorkflowEdge::data_flow())
+            .expect("add edge c->d");
+
+        let reachable = graph.forward_reachable_from(&a_id);
+        assert!(reachable.contains(&a_id));
+        assert!(reachable.contains(&b_id));
+        assert!(reachable.contains(&c_id));
+        assert!(reachable.contains(&d_id));
+        assert_eq!(reachable.len(), 4);
+    }
+
+    #[test]
+    fn test_remove_node_keeps_indexes_and_lookups_consistent() {
+        let mut graph = WorkflowGraph::new();
+        let a = WorkflowNode::new(
+            "a",
+            "",
+            NodeType::Transform {
+                transformation: "a".to_string(),
+            },
+        );
+        let b = WorkflowNode::new(
+            "b",
+            "",
+            NodeType::Transform {
+                transformation: "b".to_string(),
+            },
+        );
+        let c = WorkflowNode::new(
+            "c",
+            "",
+            NodeType::Transform {
+                transformation: "c".to_string(),
+            },
+        );
+
+        let a_id = a.id.clone();
+        let b_id = b.id.clone();
+        let c_id = c.id.clone();
+
+        graph.add_node(a).expect("add node a");
+        graph.add_node(b).expect("add node b");
+        graph.add_node(c).expect("add node c");
+        graph
+            .add_edge(a_id.clone(), b_id.clone(), WorkflowEdge::data_flow())
+            .expect("add edge a->b");
+        graph
+            .add_edge(b_id.clone(), c_id.clone(), WorkflowEdge::data_flow())
+            .expect("add edge b->c");
+
+        graph.remove_node(&b_id).expect("remove b");
+
+        assert!(graph.get_node(&b_id).is_none());
+        assert!(graph.get_node_id_by_name("b").is_none());
+        assert!(graph.get_dependencies(&c_id).is_empty());
+        assert!(graph.direct_successors(&a_id).is_empty());
+
+        let sorted = graph.topological_sort().expect("topological sort after removal");
+        assert!(sorted.contains(&a_id));
+        assert!(sorted.contains(&c_id));
+        assert_eq!(sorted.len(), 2);
+    }
+
+    #[test]
+    fn test_add_edge_updates_adjacency_incrementally() {
+        let mut graph = WorkflowGraph::new();
+        let a = WorkflowNode::new(
+            "a",
+            "",
+            NodeType::Transform {
+                transformation: "a".to_string(),
+            },
+        );
+        let b = WorkflowNode::new(
+            "b",
+            "",
+            NodeType::Transform {
+                transformation: "b".to_string(),
+            },
+        );
+
+        let a_id = a.id.clone();
+        let b_id = b.id.clone();
+
+        graph.add_node(a).expect("add node a");
+        graph.add_node(b).expect("add node b");
+
+        assert!(graph.get_dependencies(&b_id).is_empty());
+        assert!(graph.get_dependents(&a_id).is_empty());
+        assert!(graph.direct_successors(&a_id).is_empty());
+
+        graph
+            .add_edge(a_id.clone(), b_id.clone(), WorkflowEdge::data_flow())
+            .expect("add edge a->b");
+
+        assert_eq!(graph.get_dependencies(&b_id), vec![a_id.clone()]);
+        assert_eq!(graph.get_dependents(&a_id), vec![b_id.clone()]);
+        assert_eq!(graph.direct_successors(&a_id), vec![b_id.clone()]);
+    }
+
+    #[test]
+    fn test_get_node_id_by_name_duplicate_names_first_wins_then_fallback() {
+        let mut graph = WorkflowGraph::new();
+        let n1 = WorkflowNode::new(
+            "dup",
+            "",
+            NodeType::Transform {
+                transformation: "one".to_string(),
+            },
+        );
+        let n2 = WorkflowNode::new(
+            "dup",
+            "",
+            NodeType::Transform {
+                transformation: "two".to_string(),
+            },
+        );
+        let n1_id = n1.id.clone();
+        let n2_id = n2.id.clone();
+
+        graph.add_node(n1).expect("add first dup");
+        graph.add_node(n2).expect("add second dup");
+
+        let winner = graph
+            .get_node_id_by_name("dup")
+            .expect("winner should exist");
+        assert!(winner == n1_id || winner == n2_id);
+
+        graph
+            .remove_node(&winner)
+            .expect("remove canonical duplicate name");
+        let fallback = graph
+            .get_node_id_by_name("dup")
+            .expect("fallback should exist after removing winner");
+        assert_ne!(fallback, winner);
+    }
 }
