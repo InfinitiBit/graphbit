@@ -58,6 +58,20 @@ impl PyLlmUsage {
         self.inner.total_tokens
     }
 
+    /// Number of tokens read from the prompt cache (Anthropic prompt caching).
+    /// `None` when caching was not enabled or the provider does not support it.
+    #[getter]
+    fn cache_read_tokens(&self) -> Option<u32> {
+        self.inner.cache_read_tokens
+    }
+
+    /// Number of tokens written to the prompt cache (Anthropic prompt caching).
+    /// `None` when caching was not enabled or the provider does not support it.
+    #[getter]
+    fn cache_creation_tokens(&self) -> Option<u32> {
+        self.inner.cache_creation_tokens
+    }
+
     /// Add usage statistics from another LlmUsage instance
     fn add(&mut self, other: &PyLlmUsage) {
         self.inner.add(&other.inner);
@@ -77,10 +91,20 @@ impl PyLlmUsage {
 
     /// String representation
     fn __repr__(&self) -> String {
-        format!(
-            "LlmUsage(prompt_tokens={}, completion_tokens={}, total_tokens={})",
-            self.inner.prompt_tokens, self.inner.completion_tokens, self.inner.total_tokens
-        )
+        let mut s = format!(
+            "LlmUsage(prompt_tokens={}, completion_tokens={}, total_tokens={}",
+            self.inner.prompt_tokens,
+            self.inner.completion_tokens,
+            self.inner.total_tokens
+        );
+        if let Some(r) = self.inner.cache_read_tokens {
+            s.push_str(&format!(", cache_read_tokens={r}"));
+        }
+        if let Some(c) = self.inner.cache_creation_tokens {
+            s.push_str(&format!(", cache_creation_tokens={c}"));
+        }
+        s.push(')');
+        s
     }
 
     /// String representation
@@ -94,6 +118,8 @@ impl PyLlmUsage {
         dict.set_item("prompt_tokens", self.inner.prompt_tokens)?;
         dict.set_item("completion_tokens", self.inner.completion_tokens)?;
         dict.set_item("total_tokens", self.inner.total_tokens)?;
+        dict.set_item("cache_read_tokens", self.inner.cache_read_tokens)?;
+        dict.set_item("cache_creation_tokens", self.inner.cache_creation_tokens)?;
         Ok(dict)
     }
 

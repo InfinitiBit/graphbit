@@ -172,6 +172,8 @@ impl XaiProvider {
             prompt_tokens: response.usage.prompt_tokens,
             completion_tokens: response.usage.completion_tokens,
             total_tokens: response.usage.prompt_tokens + response.usage.completion_tokens,
+            cache_read_tokens: None,
+            cache_creation_tokens: None,
         };
 
         Ok(LlmResponse::new(content, &self.model)

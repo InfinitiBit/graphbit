@@ -1380,6 +1380,11 @@ impl WorkflowExecutor {
                 }
             }
 
+            // Enable Anthropic prompt caching when configured on the node
+            if node_config.get("enable_prompt_caching").and_then(|v| v.as_bool()).unwrap_or(false) {
+                request = request.with_prompt_caching(true);
+            }
+
             // Measure LLM call duration and capture execution timestamp
             let execution_timestamp = chrono::Utc::now();
             let llm_start = std::time::Instant::now();
@@ -1418,7 +1423,8 @@ impl WorkflowExecutor {
                     "completion_tokens": llm_response.usage.completion_tokens,
                     "total_tokens": llm_response.usage.total_tokens,
                     "prompt_tokens_details": {
-                        "cached_tokens": 0,
+                        "cached_tokens": llm_response.usage.cache_read_tokens.unwrap_or(0),
+                        "cache_creation_tokens": llm_response.usage.cache_creation_tokens.unwrap_or(0),
                         "audio_tokens": 0
                     },
                     "completion_tokens_details": {
@@ -1517,7 +1523,8 @@ impl WorkflowExecutor {
                         "completion_tokens": llm_response.usage.completion_tokens,
                         "total_tokens": llm_response.usage.total_tokens,
                         "prompt_tokens_details": {
-                            "cached_tokens": 0,
+                            "cached_tokens": llm_response.usage.cache_read_tokens.unwrap_or(0),
+                            "cache_creation_tokens": llm_response.usage.cache_creation_tokens.unwrap_or(0),
                             "audio_tokens": 0
                         },
                         "completion_tokens_details": {
@@ -1728,6 +1735,12 @@ impl WorkflowExecutor {
             }
         }
 
+        // Enable Anthropic prompt caching when configured on the node
+        if node_config.get("enable_prompt_caching").and_then(|v| v.as_bool()).unwrap_or(false) {
+            request = request.with_prompt_caching(true);
+            tracing::debug!("Applied enable_prompt_caching=true to tool selection request");
+        }
+
         tracing::info!("Created LLM request with {} tools", request.tools.len());
         for (i, tool) in request.tools.iter().enumerate() {
             tracing::info!("Tool {i}: {} - {}", tool.name, tool.description);
@@ -1807,7 +1820,8 @@ impl WorkflowExecutor {
                 "completion_tokens": llm_response.usage.completion_tokens,
                 "total_tokens": llm_response.usage.total_tokens,
                 "prompt_tokens_details": {
-                    "cached_tokens": 0,
+                    "cached_tokens": llm_response.usage.cache_read_tokens.unwrap_or(0),
+                    "cache_creation_tokens": llm_response.usage.cache_creation_tokens.unwrap_or(0),
                     "audio_tokens": 0
                 },
                 "completion_tokens_details": {
@@ -1890,7 +1904,8 @@ impl WorkflowExecutor {
                 "completion_tokens": llm_response.usage.completion_tokens,
                 "total_tokens": llm_response.usage.total_tokens,
                 "prompt_tokens_details": {
-                    "cached_tokens": 0,
+                    "cached_tokens": llm_response.usage.cache_read_tokens.unwrap_or(0),
+                    "cache_creation_tokens": llm_response.usage.cache_creation_tokens.unwrap_or(0),
                     "audio_tokens": 0
                 },
                 "completion_tokens_details": {

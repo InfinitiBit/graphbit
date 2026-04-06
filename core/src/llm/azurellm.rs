@@ -301,6 +301,8 @@ impl AzureLlmProvider {
             prompt_tokens: resp_json["usage"]["input_tokens"].as_u64().unwrap_or(0) as u32,
             completion_tokens: resp_json["usage"]["output_tokens"].as_u64().unwrap_or(0) as u32,
             total_tokens: resp_json["usage"]["total_tokens"].as_u64().unwrap_or(0) as u32,
+            cache_read_tokens: None,
+            cache_creation_tokens: None,
         };
 
         // Determine finish reason from status
@@ -436,6 +438,8 @@ impl AzureLlmProvider {
                 prompt_tokens: response.usage.prompt_tokens,
                 completion_tokens: response.usage.completion_tokens,
                 total_tokens: response.usage.total_tokens,
+                cache_read_tokens: None,
+                cache_creation_tokens: None,
             })
             .with_id(response.id))
     }

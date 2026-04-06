@@ -98,6 +98,12 @@ pub struct LlmUsage {
     pub completion_tokens: u32,
     /// Total number of tokens
     pub total_tokens: u32,
+    /// Number of tokens read from the prompt cache (Anthropic prompt caching)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cache_read_tokens: Option<u32>,
+    /// Number of tokens written to the prompt cache (Anthropic prompt caching)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cache_creation_tokens: Option<u32>,
 }
 
 impl LlmUsage {
@@ -107,6 +113,24 @@ impl LlmUsage {
             prompt_tokens,
             completion_tokens,
             total_tokens: prompt_tokens + completion_tokens,
+            cache_read_tokens: None,
+            cache_creation_tokens: None,
+        }
+    }
+
+    /// Create usage statistics with Anthropic prompt-caching token counts
+    pub fn new_with_cache(
+        prompt_tokens: u32,
+        completion_tokens: u32,
+        cache_read_tokens: Option<u32>,
+        cache_creation_tokens: Option<u32>,
+    ) -> Self {
+        Self {
+            prompt_tokens,
+            completion_tokens,
+            total_tokens: prompt_tokens + completion_tokens,
+            cache_read_tokens,
+            cache_creation_tokens,
         }
     }
 
@@ -116,6 +140,8 @@ impl LlmUsage {
             prompt_tokens: 0,
             completion_tokens: 0,
             total_tokens: 0,
+            cache_read_tokens: None,
+            cache_creation_tokens: None,
         }
     }
 
@@ -124,6 +150,19 @@ impl LlmUsage {
         self.prompt_tokens += other.prompt_tokens;
         self.completion_tokens += other.completion_tokens;
         self.total_tokens += other.total_tokens;
+        self.cache_read_tokens = match (self.cache_read_tokens, other.cache_read_tokens) {
+            (Some(a), Some(b)) => Some(a + b),
+            (Some(a), None) => Some(a),
+            (None, Some(b)) => Some(b),
+            (None, None) => None,
+        };
+        self.cache_creation_tokens =
+            match (self.cache_creation_tokens, other.cache_creation_tokens) {
+                (Some(a), Some(b)) => Some(a + b),
+                (Some(a), None) => Some(a),
+                (None, Some(b)) => Some(b),
+                (None, None) => None,
+            };
     }
 }
 
@@ -141,6 +180,19 @@ impl std::ops::Add for LlmUsage {
             prompt_tokens: self.prompt_tokens + other.prompt_tokens,
             completion_tokens: self.completion_tokens + other.completion_tokens,
             total_tokens: self.total_tokens + other.total_tokens,
+            cache_read_tokens: match (self.cache_read_tokens, other.cache_read_tokens) {
+                (Some(a), Some(b)) => Some(a + b),
+                (Some(a), None) | (None, Some(a)) => Some(a),
+                (None, None) => None,
+            },
+            cache_creation_tokens: match (
+                self.cache_creation_tokens,
+                other.cache_creation_tokens,
+            ) {
+                (Some(a), Some(b)) => Some(a + b),
+                (Some(a), None) | (None, Some(a)) => Some(a),
+                (None, None) => None,
+            },
         }
     }
 }
@@ -150,6 +202,17 @@ impl std::ops::AddAssign for LlmUsage {
         self.prompt_tokens += other.prompt_tokens;
         self.completion_tokens += other.completion_tokens;
         self.total_tokens += other.total_tokens;
+        self.cache_read_tokens = match (self.cache_read_tokens, other.cache_read_tokens) {
+            (Some(a), Some(b)) => Some(a + b),
+            (Some(a), None) | (None, Some(a)) => Some(a),
+            (None, None) => None,
+        };
+        self.cache_creation_tokens =
+            match (self.cache_creation_tokens, other.cache_creation_tokens) {
+                (Some(a), Some(b)) => Some(a + b),
+                (Some(a), None) | (None, Some(a)) => Some(a),
+                (None, None) => None,
+            };
     }
 }
 

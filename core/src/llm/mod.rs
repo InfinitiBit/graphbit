@@ -45,6 +45,9 @@ pub struct LlmRequest {
     pub tools: Vec<LlmTool>,
     /// Additional provider-specific parameters
     pub extra_params: HashMap<String, serde_json::Value>,
+    /// Enable Anthropic prompt caching (`cache_control` breakpoints on tools and system prompt)
+    #[serde(default)]
+    pub enable_prompt_caching: bool,
 }
 
 impl LlmRequest {
@@ -57,6 +60,7 @@ impl LlmRequest {
             top_p: None,
             tools: Vec::with_capacity(4), //# Pre-allocate small capacity
             extra_params: HashMap::with_capacity(4), // Pre-allocate small capacity
+            enable_prompt_caching: false,
         }
     }
 
@@ -69,6 +73,7 @@ impl LlmRequest {
             top_p: None,
             tools: Vec::with_capacity(4),
             extra_params: HashMap::with_capacity(4),
+            enable_prompt_caching: false,
         }
     }
 
@@ -117,6 +122,18 @@ impl LlmRequest {
     #[inline]
     pub fn with_extra_param(mut self, key: String, value: serde_json::Value) -> Self {
         self.extra_params.insert(key, value);
+        self
+    }
+
+    /// Enable Anthropic prompt caching for this request.
+    ///
+    /// When enabled, the Anthropic provider will attach `cache_control: {"type": "ephemeral"}`
+    /// to the system prompt (as a content block) and to the last tool definition, and will
+    /// send the `anthropic-beta: prompt-caching-2024-07-31` header. Cache reads cost ~10% of
+    /// normal input token pricing, yielding 60-80% cost savings on repeated static content.
+    #[inline]
+    pub fn with_prompt_caching(mut self, enable: bool) -> Self {
+        self.enable_prompt_caching = enable;
         self
     }
 

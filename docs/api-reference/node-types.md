@@ -34,6 +34,7 @@ agent = Node.agent(
 - `system_prompt` (str, optional): System prompt that defines agent behavior and constraints
 - `temperature` (float, optional): Controls randomness in LLM responses (0.0-2.0). Lower values = more focused, higher = more creative
 - `max_tokens` (int, optional): Maximum number of tokens to generate in the response
+- `enable_prompt_caching` (bool, optional): Enable Anthropic prompt caching for cost savings on repeated calls. Default: `False`
 
 ### Agent Node with Tool calling
 
@@ -137,6 +138,31 @@ json_agent = Node.agent(
     llm_config=openai_config  # Use Openai
 )
 ```
+
+### Agent Node with Prompt Caching (Anthropic)
+
+Enable Anthropic prompt caching to reduce costs by up to 90% on repeated calls with the same system prompt and tools:
+
+```python
+from graphbit import LlmConfig, Node
+
+anthropic_config = LlmConfig.anthropic(
+    api_key=os.getenv("ANTHROPIC_API_KEY"),
+    model="claude-sonnet-4-20250514"
+)
+
+# Agent with prompt caching enabled
+cached_agent = Node.agent(
+    name="Research Assistant",
+    prompt=f"Analyze this topic in depth: {input}",
+    agent_id="research_assistant",
+    system_prompt="You are an expert research analyst.",
+    llm_config=anthropic_config,
+    enable_prompt_caching=True  # Caches system prompt and tool definitions
+)
+```
+
+> **Note:** Prompt caching is currently supported only with Anthropic (Claude) models. The flag is safely ignored for other providers.
 
 ### Agent Node Examples
 
