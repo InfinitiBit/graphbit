@@ -483,6 +483,9 @@ impl Executor {
         let (event_tx, event_rx) = tokio::sync::mpsc::channel::<StreamEvent>(256);
         let event_tx_for_core = event_tx.clone();
 
+        // Stream mode for follow-up LLM calls in the live tool loop (Messages/All → token stream).
+        let tool_loop_stream_mode = mode;
+
         // Spawn the streaming executor on the shared Tokio runtime
         get_runtime().spawn(async move {
             let conditional_handlers =
@@ -571,6 +574,7 @@ impl Executor {
                             processor_llm_config.clone(),
                             guardrail_for_iterator.clone(),
                             &event_tx,
+                            tool_loop_stream_mode,
                         )
                         .await
                         {
@@ -649,6 +653,7 @@ impl Executor {
         llm_config: graphbit_core::llm::LlmConfig,
         guardrail_enforcer: Option<Arc<Enforcer>>,
         event_tx: &tokio::sync::mpsc::Sender<StreamEvent>,
+        stream_mode: StreamMode,
     ) -> Result<
         (String, Vec<serde_json::Value>, Vec<String>, String),
         graphbit_core::errors::GraphBitError,
@@ -943,7 +948,45 @@ impl Executor {
             }
 
             let llm_start = std::time::Instant::now();
-            let next_response = llm_provider.complete(req).await?;
+            let next_response = if stream_mode.emits_tokens()
+                && llm_provider.provider().supports_streaming()
+            {
+                use futures::StreamExt;
+                let fallback_request = req.clone();
+                let mut stream = llm_provider.stream(req).await?;
+                let mut accumulated_content = String::new();
+                let mut last_response: Option<graphbit_core::llm::LlmResponse> = None;
+                while let Some(chunk_result) = stream.next().await {
+                    let chunk = chunk_result?;
+                    if !chunk.content.is_empty() {
+                        let _ = event_tx
+                            .send(StreamEvent::Token {
+                                node_id: node_id.to_string(),
+                                node_name: node_name.to_string(),
+                                content: chunk.content.clone(),
+                            })
+                            .await;
+                        accumulated_content.push_str(&chunk.content);
+                    }
+                    last_response = Some(chunk);
+                }
+                match last_response {
+                    Some(mut final_resp) => {
+                        if !accumulated_content.is_empty() {
+                            final_resp.content = accumulated_content;
+                        }
+                        final_resp
+                    }
+                    None => {
+                        tracing::warn!(
+                            "LLM stream returned 0 chunks in live tool loop; falling back to complete()"
+                        );
+                        llm_provider.complete(fallback_request).await?
+                    }
+                }
+            } else {
+                llm_provider.complete(req).await?
+            };
             let llm_duration_ms = llm_start.elapsed().as_secs_f64() * 1000.0;
             let next_call_id = next_response
                 .id

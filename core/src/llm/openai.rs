@@ -9,6 +9,7 @@ use async_trait::async_trait;
 use futures::stream::{Stream, StreamExt};
 use reqwest::Client;
 use serde::{Deserialize, Deserializer, Serialize};
+use std::collections::HashMap;
 use std::time::Duration;
 use tokio::time::timeout;
 
@@ -374,20 +375,29 @@ impl LlmProviderTrait for OpenAiProvider {
         let model = self.model.clone();
         let byte_stream = response.bytes_stream();
 
-        // State tuple: (byte_stream, buffer, timeout_occurred, consecutive_parse_errors, total_parse_errors)
+        // State: byte_stream, buffer, timeout / parse error counters, and accumulated tool-call
+        // fragments from `delta.tool_calls` (required for streaming + function calling).
         // - consecutive_parse_errors: Resets on successful parse, triggers error if too high
         // - total_parse_errors: Running count for logging
         const MAX_CONSECUTIVE_PARSE_ERRORS: u32 = 5;
 
         // Use a stateful stream that buffers incomplete lines with timeout protection
         let stream = futures::stream::unfold(
-            (byte_stream, String::new(), false, 0u32, 0u32), // Extended state with error tracking
+            (
+                byte_stream,
+                String::new(),
+                false,
+                0u32,
+                0u32,
+                HashMap::<u32, OpenAiStreamToolAccum>::new(),
+            ),
             move |(
                 mut byte_stream,
                 mut buffer,
                 timeout_occurred,
                 mut consecutive_parse_errors,
                 mut total_parse_errors,
+                mut tool_call_accum,
             )| {
                 let model = model.clone();
                 async move {
@@ -440,6 +450,7 @@ impl LlmProviderTrait for OpenAiProvider {
                                             true,
                                             consecutive_parse_errors,
                                             total_parse_errors,
+                                            tool_call_accum,
                                         ),
                                     ));
                                 }
@@ -459,6 +470,7 @@ impl LlmProviderTrait for OpenAiProvider {
                                             false,
                                             consecutive_parse_errors,
                                             total_parse_errors,
+                                            tool_call_accum,
                                         ),
                                     ));
                                 }
@@ -500,6 +512,14 @@ impl LlmProviderTrait for OpenAiProvider {
                                         consecutive_parse_errors = 0;
 
                                         let OpenAiStreamChunk { id, choices, usage } = stream_chunk;
+                                        if let Some(choice) = choices.first() {
+                                            merge_openai_stream_tool_deltas(
+                                                &mut tool_call_accum,
+                                                &choice.delta.tool_calls,
+                                            );
+                                        }
+                                        let streamed_tool_calls =
+                                            tool_accum_map_to_llm_calls(&tool_call_accum);
                                         let usage = usage.map(|u| {
                                             LlmUsage::new(u.prompt_tokens, u.completion_tokens)
                                         });
@@ -513,7 +533,10 @@ impl LlmProviderTrait for OpenAiProvider {
                                                 if !content.is_empty() {
                                                     let mut response =
                                                         LlmResponse::new(content.clone(), &model)
-                                                            .with_id(id.clone());
+                                                            .with_id(id.clone())
+                                                            .with_tool_calls(
+                                                                streamed_tool_calls.clone(),
+                                                            );
                                                     if let Some(usage) = usage.clone() {
                                                         response = response.with_usage(usage);
                                                     }
@@ -531,6 +554,7 @@ impl LlmProviderTrait for OpenAiProvider {
                                                             false,
                                                             consecutive_parse_errors,
                                                             total_parse_errors,
+                                                            tool_call_accum,
                                                         ),
                                                     ));
                                                 }
@@ -540,8 +564,13 @@ impl LlmProviderTrait for OpenAiProvider {
                                         // Terminal usage chunks are often emitted without content.
                                         // Surface them so caller can preserve usage in final metadata.
                                         if usage.is_some() || finish_reason.is_some() {
-                                            let mut response =
-                                                LlmResponse::new(String::new(), &model).with_id(id);
+                                            let text = stream_assistant_text_for_tool_calls(
+                                                String::new(),
+                                                &streamed_tool_calls,
+                                            );
+                                            let mut response = LlmResponse::new(text, &model)
+                                                .with_id(id)
+                                                .with_tool_calls(streamed_tool_calls);
                                             if let Some(usage) = usage {
                                                 response = response.with_usage(usage);
                                             }
@@ -557,6 +586,7 @@ impl LlmProviderTrait for OpenAiProvider {
                                                     false,
                                                     consecutive_parse_errors,
                                                     total_parse_errors,
+                                                    tool_call_accum,
                                                 ),
                                             ));
                                         }
@@ -595,11 +625,18 @@ impl LlmProviderTrait for OpenAiProvider {
                                                     .and_then(|v| v.as_str())
                                                     .map(|r| parse_finish_reason(Some(r)));
 
-                                                let mut response = LlmResponse::new("", &model)
+                                                let streamed_tool_calls =
+                                                    tool_accum_map_to_llm_calls(&tool_call_accum);
+                                                let text = stream_assistant_text_for_tool_calls(
+                                                    String::new(),
+                                                    &streamed_tool_calls,
+                                                );
+                                                let mut response = LlmResponse::new(text, &model)
                                                     .with_usage(LlmUsage::new(
                                                         prompt_tokens,
                                                         completion_tokens,
-                                                    ));
+                                                    ))
+                                                    .with_tool_calls(streamed_tool_calls);
                                                 if !id.is_empty() {
                                                     response = response.with_id(id);
                                                 }
@@ -615,6 +652,7 @@ impl LlmProviderTrait for OpenAiProvider {
                                                         false,
                                                         consecutive_parse_errors,
                                                         total_parse_errors,
+                                                        tool_call_accum,
                                                     ),
                                                 ));
                                             }
@@ -652,6 +690,7 @@ impl LlmProviderTrait for OpenAiProvider {
                                                     true,
                                                     consecutive_parse_errors,
                                                     total_parse_errors,
+                                                    tool_call_accum,
                                                 ),
                                             ));
                                         }
@@ -811,11 +850,107 @@ struct OpenAiStreamChoice {
 }
 
 #[derive(Debug, Deserialize)]
+struct OpenAiDeltaToolCall {
+    #[serde(default)]
+    index: Option<u32>,
+    #[serde(default)]
+    id: Option<String>,
+    #[serde(rename = "type")]
+    #[allow(dead_code)]
+    tool_type: Option<String>,
+    #[serde(default)]
+    function: Option<OpenAiDeltaFunctionPart>,
+}
+
+#[derive(Debug, Deserialize)]
+struct OpenAiDeltaFunctionPart {
+    #[serde(default)]
+    name: Option<String>,
+    #[serde(default)]
+    arguments: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
 struct OpenAiDelta {
     #[serde(default)]
     content: Option<String>,
     #[serde(default)]
     _role: Option<String>,
+    #[serde(default)]
+    tool_calls: Vec<OpenAiDeltaToolCall>,
+}
+
+/// One tool-call slot in an SSE stream (`index`), merged across chunks.
+#[derive(Debug, Default, Clone)]
+struct OpenAiStreamToolAccum {
+    id: String,
+    name: String,
+    arguments: String,
+}
+
+fn merge_openai_stream_tool_deltas(
+    acc: &mut HashMap<u32, OpenAiStreamToolAccum>,
+    deltas: &[OpenAiDeltaToolCall],
+) {
+    for d in deltas {
+        let idx = d.index.unwrap_or(0);
+        let entry = acc.entry(idx).or_default();
+        if let Some(id) = &d.id {
+            if !id.is_empty() {
+                entry.id.clone_from(id);
+            }
+        }
+        if let Some(f) = &d.function {
+            if let Some(name) = &f.name {
+                if !name.is_empty() {
+                    entry.name.clone_from(name);
+                }
+            }
+            if let Some(args) = &f.arguments {
+                entry.arguments.push_str(args);
+            }
+        }
+    }
+}
+
+fn tool_accum_map_to_llm_calls(acc: &HashMap<u32, OpenAiStreamToolAccum>) -> Vec<LlmToolCall> {
+    let mut pairs: Vec<(u32, &OpenAiStreamToolAccum)> = acc.iter().map(|(i, t)| (*i, t)).collect();
+    pairs.sort_by_key(|(i, _)| *i);
+    pairs
+        .into_iter()
+        .map(|(_, tc)| {
+            let parameters = if tc.arguments.trim().is_empty() {
+                serde_json::Value::Object(serde_json::Map::new())
+            } else {
+                match serde_json::from_str(&tc.arguments) {
+                    Ok(p) => p,
+                    Err(e) => {
+                        tracing::warn!(
+                            "Failed to parse streamed tool call arguments for '{}': {e}",
+                            tc.name
+                        );
+                        serde_json::json!(
+                            { "raw_arguments": tc.arguments }
+                        )
+                    }
+                }
+            };
+            LlmToolCall {
+                id: tc.id.clone(),
+                name: tc.name.clone(),
+                parameters,
+            }
+        })
+        .collect()
+}
+
+/// Align with non-streaming [`OpenAiProvider::parse_response`]: non-empty assistant text when the
+/// model only requests tools (`content` is null in the REST response).
+fn stream_assistant_text_for_tool_calls(mut content: String, tool_calls: &[LlmToolCall]) -> String {
+    if content.trim().is_empty() && !tool_calls.is_empty() {
+        content = "I'll help you with that using the available tools.".to_string();
+    }
+    content
 }
 
 fn parse_finish_reason(reason: Option<&str>) -> FinishReason {
@@ -850,6 +985,48 @@ mod tests {
         let usage = parsed.usage.expect("usage should be present");
         assert_eq!(usage.prompt_tokens, 15);
         assert_eq!(usage.completion_tokens, 14);
+    }
+
+    #[test]
+    fn stream_tool_call_deltas_merge_to_llm_calls() {
+        let chunk1: OpenAiStreamChunk = serde_json::from_value(serde_json::json!({
+            "id": "chatcmpl-toolstream",
+            "choices": [{
+                "delta": {
+                    "tool_calls": [{
+                        "index": 0,
+                        "id": "call_abc",
+                        "type": "function",
+                        "function": { "name": "add", "arguments": "" }
+                    }]
+                }
+            }]
+        }))
+        .expect("chunk1");
+
+        let chunk2: OpenAiStreamChunk = serde_json::from_value(serde_json::json!({
+            "id": "chatcmpl-toolstream",
+            "choices": [{
+                "delta": {
+                    "tool_calls": [{
+                        "index": 0,
+                        "function": { "arguments": "{\"a\": 10, \"b\": 20}" }
+                    }]
+                },
+                "finish_reason": "tool_calls"
+            }]
+        }))
+        .expect("chunk2");
+
+        let mut acc = HashMap::new();
+        merge_openai_stream_tool_deltas(&mut acc, &chunk1.choices[0].delta.tool_calls);
+        merge_openai_stream_tool_deltas(&mut acc, &chunk2.choices[0].delta.tool_calls);
+        let calls = tool_accum_map_to_llm_calls(&acc);
+        assert_eq!(calls.len(), 1);
+        assert_eq!(calls[0].id, "call_abc");
+        assert_eq!(calls[0].name, "add");
+        assert_eq!(calls[0].parameters["a"], 10);
+        assert_eq!(calls[0].parameters["b"], 20);
     }
 
     #[test]
