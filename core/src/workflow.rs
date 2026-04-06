@@ -1566,6 +1566,30 @@ impl WorkflowExecutor {
 
             // Measure LLM call duration and capture execution timestamp
             let execution_timestamp = chrono::Utc::now();
+
+            // Emit live LLM lifecycle events for non-tool agent execution.
+            let llm_call_id_hint = format!("{}-llm-1", current_node_id);
+            if let Some(ref tx) = event_tx {
+                let _ = tx
+                    .send(crate::stream::StreamEvent::LlmCallStarted {
+                        node_id: current_node_id.to_string(),
+                        node_name: {
+                            let ctx = context.lock().await;
+                            ctx.metadata
+                                .get("node_id_to_name")
+                                .and_then(|m| m.as_object())
+                                .and_then(|m| m.get(&current_node_id.to_string()))
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("unknown")
+                                .to_string()
+                        },
+                        llm_call_id: llm_call_id_hint.clone(),
+                        iteration: 1,
+                        model: agent.llm_provider().config().model_name().to_string(),
+                    })
+                    .await;
+            }
+
             let llm_start = std::time::Instant::now();
 
             // ── Token-level streaming (stream_mode = Messages | All) ──────────────
@@ -1642,6 +1666,29 @@ impl WorkflowExecutor {
 
             let llm_duration_ms = llm_start.elapsed().as_secs_f64() * 1000.0;
             let llm_end_timestamp = chrono::Utc::now();
+
+            if let Some(ref tx) = event_tx {
+                let _ = tx
+                    .send(crate::stream::StreamEvent::LlmCallCompleted {
+                        node_id: current_node_id.to_string(),
+                        node_name: {
+                            let ctx = context.lock().await;
+                            ctx.metadata
+                                .get("node_id_to_name")
+                                .and_then(|m| m.as_object())
+                                .and_then(|m| m.get(&current_node_id.to_string()))
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("unknown")
+                                .to_string()
+                        },
+                        llm_call_id: llm_response.id.clone().unwrap_or(llm_call_id_hint),
+                        iteration: 1,
+                        finish_reason: format!("{}", llm_response.finish_reason),
+                        output: llm_response.content.clone(),
+                        duration_ms: llm_duration_ms,
+                    })
+                    .await;
+            }
 
             // Get provider name for metadata
             let provider_name = agent.llm_provider().config().provider_name().to_string();
