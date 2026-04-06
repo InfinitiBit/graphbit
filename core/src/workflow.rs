@@ -1623,7 +1623,6 @@ impl WorkflowExecutor {
                 // Accumulate content and keep the last full LlmResponse for metadata
                 let mut accumulated_content = String::new();
                 let mut last_response: Option<crate::llm::LlmResponse> = None;
-                let mut last_tool_calls_stream = String::new();
 
                 while let Some(chunk_result) = stream.next().await {
                     let chunk = chunk_result?;
@@ -1640,35 +1639,6 @@ impl WorkflowExecutor {
                                 .await;
                         }
                         accumulated_content.push_str(&chunk.content);
-                    }
-                    if !chunk.tool_calls.is_empty() {
-                        let tool_calls_stream = format!(
-                            "[tool_calls] {}",
-                            serde_json::to_string(&chunk.tool_calls)
-                                .unwrap_or_else(|_| "[]".to_string())
-                        );
-                        if tool_calls_stream != last_tool_calls_stream {
-                            let delta = if let Some(suffix) =
-                                tool_calls_stream.strip_prefix(&last_tool_calls_stream)
-                            {
-                                suffix.to_string()
-                            } else {
-                                tool_calls_stream.clone()
-                            };
-                            if !delta.is_empty() {
-                                if let Some(ref tx) = event_tx {
-                                    let _ = tx
-                                        .send(StreamEvent::Token {
-                                            node_id: current_node_id.to_string(),
-                                            node_name: token_node_name.clone(),
-                                            content: delta.clone(),
-                                        })
-                                        .await;
-                                }
-                                accumulated_content.push_str(&delta);
-                            }
-                            last_tool_calls_stream = tool_calls_stream;
-                        }
                     }
                     last_response = Some(chunk);
                 }
@@ -2121,7 +2091,6 @@ impl WorkflowExecutor {
 
             let mut accumulated_content = String::new();
             let mut last_response: Option<crate::llm::LlmResponse> = None;
-            let mut last_tool_calls_stream = String::new();
 
             while let Some(chunk_result) = stream.next().await {
                 let chunk = chunk_result?;
@@ -2137,35 +2106,6 @@ impl WorkflowExecutor {
                             .await;
                     }
                     accumulated_content.push_str(&chunk.content);
-                }
-                if !chunk.tool_calls.is_empty() {
-                    let tool_calls_stream = format!(
-                        "[tool_calls] {}",
-                        serde_json::to_string(&chunk.tool_calls)
-                            .unwrap_or_else(|_| "[]".to_string())
-                    );
-                    if tool_calls_stream != last_tool_calls_stream {
-                        let delta = if let Some(suffix) =
-                            tool_calls_stream.strip_prefix(&last_tool_calls_stream)
-                        {
-                            suffix.to_string()
-                        } else {
-                            tool_calls_stream.clone()
-                        };
-                        if !delta.is_empty() {
-                            if let Some(ref tx) = event_tx {
-                                let _ = tx
-                                    .send(StreamEvent::Token {
-                                        node_id: node_id.to_string(),
-                                        node_name: token_node_name.clone(),
-                                        content: delta.clone(),
-                                    })
-                                    .await;
-                            }
-                            accumulated_content.push_str(&delta);
-                        }
-                        last_tool_calls_stream = tool_calls_stream;
-                    }
                 }
                 last_response = Some(chunk);
             }

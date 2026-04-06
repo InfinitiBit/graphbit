@@ -9,7 +9,7 @@ use async_trait::async_trait;
 use futures::stream::{Stream, StreamExt};
 use reqwest::Client;
 use serde::{Deserialize, Deserializer, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 use tokio::time::timeout;
 
@@ -375,8 +375,8 @@ impl LlmProviderTrait for OpenAiProvider {
         let model = self.model.clone();
         let byte_stream = response.bytes_stream();
 
-        // State: byte_stream, buffer, timeout / parse error counters, and accumulated tool-call
-        // fragments from `delta.tool_calls` (required for streaming + function calling).
+        // State: byte_stream, buffer, timeout / parse error counters, accumulated tool-call
+        // fragments from `delta.tool_calls`, and which tool-call indices were announced.
         // - consecutive_parse_errors: Resets on successful parse, triggers error if too high
         // - total_parse_errors: Running count for logging
         const MAX_CONSECUTIVE_PARSE_ERRORS: u32 = 5;
@@ -390,6 +390,7 @@ impl LlmProviderTrait for OpenAiProvider {
                 0u32,
                 0u32,
                 HashMap::<u32, OpenAiStreamToolAccum>::new(),
+                HashSet::<u32>::new(),
             ),
             move |(
                 mut byte_stream,
@@ -398,6 +399,7 @@ impl LlmProviderTrait for OpenAiProvider {
                 mut consecutive_parse_errors,
                 mut total_parse_errors,
                 mut tool_call_accum,
+                mut announced_tool_indices,
             )| {
                 let model = model.clone();
                 async move {
@@ -451,6 +453,7 @@ impl LlmProviderTrait for OpenAiProvider {
                                             consecutive_parse_errors,
                                             total_parse_errors,
                                             tool_call_accum,
+                                            announced_tool_indices,
                                         ),
                                     ));
                                 }
@@ -471,6 +474,7 @@ impl LlmProviderTrait for OpenAiProvider {
                                             consecutive_parse_errors,
                                             total_parse_errors,
                                             tool_call_accum,
+                                            announced_tool_indices,
                                         ),
                                     ));
                                 }
@@ -512,10 +516,16 @@ impl LlmProviderTrait for OpenAiProvider {
                                         consecutive_parse_errors = 0;
 
                                         let OpenAiStreamChunk { id, choices, usage } = stream_chunk;
+                                        let mut tool_fragment = String::new();
                                         if let Some(choice) = choices.first() {
                                             merge_openai_stream_tool_deltas(
                                                 &mut tool_call_accum,
                                                 &choice.delta.tool_calls,
+                                            );
+                                            tool_fragment = render_tool_call_delta_fragment(
+                                                &choice.delta.tool_calls,
+                                                &tool_call_accum,
+                                                &mut announced_tool_indices,
                                             );
                                         }
                                         let streamed_tool_calls =
@@ -529,35 +539,36 @@ impl LlmProviderTrait for OpenAiProvider {
                                             .map(|reason| parse_finish_reason(Some(reason)));
 
                                         if let Some(choice) = choices.first() {
-                                            if let Some(content) = &choice.delta.content {
-                                                if !content.is_empty() {
-                                                    let mut response =
-                                                        LlmResponse::new(content.clone(), &model)
-                                                            .with_id(id.clone())
-                                                            .with_tool_calls(
-                                                                streamed_tool_calls.clone(),
-                                                            );
-                                                    if let Some(usage) = usage.clone() {
-                                                        response = response.with_usage(usage);
-                                                    }
-                                                    if let Some(finish_reason) =
-                                                        finish_reason.clone()
-                                                    {
-                                                        response = response
-                                                            .with_finish_reason(finish_reason);
-                                                    }
-                                                    return Some((
-                                                        Ok(response),
-                                                        (
-                                                            byte_stream,
-                                                            buffer,
-                                                            false,
-                                                            consecutive_parse_errors,
-                                                            total_parse_errors,
-                                                            tool_call_accum,
-                                                        ),
-                                                    ));
+                                            let content =
+                                                choice.delta.content.clone().unwrap_or_default();
+                                            let streamed_content =
+                                                format!("{tool_fragment}{content}");
+                                            if !streamed_content.is_empty() {
+                                                let mut response =
+                                                    LlmResponse::new(streamed_content, &model)
+                                                        .with_id(id.clone())
+                                                        .with_tool_calls(
+                                                            streamed_tool_calls.clone(),
+                                                        );
+                                                if let Some(usage) = usage.clone() {
+                                                    response = response.with_usage(usage);
                                                 }
+                                                if let Some(finish_reason) = finish_reason.clone() {
+                                                    response =
+                                                        response.with_finish_reason(finish_reason);
+                                                }
+                                                return Some((
+                                                    Ok(response),
+                                                    (
+                                                        byte_stream,
+                                                        buffer,
+                                                        false,
+                                                        consecutive_parse_errors,
+                                                        total_parse_errors,
+                                                        tool_call_accum,
+                                                        announced_tool_indices,
+                                                    ),
+                                                ));
                                             }
                                         }
 
@@ -587,6 +598,7 @@ impl LlmProviderTrait for OpenAiProvider {
                                                     consecutive_parse_errors,
                                                     total_parse_errors,
                                                     tool_call_accum,
+                                                    announced_tool_indices,
                                                 ),
                                             ));
                                         }
@@ -653,6 +665,7 @@ impl LlmProviderTrait for OpenAiProvider {
                                                         consecutive_parse_errors,
                                                         total_parse_errors,
                                                         tool_call_accum,
+                                                        announced_tool_indices,
                                                     ),
                                                 ));
                                             }
@@ -691,6 +704,7 @@ impl LlmProviderTrait for OpenAiProvider {
                                                     consecutive_parse_errors,
                                                     total_parse_errors,
                                                     tool_call_accum,
+                                                    announced_tool_indices,
                                                 ),
                                             ));
                                         }
@@ -911,6 +925,35 @@ fn merge_openai_stream_tool_deltas(
             }
         }
     }
+}
+
+/// Render user-facing incremental text for tool-call deltas.
+/// This keeps streaming behavior close to normal token output:
+/// - one header per tool call (when first seen)
+/// - raw argument fragments appended as they arrive
+fn render_tool_call_delta_fragment(
+    deltas: &[OpenAiDeltaToolCall],
+    acc: &HashMap<u32, OpenAiStreamToolAccum>,
+    announced: &mut HashSet<u32>,
+) -> String {
+    let mut out = String::new();
+    for d in deltas {
+        let idx = d.index.unwrap_or(0);
+        if !announced.contains(&idx) {
+            let name = d
+                .function
+                .as_ref()
+                .and_then(|f| f.name.as_deref())
+                .or_else(|| acc.get(&idx).map(|t| t.name.as_str()))
+                .unwrap_or("tool");
+            out.push_str(&format!("[tool_call:{name}] "));
+            announced.insert(idx);
+        }
+        if let Some(args) = d.function.as_ref().and_then(|f| f.arguments.as_deref()) {
+            out.push_str(args);
+        }
+    }
+    out
 }
 
 fn tool_accum_map_to_llm_calls(acc: &HashMap<u32, OpenAiStreamToolAccum>) -> Vec<LlmToolCall> {
