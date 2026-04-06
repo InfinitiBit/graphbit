@@ -197,6 +197,37 @@ fast_config = LlmConfig.anthropic(
 )
 ```
 
+#### Anthropic Prompt Caching
+
+Anthropic supports **prompt caching**, which caches the system prompt and tool definitions server-side. Cached tokens cost ~90% less than normal input tokens, yielding significant cost savings on repeated calls.
+
+- First request: caches content (one-time ~125% of normal input price)
+- Subsequent requests: cached tokens read at ~10% of normal input price
+
+```python
+from graphbit import LlmConfig, Node
+
+anthropic_config = LlmConfig.anthropic(
+    api_key=os.getenv("ANTHROPIC_API_KEY"),
+    model="claude-sonnet-4-20250514"
+)
+
+agent = Node.agent(
+    name="Research Assistant",
+    prompt=f"Analyze the following topic: {input}",
+    system_prompt="You are an expert research analyst with deep domain knowledge.",
+    llm_config=anthropic_config,
+    tools=[search_web, fetch_paper],
+    enable_prompt_caching=True  # Caches system prompt and tool definitions
+)
+```
+
+Cache token statistics are available in `result.summary()["usage"]["prompt_tokens_details"]` as `cached_tokens` and `cache_creation_tokens`.
+
+Prompt caching can also be enabled on direct `LlmClient` calls via `enable_prompt_caching=True` on `complete()`, `complete_async()`, and `chat_optimized()`.
+
+> **Note:** Prompt caching is currently supported only with Anthropic (Claude) models. The flag is safely ignored for other providers.
+
 ### MistralAI Configuration
 
 Configure MistralAI provider for high-performance multilingual models with function calling support:

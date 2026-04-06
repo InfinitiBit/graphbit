@@ -255,6 +255,8 @@ impl WorkflowResult {
         let mut total_prompt_tokens: u64 = 0;
         let mut total_completion_tokens: u64 = 0;
         let mut total_tokens: u64 = 0;
+        let mut total_cached_tokens: u64 = 0;
+        let mut total_cache_creation_tokens: u64 = 0;
         let mut total_tool_calls: u64 = 0;
 
         for node in &nodes {
@@ -271,6 +273,16 @@ impl WorkflowResult {
                     .get("total_tokens")
                     .and_then(|v| v.as_u64())
                     .unwrap_or(0);
+                if let Some(details) = usage.get("prompt_tokens_details") {
+                    total_cached_tokens += details
+                        .get("cached_tokens")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0);
+                    total_cache_creation_tokens += details
+                        .get("cache_creation_tokens")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0);
+                }
             }
             total_tool_calls += node
                 .get("total_tool_calls")
@@ -337,7 +349,8 @@ impl WorkflowResult {
                 "completion_tokens": total_completion_tokens,
                 "total_tokens": total_tokens,
                 "prompt_tokens_details": {
-                    "cached_tokens": 0,
+                    "cached_tokens": total_cached_tokens,
+                    "cache_creation_tokens": total_cache_creation_tokens,
                     "audio_tokens": 0
                 },
                 "completion_tokens_details": {

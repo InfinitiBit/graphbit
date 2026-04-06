@@ -661,6 +661,10 @@ def run_comprehensive_performance_test():
 
 ## Caching and Optimization Strategies
 
+### LLM Provider Prompt Caching (Anthropic)
+
+Anthropic supports server-side prompt caching that can reduce input token costs by up to 90% on repeated calls. Enable it with `enable_prompt_caching=True` on `Node.agent()` or `LlmClient` methods. See [Anthropic Prompt Caching](../user-guide/llm-providers.md#anthropic-prompt-caching) for details.
+
 ### Response Caching
 
 ```python
@@ -812,7 +816,8 @@ def select_optimal_model(use_case):
         "simple_tasks": "gpt-4o-mini",
         "complex_analysis": "gpt-4o", 
         "cost_sensitive": "gpt-4o-mini",
-        "highest_quality": "gpt-4o"
+        "highest_quality": "gpt-4o",
+        "cost_sensitive_anthropic": "claude-sonnet-4-20250514 + enable_prompt_caching=True"
     }
     
     recommended_model = model_recommendations.get(use_case, "gpt-4o-mini")

@@ -256,7 +256,7 @@ client = LlmClient(config, debug=True)
 
 #### Methods
 
-##### `complete(prompt, max_tokens=None, temperature=None)`
+##### `complete(prompt, max_tokens=None, temperature=None, enable_prompt_caching=False)`
 Synchronous completion with resilience.
 
 ```python
@@ -275,11 +275,12 @@ response = client.complete(
 - `prompt` (str): Input prompt
 - `max_tokens` (int, optional): Maximum tokens to generate (1-100000)
 - `temperature` (float, optional): Sampling temperature (0.0-2.0)
+- `enable_prompt_caching` (bool, optional): Enable Anthropic prompt caching. Default: `False`
 
 **Returns**: `str` - Generated text
 **Raises**: `ValueError` for invalid parameters
 
-##### `complete_async(prompt, max_tokens=None, temperature=None)`
+##### `complete_async(prompt, max_tokens=None, temperature=None, enable_prompt_caching=False)`
 Asynchronous completion with full resilience.
 
 ```python
@@ -322,7 +323,7 @@ results = asyncio.run(batch_generate())
 
 **Returns**: `Awaitable[List[str]]` - List of generated responses
 
-##### `chat_optimized(messages, max_tokens=None, temperature=None)`
+##### `chat_optimized(messages, max_tokens=None, temperature=None, enable_prompt_caching=False)`
 Optimized chat completion with message validation.
 
 ```python
@@ -346,6 +347,7 @@ result = asyncio.run(chat())
 - `messages` (List[Tuple[str, str]]): List of (role, content) tuples
 - `max_tokens` (int, optional): Maximum tokens to generate
 - `temperature` (float, optional): Sampling temperature
+- `enable_prompt_caching` (bool, optional): Enable Anthropic prompt caching. Default: `False`
 
 **Returns**: `Awaitable[str]` - Generated response
 
@@ -1056,7 +1058,7 @@ Factory class for creating different types of workflow nodes.
 
 #### Static Methods
 
-##### `Node.agent(name, prompt, agent_id=None, output_name=None, tools=None, system_prompt=None, llm_config=None, temperature=None, max_tokens=None)`
+##### `Node.agent(name, prompt, agent_id=None, output_name=None, tools=None, system_prompt=None, llm_config=None, temperature=None, max_tokens=None, enable_prompt_caching=False)`
 Create an AI agent node.
 
 ```python
@@ -1073,6 +1075,7 @@ agent = Node.agent(
     llm_config=my_llm_config,  # Optional, custom LLM configuration for this specific agent
     temperature=0.7,  # Optional, sampling temperature (0.0-2.0)
     max_tokens=500  # Optional, maximum tokens to generate
+    enable_prompt_caching=True  # Optional, enable Anthropic prompt caching
 )
 ```
 
@@ -1087,6 +1090,7 @@ agent = Node.agent(
 - `llm_config` (LlmConfig, optional): Custom LLM configuration for this specific agent
 - `temperature` (float, optional): Sampling temperature (0.0-2.0)
 - `max_tokens` (int, optional): Maximum tokens to generate
+- `enable_prompt_caching` (bool, optional): Enable Anthropic prompt caching for cost savings. Default: `False`
 
 **Returns**: `Node` instance
 

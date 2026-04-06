@@ -237,12 +237,13 @@ impl LlmClient {
 
     /// High-performance async completion with full resilience
     #[instrument(skip(self, py), fields(prompt_len = prompt.len()))]
-    #[pyo3(signature = (prompt, max_tokens=None, temperature=None))]
+    #[pyo3(signature = (prompt, max_tokens=None, temperature=None, enable_prompt_caching=false))]
     fn complete_async<'a>(
         &self,
         prompt: String,
         max_tokens: Option<i64>,
         temperature: Option<f64>,
+        enable_prompt_caching: bool,
         py: Python<'a>,
     ) -> PyResult<Bound<'a, PyAny>> {
         // Validate input
@@ -303,6 +304,7 @@ impl LlmClient {
                 prompt,
                 validated_max_tokens,
                 validated_temperature,
+                enable_prompt_caching,
             )
             .await
         })
@@ -310,12 +312,13 @@ impl LlmClient {
 
     /// Synchronous completion with resilience (use sparingly)
     #[instrument(skip(self, py), fields(prompt_len = prompt.len()))]
-    #[pyo3(signature = (prompt, max_tokens=None, temperature=None))]
+    #[pyo3(signature = (prompt, max_tokens=None, temperature=None, enable_prompt_caching=false))]
     fn complete(
         &self,
         prompt: String,
         max_tokens: Option<i64>,
         temperature: Option<f64>,
+        enable_prompt_caching: bool,
         py: Python<'_>,
     ) -> PyResult<String> {
         // Validate input
@@ -378,6 +381,7 @@ impl LlmClient {
                     prompt,
                     validated_max_tokens,
                     validated_temperature,
+                    enable_prompt_caching,
                 )
                 .await
             })
@@ -538,12 +542,13 @@ impl LlmClient {
 
     /// Optimized chat completion with message validation
     #[instrument(skip(self, py), fields(message_count = messages.len()))]
-    #[pyo3(signature = (messages, max_tokens=None, temperature=None))]
+    #[pyo3(signature = (messages, max_tokens=None, temperature=None, enable_prompt_caching=false))]
     fn chat_optimized<'a>(
         &self,
         messages: Vec<(String, String)>,
         max_tokens: Option<i64>,
         temperature: Option<f64>,
+        enable_prompt_caching: bool,
         py: Python<'a>,
     ) -> PyResult<Bound<'a, PyAny>> {
         // Validate messages
@@ -626,6 +631,9 @@ impl LlmClient {
             }
             if let Some(temp) = validated_temperature {
                 request = request.with_temperature(temp);
+            }
+            if enable_prompt_caching {
+                request = request.with_prompt_caching(true);
             }
 
             Self::execute_request_with_resilience(provider, circuit_breaker, stats, config, request)
@@ -800,12 +808,13 @@ impl LlmClient {
 
     /// Complete with full response object (synchronous)
     #[instrument(skip(self, py), fields(prompt_len = prompt.len()))]
-    #[pyo3(signature = (prompt, max_tokens=None, temperature=None))]
+    #[pyo3(signature = (prompt, max_tokens=None, temperature=None, enable_prompt_caching=false))]
     fn complete_full(
         &self,
         prompt: String,
         max_tokens: Option<i64>,
         temperature: Option<f64>,
+        enable_prompt_caching: bool,
         py: Python<'_>,
     ) -> PyResult<PyLlmResponse> {
         // Validate input
@@ -861,6 +870,7 @@ impl LlmClient {
                 prompt,
                 validated_max_tokens,
                 validated_temperature,
+                enable_prompt_caching,
             ))
         })?;
 
@@ -869,12 +879,13 @@ impl LlmClient {
 
     /// Complete with full response object (asynchronous)
     #[instrument(skip(self, py), fields(prompt_len = prompt.len()))]
-    #[pyo3(signature = (prompt, max_tokens=None, temperature=None))]
+    #[pyo3(signature = (prompt, max_tokens=None, temperature=None, enable_prompt_caching=false))]
     fn complete_full_async<'a>(
         &self,
         prompt: String,
         max_tokens: Option<i64>,
         temperature: Option<f64>,
+        enable_prompt_caching: bool,
         py: Python<'a>,
     ) -> PyResult<Bound<'a, PyAny>> {
         // Validate input
@@ -934,6 +945,7 @@ impl LlmClient {
                 prompt,
                 validated_max_tokens,
                 validated_temperature,
+                enable_prompt_caching,
             )
             .await?;
 
@@ -952,6 +964,7 @@ impl LlmClient {
         prompt: String,
         max_tokens: Option<u32>,
         temperature: Option<f32>,
+        enable_prompt_caching: bool,
     ) -> PyResult<String> {
         let mut request = LlmRequest::new(prompt);
         if let Some(tokens) = max_tokens {
@@ -959,6 +972,9 @@ impl LlmClient {
         }
         if let Some(temp) = temperature {
             request = request.with_temperature(temp);
+        }
+        if enable_prompt_caching {
+            request = request.with_prompt_caching(true);
         }
 
         let response = Self::execute_request_with_resilience(
@@ -982,6 +998,7 @@ impl LlmClient {
         prompt: String,
         max_tokens: Option<u32>,
         temperature: Option<f32>,
+        enable_prompt_caching: bool,
     ) -> PyResult<graphbit_core::llm::LlmResponse> {
         let mut request = LlmRequest::new(prompt);
         if let Some(tokens) = max_tokens {
@@ -989,6 +1006,9 @@ impl LlmClient {
         }
         if let Some(temp) = temperature {
             request = request.with_temperature(temp);
+        }
+        if enable_prompt_caching {
+            request = request.with_prompt_caching(true);
         }
 
         Self::execute_request_with_resilience(provider, circuit_breaker, stats, config, request)
