@@ -1623,6 +1623,7 @@ impl WorkflowExecutor {
                 // Accumulate content and keep the last full LlmResponse for metadata
                 let mut accumulated_content = String::new();
                 let mut last_response: Option<crate::llm::LlmResponse> = None;
+                let mut last_tool_calls_stream = String::new();
 
                 while let Some(chunk_result) = stream.next().await {
                     let chunk = chunk_result?;
@@ -1639,6 +1640,35 @@ impl WorkflowExecutor {
                                 .await;
                         }
                         accumulated_content.push_str(&chunk.content);
+                    }
+                    if !chunk.tool_calls.is_empty() {
+                        let tool_calls_stream = format!(
+                            "[tool_calls] {}",
+                            serde_json::to_string(&chunk.tool_calls)
+                                .unwrap_or_else(|_| "[]".to_string())
+                        );
+                        if tool_calls_stream != last_tool_calls_stream {
+                            let delta = if let Some(suffix) =
+                                tool_calls_stream.strip_prefix(&last_tool_calls_stream)
+                            {
+                                suffix.to_string()
+                            } else {
+                                tool_calls_stream.clone()
+                            };
+                            if !delta.is_empty() {
+                                if let Some(ref tx) = event_tx {
+                                    let _ = tx
+                                        .send(StreamEvent::Token {
+                                            node_id: current_node_id.to_string(),
+                                            node_name: token_node_name.clone(),
+                                            content: delta.clone(),
+                                        })
+                                        .await;
+                                }
+                                accumulated_content.push_str(&delta);
+                            }
+                            last_tool_calls_stream = tool_calls_stream;
+                        }
                     }
                     last_response = Some(chunk);
                 }
@@ -1687,7 +1717,10 @@ impl WorkflowExecutor {
                         llm_call_id: llm_response.id.clone().unwrap_or(llm_call_id_hint),
                         iteration: 1,
                         finish_reason: format!("{}", llm_response.finish_reason),
-                        output: llm_response.content.clone(),
+                        output: Self::append_tool_calls_to_llm_output(
+                            &llm_response.content,
+                            &llm_response.tool_calls,
+                        ),
                         duration_ms: llm_duration_ms,
                     })
                     .await;
@@ -2088,6 +2121,7 @@ impl WorkflowExecutor {
 
             let mut accumulated_content = String::new();
             let mut last_response: Option<crate::llm::LlmResponse> = None;
+            let mut last_tool_calls_stream = String::new();
 
             while let Some(chunk_result) = stream.next().await {
                 let chunk = chunk_result?;
@@ -2103,6 +2137,35 @@ impl WorkflowExecutor {
                             .await;
                     }
                     accumulated_content.push_str(&chunk.content);
+                }
+                if !chunk.tool_calls.is_empty() {
+                    let tool_calls_stream = format!(
+                        "[tool_calls] {}",
+                        serde_json::to_string(&chunk.tool_calls)
+                            .unwrap_or_else(|_| "[]".to_string())
+                    );
+                    if tool_calls_stream != last_tool_calls_stream {
+                        let delta = if let Some(suffix) =
+                            tool_calls_stream.strip_prefix(&last_tool_calls_stream)
+                        {
+                            suffix.to_string()
+                        } else {
+                            tool_calls_stream.clone()
+                        };
+                        if !delta.is_empty() {
+                            if let Some(ref tx) = event_tx {
+                                let _ = tx
+                                    .send(StreamEvent::Token {
+                                        node_id: node_id.to_string(),
+                                        node_name: token_node_name.clone(),
+                                        content: delta.clone(),
+                                    })
+                                    .await;
+                            }
+                            accumulated_content.push_str(&delta);
+                        }
+                        last_tool_calls_stream = tool_calls_stream;
+                    }
                 }
                 last_response = Some(chunk);
             }
@@ -2136,7 +2199,10 @@ impl WorkflowExecutor {
                     llm_call_id: llm_response.id.clone().unwrap_or(initial_llm_call_id),
                     iteration: 1,
                     finish_reason: format!("{}", llm_response.finish_reason),
-                    output: llm_response.content.clone(),
+                    output: Self::append_tool_calls_to_llm_output(
+                        &llm_response.content,
+                        &llm_response.tool_calls,
+                    ),
                     duration_ms: llm_duration_ms,
                 })
                 .await;
@@ -2651,6 +2717,29 @@ impl WorkflowExecutor {
         // Simple topological sort - can be enhanced for better parallelism
         let nodes: Vec<WorkflowNode> = graph.get_nodes().values().cloned().collect();
         Ok(nodes)
+    }
+
+    /// Format LLM output for streaming lifecycle events.
+    /// If tool calls are present, append them so function-call fragments are visible
+    /// in `llm_call_completed.output` without introducing a new event type.
+    fn append_tool_calls_to_llm_output(
+        content: &str,
+        tool_calls: &[crate::llm::LlmToolCall],
+    ) -> String {
+        if tool_calls.is_empty() {
+            return content.to_string();
+        }
+
+        let tool_calls_json =
+            serde_json::to_string(tool_calls).unwrap_or_else(|_| "[]".to_string());
+        if content.contains("[tool_calls]") {
+            return content.to_string();
+        }
+        if content.trim().is_empty() {
+            format!("[tool_calls] {tool_calls_json}")
+        } else {
+            format!("{content}\n[tool_calls] {tool_calls_json}")
+        }
     }
 
     /// Create with custom concurrency configuration

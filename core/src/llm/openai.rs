@@ -944,12 +944,10 @@ fn tool_accum_map_to_llm_calls(acc: &HashMap<u32, OpenAiStreamToolAccum>) -> Vec
         .collect()
 }
 
-/// Align with non-streaming [`OpenAiProvider::parse_response`]: non-empty assistant text when the
-/// model only requests tools (`content` is null in the REST response).
-fn stream_assistant_text_for_tool_calls(mut content: String, tool_calls: &[LlmToolCall]) -> String {
-    if content.trim().is_empty() && !tool_calls.is_empty() {
-        content = "I'll help you with that using the available tools.".to_string();
-    }
+/// For streaming, keep textual content as-is; tool-call details are surfaced via
+/// `LlmResponse.tool_calls` and consumed by higher layers.
+fn stream_assistant_text_for_tool_calls(content: String, tool_calls: &[LlmToolCall]) -> String {
+    let _ = tool_calls;
     content
 }
 

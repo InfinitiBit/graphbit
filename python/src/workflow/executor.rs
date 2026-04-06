@@ -956,6 +956,7 @@ impl Executor {
                 let mut stream = llm_provider.stream(req).await?;
                 let mut accumulated_content = String::new();
                 let mut last_response: Option<graphbit_core::llm::LlmResponse> = None;
+                let mut last_tool_calls_stream = String::new();
                 while let Some(chunk_result) = stream.next().await {
                     let chunk = chunk_result?;
                     if !chunk.content.is_empty() {
@@ -967,6 +968,33 @@ impl Executor {
                             })
                             .await;
                         accumulated_content.push_str(&chunk.content);
+                    }
+                    if !chunk.tool_calls.is_empty() {
+                        let tool_calls_stream = format!(
+                            "[tool_calls] {}",
+                            serde_json::to_string(&chunk.tool_calls)
+                                .unwrap_or_else(|_| "[]".to_string())
+                        );
+                        if tool_calls_stream != last_tool_calls_stream {
+                            let delta = if let Some(suffix) =
+                                tool_calls_stream.strip_prefix(&last_tool_calls_stream)
+                            {
+                                suffix.to_string()
+                            } else {
+                                tool_calls_stream.clone()
+                            };
+                            if !delta.is_empty() {
+                                let _ = event_tx
+                                    .send(StreamEvent::Token {
+                                        node_id: node_id.to_string(),
+                                        node_name: node_name.to_string(),
+                                        content: delta.clone(),
+                                    })
+                                    .await;
+                                accumulated_content.push_str(&delta);
+                            }
+                            last_tool_calls_stream = tool_calls_stream;
+                        }
                     }
                     last_response = Some(chunk);
                 }
@@ -999,7 +1027,10 @@ impl Executor {
                     llm_call_id: next_call_id.clone(),
                     iteration: llm_iteration,
                     finish_reason: format!("{}", next_response.finish_reason),
-                    output: next_response.content.clone(),
+                    output: Self::append_tool_calls_to_llm_output(
+                        &next_response.content,
+                        &next_response.tool_calls,
+                    ),
                     duration_ms: llm_duration_ms,
                 })
                 .await;
@@ -1159,6 +1190,26 @@ impl Executor {
             );
 
             context.metadata.insert(key, node_meta);
+        }
+    }
+
+    fn append_tool_calls_to_llm_output(
+        content: &str,
+        tool_calls: &[graphbit_core::llm::LlmToolCall],
+    ) -> String {
+        if tool_calls.is_empty() {
+            return content.to_string();
+        }
+
+        let tool_calls_json =
+            serde_json::to_string(tool_calls).unwrap_or_else(|_| "[]".to_string());
+        if content.contains("[tool_calls]") {
+            return content.to_string();
+        }
+        if content.trim().is_empty() {
+            format!("[tool_calls] {tool_calls_json}")
+        } else {
+            format!("{content}\n[tool_calls] {tool_calls_json}")
         }
     }
 
