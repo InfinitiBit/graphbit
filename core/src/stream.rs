@@ -5,8 +5,8 @@
 //!
 //! # Stream Modes
 //!
-//! - `Updates` — workflow/node lifecycle events only (default)
-//! - `Messages` — real-time LLM tokens + LLM/tool call lifecycle events
+//! - `Updates` — all non-token events (workflow/node + LLM/tool lifecycle)
+//! - `Messages` — real-time LLM tokens + terminal workflow event
 //! - `All` — all event types (`Updates` + `Messages`)
 //!
 //! # Event Types
@@ -15,7 +15,7 @@
 //! 1. **Workflow/Node lifecycle** (`Updates`/`All`): `WorkflowStarted`, `NodeStarted`,
 //!    `NodeCompleted`, `NodeFailed`, `WorkflowCompleted`, `WorkflowFailed`
 //! 2. **Token-level** (`Messages`/`All`): `Token`
-//! 3. **Execution-level** (`Messages`/`All`): `LlmCallStarted`, `LlmCallCompleted`, `ToolCallStarted`,
+//! 3. **Execution-level** (`Updates`/`All`): `LlmCallStarted`, `LlmCallCompleted`, `ToolCallStarted`,
 //!    `ToolCallCompleted`, `ToolCallFailed`
 
 use crate::errors::GraphBitError;
@@ -29,9 +29,9 @@ use serde::{Deserialize, Serialize};
 /// Controls the granularity of events emitted during streaming execution.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum StreamMode {
-    /// Workflow/node lifecycle events only (default).
+    /// All non-token events (workflow/node + LLM/tool lifecycle) (default).
     Updates,
-    /// Real-time LLM tokens + LLM/tool call lifecycle events.
+    /// Real-time LLM tokens + terminal workflow event.
     Messages,
     /// All events (`Updates` + `Messages`).
     All,
@@ -53,7 +53,7 @@ impl StreamMode {
     /// Whether this mode emits `ToolCall*` events.
     #[inline]
     pub fn emits_tool_events(&self) -> bool {
-        matches!(self, Self::Messages | Self::All)
+        matches!(self, Self::Updates | Self::All)
     }
 
     /// Parse a stream mode from a string (case-insensitive).
@@ -167,7 +167,7 @@ pub enum StreamEvent {
         content: String,
     },
 
-    // ── Tool call events (Messages / All) ────────────────────────────────
+    // ── LLM/tool lifecycle events (Updates / All) ────────────────────────
     /// An LLM call started within an agent node execution.
     #[serde(rename = "llm_call_started")]
     LlmCallStarted {
@@ -202,7 +202,7 @@ pub enum StreamEvent {
         duration_ms: f64,
     },
 
-    // ── Tool call events (Messages / All) ────────────────────────────────
+    // ── Tool call events (Updates / All) ─────────────────────────────────
     /// A tool call started within an agent node's ReAct loop.
     #[serde(rename = "tool_call_started")]
     ToolCallStarted {

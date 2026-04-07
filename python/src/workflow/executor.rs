@@ -731,15 +731,7 @@ impl Executor {
         use StreamEvent::*;
         match stream_mode {
             StreamMode::All => true,
-            StreamMode::Updates => matches!(
-                event,
-                WorkflowStarted { .. }
-                    | NodeStarted { .. }
-                    | NodeCompleted { .. }
-                    | NodeFailed { .. }
-                    | WorkflowCompleted { .. }
-                    | WorkflowFailed { .. }
-            ),
+            StreamMode::Updates => !matches!(event, Token { .. }),
             StreamMode::Messages => matches!(
                 event,
                 Token { .. } | WorkflowCompleted { .. } | WorkflowFailed { .. }
@@ -2351,7 +2343,7 @@ fn stream_event_schema_dict<'py>(py: Python<'py>) -> PyResult<Bound<'py, PyDict>
     let modes = PyDict::new(py);
     modes.set_item(
         "updates",
-        "Node/workflow lifecycle events only (no token/llm/tool-call details)",
+        "Node/workflow lifecycle + LLM lifecycle + tool lifecycle (no token streaming)",
     )?;
     modes.set_item(
         "messages",

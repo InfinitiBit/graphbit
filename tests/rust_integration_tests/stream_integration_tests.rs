@@ -350,9 +350,9 @@ async fn test_workflow_started_event_fields() {
 #[test]
 fn test_stream_mode_emits_flags() {
     assert!(!StreamMode::Updates.emits_tokens());
-    assert!(!StreamMode::Updates.emits_tool_events());
+    assert!(StreamMode::Updates.emits_tool_events());
     assert!(StreamMode::Messages.emits_tokens());
-    assert!(StreamMode::Messages.emits_tool_events());
+    assert!(!StreamMode::Messages.emits_tool_events());
     assert!(StreamMode::All.emits_tokens());
     assert!(StreamMode::All.emits_tool_events());
 }

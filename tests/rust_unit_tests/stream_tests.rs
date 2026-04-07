@@ -38,8 +38,8 @@ fn test_stream_mode_emits_tokens() {
 
 #[test]
 fn test_stream_mode_emits_tool_events() {
-    assert!(!StreamMode::Updates.emits_tool_events());
-    assert!(StreamMode::Messages.emits_tool_events());
+    assert!(StreamMode::Updates.emits_tool_events());
+    assert!(!StreamMode::Messages.emits_tool_events());
     assert!(StreamMode::All.emits_tool_events());
 }
 
