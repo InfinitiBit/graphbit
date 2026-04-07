@@ -13,6 +13,7 @@ use graphbit_core::{DecodeContext, EncodeContext, Enforcer, GuardRail};
 use pyo3::exceptions::PyStopIteration;
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyDict};
+use serde::Serialize;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tracing::{debug, error, info, instrument, warn};
@@ -549,20 +550,16 @@ impl Executor {
                         node_name,
                         output,
                     } => {
-                        let is_tool_calls_required = output
-                            .get("type")
-                            .and_then(|v| v.as_str())
-                            .map(|v| v == "tool_calls_required")
-                            .unwrap_or(false);
-
-                        if !is_tool_calls_required {
-                            let _ = event_tx
-                                .send(StreamEvent::NodeCompleted {
+                        if !Executor::is_tool_calls_required(&output) {
+                            Executor::send_stream_event(
+                                &event_tx,
+                                StreamEvent::NodeCompleted {
                                     node_id,
                                     node_name,
                                     output,
-                                })
-                                .await;
+                                },
+                            )
+                            .await;
                             continue;
                         }
 
@@ -589,22 +586,26 @@ impl Executor {
                                         finish_reason,
                                     ),
                                 );
-                                let _ = event_tx
-                                    .send(StreamEvent::NodeCompleted {
+                                Executor::send_stream_event(
+                                    &event_tx,
+                                    StreamEvent::NodeCompleted {
                                         node_id,
                                         node_name,
                                         output: serde_json::Value::String(final_output),
-                                    })
-                                    .await;
+                                    },
+                                )
+                                .await;
                             }
                             Err(e) => {
                                 let err = e.to_string();
-                                let _ = event_tx
-                                    .send(StreamEvent::WorkflowFailed {
+                                Executor::send_stream_event(
+                                    &event_tx,
+                                    StreamEvent::WorkflowFailed {
                                         error: err.clone(),
                                         error_type: graphbit_core::error_type_from_string(&err),
-                                    })
-                                    .await;
+                                    },
+                                )
+                                .await;
                                 break;
                             }
                         }
@@ -625,12 +626,14 @@ impl Executor {
                                 &finish_reason,
                             );
                         }
-                        let _ = event_tx
-                            .send(StreamEvent::WorkflowCompleted { context })
-                            .await;
+                        Executor::send_stream_event(
+                            &event_tx,
+                            StreamEvent::WorkflowCompleted { context },
+                        )
+                        .await;
                     }
                     other => {
-                        let _ = event_tx.send(other).await;
+                        Executor::send_stream_event(&event_tx, other).await;
                     }
                 }
             }
@@ -645,6 +648,21 @@ impl Executor {
 } // end #[pymethods] impl Executor
 
 impl Executor {
+    #[inline]
+    fn is_tool_calls_required(output: &serde_json::Value) -> bool {
+        output
+            .get("type")
+            .and_then(|v| v.as_str())
+            .is_some_and(|kind| kind == "tool_calls_required")
+    }
+
+    async fn send_stream_event(
+        event_tx: &tokio::sync::mpsc::Sender<StreamEvent>,
+        event: StreamEvent,
+    ) {
+        let _ = event_tx.send(event).await;
+    }
+
     async fn run_live_tool_loop_for_node(
         node_id: &str,
         node_name: &str,
@@ -814,8 +832,9 @@ impl Executor {
 
             if loop_iteration > 1 {
                 for tc in &python_tool_calls {
-                    let _ = event_tx
-                        .send(StreamEvent::ToolCallStarted {
+                    Self::send_stream_event(
+                        event_tx,
+                        StreamEvent::ToolCallStarted {
                             node_id: node_id.to_string(),
                             node_name: node_name.to_string(),
                             tool_name: tc
@@ -832,8 +851,9 @@ impl Executor {
                                 .get("parameters")
                                 .cloned()
                                 .unwrap_or(serde_json::json!({})),
-                        })
-                        .await;
+                        },
+                    )
+                    .await;
                 }
             }
 
@@ -868,16 +888,18 @@ impl Executor {
                         .unwrap_or(serde_json::Value::Null);
                     let output_text = output.as_str().unwrap_or("").to_string();
                     messages.push(LlmMessage::tool(&tool_call_id, &output_text));
-                    let _ = event_tx
-                        .send(StreamEvent::ToolCallCompleted {
+                    Self::send_stream_event(
+                        event_tx,
+                        StreamEvent::ToolCallCompleted {
                             node_id: node_id.to_string(),
                             node_name: node_name.to_string(),
                             tool_name: tool_name.clone(),
                             tool_call_id: tool_call_id.clone(),
                             output: output.clone(),
                             duration_ms: latency_ms,
-                        })
-                        .await;
+                        },
+                    )
+                    .await;
                 } else {
                     let err = result
                         .get("error")
@@ -885,16 +907,18 @@ impl Executor {
                         .unwrap_or("Tool execution failed")
                         .to_string();
                     messages.push(LlmMessage::tool(&tool_call_id, &err));
-                    let _ = event_tx
-                        .send(StreamEvent::ToolCallFailed {
+                    Self::send_stream_event(
+                        event_tx,
+                        StreamEvent::ToolCallFailed {
                             node_id: node_id.to_string(),
                             node_name: node_name.to_string(),
                             tool_name: tool_name.clone(),
                             tool_call_id: tool_call_id.clone(),
                             error: err.clone(),
                             error_type: graphbit_core::error_type_from_string(&err),
-                        })
-                        .await;
+                        },
+                    )
+                    .await;
                 }
 
                 let mut meta = result.clone();
@@ -923,15 +947,17 @@ impl Executor {
 
             llm_iteration += 1;
             let provisional_call_id = format!("{node_id}-llm-{llm_iteration}");
-            let _ = event_tx
-                .send(StreamEvent::LlmCallStarted {
+            Self::send_stream_event(
+                event_tx,
+                StreamEvent::LlmCallStarted {
                     node_id: node_id.to_string(),
                     node_name: node_name.to_string(),
                     llm_call_id: provisional_call_id.clone(),
                     iteration: llm_iteration,
                     model: llm_config.model_name().to_string(),
-                })
-                .await;
+                },
+            )
+            .await;
 
             let mut req = LlmRequest::with_messages(messages.clone());
             for tool in &llm_tools {
@@ -959,13 +985,15 @@ impl Executor {
                 while let Some(chunk_result) = stream.next().await {
                     let chunk = chunk_result?;
                     if !chunk.content.is_empty() {
-                        let _ = event_tx
-                            .send(StreamEvent::Token {
+                        Self::send_stream_event(
+                            event_tx,
+                            StreamEvent::Token {
                                 node_id: node_id.to_string(),
                                 node_name: node_name.to_string(),
                                 content: chunk.content.clone(),
-                            })
-                            .await;
+                            },
+                        )
+                        .await;
                         accumulated_content.push_str(&chunk.content);
                     }
                     last_response = Some(chunk);
@@ -992,8 +1020,9 @@ impl Executor {
                 .id
                 .clone()
                 .unwrap_or_else(|| provisional_call_id.clone());
-            let _ = event_tx
-                .send(StreamEvent::LlmCallCompleted {
+            Self::send_stream_event(
+                event_tx,
+                StreamEvent::LlmCallCompleted {
                     node_id: node_id.to_string(),
                     node_name: node_name.to_string(),
                     llm_call_id: next_call_id.clone(),
@@ -1004,8 +1033,9 @@ impl Executor {
                         &next_response.tool_calls,
                     ),
                     duration_ms: llm_duration_ms,
-                })
-                .await;
+                },
+            )
+            .await;
 
             executions_meta.push(serde_json::json!({
                 "type": "llm_call",
@@ -2070,6 +2100,11 @@ impl Executor {
 /// The dict always has an `"event"` key with the event type name, plus
 /// all event fields as additional keys — matching the JSON serialisation
 /// defined in `core/src/stream.rs`.
+#[inline]
+fn json_to_string_lossy<T: Serialize>(value: &T) -> String {
+    serde_json::to_string(value).unwrap_or_default()
+}
+
 fn stream_event_to_dict<'py>(
     py: Python<'py>,
     event: StreamEvent,
@@ -2106,7 +2141,7 @@ fn stream_event_to_dict<'py>(
                     dict.set_item("output", s)?;
                 }
                 other => {
-                    dict.set_item("output", serde_json::to_string(&other).unwrap_or_default())?;
+                    dict.set_item("output", json_to_string_lossy(&other))?;
                 }
             }
         }
@@ -2144,10 +2179,7 @@ fn stream_event_to_dict<'py>(
             dict.set_item("node_name", node_name)?;
             dict.set_item("tool_name", tool_name)?;
             dict.set_item("tool_call_id", tool_call_id)?;
-            dict.set_item(
-                "parameters",
-                serde_json::to_string(&parameters).unwrap_or_default(),
-            )?;
+            dict.set_item("parameters", json_to_string_lossy(&parameters))?;
         }
         ToolCallCompleted {
             node_id,
@@ -2162,7 +2194,7 @@ fn stream_event_to_dict<'py>(
             dict.set_item("node_name", node_name)?;
             dict.set_item("tool_name", tool_name)?;
             dict.set_item("tool_call_id", tool_call_id)?;
-            dict.set_item("output", serde_json::to_string(&output).unwrap_or_default())?;
+            dict.set_item("output", json_to_string_lossy(&output))?;
             dict.set_item("duration_ms", duration_ms)?;
         }
         ToolCallFailed {
@@ -2222,10 +2254,7 @@ fn stream_event_to_dict<'py>(
             );
             dict.set_item("event", "workflow_completed")?;
             dict.set_item("result", WorkflowResult::new(context.clone()))?;
-            dict.set_item(
-                "outputs",
-                serde_json::to_string(&context.node_outputs).unwrap_or_default(),
-            )?;
+            dict.set_item("outputs", json_to_string_lossy(&context.node_outputs))?;
         }
         WorkflowFailed { error, error_type } => {
             dict.set_item("event", "workflow_failed")?;
