@@ -12,7 +12,7 @@ use graphbit_core::workflow::WorkflowExecutor as CoreWorkflowExecutor;
 use graphbit_core::{DecodeContext, EncodeContext, Enforcer, GuardRail};
 use pyo3::exceptions::PyStopIteration;
 use pyo3::prelude::*;
-use pyo3::types::{PyAny, PyDict};
+use pyo3::types::{PyAny, PyDict, PyList};
 use serde::Serialize;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -23,6 +23,8 @@ use crate::errors::{timeout_error, to_py_runtime_error, validation_error};
 use crate::guardrail::GuardRailPolicyConfig;
 use crate::llm::config::LlmConfig;
 use crate::runtime::get_runtime;
+
+type TimedStreamEvent = (StreamEvent, String);
 
 /// Execution mode for different performance characteristics
 #[derive(Debug, Clone, Copy)]
@@ -440,6 +442,9 @@ impl Executor {
     /// for event in executor.execute_streaming(workflow, stream_mode="updates"):
     ///     print(event)
     /// ```
+    ///
+    /// To inspect all event types and fields programmatically, use:
+    /// `Executor.get_stream_event_schema()`.
     #[pyo3(signature = (workflow, policy=None, stream_mode=None))]
     fn execute_streaming(
         &mut self,
@@ -481,7 +486,7 @@ impl Executor {
         // Internal channel from core executor -> processor
         let (core_event_tx, mut core_event_rx) = tokio::sync::mpsc::channel::<StreamEvent>(256);
         // Public channel from processor -> Python iterator
-        let (event_tx, event_rx) = tokio::sync::mpsc::channel::<StreamEvent>(256);
+        let (event_tx, event_rx) = tokio::sync::mpsc::channel::<TimedStreamEvent>(256);
 
         // Stream mode for follow-up LLM calls in the live tool loop (Messages/All → token stream).
         let tool_loop_stream_mode = mode;
@@ -677,6 +682,19 @@ impl Executor {
             workflow_name: workflow.inner.name.clone(),
         })
     }
+
+    /// Return a user-friendly schema for streaming events.
+    ///
+    /// The schema includes:
+    /// - available stream modes and what they emit
+    /// - all event types
+    /// - per-event field names, field types, and descriptions
+    ///
+    /// This is documentation/introspection only and does not execute a workflow.
+    #[staticmethod]
+    fn get_stream_event_schema<'py>(py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
+        stream_event_schema_dict(py)
+    }
 } // end #[pymethods] impl Executor
 
 impl Executor {
@@ -786,7 +804,7 @@ impl Executor {
         llm_provider: &graphbit_core::llm::LlmProvider,
         req: graphbit_core::llm::LlmRequest,
         stream_mode: StreamMode,
-        event_tx: &tokio::sync::mpsc::Sender<StreamEvent>,
+        event_tx: &tokio::sync::mpsc::Sender<TimedStreamEvent>,
         node_id: &str,
         node_name: &str,
         empty_stream_warn_message: &str,
@@ -832,12 +850,13 @@ impl Executor {
     }
 
     async fn send_stream_event(
-        event_tx: &tokio::sync::mpsc::Sender<StreamEvent>,
+        event_tx: &tokio::sync::mpsc::Sender<TimedStreamEvent>,
         event: StreamEvent,
     ) {
         let event_name = Self::stream_event_name(&event);
+        let event_time = chrono::Utc::now().to_rfc3339();
         let started_at = Instant::now();
-        if event_tx.send(event).await.is_err() {
+        if event_tx.send((event, event_time)).await.is_err() {
             tracing::debug!(event = event_name, "Stream receiver dropped; event not delivered");
             return;
         }
@@ -859,7 +878,7 @@ impl Executor {
         workflow: &graphbit_core::workflow::Workflow,
         llm_config: graphbit_core::llm::LlmConfig,
         guardrail_enforcer: Option<Arc<Enforcer>>,
-        event_tx: &tokio::sync::mpsc::Sender<StreamEvent>,
+        event_tx: &tokio::sync::mpsc::Sender<TimedStreamEvent>,
         stream_mode: StreamMode,
     ) -> Result<
         (String, Vec<serde_json::Value>, Vec<String>, String),
@@ -2222,13 +2241,313 @@ fn json_to_string_lossy<T: Serialize>(value: &T) -> String {
     serde_json::to_string(value).unwrap_or_default()
 }
 
+#[inline]
+fn event_category_phase(event: &StreamEvent) -> (&'static str, &'static str) {
+    use graphbit_core::stream::StreamEvent::*;
+    match event {
+        StreamEvent::WorkflowStarted { .. } => ("workflow", "started"),
+        StreamEvent::WorkflowCompleted { .. } => ("workflow", "completed"),
+        StreamEvent::WorkflowFailed { .. } => ("workflow", "failed"),
+        NodeStarted { .. } => ("node", "started"),
+        NodeCompleted { .. } => ("node", "completed"),
+        NodeFailed { .. } => ("node", "failed"),
+        Token { .. } => ("llm", "token"),
+        LlmCallStarted { .. } => ("llm", "started"),
+        LlmCallCompleted { .. } => ("llm", "completed"),
+        ToolCallStarted { .. } => ("tool", "started"),
+        ToolCallCompleted { .. } => ("tool", "completed"),
+        ToolCallFailed { .. } => ("tool", "failed"),
+    }
+}
+
+fn make_event_schema<'py>(
+    py: Python<'py>,
+    event: &str,
+    description: &str,
+    category_value: &str,
+    phase_value: &str,
+    fields: &[(&str, &str, &str)],
+) -> PyResult<Bound<'py, PyDict>> {
+    let event_dict = PyDict::new(py);
+    event_dict.set_item("event", event)?;
+    event_dict.set_item("description", description)?;
+    event_dict.set_item("category_value", category_value)?;
+    event_dict.set_item("phase_value", phase_value)?;
+
+    let fields_list = PyList::empty(py);
+    let time_field = PyDict::new(py);
+    time_field.set_item("name", "time")?;
+    time_field.set_item("type", "str")?;
+    time_field.set_item("description", "Event timestamp in RFC3339 format (UTC)")?;
+    fields_list.append(time_field)?;
+    let category_field = PyDict::new(py);
+    category_field.set_item("name", "category")?;
+    category_field.set_item("type", "str")?;
+    category_field.set_item("description", "Generic event family: workflow | node | llm | tool")?;
+    fields_list.append(category_field)?;
+    let phase_field = PyDict::new(py);
+    phase_field.set_item("name", "phase")?;
+    phase_field.set_item("type", "str")?;
+    phase_field.set_item(
+        "description",
+        "Generic lifecycle phase: started | completed | failed | token",
+    )?;
+    fields_list.append(phase_field)?;
+
+    for (name, field_type, field_description) in fields {
+        let field_dict = PyDict::new(py);
+        field_dict.set_item("name", *name)?;
+        field_dict.set_item("type", *field_type)?;
+        field_dict.set_item("description", *field_description)?;
+        fields_list.append(field_dict)?;
+    }
+    event_dict.set_item("fields", fields_list)?;
+    Ok(event_dict)
+}
+
+fn stream_event_schema_dict<'py>(py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
+    let schema = PyDict::new(py);
+    schema.set_item(
+        "description",
+        "Streaming workflow event schema for execute_streaming()",
+    )?;
+    schema.set_item("version", 1)?;
+    let dimensions = PyDict::new(py);
+    dimensions.set_item(
+        "event",
+        "Exact concrete event name (stable, specific contract)",
+    )?;
+    dimensions.set_item(
+        "category",
+        "Generic event family for grouping/filtering: workflow | node | llm | tool",
+    )?;
+    dimensions.set_item(
+        "phase",
+        "Generic lifecycle state: started | completed | failed | token",
+    )?;
+    schema.set_item("generic_dimensions", dimensions)?;
+
+    let modes = PyDict::new(py);
+    modes.set_item(
+        "updates",
+        "Node/workflow lifecycle events only (no token/tool/llm call details)",
+    )?;
+    modes.set_item(
+        "messages",
+        "Updates + token streaming + LLM call lifecycle + tool call lifecycle",
+    )?;
+    modes.set_item(
+        "all",
+        "Currently equivalent to messages; reserved for future additional categories",
+    )?;
+    schema.set_item("stream_modes", modes)?;
+    let event_groups = PyDict::new(py);
+    event_groups.set_item(
+        "workflow",
+        vec!["workflow_started", "workflow_completed", "workflow_failed"],
+    )?;
+    event_groups.set_item("node", vec!["node_started", "node_completed", "node_failed"])?;
+    event_groups.set_item("llm", vec!["token", "llm_call_started", "llm_call_completed"])?;
+    event_groups.set_item(
+        "tool",
+        vec![
+            "tool_call_started",
+            "tool_call_completed",
+            "tool_call_failed",
+        ],
+    )?;
+    schema.set_item("event_groups", event_groups)?;
+
+    let events = PyList::empty(py);
+    events.append(make_event_schema(
+        py,
+        "workflow_started",
+        "Workflow execution has begun",
+        "workflow",
+        "started",
+        &[
+            ("event", "str", "Event type"),
+            ("workflow_id", "str", "Workflow UUID"),
+            ("workflow_name", "str", "Workflow display name"),
+            ("total_nodes", "int", "Total number of nodes in the workflow"),
+        ],
+    )?)?;
+    events.append(make_event_schema(
+        py,
+        "node_started",
+        "Node execution has begun",
+        "node",
+        "started",
+        &[
+            ("event", "str", "Event type"),
+            ("node_id", "str", "Node UUID"),
+            ("node_name", "str", "Node display name"),
+        ],
+    )?)?;
+    events.append(make_event_schema(
+        py,
+        "node_completed",
+        "Node finished successfully",
+        "node",
+        "completed",
+        &[
+            ("event", "str", "Event type"),
+            ("node_id", "str", "Node UUID"),
+            ("node_name", "str", "Node display name"),
+            ("output", "str", "Node output serialized for Python stream consumers"),
+        ],
+    )?)?;
+    events.append(make_event_schema(
+        py,
+        "node_failed",
+        "Node failed with an error",
+        "node",
+        "failed",
+        &[
+            ("event", "str", "Event type"),
+            ("node_id", "str", "Node UUID"),
+            ("node_name", "str", "Node display name"),
+            ("error", "str", "Human-readable error message"),
+            ("error_type", "str", "Error class hint (e.g. runtime_error, timeout_error)"),
+        ],
+    )?)?;
+    events.append(make_event_schema(
+        py,
+        "token",
+        "Incremental token/delta chunk from an LLM stream",
+        "llm",
+        "token",
+        &[
+            ("event", "str", "Event type"),
+            ("node_id", "str", "Node UUID"),
+            ("node_name", "str", "Node display name"),
+            ("content", "str", "Token or chunk text"),
+        ],
+    )?)?;
+    events.append(make_event_schema(
+        py,
+        "llm_call_started",
+        "An LLM call started",
+        "llm",
+        "started",
+        &[
+            ("event", "str", "Event type"),
+            ("node_id", "str", "Node UUID"),
+            ("node_name", "str", "Node display name"),
+            ("llm_call_id", "str", "Provider call identifier (or generated fallback)"),
+            ("iteration", "int", "1-based call number for that node timeline"),
+            ("model", "str", "Model name used for this call"),
+        ],
+    )?)?;
+    events.append(make_event_schema(
+        py,
+        "llm_call_completed",
+        "An LLM call completed",
+        "llm",
+        "completed",
+        &[
+            ("event", "str", "Event type"),
+            ("node_id", "str", "Node UUID"),
+            ("node_name", "str", "Node display name"),
+            ("llm_call_id", "str", "Provider call identifier (or generated fallback)"),
+            ("iteration", "int", "1-based call number for that node timeline"),
+            ("finish_reason", "str", "Provider finish reason"),
+            ("output", "str", "Full output text for this LLM call"),
+            ("duration_ms", "float", "Call duration in milliseconds"),
+        ],
+    )?)?;
+    events.append(make_event_schema(
+        py,
+        "tool_call_started",
+        "Tool execution started",
+        "tool",
+        "started",
+        &[
+            ("event", "str", "Event type"),
+            ("node_id", "str", "Node UUID"),
+            ("node_name", "str", "Node display name"),
+            ("tool_name", "str", "Tool name"),
+            ("tool_call_id", "str", "Tool call identifier"),
+            (
+                "parameters",
+                "str",
+                "Tool parameters serialized as JSON string",
+            ),
+        ],
+    )?)?;
+    events.append(make_event_schema(
+        py,
+        "tool_call_completed",
+        "Tool execution completed successfully",
+        "tool",
+        "completed",
+        &[
+            ("event", "str", "Event type"),
+            ("node_id", "str", "Node UUID"),
+            ("node_name", "str", "Node display name"),
+            ("tool_name", "str", "Tool name"),
+            ("tool_call_id", "str", "Tool call identifier"),
+            ("output", "str", "Tool output serialized as JSON string"),
+            ("duration_ms", "float", "Tool execution duration in milliseconds"),
+        ],
+    )?)?;
+    events.append(make_event_schema(
+        py,
+        "tool_call_failed",
+        "Tool execution failed",
+        "tool",
+        "failed",
+        &[
+            ("event", "str", "Event type"),
+            ("node_id", "str", "Node UUID"),
+            ("node_name", "str", "Node display name"),
+            ("tool_name", "str", "Tool name"),
+            ("tool_call_id", "str", "Tool call identifier"),
+            ("error", "str", "Error message"),
+            ("error_type", "str", "Error class hint"),
+        ],
+    )?)?;
+    events.append(make_event_schema(
+        py,
+        "workflow_completed",
+        "Workflow finished successfully",
+        "workflow",
+        "completed",
+        &[
+            ("event", "str", "Event type"),
+            ("result", "WorkflowResult", "Structured workflow result object"),
+            ("outputs", "str", "Final node outputs serialized as JSON string"),
+        ],
+    )?)?;
+    events.append(make_event_schema(
+        py,
+        "workflow_failed",
+        "Workflow failed",
+        "workflow",
+        "failed",
+        &[
+            ("event", "str", "Event type"),
+            ("error", "str", "Human-readable error message"),
+            ("error_type", "str", "Error class hint"),
+        ],
+    )?)?;
+
+    schema.set_item("events", events)?;
+    Ok(schema)
+}
+
 fn stream_event_to_dict<'py>(
     py: Python<'py>,
     event: StreamEvent,
+    event_time: &str,
     workflow_name: &str,
 ) -> PyResult<Bound<'py, PyDict>> {
     use graphbit_core::stream::StreamEvent::*;
     let dict = PyDict::new(py);
+    let (category, phase) = event_category_phase(&event);
+    dict.set_item("time", event_time)?;
+    dict.set_item("category", category)?;
+    dict.set_item("phase", phase)?;
     match event {
         WorkflowStarted {
             workflow_id,
@@ -2399,7 +2718,7 @@ fn stream_event_to_dict<'py>(
 #[pyclass]
 pub struct WorkflowStreamIterator {
     /// `tokio::sync::Mutex` so the guard is `Send` and can be held across `.await`.
-    receiver: Arc<tokio::sync::Mutex<tokio::sync::mpsc::Receiver<StreamEvent>>>,
+    receiver: Arc<tokio::sync::Mutex<tokio::sync::mpsc::Receiver<TimedStreamEvent>>>,
     /// Set to `true` after the channel has been fully drained.
     done: bool,
     /// The name of the workflow being streamed — injected into the terminal event context
@@ -2435,7 +2754,7 @@ impl WorkflowStreamIterator {
         });
 
         match maybe_event {
-            Some(event) => {
+            Some((event, event_time)) => {
                 // Mark done *after* returning the last real event so callers
                 // see WorkflowCompleted / WorkflowFailed before StopIteration.
                 if matches!(
@@ -2444,7 +2763,7 @@ impl WorkflowStreamIterator {
                 ) {
                     self.done = true;
                 }
-                stream_event_to_dict(py, event, &self.workflow_name)
+                stream_event_to_dict(py, event, &event_time, &self.workflow_name)
             }
             None => {
                 // Channel closed — stream is exhausted
@@ -2474,8 +2793,9 @@ impl WorkflowStreamIterator {
             let maybe_event = rx.recv().await;
             drop(rx); // release the tokio Mutex before re-acquiring the GIL
             match maybe_event {
-                Some(event) => Python::with_gil(|py| {
-                    stream_event_to_dict(py, event, &wf_name).map(|d| d.into_any().unbind())
+                Some((event, event_time)) => Python::with_gil(|py| {
+                    stream_event_to_dict(py, event, &event_time, &wf_name)
+                        .map(|d| d.into_any().unbind())
                 }),
                 None => Err(pyo3::exceptions::PyStopAsyncIteration::new_err(())),
             }
