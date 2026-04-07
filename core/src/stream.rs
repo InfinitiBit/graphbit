@@ -5,17 +5,17 @@
 //!
 //! # Stream Modes
 //!
-//! - `Updates` — one event per node start/finish (default)
-//! - `Messages` — real-time LLM tokens + tool call events + node events
-//! - `All` — all event types (currently equivalent to `Messages`)
+//! - `Updates` — workflow/node lifecycle events only (default)
+//! - `Messages` — real-time LLM tokens + LLM/tool call lifecycle events
+//! - `All` — all event types (`Updates` + `Messages`)
 //!
 //! # Event Types
 //!
 //! Events are divided into three categories:
-//! 1. **Node-level** (all modes): `WorkflowStarted`, `NodeStarted`, `NodeCompleted`,
-//!    `NodeFailed`, `WorkflowCompleted`, `WorkflowFailed`
+//! 1. **Workflow/Node lifecycle** (`Updates`/`All`): `WorkflowStarted`, `NodeStarted`,
+//!    `NodeCompleted`, `NodeFailed`, `WorkflowCompleted`, `WorkflowFailed`
 //! 2. **Token-level** (`Messages`/`All`): `Token`
-//! 3. **Execution-level**: `LlmCallStarted`, `LlmCallCompleted`, `ToolCallStarted`,
+//! 3. **Execution-level** (`Messages`/`All`): `LlmCallStarted`, `LlmCallCompleted`, `ToolCallStarted`,
 //!    `ToolCallCompleted`, `ToolCallFailed`
 
 use crate::errors::GraphBitError;
@@ -29,17 +29,21 @@ use serde::{Deserialize, Serialize};
 /// Controls the granularity of events emitted during streaming execution.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum StreamMode {
-    /// Node-level: one event per node start/finish (default).
+    /// Workflow/node lifecycle events only (default).
     Updates,
-    /// Token-level: real-time LLM tokens + tool call events + node events.
+    /// Real-time LLM tokens + LLM/tool call lifecycle events.
     Messages,
-    /// All events — currently equivalent to `Messages`, but semantically
-    /// distinct for forward compatibility when additional event categories
-    /// are added.
+    /// All events (`Updates` + `Messages`).
     All,
 }
 
 impl StreamMode {
+    /// Whether this mode emits workflow/node lifecycle events.
+    #[inline]
+    pub fn emits_updates(&self) -> bool {
+        matches!(self, Self::Updates | Self::All)
+    }
+
     /// Whether this mode emits `Token` events (real-time LLM output).
     #[inline]
     pub fn emits_tokens(&self) -> bool {

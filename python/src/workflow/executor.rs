@@ -549,6 +549,7 @@ impl Executor {
 
         let processor_workflow = workflow.inner.clone();
         let processor_llm_config = self.llm_config.inner.clone();
+        let user_stream_mode = mode;
         get_runtime().spawn(async move {
             use std::collections::HashMap;
             let mut live_node_outcomes: HashMap<
@@ -565,15 +566,14 @@ impl Executor {
                         output,
                     } => {
                         if !Executor::is_tool_calls_required(&output) {
-                            Executor::send_stream_event(
-                                &event_tx,
-                                StreamEvent::NodeCompleted {
-                                    node_id,
-                                    node_name,
-                                    output,
-                                },
-                            )
-                            .await;
+                            let event = StreamEvent::NodeCompleted {
+                                node_id,
+                                node_name,
+                                output,
+                            };
+                            if Executor::should_forward_event_to_user(user_stream_mode, &event) {
+                                Executor::send_stream_event(&event_tx, event).await;
+                            }
                             continue;
                         }
 
@@ -600,15 +600,15 @@ impl Executor {
                                         finish_reason,
                                     ),
                                 );
-                                Executor::send_stream_event(
-                                    &event_tx,
-                                    StreamEvent::NodeCompleted {
-                                        node_id,
-                                        node_name,
-                                        output: serde_json::Value::String(final_output),
-                                    },
-                                )
-                                .await;
+                                let event = StreamEvent::NodeCompleted {
+                                    node_id,
+                                    node_name,
+                                    output: serde_json::Value::String(final_output),
+                                };
+                                if Executor::should_forward_event_to_user(user_stream_mode, &event)
+                                {
+                                    Executor::send_stream_event(&event_tx, event).await;
+                                }
                             }
                             Err(e) => {
                                 let err = e.to_string();
@@ -640,25 +640,25 @@ impl Executor {
                                 &finish_reason,
                             );
                         }
-                        Executor::send_stream_event(
-                            &event_tx,
-                            StreamEvent::WorkflowCompleted { context },
-                        )
-                        .await;
+                        let event = StreamEvent::WorkflowCompleted { context };
+                        if Executor::should_forward_event_to_user(user_stream_mode, &event) {
+                            Executor::send_stream_event(&event_tx, event).await;
+                        }
                         saw_terminal_event = true;
                         break;
                     }
                     StreamEvent::WorkflowFailed { error, error_type } => {
-                        Executor::send_stream_event(
-                            &event_tx,
-                            StreamEvent::WorkflowFailed { error, error_type },
-                        )
-                        .await;
+                        let event = StreamEvent::WorkflowFailed { error, error_type };
+                        if Executor::should_forward_event_to_user(user_stream_mode, &event) {
+                            Executor::send_stream_event(&event_tx, event).await;
+                        }
                         saw_terminal_event = true;
                         break;
                     }
                     other => {
-                        Executor::send_stream_event(&event_tx, other).await;
+                        if Executor::should_forward_event_to_user(user_stream_mode, &other) {
+                            Executor::send_stream_event(&event_tx, other).await;
+                        }
                     }
                 }
             }
@@ -723,6 +723,27 @@ impl Executor {
             StreamEvent::ToolCallStarted { .. } => "tool_call_started",
             StreamEvent::ToolCallCompleted { .. } => "tool_call_completed",
             StreamEvent::ToolCallFailed { .. } => "tool_call_failed",
+        }
+    }
+
+    #[inline]
+    fn should_forward_event_to_user(stream_mode: StreamMode, event: &StreamEvent) -> bool {
+        use StreamEvent::*;
+        match stream_mode {
+            StreamMode::All => true,
+            StreamMode::Updates => matches!(
+                event,
+                WorkflowStarted { .. }
+                    | NodeStarted { .. }
+                    | NodeCompleted { .. }
+                    | NodeFailed { .. }
+                    | WorkflowCompleted { .. }
+                    | WorkflowFailed { .. }
+            ),
+            StreamMode::Messages => matches!(
+                event,
+                Token { .. } | WorkflowCompleted { .. } | WorkflowFailed { .. }
+            ),
         }
     }
 
@@ -2330,15 +2351,15 @@ fn stream_event_schema_dict<'py>(py: Python<'py>) -> PyResult<Bound<'py, PyDict>
     let modes = PyDict::new(py);
     modes.set_item(
         "updates",
-        "Node/workflow lifecycle events only (no token/tool/llm call details)",
+        "Node/workflow lifecycle events only (no token/llm/tool-call details)",
     )?;
     modes.set_item(
         "messages",
-        "Updates + token streaming + LLM call lifecycle + tool call lifecycle",
+        "Token streaming + terminal workflow event (workflow_completed/workflow_failed)",
     )?;
     modes.set_item(
         "all",
-        "Currently equivalent to messages; reserved for future additional categories",
+        "All events: updates + messages",
     )?;
     schema.set_item("stream_modes", modes)?;
     let event_groups = PyDict::new(py);
