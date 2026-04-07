@@ -1634,6 +1634,7 @@ impl WorkflowExecutor {
                                 .send(StreamEvent::Token {
                                     node_id: current_node_id.to_string(),
                                     node_name: token_node_name.clone(),
+                                    llm_call_id: llm_call_id_hint.clone(),
                                     content: chunk.content.clone(),
                                 })
                                 .await;
@@ -2101,6 +2102,7 @@ impl WorkflowExecutor {
                             .send(StreamEvent::Token {
                                 node_id: node_id.to_string(),
                                 node_name: token_node_name.clone(),
+                                llm_call_id: initial_llm_call_id.clone(),
                                 content: chunk.content.clone(),
                             })
                             .await;

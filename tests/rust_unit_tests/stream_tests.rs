@@ -113,10 +113,12 @@ fn test_token_event() {
     let event = StreamEvent::Token {
         node_id: "node-1".to_string(),
         node_name: "researcher".to_string(),
+        llm_call_id: "call-1".to_string(),
         content: "The".to_string(),
     };
     let json = serde_json::to_value(&event).unwrap();
     assert_eq!(json["event"], "token");
+    assert_eq!(json["llm_call_id"], "call-1");
     assert_eq!(json["content"], "The");
 }
 
@@ -182,6 +184,7 @@ fn test_stream_event_roundtrip() {
         StreamEvent::Token {
             node_id: "n1".to_string(),
             node_name: "step1".to_string(),
+            llm_call_id: "n1-llm-1".to_string(),
             content: "Hello".to_string(),
         },
         StreamEvent::NodeCompleted {

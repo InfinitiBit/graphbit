@@ -163,6 +163,8 @@ pub enum StreamEvent {
         node_id: String,
         /// Human-readable node name
         node_name: String,
+        /// LLM call identifier this token belongs to
+        llm_call_id: String,
         /// Token content (may be a single character or word fragment)
         content: String,
     },

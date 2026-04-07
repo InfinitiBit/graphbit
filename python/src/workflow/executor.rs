@@ -820,6 +820,7 @@ impl Executor {
         event_tx: &tokio::sync::mpsc::Sender<TimedStreamEvent>,
         node_id: &str,
         node_name: &str,
+        llm_call_id: &str,
         empty_stream_warn_message: &str,
     ) -> Result<graphbit_core::llm::LlmResponse, graphbit_core::errors::GraphBitError> {
         if stream_mode.emits_tokens() && llm_provider.provider().supports_streaming() {
@@ -836,6 +837,7 @@ impl Executor {
                         StreamEvent::Token {
                             node_id: node_id.to_string(),
                             node_name: node_name.to_string(),
+                            llm_call_id: llm_call_id.to_string(),
                             content: chunk.content.clone(),
                         },
                     )
@@ -1161,6 +1163,7 @@ impl Executor {
                 event_tx,
                 node_id,
                 node_name,
+                &provisional_call_id,
                 "LLM stream returned 0 chunks in live tool loop; falling back to complete()",
             )
             .await?;
@@ -2434,6 +2437,7 @@ fn stream_event_schema_dict<'py>(py: Python<'py>) -> PyResult<Bound<'py, PyDict>
             ("event", "str", "Event type"),
             ("node_id", "str", "Node UUID"),
             ("node_name", "str", "Node display name"),
+            ("llm_call_id", "str", "LLM call identifier for grouping token chunks"),
             ("content", "str", "Token or chunk text"),
         ],
     )?)?;
@@ -2609,11 +2613,13 @@ fn stream_event_to_dict<'py>(
         Token {
             node_id,
             node_name,
+            llm_call_id,
             content,
         } => {
             dict.set_item("event", "token")?;
             dict.set_item("node_id", node_id)?;
             dict.set_item("node_name", node_name)?;
+            dict.set_item("llm_call_id", llm_call_id)?;
             dict.set_item("content", content)?;
         }
         ToolCallStarted {
