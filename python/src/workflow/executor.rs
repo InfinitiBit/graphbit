@@ -708,6 +708,129 @@ impl Executor {
         }
     }
 
+    fn extract_node_tools(
+        node_config: &std::collections::HashMap<String, serde_json::Value>,
+    ) -> Vec<String> {
+        node_config
+            .get("tools")
+            .and_then(|v| v.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str().map(str::to_string))
+                    .collect::<Vec<String>>()
+            })
+            .unwrap_or_default()
+    }
+
+    fn extract_llm_tools(
+        node_config: &std::collections::HashMap<String, serde_json::Value>,
+    ) -> Vec<graphbit_core::llm::LlmTool> {
+        use graphbit_core::llm::LlmTool;
+        node_config
+            .get("tool_schemas")
+            .and_then(|v| v.as_array())
+            .map(|schemas| {
+                schemas
+                    .iter()
+                    .filter_map(|schema| {
+                        let name = schema.get("name")?.as_str()?;
+                        let description = schema.get("description")?.as_str()?;
+                        let parameters = schema.get("parameters")?;
+                        Some(LlmTool::new(name, description, parameters.clone()))
+                    })
+                    .collect::<Vec<LlmTool>>()
+            })
+            .unwrap_or_default()
+    }
+
+    fn extract_max_iterations(
+        node_config: &std::collections::HashMap<String, serde_json::Value>,
+        default_value: usize,
+    ) -> usize {
+        node_config
+            .get("max_iterations")
+            .and_then(|v| v.as_u64())
+            .map(|v| v as usize)
+            .unwrap_or(default_value)
+    }
+
+    fn apply_node_llm_overrides(
+        mut req: graphbit_core::llm::LlmRequest,
+        node_config: &std::collections::HashMap<String, serde_json::Value>,
+    ) -> graphbit_core::llm::LlmRequest {
+        if let Some(temp) = node_config.get("temperature").and_then(|v| v.as_f64()) {
+            req = req.with_temperature(temp as f32);
+        }
+        if let Some(max_tokens) = node_config.get("max_tokens").and_then(|v| v.as_u64()) {
+            req = req.with_max_tokens(max_tokens as u32);
+        }
+        if let Some(top_p) = node_config.get("top_p").and_then(|v| v.as_f64()) {
+            req = req.with_top_p(top_p as f32);
+        }
+        req
+    }
+
+    fn build_llm_request_with_tools(
+        messages: Vec<graphbit_core::llm::LlmMessage>,
+        llm_tools: &[graphbit_core::llm::LlmTool],
+        node_config: &std::collections::HashMap<String, serde_json::Value>,
+    ) -> graphbit_core::llm::LlmRequest {
+        let mut req = graphbit_core::llm::LlmRequest::with_messages(messages);
+        for tool in llm_tools {
+            req = req.with_tool(tool.clone());
+        }
+        Self::apply_node_llm_overrides(req, node_config)
+    }
+
+    async fn execute_llm_request_with_optional_stream(
+        llm_provider: &graphbit_core::llm::LlmProvider,
+        req: graphbit_core::llm::LlmRequest,
+        stream_mode: StreamMode,
+        event_tx: &tokio::sync::mpsc::Sender<StreamEvent>,
+        node_id: &str,
+        node_name: &str,
+        empty_stream_warn_message: &str,
+    ) -> Result<graphbit_core::llm::LlmResponse, graphbit_core::errors::GraphBitError> {
+        if stream_mode.emits_tokens() && llm_provider.provider().supports_streaming() {
+            use futures::StreamExt;
+            let fallback_request = req.clone();
+            let mut stream = llm_provider.stream(req).await?;
+            let mut accumulated_content = String::new();
+            let mut last_response: Option<graphbit_core::llm::LlmResponse> = None;
+            while let Some(chunk_result) = stream.next().await {
+                let chunk = chunk_result?;
+                if !chunk.content.is_empty() {
+                    Self::send_stream_event(
+                        event_tx,
+                        StreamEvent::Token {
+                            node_id: node_id.to_string(),
+                            node_name: node_name.to_string(),
+                            content: chunk.content.clone(),
+                        },
+                    )
+                    .await;
+                    accumulated_content.push_str(&chunk.content);
+                }
+                last_response = Some(chunk);
+            }
+
+            match last_response {
+                Some(mut final_resp) => {
+                    if !accumulated_content.is_empty() {
+                        final_resp.content = accumulated_content;
+                    }
+                    Ok(final_resp)
+                }
+                None => {
+                    tracing::warn!("{empty_stream_warn_message}");
+                    llm_provider.complete(fallback_request).await
+                }
+            }
+        } else {
+            llm_provider.complete(req).await
+        }
+    }
+
     async fn send_stream_event(
         event_tx: &tokio::sync::mpsc::Sender<StreamEvent>,
         event: StreamEvent,
@@ -743,7 +866,7 @@ impl Executor {
         graphbit_core::errors::GraphBitError,
     > {
         use crate::workflow::node::execute_production_tool_calls;
-        use graphbit_core::llm::{LlmMessage, LlmProvider, LlmRequest, LlmTool, LlmToolCall};
+        use graphbit_core::llm::{LlmMessage, LlmProvider, LlmTool, LlmToolCall};
 
         let response_obj = initial_output;
         let initial_tool_calls = response_obj
@@ -773,39 +896,9 @@ impl Executor {
                 ))
             })?;
 
-        let node_tools = node
-            .config
-            .get("tools")
-            .and_then(|v| v.as_array())
-            .map(|arr| {
-                arr.iter()
-                    .filter_map(|v| v.as_str().map(|s| s.to_string()))
-                    .collect::<Vec<String>>()
-            })
-            .unwrap_or_default();
-
-        let llm_tools: Vec<LlmTool> = node
-            .config
-            .get("tool_schemas")
-            .and_then(|v| v.as_array())
-            .map(|schemas| {
-                schemas
-                    .iter()
-                    .filter_map(|schema| {
-                        let name = schema.get("name")?.as_str()?;
-                        let description = schema.get("description")?.as_str()?;
-                        let parameters = schema.get("parameters")?;
-                        Some(LlmTool::new(name, description, parameters.clone()))
-                    })
-                    .collect()
-            })
-            .unwrap_or_default();
-
-        let max_iterations = node
-            .config
-            .get("max_iterations")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(10) as usize;
+        let node_tools = Self::extract_node_tools(&node.config);
+        let llm_tools: Vec<LlmTool> = Self::extract_llm_tools(&node.config);
+        let max_iterations = Self::extract_max_iterations(&node.config, 10);
 
         let llm_provider =
             graphbit_core::llm::LlmProviderFactory::create_provider(llm_config.clone())
@@ -1025,62 +1118,20 @@ impl Executor {
             )
             .await;
 
-            let mut req = LlmRequest::with_messages(messages.clone());
-            for tool in &llm_tools {
-                req = req.with_tool(tool.clone());
-            }
-            if let Some(temp) = node.config.get("temperature").and_then(|v| v.as_f64()) {
-                req = req.with_temperature(temp as f32);
-            }
-            if let Some(max_tokens) = node.config.get("max_tokens").and_then(|v| v.as_u64()) {
-                req = req.with_max_tokens(max_tokens as u32);
-            }
-            if let Some(top_p) = node.config.get("top_p").and_then(|v| v.as_f64()) {
-                req = req.with_top_p(top_p as f32);
-            }
+            let req =
+                Self::build_llm_request_with_tools(messages.clone(), &llm_tools, &node.config);
 
             let llm_start = std::time::Instant::now();
-            let next_response = if stream_mode.emits_tokens()
-                && llm_provider.provider().supports_streaming()
-            {
-                use futures::StreamExt;
-                let fallback_request = req.clone();
-                let mut stream = llm_provider.stream(req).await?;
-                let mut accumulated_content = String::new();
-                let mut last_response: Option<graphbit_core::llm::LlmResponse> = None;
-                while let Some(chunk_result) = stream.next().await {
-                    let chunk = chunk_result?;
-                    if !chunk.content.is_empty() {
-                        Self::send_stream_event(
-                            event_tx,
-                            StreamEvent::Token {
-                                node_id: node_id.to_string(),
-                                node_name: node_name.to_string(),
-                                content: chunk.content.clone(),
-                            },
-                        )
-                        .await;
-                        accumulated_content.push_str(&chunk.content);
-                    }
-                    last_response = Some(chunk);
-                }
-                match last_response {
-                    Some(mut final_resp) => {
-                        if !accumulated_content.is_empty() {
-                            final_resp.content = accumulated_content;
-                        }
-                        final_resp
-                    }
-                    None => {
-                        tracing::warn!(
-                            "LLM stream returned 0 chunks in live tool loop; falling back to complete()"
-                        );
-                        llm_provider.complete(fallback_request).await?
-                    }
-                }
-            } else {
-                llm_provider.complete(req).await?
-            };
+            let next_response = Self::execute_llm_request_with_optional_stream(
+                &llm_provider,
+                req,
+                stream_mode,
+                event_tx,
+                node_id,
+                node_name,
+                "LLM stream returned 0 chunks in live tool loop; falling back to complete()",
+            )
+            .await?;
             let llm_duration_ms = llm_start.elapsed().as_secs_f64() * 1000.0;
             let next_call_id = next_response
                 .id
