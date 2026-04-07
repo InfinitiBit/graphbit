@@ -40,6 +40,7 @@ Welcome to the comprehensive documentation for **GraphBit** - a high-performance
 ### 📚 User Guide
 - [Core Concepts](user-guide/concepts.md) - Understand workflows, agents, and nodes
 - [Workflow Builder](user-guide/workflow-builder.md) - Creating and connecting workflow nodes
+- [Streaming Workflow](user-guide/streaming-workflow.md) - Real-time workflow events, token streaming, and tool-call streaming
 - [Agent Configuration](user-guide/agents.md) - Setting up AI agents with different capabilities
 - [Document Loader](user-guide/document-loader.md) - Loading and processing documents (PDF, DOCX, TXT, etc.)
 - [Text Splitters](user-guide/text-splitters.md) - Processing large documents with various splitting strategies
