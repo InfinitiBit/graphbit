@@ -482,7 +482,6 @@ impl Executor {
         let (core_event_tx, mut core_event_rx) = tokio::sync::mpsc::channel::<StreamEvent>(256);
         // Public channel from processor -> Python iterator
         let (event_tx, event_rx) = tokio::sync::mpsc::channel::<StreamEvent>(256);
-        let event_tx_for_core = event_tx.clone();
 
         // Stream mode for follow-up LLM calls in the live tool loop (Messages/All → token stream).
         let tool_loop_stream_mode = mode;
@@ -494,7 +493,7 @@ impl Executor {
                     Ok(h) => h,
                     Err(e) => {
                         let err_msg = e.to_string();
-                        let _ = event_tx_for_core
+                        let _ = core_event_tx
                             .send(StreamEvent::WorkflowFailed {
                                 error: err_msg.clone(),
                                 error_type: graphbit_core::error_type_from_string(&err_msg),
@@ -508,12 +507,13 @@ impl Executor {
                 .with_default_llm_config(llm_config.clone())
                 .with_conditional_handlers(conditional_handlers);
 
+            let core_event_tx_for_execution = core_event_tx.clone();
             let result = tokio::time::timeout(timeout_duration, async move {
                 executor
                     .execute_streaming(
                         workflow_clone.clone(),
                         guardrail_enforcer,
-                        core_event_tx.clone(),
+                        core_event_tx_for_execution,
                         mode,
                     )
                     .await
@@ -530,6 +530,14 @@ impl Executor {
                 }
                 Err(_elapsed) => {
                     tracing::warn!("execute_streaming timed out after {:?}", timeout_duration);
+                    let timeout_err =
+                        format!("Workflow execution timed out after {:?}", timeout_duration);
+                    let _ = core_event_tx
+                        .send(StreamEvent::WorkflowFailed {
+                            error: timeout_err,
+                            error_type: "timeout_error".to_string(),
+                        })
+                        .await;
                 }
             }
         });
@@ -542,6 +550,7 @@ impl Executor {
                 String,
                 (String, String, Vec<serde_json::Value>, Vec<String>, String),
             > = HashMap::new();
+            let mut saw_terminal_event = false;
 
             while let Some(event) = core_event_rx.recv().await {
                 match event {
@@ -631,11 +640,34 @@ impl Executor {
                             StreamEvent::WorkflowCompleted { context },
                         )
                         .await;
+                        saw_terminal_event = true;
+                        break;
+                    }
+                    StreamEvent::WorkflowFailed { error, error_type } => {
+                        Executor::send_stream_event(
+                            &event_tx,
+                            StreamEvent::WorkflowFailed { error, error_type },
+                        )
+                        .await;
+                        saw_terminal_event = true;
+                        break;
                     }
                     other => {
                         Executor::send_stream_event(&event_tx, other).await;
                     }
                 }
+            }
+
+            // Defensive terminal guarantee: stream consumers should always see a terminal event.
+            if !saw_terminal_event {
+                Executor::send_stream_event(
+                    &event_tx,
+                    StreamEvent::WorkflowFailed {
+                        error: "Streaming execution ended without terminal event".to_string(),
+                        error_type: "runtime_error".to_string(),
+                    },
+                )
+                .await;
             }
         });
 
@@ -648,6 +680,8 @@ impl Executor {
 } // end #[pymethods] impl Executor
 
 impl Executor {
+    const STREAM_SEND_WARN_THRESHOLD_MS: u128 = 200;
+
     #[inline]
     fn is_tool_calls_required(output: &serde_json::Value) -> bool {
         output
@@ -656,11 +690,43 @@ impl Executor {
             .is_some_and(|kind| kind == "tool_calls_required")
     }
 
+    #[inline]
+    fn stream_event_name(event: &StreamEvent) -> &'static str {
+        match event {
+            StreamEvent::WorkflowStarted { .. } => "workflow_started",
+            StreamEvent::NodeStarted { .. } => "node_started",
+            StreamEvent::NodeCompleted { .. } => "node_completed",
+            StreamEvent::NodeFailed { .. } => "node_failed",
+            StreamEvent::WorkflowCompleted { .. } => "workflow_completed",
+            StreamEvent::WorkflowFailed { .. } => "workflow_failed",
+            StreamEvent::Token { .. } => "token",
+            StreamEvent::LlmCallStarted { .. } => "llm_call_started",
+            StreamEvent::LlmCallCompleted { .. } => "llm_call_completed",
+            StreamEvent::ToolCallStarted { .. } => "tool_call_started",
+            StreamEvent::ToolCallCompleted { .. } => "tool_call_completed",
+            StreamEvent::ToolCallFailed { .. } => "tool_call_failed",
+        }
+    }
+
     async fn send_stream_event(
         event_tx: &tokio::sync::mpsc::Sender<StreamEvent>,
         event: StreamEvent,
     ) {
-        let _ = event_tx.send(event).await;
+        let event_name = Self::stream_event_name(&event);
+        let started_at = Instant::now();
+        if event_tx.send(event).await.is_err() {
+            tracing::debug!(event = event_name, "Stream receiver dropped; event not delivered");
+            return;
+        }
+
+        let blocked_ms = started_at.elapsed().as_millis();
+        if blocked_ms > Self::STREAM_SEND_WARN_THRESHOLD_MS {
+            tracing::warn!(
+                event = event_name,
+                blocked_ms,
+                "Streaming channel backpressure detected while sending event"
+            );
+        }
     }
 
     async fn run_live_tool_loop_for_node(
