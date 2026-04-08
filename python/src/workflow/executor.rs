@@ -7,10 +7,13 @@
 //! - Detailed execution metrics and logging
 //! - Graceful error handling and recovery
 
+use graphbit_core::stream::{StreamEvent, StreamMode};
 use graphbit_core::workflow::WorkflowExecutor as CoreWorkflowExecutor;
 use graphbit_core::{DecodeContext, EncodeContext, Enforcer, GuardRail};
+use pyo3::exceptions::PyStopIteration;
 use pyo3::prelude::*;
-use pyo3::types::{PyAny, PyDict};
+use pyo3::types::{PyAny, PyDict, PyList};
+use serde::Serialize;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tracing::{debug, error, info, instrument, warn};
@@ -20,6 +23,8 @@ use crate::errors::{timeout_error, to_py_runtime_error, validation_error};
 use crate::guardrail::GuardRailPolicyConfig;
 use crate::llm::config::LlmConfig;
 use crate::runtime::get_runtime;
+
+type TimedStreamEvent = (StreamEvent, String);
 
 /// Execution mode for different performance characteristics
 #[derive(Debug, Clone, Copy)]
@@ -420,13 +425,948 @@ impl Executor {
         Ok(())
     }
 
-    /// Check execution mode
+    /// Get execution mode
     fn get_execution_mode(&self) -> String {
         format!("{:?}", self.config.mode)
     }
-}
+
+    /// Execute a workflow in streaming mode.
+    ///
+    /// Returns a `WorkflowStreamIterator` that yields one Python dict per
+    /// `StreamEvent`.  Iteration blocks until the next event is available,
+    /// releasing the GIL between receives so other Python threads can run.
+    ///
+    /// Example
+    /// -------
+    /// ```python
+    /// for event in executor.execute_streaming(workflow, stream_mode="updates"):
+    ///     print(event)
+    /// ```
+    ///
+    /// To inspect all event types and fields programmatically, use:
+    /// `Executor.get_stream_event_schema()`.
+    #[pyo3(signature = (workflow, policy=None, stream_mode=None))]
+    fn execute_streaming(
+        &mut self,
+        workflow: &Workflow,
+        policy: Option<&Bound<'_, GuardRailPolicyConfig>>,
+        stream_mode: Option<&str>,
+    ) -> PyResult<WorkflowStreamIterator> {
+        // Validate workflow
+        if workflow.inner.graph.node_count() == 0 {
+            return Err(validation_error(
+                "workflow",
+                None,
+                "Workflow cannot be empty",
+            ));
+        }
+        if let Err(e) = workflow.inner.validate() {
+            return Err(validation_error(
+                "workflow",
+                None,
+                &format!("Invalid workflow: {}", e),
+            ));
+        }
+
+        // Parse stream mode (default: Updates)
+        let mode = stream_mode
+            .and_then(StreamMode::from_str_opt)
+            .unwrap_or(StreamMode::Updates);
+
+        let workflow_clone = workflow.inner.clone();
+        let llm_config = self.llm_config.inner.clone();
+        let config = self.config.clone();
+        let timeout_duration = config.timeout;
+        let guardrail_enforcer = policy.map(|p| {
+            let cfg = p.borrow().get_inner();
+            Arc::new(GuardRail::enforcer_for(cfg, workflow_clone.id.to_string()))
+        });
+        let guardrail_for_iterator = guardrail_enforcer.clone();
+
+        // Internal channel from core executor -> processor
+        let (core_event_tx, mut core_event_rx) = tokio::sync::mpsc::channel::<StreamEvent>(256);
+        // Public channel from processor -> Python iterator
+        let (event_tx, event_rx) = tokio::sync::mpsc::channel::<TimedStreamEvent>(256);
+
+        // Stream mode for follow-up LLM calls in the live tool loop (Messages/All → token stream).
+        let tool_loop_stream_mode = mode;
+
+        // Spawn the streaming executor on the shared Tokio runtime
+        get_runtime().spawn(async move {
+            let conditional_handlers =
+                match crate::workflow::node::build_core_conditional_handlers(&workflow_clone) {
+                    Ok(h) => h,
+                    Err(e) => {
+                        let err_msg = e.to_string();
+                        let _ = core_event_tx
+                            .send(StreamEvent::WorkflowFailed {
+                                error: err_msg.clone(),
+                                error_type: graphbit_core::error_type_from_string(&err_msg),
+                            })
+                            .await;
+                        return;
+                    }
+                };
+
+            let executor = CoreWorkflowExecutor::new()
+                .with_default_llm_config(llm_config.clone())
+                .with_conditional_handlers(conditional_handlers);
+
+            let core_event_tx_for_execution = core_event_tx.clone();
+            let result = tokio::time::timeout(timeout_duration, async move {
+                executor
+                    .execute_streaming(
+                        workflow_clone.clone(),
+                        guardrail_enforcer,
+                        core_event_tx_for_execution,
+                        mode,
+                    )
+                    .await
+            })
+            .await;
+
+            // Core event channel closes when this task exits.
+            match result {
+                Ok(Ok(_)) => {} // WorkflowCompleted was already emitted by execute_streaming
+                Ok(Err(e)) => {
+                    // Should never happen (execute_streaming emits WorkflowFailed on errors),
+                    // but guard defensively.
+                    tracing::warn!("execute_streaming returned unexpected Err: {}", e);
+                }
+                Err(_elapsed) => {
+                    tracing::warn!("execute_streaming timed out after {:?}", timeout_duration);
+                    let timeout_err =
+                        format!("Workflow execution timed out after {:?}", timeout_duration);
+                    let _ = core_event_tx
+                        .send(StreamEvent::WorkflowFailed {
+                            error: timeout_err,
+                            error_type: "timeout_error".to_string(),
+                        })
+                        .await;
+                }
+            }
+        });
+
+        let processor_workflow = workflow.inner.clone();
+        let processor_llm_config = self.llm_config.inner.clone();
+        let user_stream_mode = mode;
+        get_runtime().spawn(async move {
+            use std::collections::HashMap;
+            let mut live_node_outcomes: HashMap<
+                String,
+                (String, String, Vec<serde_json::Value>, Vec<String>, String),
+            > = HashMap::new();
+            let mut saw_terminal_event = false;
+
+            while let Some(event) = core_event_rx.recv().await {
+                match event {
+                    StreamEvent::NodeCompleted {
+                        node_id,
+                        node_name,
+                        output,
+                    } => {
+                        if !Executor::is_tool_calls_required(&output) {
+                            let event = StreamEvent::NodeCompleted {
+                                node_id,
+                                node_name,
+                                output,
+                            };
+                            if Executor::should_forward_event_to_user(user_stream_mode, &event) {
+                                Executor::send_stream_event(&event_tx, event).await;
+                            }
+                            continue;
+                        }
+
+                        match Executor::run_live_tool_loop_for_node(
+                            &node_id,
+                            &node_name,
+                            &output,
+                            &processor_workflow,
+                            processor_llm_config.clone(),
+                            guardrail_for_iterator.clone(),
+                            &event_tx,
+                            tool_loop_stream_mode,
+                        )
+                        .await
+                        {
+                            Ok((final_output, executions, tools_used, finish_reason)) => {
+                                live_node_outcomes.insert(
+                                    node_id.clone(),
+                                    (
+                                        node_name.clone(),
+                                        final_output.clone(),
+                                        executions,
+                                        tools_used,
+                                        finish_reason,
+                                    ),
+                                );
+                                let event = StreamEvent::NodeCompleted {
+                                    node_id,
+                                    node_name,
+                                    output: serde_json::Value::String(final_output),
+                                };
+                                if Executor::should_forward_event_to_user(user_stream_mode, &event)
+                                {
+                                    Executor::send_stream_event(&event_tx, event).await;
+                                }
+                            }
+                            Err(e) => {
+                                let err = e.to_string();
+                                Executor::send_stream_event(
+                                    &event_tx,
+                                    StreamEvent::WorkflowFailed {
+                                        error: err.clone(),
+                                        error_type: graphbit_core::error_type_from_string(&err),
+                                    },
+                                )
+                                .await;
+                                break;
+                            }
+                        }
+                    }
+                    StreamEvent::WorkflowCompleted { mut context } => {
+                        for (
+                            node_id,
+                            (node_name, final_output, executions, tools_used, finish_reason),
+                        ) in live_node_outcomes.drain()
+                        {
+                            Executor::merge_live_outcome_into_context(
+                                &mut context,
+                                &node_id,
+                                &node_name,
+                                &final_output,
+                                executions,
+                                tools_used,
+                                &finish_reason,
+                            );
+                        }
+                        let event = StreamEvent::WorkflowCompleted { context };
+                        if Executor::should_forward_event_to_user(user_stream_mode, &event) {
+                            Executor::send_stream_event(&event_tx, event).await;
+                        }
+                        saw_terminal_event = true;
+                        break;
+                    }
+                    StreamEvent::WorkflowFailed { error, error_type } => {
+                        let event = StreamEvent::WorkflowFailed { error, error_type };
+                        if Executor::should_forward_event_to_user(user_stream_mode, &event) {
+                            Executor::send_stream_event(&event_tx, event).await;
+                        }
+                        saw_terminal_event = true;
+                        break;
+                    }
+                    other => {
+                        if Executor::should_forward_event_to_user(user_stream_mode, &other) {
+                            Executor::send_stream_event(&event_tx, other).await;
+                        }
+                    }
+                }
+            }
+
+            // Defensive terminal guarantee: stream consumers should always see a terminal event.
+            if !saw_terminal_event {
+                Executor::send_stream_event(
+                    &event_tx,
+                    StreamEvent::WorkflowFailed {
+                        error: "Streaming execution ended without terminal event".to_string(),
+                        error_type: "runtime_error".to_string(),
+                    },
+                )
+                .await;
+            }
+        });
+
+        Ok(WorkflowStreamIterator {
+            receiver: Arc::new(tokio::sync::Mutex::new(event_rx)),
+            done: false,
+            workflow_name: workflow.inner.name.clone(),
+        })
+    }
+
+    /// Return a user-friendly schema for streaming events.
+    ///
+    /// The schema includes:
+    /// - available stream modes and what they emit
+    /// - all event types
+    /// - per-event field names, field types, and descriptions
+    ///
+    /// This is documentation/introspection only and does not execute a workflow.
+    #[staticmethod]
+    fn get_stream_event_schema<'py>(py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
+        stream_event_schema_dict(py)
+    }
+} // end #[pymethods] impl Executor
 
 impl Executor {
+    const STREAM_SEND_WARN_THRESHOLD_MS: u128 = 200;
+
+    #[inline]
+    fn is_tool_calls_required(output: &serde_json::Value) -> bool {
+        output
+            .get("type")
+            .and_then(|v| v.as_str())
+            .is_some_and(|kind| kind == "tool_calls_required")
+    }
+
+    #[inline]
+    fn stream_event_name(event: &StreamEvent) -> &'static str {
+        match event {
+            StreamEvent::WorkflowStarted { .. } => "workflow_started",
+            StreamEvent::NodeStarted { .. } => "node_started",
+            StreamEvent::NodeCompleted { .. } => "node_completed",
+            StreamEvent::NodeFailed { .. } => "node_failed",
+            StreamEvent::WorkflowCompleted { .. } => "workflow_completed",
+            StreamEvent::WorkflowFailed { .. } => "workflow_failed",
+            StreamEvent::Token { .. } => "token",
+            StreamEvent::LlmCallStarted { .. } => "llm_call_started",
+            StreamEvent::LlmCallCompleted { .. } => "llm_call_completed",
+            StreamEvent::ToolCallStarted { .. } => "tool_call_started",
+            StreamEvent::ToolCallCompleted { .. } => "tool_call_completed",
+            StreamEvent::ToolCallFailed { .. } => "tool_call_failed",
+        }
+    }
+
+    #[inline]
+    fn should_forward_event_to_user(stream_mode: StreamMode, event: &StreamEvent) -> bool {
+        use StreamEvent::*;
+        match stream_mode {
+            StreamMode::All => true,
+            StreamMode::Updates => !matches!(event, Token { .. }),
+            StreamMode::Messages => matches!(
+                event,
+                Token { .. } | WorkflowCompleted { .. } | WorkflowFailed { .. }
+            ),
+        }
+    }
+
+    fn extract_node_tools(
+        node_config: &std::collections::HashMap<String, serde_json::Value>,
+    ) -> Vec<String> {
+        node_config
+            .get("tools")
+            .and_then(|v| v.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str().map(str::to_string))
+                    .collect::<Vec<String>>()
+            })
+            .unwrap_or_default()
+    }
+
+    fn extract_llm_tools(
+        node_config: &std::collections::HashMap<String, serde_json::Value>,
+    ) -> Vec<graphbit_core::llm::LlmTool> {
+        use graphbit_core::llm::LlmTool;
+        node_config
+            .get("tool_schemas")
+            .and_then(|v| v.as_array())
+            .map(|schemas| {
+                schemas
+                    .iter()
+                    .filter_map(|schema| {
+                        let name = schema.get("name")?.as_str()?;
+                        let description = schema.get("description")?.as_str()?;
+                        let parameters = schema.get("parameters")?;
+                        Some(LlmTool::new(name, description, parameters.clone()))
+                    })
+                    .collect::<Vec<LlmTool>>()
+            })
+            .unwrap_or_default()
+    }
+
+    fn extract_max_iterations(
+        node_config: &std::collections::HashMap<String, serde_json::Value>,
+        default_value: usize,
+    ) -> usize {
+        node_config
+            .get("max_iterations")
+            .and_then(|v| v.as_u64())
+            .map(|v| v as usize)
+            .unwrap_or(default_value)
+    }
+
+    fn apply_node_llm_overrides(
+        mut req: graphbit_core::llm::LlmRequest,
+        node_config: &std::collections::HashMap<String, serde_json::Value>,
+    ) -> graphbit_core::llm::LlmRequest {
+        if let Some(temp) = node_config.get("temperature").and_then(|v| v.as_f64()) {
+            req = req.with_temperature(temp as f32);
+        }
+        if let Some(max_tokens) = node_config.get("max_tokens").and_then(|v| v.as_u64()) {
+            req = req.with_max_tokens(max_tokens as u32);
+        }
+        if let Some(top_p) = node_config.get("top_p").and_then(|v| v.as_f64()) {
+            req = req.with_top_p(top_p as f32);
+        }
+        req
+    }
+
+    fn build_llm_request_with_tools(
+        messages: Vec<graphbit_core::llm::LlmMessage>,
+        llm_tools: &[graphbit_core::llm::LlmTool],
+        node_config: &std::collections::HashMap<String, serde_json::Value>,
+    ) -> graphbit_core::llm::LlmRequest {
+        let mut req = graphbit_core::llm::LlmRequest::with_messages(messages);
+        for tool in llm_tools {
+            req = req.with_tool(tool.clone());
+        }
+        Self::apply_node_llm_overrides(req, node_config)
+    }
+
+    async fn execute_llm_request_with_optional_stream(
+        llm_provider: &graphbit_core::llm::LlmProvider,
+        req: graphbit_core::llm::LlmRequest,
+        stream_mode: StreamMode,
+        event_tx: &tokio::sync::mpsc::Sender<TimedStreamEvent>,
+        node_id: &str,
+        node_name: &str,
+        llm_call_id: &str,
+        empty_stream_warn_message: &str,
+    ) -> Result<graphbit_core::llm::LlmResponse, graphbit_core::errors::GraphBitError> {
+        if stream_mode.emits_tokens() && llm_provider.provider().supports_streaming() {
+            use futures::StreamExt;
+            let fallback_request = req.clone();
+            let mut stream = llm_provider.stream(req).await?;
+            let mut accumulated_content = String::new();
+            let mut last_response: Option<graphbit_core::llm::LlmResponse> = None;
+            while let Some(chunk_result) = stream.next().await {
+                let chunk = chunk_result?;
+                if !chunk.content.is_empty() {
+                    Self::send_stream_event(
+                        event_tx,
+                        StreamEvent::Token {
+                            node_id: node_id.to_string(),
+                            node_name: node_name.to_string(),
+                            llm_call_id: llm_call_id.to_string(),
+                            content: chunk.content.clone(),
+                        },
+                    )
+                    .await;
+                    accumulated_content.push_str(&chunk.content);
+                }
+                last_response = Some(chunk);
+            }
+
+            match last_response {
+                Some(mut final_resp) => {
+                    if !accumulated_content.is_empty() {
+                        final_resp.content = accumulated_content;
+                    }
+                    Ok(final_resp)
+                }
+                None => {
+                    tracing::warn!("{empty_stream_warn_message}");
+                    llm_provider.complete(fallback_request).await
+                }
+            }
+        } else {
+            llm_provider.complete(req).await
+        }
+    }
+
+    async fn send_stream_event(
+        event_tx: &tokio::sync::mpsc::Sender<TimedStreamEvent>,
+        event: StreamEvent,
+    ) {
+        let event_name = Self::stream_event_name(&event);
+        let event_time = chrono::Utc::now().to_rfc3339();
+        let started_at = Instant::now();
+        if event_tx.send((event, event_time)).await.is_err() {
+            tracing::debug!(event = event_name, "Stream receiver dropped; event not delivered");
+            return;
+        }
+
+        let blocked_ms = started_at.elapsed().as_millis();
+        if blocked_ms > Self::STREAM_SEND_WARN_THRESHOLD_MS {
+            tracing::warn!(
+                event = event_name,
+                blocked_ms,
+                "Streaming channel backpressure detected while sending event"
+            );
+        }
+    }
+
+    async fn run_live_tool_loop_for_node(
+        node_id: &str,
+        node_name: &str,
+        initial_output: &serde_json::Value,
+        workflow: &graphbit_core::workflow::Workflow,
+        llm_config: graphbit_core::llm::LlmConfig,
+        guardrail_enforcer: Option<Arc<Enforcer>>,
+        event_tx: &tokio::sync::mpsc::Sender<TimedStreamEvent>,
+        stream_mode: StreamMode,
+    ) -> Result<
+        (String, Vec<serde_json::Value>, Vec<String>, String),
+        graphbit_core::errors::GraphBitError,
+    > {
+        use crate::workflow::node::execute_production_tool_calls;
+        use graphbit_core::llm::{LlmMessage, LlmProvider, LlmTool, LlmToolCall};
+
+        let response_obj = initial_output;
+        let initial_tool_calls = response_obj
+            .get("tool_calls")
+            .and_then(|v| v.as_array())
+            .cloned()
+            .unwrap_or_default();
+        let original_prompt = response_obj
+            .get("original_prompt")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        let initial_content = response_obj
+            .get("content")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+
+        let node = workflow
+            .graph
+            .get_nodes()
+            .iter()
+            .find(|(id, _)| id.to_string() == node_id)
+            .map(|(_, node)| node.clone())
+            .ok_or_else(|| {
+                graphbit_core::errors::GraphBitError::workflow_execution(format!(
+                    "Node '{node_id}' not found while running live tool loop",
+                ))
+            })?;
+
+        let node_tools = Self::extract_node_tools(&node.config);
+        let llm_tools: Vec<LlmTool> = Self::extract_llm_tools(&node.config);
+        let max_iterations = Self::extract_max_iterations(&node.config, 10);
+
+        let llm_provider =
+            graphbit_core::llm::LlmProviderFactory::create_provider(llm_config.clone())
+                .map(|provider_trait| LlmProvider::new(provider_trait, llm_config.clone()))
+                .map_err(|e| {
+                    graphbit_core::errors::GraphBitError::workflow_execution(format!(
+                        "Failed to create LLM provider for live streaming loop: {e}",
+                    ))
+                })?;
+
+        let mut messages: Vec<LlmMessage> = vec![LlmMessage::user(original_prompt)];
+        let mut current_tool_calls = initial_tool_calls;
+        let mut current_content = initial_content.clone();
+        let mut final_content = current_content.clone();
+        let mut final_finish_reason = "tool_calls_required".to_string();
+        let mut executions_meta: Vec<serde_json::Value> = Vec::new();
+        let mut tools_used: Vec<String> = Vec::new();
+        let mut llm_iteration: u64 = 1;
+        let mut loop_iteration: usize = 0;
+
+        loop {
+            if loop_iteration >= max_iterations {
+                final_content = current_content.clone();
+                break;
+            }
+            loop_iteration += 1;
+
+            let assistant_tool_calls: Vec<LlmToolCall> = current_tool_calls
+                .iter()
+                .filter_map(|tc| {
+                    let id = tc
+                        .get("id")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string();
+                    let name = tc.get("name").and_then(|v| v.as_str())?.to_string();
+                    let parameters = tc
+                        .get("parameters")
+                        .cloned()
+                        .unwrap_or(serde_json::json!({}));
+                    Some(LlmToolCall {
+                        id,
+                        name,
+                        parameters,
+                    })
+                })
+                .collect();
+            messages.push(
+                LlmMessage::assistant(&current_content)
+                    .with_tool_calls(assistant_tool_calls.clone()),
+            );
+
+            let python_tool_calls: Vec<serde_json::Value> = current_tool_calls
+                .iter()
+                .map(|tc| {
+                    let name = tc.get("name").and_then(|v| v.as_str()).unwrap_or("unknown");
+                    let mut parameters = tc
+                        .get("parameters")
+                        .cloned()
+                        .unwrap_or(serde_json::json!({}));
+                    if let Some(enforcer) = guardrail_enforcer.as_ref() {
+                        let decoded_result =
+                            enforcer.decode(parameters, DecodeContext::ToolBoundary);
+                        parameters = decoded_result.payload;
+                    }
+                    serde_json::json!({
+                        "id": tc.get("id").and_then(|v| v.as_str()).unwrap_or(""),
+                        "tool_name": name,
+                        "parameters": parameters
+                    })
+                })
+                .collect();
+
+            let tool_calls_json = serde_json::to_string(&python_tool_calls).map_err(|e| {
+                graphbit_core::errors::GraphBitError::workflow_execution(format!(
+                    "Failed to serialize tool calls: {e}",
+                ))
+            })?;
+
+            let tool_results_json = Python::with_gil(|py| {
+                execute_production_tool_calls(py, tool_calls_json, node_tools.clone())
+            })
+            .map_err(|e| {
+                graphbit_core::errors::GraphBitError::workflow_execution(format!(
+                    "Failed to execute tools in live iteration {loop_iteration}: {e}",
+                ))
+            })?;
+            let tool_results: Vec<serde_json::Value> =
+                serde_json::from_str(&tool_results_json).unwrap_or_default();
+
+            if loop_iteration > 1 {
+                for tc in &python_tool_calls {
+                    Self::send_stream_event(
+                        event_tx,
+                        StreamEvent::ToolCallStarted {
+                            node_id: node_id.to_string(),
+                            node_name: node_name.to_string(),
+                            tool_name: tc
+                                .get("tool_name")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("unknown")
+                                .to_string(),
+                            tool_call_id: tc
+                                .get("id")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("")
+                                .to_string(),
+                            parameters: tc
+                                .get("parameters")
+                                .cloned()
+                                .unwrap_or(serde_json::json!({})),
+                        },
+                    )
+                    .await;
+                }
+            }
+
+            for (i, result) in tool_results.iter().enumerate() {
+                let tool_call_id = assistant_tool_calls
+                    .get(i)
+                    .map(|tc| tc.id.as_str())
+                    .unwrap_or("")
+                    .to_string();
+                let tool_name = result
+                    .get("tool_name")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("unknown")
+                    .to_string();
+                let success = result
+                    .get("success")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
+                let latency_ms = result
+                    .get("latency_ms")
+                    .and_then(|v| v.as_f64())
+                    .unwrap_or(0.0);
+
+                if !tools_used.contains(&tool_name) {
+                    tools_used.push(tool_name.clone());
+                }
+
+                if success {
+                    let output = result
+                        .get("output")
+                        .cloned()
+                        .unwrap_or(serde_json::Value::Null);
+                    let output_text = output.as_str().unwrap_or("").to_string();
+                    messages.push(LlmMessage::tool(&tool_call_id, &output_text));
+                    Self::send_stream_event(
+                        event_tx,
+                        StreamEvent::ToolCallCompleted {
+                            node_id: node_id.to_string(),
+                            node_name: node_name.to_string(),
+                            tool_name: tool_name.clone(),
+                            tool_call_id: tool_call_id.clone(),
+                            output: output.clone(),
+                            duration_ms: latency_ms,
+                        },
+                    )
+                    .await;
+                } else {
+                    let err = result
+                        .get("error")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("Tool execution failed")
+                        .to_string();
+                    messages.push(LlmMessage::tool(&tool_call_id, &err));
+                    Self::send_stream_event(
+                        event_tx,
+                        StreamEvent::ToolCallFailed {
+                            node_id: node_id.to_string(),
+                            node_name: node_name.to_string(),
+                            tool_name: tool_name.clone(),
+                            tool_call_id: tool_call_id.clone(),
+                            error: err.clone(),
+                            error_type: graphbit_core::error_type_from_string(&err),
+                        },
+                    )
+                    .await;
+                }
+
+                let mut meta = result.clone();
+                if let Some(obj) = meta.as_object_mut() {
+                    obj.insert(
+                        "type".to_string(),
+                        serde_json::Value::String("tool_call".to_string()),
+                    );
+                    if let Some(tc) = python_tool_calls.get(i) {
+                        obj.insert(
+                            "parameters".to_string(),
+                            tc.get("parameters")
+                                .cloned()
+                                .unwrap_or(serde_json::json!({})),
+                        );
+                        obj.insert(
+                            "id".to_string(),
+                            tc.get("id")
+                                .cloned()
+                                .unwrap_or(serde_json::Value::String(String::new())),
+                        );
+                    }
+                }
+                executions_meta.push(meta);
+            }
+
+            llm_iteration += 1;
+            let provisional_call_id = format!("{node_id}-llm-{llm_iteration}");
+            Self::send_stream_event(
+                event_tx,
+                StreamEvent::LlmCallStarted {
+                    node_id: node_id.to_string(),
+                    node_name: node_name.to_string(),
+                    llm_call_id: provisional_call_id.clone(),
+                    iteration: llm_iteration,
+                    model: llm_config.model_name().to_string(),
+                },
+            )
+            .await;
+
+            let req =
+                Self::build_llm_request_with_tools(messages.clone(), &llm_tools, &node.config);
+
+            let llm_start = std::time::Instant::now();
+            let next_response = Self::execute_llm_request_with_optional_stream(
+                &llm_provider,
+                req,
+                stream_mode,
+                event_tx,
+                node_id,
+                node_name,
+                &provisional_call_id,
+                "LLM stream returned 0 chunks in live tool loop; falling back to complete()",
+            )
+            .await?;
+            let llm_duration_ms = llm_start.elapsed().as_secs_f64() * 1000.0;
+            let next_call_id = next_response
+                .id
+                .clone()
+                .unwrap_or_else(|| provisional_call_id.clone());
+            Self::send_stream_event(
+                event_tx,
+                StreamEvent::LlmCallCompleted {
+                    node_id: node_id.to_string(),
+                    node_name: node_name.to_string(),
+                    llm_call_id: next_call_id.clone(),
+                    iteration: llm_iteration,
+                    finish_reason: format!("{}", next_response.finish_reason),
+                    output: Self::append_tool_calls_to_llm_output(
+                        &next_response.content,
+                        &next_response.tool_calls,
+                    ),
+                    duration_ms: llm_duration_ms,
+                },
+            )
+            .await;
+
+            executions_meta.push(serde_json::json!({
+                "type": "llm_call",
+                "id": next_call_id,
+                "model": next_response.model,
+                "provider": llm_config.provider_name(),
+                "input": original_prompt,
+                "output": next_response.content,
+                "finish_reason": format!("{}", next_response.finish_reason),
+                "tool_calls": serde_json::to_value(&next_response.tool_calls).unwrap_or(serde_json::json!([])),
+                "duration_ms": llm_duration_ms,
+                "usage": {
+                    "prompt_tokens": next_response.usage.prompt_tokens,
+                    "completion_tokens": next_response.usage.completion_tokens,
+                    "total_tokens": next_response.usage.total_tokens
+                },
+                "retries": []
+            }));
+
+            let mut next_content = next_response.content.clone();
+            let mut next_tool_calls = next_response.tool_calls.clone();
+            if let Some(enforcer) = guardrail_enforcer.as_ref() {
+                if !next_tool_calls.is_empty() {
+                    let payload = serde_json::json!({
+                        "content": next_response.content.clone(),
+                        "tool_calls": next_response.tool_calls.clone(),
+                    });
+                    let decoded_result = enforcer.decode(payload, DecodeContext::LlmResponse);
+                    if let Some(content) = decoded_result
+                        .payload
+                        .get("content")
+                        .and_then(|v| v.as_str())
+                    {
+                        next_content = content.to_string();
+                    }
+                    if let Some(tc) = decoded_result.payload.get("tool_calls") {
+                        if let Ok(parsed) = serde_json::from_value(tc.clone()) {
+                            next_tool_calls = parsed;
+                        }
+                    }
+                }
+            }
+
+            final_finish_reason = format!("{}", next_response.finish_reason);
+            if next_tool_calls.is_empty() {
+                final_content = next_content;
+                break;
+            }
+            current_content = next_content;
+            current_tool_calls = serde_json::to_value(&next_tool_calls)
+                .and_then(serde_json::from_value::<Vec<serde_json::Value>>)
+                .unwrap_or_default();
+        }
+
+        Ok((
+            final_content,
+            executions_meta,
+            tools_used,
+            final_finish_reason,
+        ))
+    }
+
+    fn merge_live_outcome_into_context(
+        context: &mut graphbit_core::types::WorkflowContext,
+        node_id: &str,
+        node_name: &str,
+        final_output: &str,
+        executions_to_append: Vec<serde_json::Value>,
+        tools_used_to_add: Vec<String>,
+        final_finish_reason: &str,
+    ) {
+        context.node_outputs.insert(
+            node_id.to_string(),
+            serde_json::Value::String(final_output.to_string()),
+        );
+
+        for key in [
+            format!("node_response_{node_id}"),
+            format!("node_response_{node_name}"),
+        ] {
+            let mut node_meta = context
+                .metadata
+                .get(&key)
+                .cloned()
+                .unwrap_or_else(|| serde_json::json!({}));
+            let Some(obj) = node_meta.as_object_mut() else {
+                context.metadata.insert(key, node_meta);
+                continue;
+            };
+
+            obj.insert(
+                "final_output".to_string(),
+                serde_json::Value::String(final_output.to_string()),
+            );
+            obj.insert(
+                "exit_reason".to_string(),
+                serde_json::Value::String(final_finish_reason.to_string()),
+            );
+            obj.insert(
+                "end_time".to_string(),
+                serde_json::Value::String(chrono::Utc::now().to_rfc3339()),
+            );
+
+            let mut existing_exec = obj
+                .get("executions")
+                .and_then(|v| v.as_array())
+                .cloned()
+                .unwrap_or_default();
+            existing_exec.extend(executions_to_append.clone());
+            obj.insert(
+                "executions".to_string(),
+                serde_json::Value::Array(existing_exec.clone()),
+            );
+
+            let mut tools_used = obj
+                .get("tools_used")
+                .and_then(|v| v.as_array())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                        .collect::<Vec<String>>()
+                })
+                .unwrap_or_default();
+            for tool in &tools_used_to_add {
+                if !tools_used.contains(tool) {
+                    tools_used.push(tool.clone());
+                }
+            }
+            obj.insert(
+                "tools_used".to_string(),
+                serde_json::Value::Array(
+                    tools_used
+                        .into_iter()
+                        .map(serde_json::Value::String)
+                        .collect(),
+                ),
+            );
+
+            let total_tool_calls = existing_exec
+                .iter()
+                .filter(|e| e.get("type").and_then(|v| v.as_str()) == Some("tool_call"))
+                .count() as u64;
+            obj.insert(
+                "total_tool_calls".to_string(),
+                serde_json::Value::Number(total_tool_calls.into()),
+            );
+            let llm_call_count = existing_exec
+                .iter()
+                .filter(|e| e.get("type").and_then(|v| v.as_str()) == Some("llm_call"))
+                .count() as u64;
+            obj.insert(
+                "total_iterations".to_string(),
+                serde_json::Value::Number(llm_call_count.saturating_sub(1).into()),
+            );
+
+            context.metadata.insert(key, node_meta);
+        }
+    }
+
+    fn append_tool_calls_to_llm_output(
+        content: &str,
+        tool_calls: &[graphbit_core::llm::LlmToolCall],
+    ) -> String {
+        if tool_calls.is_empty() {
+            return content.to_string();
+        }
+
+        let tool_calls_json =
+            serde_json::to_string(tool_calls).unwrap_or_else(|_| "[]".to_string());
+        if content.contains("[tool_calls]") {
+            return content.to_string();
+        }
+        if content.trim().is_empty() {
+            format!("[tool_calls] {tool_calls_json}")
+        } else {
+            format!("{content}\n[tool_calls] {tool_calls_json}")
+        }
+    }
+
     /// Internal workflow execution with mode-specific optimizations and tool call handling.
     /// When `guardrail_enforcer` is `Some`, the core encodes before LLM and decodes after LLM;
     /// we decode before tool usage only (no encode after tool).
@@ -439,11 +1379,9 @@ impl Executor {
         let conditional_handlers =
             crate::workflow::node::build_core_conditional_handlers(&workflow)?;
         let executor = match config.mode {
-            ExecutionMode::Balanced => {
-                CoreWorkflowExecutor::new()
-                    .with_default_llm_config(llm_config.clone())
-                    .with_conditional_handlers(conditional_handlers)
-            }
+            ExecutionMode::Balanced => CoreWorkflowExecutor::new()
+                .with_default_llm_config(llm_config.clone())
+                .with_conditional_handlers(conditional_handlers),
         };
 
         // Execute the workflow (core applies encode before LLM, decode after LLM when enforcer is Some)
@@ -1030,12 +1968,12 @@ impl Executor {
                                 let is_final_llm_call = next_response.tool_calls.is_empty();
                                 if let Some(enforcer) = guardrail_enforcer {
                                     if !is_final_llm_call {
-                                    let payload = serde_json::json!({
-                                        "content": next_response.content.clone(),
-                                        "tool_calls": next_response.tool_calls.clone(),
-                                    });
-                                    let decoded_result =
-                                        enforcer.decode(payload, DecodeContext::LlmResponse);
+                                        let payload = serde_json::json!({
+                                            "content": next_response.content.clone(),
+                                            "tool_calls": next_response.tool_calls.clone(),
+                                        });
+                                        let decoded_result =
+                                            enforcer.decode(payload, DecodeContext::LlmResponse);
                                         if decoded_result.rules_applied_count > 0 {
                                             executions.push(serde_json::json!({
                                                 "type": "guardrail_policy",
@@ -1045,20 +1983,22 @@ impl Executor {
                                                 "policy_name": decoded_result.policy_name
                                             }));
                                         }
-                                    if let Some(content) = decoded_result
-                                        .payload
-                                        .get("content")
-                                        .and_then(|v| v.as_str())
-                                    {
-                                        next_content = content.to_string();
-                                    }
-                                    if let Some(tc) = decoded_result.payload.get("tool_calls") {
-                                        if let Ok(parsed) =
-                                            serde_json::from_value::<Vec<LlmToolCall>>(tc.clone())
+                                        if let Some(content) = decoded_result
+                                            .payload
+                                            .get("content")
+                                            .and_then(|v| v.as_str())
                                         {
-                                            next_tool_calls = parsed;
+                                            next_content = content.to_string();
                                         }
-                                    }
+                                        if let Some(tc) = decoded_result.payload.get("tool_calls") {
+                                            if let Ok(parsed) =
+                                                serde_json::from_value::<Vec<LlmToolCall>>(
+                                                    tc.clone(),
+                                                )
+                                            {
+                                                next_tool_calls = parsed;
+                                            }
+                                        }
                                     }
                                 }
 
@@ -1300,5 +2240,593 @@ impl Executor {
         // Update average duration (simple moving average)
         self.stats.average_duration_ms =
             self.stats.total_duration_ms as f64 / self.stats.total_executions as f64;
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WorkflowStreamIterator
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Convert a `StreamEvent` into a Python dict.
+///
+/// The dict always has an `"event"` key with the event type name, plus
+/// all event fields as additional keys — matching the JSON serialisation
+/// defined in `core/src/stream.rs`.
+#[inline]
+fn json_to_string_lossy<T: Serialize>(value: &T) -> String {
+    serde_json::to_string(value).unwrap_or_default()
+}
+
+#[inline]
+fn event_category_phase(event: &StreamEvent) -> (&'static str, &'static str) {
+    use graphbit_core::stream::StreamEvent::*;
+    match event {
+        StreamEvent::WorkflowStarted { .. } => ("workflow", "started"),
+        StreamEvent::WorkflowCompleted { .. } => ("workflow", "completed"),
+        StreamEvent::WorkflowFailed { .. } => ("workflow", "failed"),
+        NodeStarted { .. } => ("node", "started"),
+        NodeCompleted { .. } => ("node", "completed"),
+        NodeFailed { .. } => ("node", "failed"),
+        Token { .. } => ("llm", "token"),
+        LlmCallStarted { .. } => ("llm", "started"),
+        LlmCallCompleted { .. } => ("llm", "completed"),
+        ToolCallStarted { .. } => ("tool", "started"),
+        ToolCallCompleted { .. } => ("tool", "completed"),
+        ToolCallFailed { .. } => ("tool", "failed"),
+    }
+}
+
+fn make_event_schema<'py>(
+    py: Python<'py>,
+    event: &str,
+    description: &str,
+    category_value: &str,
+    phase_value: &str,
+    fields: &[(&str, &str, &str)],
+) -> PyResult<Bound<'py, PyDict>> {
+    let event_dict = PyDict::new(py);
+    event_dict.set_item("event", event)?;
+    event_dict.set_item("description", description)?;
+    event_dict.set_item("category_value", category_value)?;
+    event_dict.set_item("phase_value", phase_value)?;
+
+    let fields_list = PyList::empty(py);
+    let time_field = PyDict::new(py);
+    time_field.set_item("name", "time")?;
+    time_field.set_item("type", "str")?;
+    time_field.set_item("description", "Event timestamp in RFC3339 format (UTC)")?;
+    fields_list.append(time_field)?;
+    let category_field = PyDict::new(py);
+    category_field.set_item("name", "category")?;
+    category_field.set_item("type", "str")?;
+    category_field.set_item("description", "Generic event family: workflow | node | llm | tool")?;
+    fields_list.append(category_field)?;
+    let phase_field = PyDict::new(py);
+    phase_field.set_item("name", "phase")?;
+    phase_field.set_item("type", "str")?;
+    phase_field.set_item(
+        "description",
+        "Generic lifecycle phase: started | completed | failed | token",
+    )?;
+    fields_list.append(phase_field)?;
+
+    for (name, field_type, field_description) in fields {
+        let field_dict = PyDict::new(py);
+        field_dict.set_item("name", *name)?;
+        field_dict.set_item("type", *field_type)?;
+        field_dict.set_item("description", *field_description)?;
+        fields_list.append(field_dict)?;
+    }
+    event_dict.set_item("fields", fields_list)?;
+    Ok(event_dict)
+}
+
+fn stream_event_schema_dict<'py>(py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
+    let schema = PyDict::new(py);
+    schema.set_item(
+        "description",
+        "Streaming workflow event schema for execute_streaming()",
+    )?;
+    schema.set_item("version", 1)?;
+    let dimensions = PyDict::new(py);
+    dimensions.set_item(
+        "event",
+        "Exact concrete event name (stable, specific contract)",
+    )?;
+    dimensions.set_item(
+        "category",
+        "Generic event family for grouping/filtering: workflow | node | llm | tool",
+    )?;
+    dimensions.set_item(
+        "phase",
+        "Generic lifecycle state: started | completed | failed | token",
+    )?;
+    schema.set_item("generic_dimensions", dimensions)?;
+
+    let modes = PyDict::new(py);
+    modes.set_item(
+        "updates",
+        "Node/workflow lifecycle + LLM lifecycle + tool lifecycle (no token streaming)",
+    )?;
+    modes.set_item(
+        "messages",
+        "Token streaming + terminal workflow event (workflow_completed/workflow_failed)",
+    )?;
+    modes.set_item(
+        "all",
+        "All events: updates + messages",
+    )?;
+    schema.set_item("stream_modes", modes)?;
+    let event_groups = PyDict::new(py);
+    event_groups.set_item(
+        "workflow",
+        vec!["workflow_started", "workflow_completed", "workflow_failed"],
+    )?;
+    event_groups.set_item("node", vec!["node_started", "node_completed", "node_failed"])?;
+    event_groups.set_item("llm", vec!["token", "llm_call_started", "llm_call_completed"])?;
+    event_groups.set_item(
+        "tool",
+        vec![
+            "tool_call_started",
+            "tool_call_completed",
+            "tool_call_failed",
+        ],
+    )?;
+    schema.set_item("event_groups", event_groups)?;
+
+    let events = PyList::empty(py);
+    events.append(make_event_schema(
+        py,
+        "workflow_started",
+        "Workflow execution has begun",
+        "workflow",
+        "started",
+        &[
+            ("event", "str", "Event type"),
+            ("workflow_id", "str", "Workflow UUID"),
+            ("workflow_name", "str", "Workflow display name"),
+            ("total_nodes", "int", "Total number of nodes in the workflow"),
+        ],
+    )?)?;
+    events.append(make_event_schema(
+        py,
+        "node_started",
+        "Node execution has begun",
+        "node",
+        "started",
+        &[
+            ("event", "str", "Event type"),
+            ("node_id", "str", "Node UUID"),
+            ("node_name", "str", "Node display name"),
+        ],
+    )?)?;
+    events.append(make_event_schema(
+        py,
+        "node_completed",
+        "Node finished successfully",
+        "node",
+        "completed",
+        &[
+            ("event", "str", "Event type"),
+            ("node_id", "str", "Node UUID"),
+            ("node_name", "str", "Node display name"),
+            ("output", "str", "Node output serialized for Python stream consumers"),
+        ],
+    )?)?;
+    events.append(make_event_schema(
+        py,
+        "node_failed",
+        "Node failed with an error",
+        "node",
+        "failed",
+        &[
+            ("event", "str", "Event type"),
+            ("node_id", "str", "Node UUID"),
+            ("node_name", "str", "Node display name"),
+            ("error", "str", "Human-readable error message"),
+            ("error_type", "str", "Error class hint (e.g. runtime_error, timeout_error)"),
+        ],
+    )?)?;
+    events.append(make_event_schema(
+        py,
+        "token",
+        "Incremental token/delta chunk from an LLM stream",
+        "llm",
+        "token",
+        &[
+            ("event", "str", "Event type"),
+            ("node_id", "str", "Node UUID"),
+            ("node_name", "str", "Node display name"),
+            ("llm_call_id", "str", "LLM call identifier for grouping token chunks"),
+            ("content", "str", "Token or chunk text"),
+        ],
+    )?)?;
+    events.append(make_event_schema(
+        py,
+        "llm_call_started",
+        "An LLM call started",
+        "llm",
+        "started",
+        &[
+            ("event", "str", "Event type"),
+            ("node_id", "str", "Node UUID"),
+            ("node_name", "str", "Node display name"),
+            ("llm_call_id", "str", "Provider call identifier (or generated fallback)"),
+            ("iteration", "int", "1-based call number for that node timeline"),
+            ("model", "str", "Model name used for this call"),
+        ],
+    )?)?;
+    events.append(make_event_schema(
+        py,
+        "llm_call_completed",
+        "An LLM call completed",
+        "llm",
+        "completed",
+        &[
+            ("event", "str", "Event type"),
+            ("node_id", "str", "Node UUID"),
+            ("node_name", "str", "Node display name"),
+            ("llm_call_id", "str", "Provider call identifier (or generated fallback)"),
+            ("iteration", "int", "1-based call number for that node timeline"),
+            ("finish_reason", "str", "Provider finish reason"),
+            ("output", "str", "Full output text for this LLM call"),
+            ("duration_ms", "float", "Call duration in milliseconds"),
+        ],
+    )?)?;
+    events.append(make_event_schema(
+        py,
+        "tool_call_started",
+        "Tool execution started",
+        "tool",
+        "started",
+        &[
+            ("event", "str", "Event type"),
+            ("node_id", "str", "Node UUID"),
+            ("node_name", "str", "Node display name"),
+            ("tool_name", "str", "Tool name"),
+            ("tool_call_id", "str", "Tool call identifier"),
+            (
+                "parameters",
+                "str",
+                "Tool parameters serialized as JSON string",
+            ),
+        ],
+    )?)?;
+    events.append(make_event_schema(
+        py,
+        "tool_call_completed",
+        "Tool execution completed successfully",
+        "tool",
+        "completed",
+        &[
+            ("event", "str", "Event type"),
+            ("node_id", "str", "Node UUID"),
+            ("node_name", "str", "Node display name"),
+            ("tool_name", "str", "Tool name"),
+            ("tool_call_id", "str", "Tool call identifier"),
+            ("output", "str", "Tool output serialized as JSON string"),
+            ("duration_ms", "float", "Tool execution duration in milliseconds"),
+        ],
+    )?)?;
+    events.append(make_event_schema(
+        py,
+        "tool_call_failed",
+        "Tool execution failed",
+        "tool",
+        "failed",
+        &[
+            ("event", "str", "Event type"),
+            ("node_id", "str", "Node UUID"),
+            ("node_name", "str", "Node display name"),
+            ("tool_name", "str", "Tool name"),
+            ("tool_call_id", "str", "Tool call identifier"),
+            ("error", "str", "Error message"),
+            ("error_type", "str", "Error class hint"),
+        ],
+    )?)?;
+    events.append(make_event_schema(
+        py,
+        "workflow_completed",
+        "Workflow finished successfully",
+        "workflow",
+        "completed",
+        &[
+            ("event", "str", "Event type"),
+            ("result", "WorkflowResult", "Structured workflow result object"),
+            ("outputs", "str", "Final node outputs serialized as JSON string"),
+        ],
+    )?)?;
+    events.append(make_event_schema(
+        py,
+        "workflow_failed",
+        "Workflow failed",
+        "workflow",
+        "failed",
+        &[
+            ("event", "str", "Event type"),
+            ("error", "str", "Human-readable error message"),
+            ("error_type", "str", "Error class hint"),
+        ],
+    )?)?;
+
+    schema.set_item("events", events)?;
+    Ok(schema)
+}
+
+fn stream_event_to_dict<'py>(
+    py: Python<'py>,
+    event: StreamEvent,
+    event_time: &str,
+    workflow_name: &str,
+) -> PyResult<Bound<'py, PyDict>> {
+    use graphbit_core::stream::StreamEvent::*;
+    let dict = PyDict::new(py);
+    let (category, phase) = event_category_phase(&event);
+    dict.set_item("time", event_time)?;
+    dict.set_item("category", category)?;
+    dict.set_item("phase", phase)?;
+    match event {
+        WorkflowStarted {
+            workflow_id,
+            workflow_name,
+            total_nodes,
+        } => {
+            dict.set_item("event", "workflow_started")?;
+            dict.set_item("workflow_id", workflow_id)?;
+            dict.set_item("workflow_name", workflow_name)?;
+            dict.set_item("total_nodes", total_nodes)?;
+        }
+        NodeStarted { node_id, node_name } => {
+            dict.set_item("event", "node_started")?;
+            dict.set_item("node_id", node_id)?;
+            dict.set_item("node_name", node_name)?;
+        }
+        NodeCompleted {
+            node_id,
+            node_name,
+            output,
+        } => {
+            dict.set_item("event", "node_completed")?;
+            dict.set_item("node_id", node_id)?;
+            dict.set_item("node_name", node_name)?;
+            match output {
+                serde_json::Value::String(s) => {
+                    dict.set_item("output", s)?;
+                }
+                other => {
+                    dict.set_item("output", json_to_string_lossy(&other))?;
+                }
+            }
+        }
+        NodeFailed {
+            node_id,
+            node_name,
+            error,
+            error_type,
+        } => {
+            dict.set_item("event", "node_failed")?;
+            dict.set_item("node_id", node_id)?;
+            dict.set_item("node_name", node_name)?;
+            dict.set_item("error", error)?;
+            dict.set_item("error_type", error_type)?;
+        }
+        Token {
+            node_id,
+            node_name,
+            llm_call_id,
+            content,
+        } => {
+            dict.set_item("event", "token")?;
+            dict.set_item("node_id", node_id)?;
+            dict.set_item("node_name", node_name)?;
+            dict.set_item("llm_call_id", llm_call_id)?;
+            dict.set_item("content", content)?;
+        }
+        ToolCallStarted {
+            node_id,
+            node_name,
+            tool_name,
+            tool_call_id,
+            parameters,
+        } => {
+            dict.set_item("event", "tool_call_started")?;
+            dict.set_item("node_id", node_id)?;
+            dict.set_item("node_name", node_name)?;
+            dict.set_item("tool_name", tool_name)?;
+            dict.set_item("tool_call_id", tool_call_id)?;
+            dict.set_item("parameters", json_to_string_lossy(&parameters))?;
+        }
+        ToolCallCompleted {
+            node_id,
+            node_name,
+            tool_name,
+            tool_call_id,
+            output,
+            duration_ms,
+        } => {
+            dict.set_item("event", "tool_call_completed")?;
+            dict.set_item("node_id", node_id)?;
+            dict.set_item("node_name", node_name)?;
+            dict.set_item("tool_name", tool_name)?;
+            dict.set_item("tool_call_id", tool_call_id)?;
+            dict.set_item("output", json_to_string_lossy(&output))?;
+            dict.set_item("duration_ms", duration_ms)?;
+        }
+        ToolCallFailed {
+            node_id,
+            node_name,
+            tool_name,
+            tool_call_id,
+            error,
+            error_type,
+        } => {
+            dict.set_item("event", "tool_call_failed")?;
+            dict.set_item("node_id", node_id)?;
+            dict.set_item("node_name", node_name)?;
+            dict.set_item("tool_name", tool_name)?;
+            dict.set_item("tool_call_id", tool_call_id)?;
+            dict.set_item("error", error)?;
+            dict.set_item("error_type", error_type)?;
+        }
+        LlmCallStarted {
+            node_id,
+            node_name,
+            llm_call_id,
+            iteration,
+            model,
+        } => {
+            dict.set_item("event", "llm_call_started")?;
+            dict.set_item("node_id", node_id)?;
+            dict.set_item("node_name", node_name)?;
+            dict.set_item("llm_call_id", llm_call_id)?;
+            dict.set_item("iteration", iteration)?;
+            dict.set_item("model", model)?;
+        }
+        LlmCallCompleted {
+            node_id,
+            node_name,
+            llm_call_id,
+            iteration,
+            finish_reason,
+            output,
+            duration_ms,
+        } => {
+            dict.set_item("event", "llm_call_completed")?;
+            dict.set_item("node_id", node_id)?;
+            dict.set_item("node_name", node_name)?;
+            dict.set_item("llm_call_id", llm_call_id)?;
+            dict.set_item("iteration", iteration)?;
+            dict.set_item("finish_reason", finish_reason)?;
+            dict.set_item("output", output)?;
+            dict.set_item("duration_ms", duration_ms)?;
+        }
+        WorkflowCompleted { mut context } => {
+            // Inject the workflow name into the context metadata so WorkflowResult
+            // picks it up via get_all_node_response_metadata() — matching non-streaming parity.
+            context.metadata.insert(
+                "workflow_name".to_string(),
+                serde_json::Value::String(workflow_name.to_string()),
+            );
+            dict.set_item("event", "workflow_completed")?;
+            dict.set_item("result", WorkflowResult::new(context.clone()))?;
+            dict.set_item("outputs", json_to_string_lossy(&context.node_outputs))?;
+        }
+        WorkflowFailed { error, error_type } => {
+            dict.set_item("event", "workflow_failed")?;
+            dict.set_item("error", error)?;
+            dict.set_item("error_type", error_type)?;
+        }
+    }
+    Ok(dict)
+}
+
+/// Synchronous iterator over streaming workflow events.
+///
+/// Each call to `__next__` blocks until the next `StreamEvent` arrives from
+/// the Tokio runtime (the GIL is released during the wait), then returns a
+/// Python `dict` describing the event.  Iteration ends automatically when the
+/// channel closes — i.e., after `WorkflowCompleted` or `WorkflowFailed`.
+///
+/// Usage
+/// -----
+/// ```python
+/// for event in executor.execute_streaming(workflow):
+///     if event["event"] == "token":
+///         print(event["content"], end="", flush=True)
+/// ```
+#[pyclass]
+pub struct WorkflowStreamIterator {
+    /// `tokio::sync::Mutex` so the guard is `Send` and can be held across `.await`.
+    receiver: Arc<tokio::sync::Mutex<tokio::sync::mpsc::Receiver<TimedStreamEvent>>>,
+    /// Set to `true` after the channel has been fully drained.
+    done: bool,
+    /// The name of the workflow being streamed — injected into the terminal event context
+    /// so that `WorkflowResult::get_all_node_response_metadata()` returns the correct name.
+    workflow_name: String,
+}
+
+#[pymethods]
+impl WorkflowStreamIterator {
+    /// Return `self` so the iterator protocol works for `for event in iterator`.
+    fn __iter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
+        slf
+    }
+
+    /// Yield the next event dict, or raise `StopIteration` when done.
+    ///
+    /// The GIL is released while waiting on the channel by using
+    /// `allow_threads`, so Python threads and the Tokio runtime can continue
+    /// executing concurrently.
+    fn __next__<'a>(&mut self, py: Python<'a>) -> PyResult<Bound<'a, PyDict>> {
+        if self.done {
+            return Err(PyStopIteration::new_err(()));
+        }
+
+        let receiver = self.receiver.clone();
+        // Block this thread (GIL released) until an event arrives or channel closes.
+        // `block_on` on the shared runtime drives the async recv to completion.
+        let maybe_event = py.allow_threads(move || {
+            get_runtime().block_on(async move {
+                let mut rx = receiver.lock().await;
+                rx.recv().await
+            })
+        });
+
+        match maybe_event {
+            Some((event, event_time)) => {
+                // Mark done *after* returning the last real event so callers
+                // see WorkflowCompleted / WorkflowFailed before StopIteration.
+                if matches!(
+                    event,
+                    StreamEvent::WorkflowCompleted { .. } | StreamEvent::WorkflowFailed { .. }
+                ) {
+                    self.done = true;
+                }
+                stream_event_to_dict(py, event, &event_time, &self.workflow_name)
+            }
+            None => {
+                // Channel closed — stream is exhausted
+                self.done = true;
+                Err(PyStopIteration::new_err(()))
+            }
+        }
+    }
+
+    /// Async variant: return `self` for `async for event in iterator`.
+    fn __aiter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
+        slf
+    }
+
+    /// Async next: drives the channel receive inside a Tokio future so it
+    /// can be `await`ed from an async Python context.
+    /// Uses `tokio::sync::Mutex` so the guard is `Send` across the `.await` point.
+    fn __anext__<'py>(&mut self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+        if self.done {
+            return Err(pyo3::exceptions::PyStopAsyncIteration::new_err(()));
+        }
+
+        let receiver = self.receiver.clone();
+        let wf_name = self.workflow_name.clone();
+        pyo3_async_runtimes::tokio::future_into_py(py, async move {
+            let mut rx = receiver.lock().await;
+            let maybe_event = rx.recv().await;
+            drop(rx); // release the tokio Mutex before re-acquiring the GIL
+            match maybe_event {
+                Some((event, event_time)) => Python::with_gil(|py| {
+                    stream_event_to_dict(py, event, &event_time, &wf_name)
+                        .map(|d| d.into_any().unbind())
+                }),
+                None => Err(pyo3::exceptions::PyStopAsyncIteration::new_err(())),
+            }
+        })
+    }
+
+    /// Human-readable repr for the REPL.
+    fn __repr__(&self) -> String {
+        if self.done {
+            "WorkflowStreamIterator(exhausted)".to_string()
+        } else {
+            "WorkflowStreamIterator(active)".to_string()
+        }
     }
 }

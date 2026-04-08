@@ -47,13 +47,15 @@ pub use document_loader::{PyDocumentContent, PyDocumentLoader, PyDocumentLoaderC
 pub use embeddings::{EmbeddingClient, EmbeddingConfig};
 pub use guardrail::GuardRailPolicyConfig;
 pub use llm::{LlmClient, LlmConfig, PyFinishReason, PyLlmResponse, PyLlmToolCall, PyLlmUsage};
+pub use memory::{MemoryClient, PyMemory, PyMemoryConfig, PyMemoryHistory, PyScoredMemory};
 pub use text_splitter::{
     CharacterSplitter, RecursiveSplitter, SentenceSplitter, TextChunk, TextSplitterConfig,
     TokenSplitter,
 };
 pub use tools::{ToolDecorator, ToolExecutor, ToolRegistry, ToolResult};
-pub use memory::{MemoryClient, PyMemory, PyMemoryConfig, PyMemoryHistory, PyScoredMemory};
-pub use workflow::{Executor, Node, Workflow, WorkflowContext, WorkflowResult};
+pub use workflow::{
+    Executor, Node, Workflow, WorkflowContext, WorkflowResult, WorkflowStreamIterator,
+};
 
 /// Global initialization flag to ensure init is called only once
 static INIT: Once = Once::new();
@@ -398,6 +400,7 @@ fn graphbit(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<Workflow>()?;
     m.add_class::<WorkflowContext>()?;
     m.add_class::<WorkflowResult>()?;
+    m.add_class::<WorkflowStreamIterator>()?;
     m.add_class::<Executor>()?;
 
     // Embedding classes

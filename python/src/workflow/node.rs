@@ -318,6 +318,15 @@ impl Node {
             );
 
             Python::with_gil(|py| {
+                use crate::tools::decorator::get_global_registry;
+                let global_registry = get_global_registry();
+                let global_guard = global_registry.lock().map_err(|e| {
+                    PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+                        "Failed to acquire global tool registry lock: {}",
+                        e
+                    ))
+                })?;
+
                 TOOL_REGISTRY.with(|registry| {
                     let mut registry = registry.borrow_mut();
                     for (i, tool) in tools_list.iter().enumerate() {
@@ -325,11 +334,31 @@ impl Node {
                             .getattr("__name__")
                             .and_then(|name| name.extract::<String>())
                             .unwrap_or_else(|_| format!("tool_{}", i));
-                        let py_obj = tool.into_pyobject(py).unwrap();
-                        registry.insert(tool_name, py_obj.into_any().unbind());
+                        let py_obj = tool.clone().into_pyobject(py).unwrap();
+                        registry.insert(tool_name.clone(), py_obj.into_any().unbind());
+
+                        // Mirror registration into process-wide global registry so tool calls
+                        // executed from Tokio worker threads can still resolve Python callables.
+                        if let Some(schema) = tool_schemas.get(i) {
+                            let description = schema
+                                .get("description")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("Tool function")
+                                .to_string();
+                            let params_dict = PyDict::new(py);
+
+                            let _ = global_guard.register_tool(
+                                tool_name.clone(),
+                                description,
+                                tool.clone().into_pyobject(py).unwrap().into_any().unbind(),
+                                &params_dict,
+                                None,
+                            );
+                        }
                     }
                 });
-            });
+                Ok::<(), PyErr>(())
+            })?;
         }
 
         Ok(Self { inner: node })
@@ -1158,29 +1187,62 @@ pub(crate) fn execute_production_tool_calls(
             let start_time = chrono::Utc::now();
             let start_instant = std::time::Instant::now();
 
-            // Execute the tool
-            let result_json = match registry.execute_tool(tool_name, &params_dict, py) {
-                Ok(tool_result) => {
-                    let end_time = chrono::Utc::now();
-                    let duration = start_instant.elapsed();
-                    let duration_ms = duration.as_millis() as u64;
+            // Execute the tool. Prefer the local registry, but fall back to
+            // process-wide global registry so tool execution also works from
+            // Tokio worker threads in streaming mode.
+            let local_has_tool = registry.has_tool(tool_name).unwrap_or(false);
+            let result_json = if local_has_tool {
+                match registry.execute_tool(tool_name, &params_dict, py) {
+                    Ok(tool_result) => {
+                        let end_time = chrono::Utc::now();
+                        let duration = start_instant.elapsed();
+                        let duration_ms = duration.as_millis() as u64;
 
-                    serde_json::json!({
-                        "tool_name": tool_name,
-                        "output": tool_result.output,
-                        "success": tool_result.success,
-                        "error": tool_result.error,
-                        "start_time": start_time.to_rfc3339(),
-                        "end_time": end_time.to_rfc3339(),
-                        "latency_ms": duration_ms
-                    })
+                        serde_json::json!({
+                            "tool_name": tool_name,
+                            "output": tool_result.output,
+                            "success": tool_result.success,
+                            "error": tool_result.error,
+                            "start_time": start_time.to_rfc3339(),
+                            "end_time": end_time.to_rfc3339(),
+                            "latency_ms": duration_ms
+                        })
+                    }
+                    Err(e) => {
+                        let end_time = chrono::Utc::now();
+                        let duration = start_instant.elapsed();
+                        let duration_ms = duration.as_millis() as u64;
+
+                        serde_json::json!({
+                            "tool_name": tool_name,
+                            "output": "",
+                            "success": false,
+                            "error": e.to_string(),
+                            "start_time": start_time.to_rfc3339(),
+                            "end_time": end_time.to_rfc3339(),
+                            "latency_ms": duration_ms
+                        })
+                    }
                 }
-                Err(e) => {
-                    let end_time = chrono::Utc::now();
-                    let duration = start_instant.elapsed();
-                    let duration_ms = duration.as_millis() as u64;
-
-                    serde_json::json!({
+            } else {
+                let end_time = chrono::Utc::now();
+                let duration = start_instant.elapsed();
+                let duration_ms = duration.as_millis() as u64;
+                match execute_tool_from_global_registry(py, tool_name, parameters) {
+                    Ok(output_text) => {
+                        let looks_like_error =
+                            output_text.contains("Error -") || output_text.contains("not found");
+                        serde_json::json!({
+                            "tool_name": tool_name,
+                            "output": if looks_like_error { serde_json::Value::String(String::new()) } else { serde_json::Value::String(output_text.clone()) },
+                            "success": !looks_like_error,
+                            "error": if looks_like_error { serde_json::Value::String(output_text) } else { serde_json::Value::Null },
+                            "start_time": start_time.to_rfc3339(),
+                            "end_time": end_time.to_rfc3339(),
+                            "latency_ms": duration_ms
+                        })
+                    }
+                    Err(e) => serde_json::json!({
                         "tool_name": tool_name,
                         "output": "",
                         "success": false,
@@ -1188,7 +1250,7 @@ pub(crate) fn execute_production_tool_calls(
                         "start_time": start_time.to_rfc3339(),
                         "end_time": end_time.to_rfc3339(),
                         "latency_ms": duration_ms
-                    })
+                    }),
                 }
             };
 

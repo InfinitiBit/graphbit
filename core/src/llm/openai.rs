@@ -9,6 +9,7 @@ use async_trait::async_trait;
 use futures::stream::{Stream, StreamExt};
 use reqwest::Client;
 use serde::{Deserialize, Deserializer, Serialize};
+use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 use tokio::time::timeout;
 
@@ -168,14 +169,7 @@ impl OpenAiProvider {
             })
             .collect();
 
-        let finish_reason = match choice.finish_reason.as_deref() {
-            Some("stop") => FinishReason::Stop,
-            Some("length") => FinishReason::Length,
-            Some("tool_calls") => FinishReason::ToolCalls,
-            Some("content_filter") => FinishReason::ContentFilter,
-            Some(other) => FinishReason::Other(other.to_string()),
-            None => FinishReason::Stop,
-        };
+        let finish_reason = parse_finish_reason(choice.finish_reason.as_deref());
 
         let usage = LlmUsage::new(
             response.usage.prompt_tokens,
@@ -225,6 +219,7 @@ impl LlmProviderTrait for OpenAiProvider {
                 None
             },
             stream: None, // Disable streaming for complete method
+            stream_options: None,
         };
 
         // Add extra parameters
@@ -306,6 +301,10 @@ impl LlmProviderTrait for OpenAiProvider {
                 None
             },
             stream: Some(true), // Enable streaming
+            // Request terminal usage chunk so workflow metadata token usage matches non-streaming.
+            stream_options: Some(OpenAiStreamOptions {
+                include_usage: true,
+            }),
         };
 
         // Add extra parameters
@@ -376,20 +375,31 @@ impl LlmProviderTrait for OpenAiProvider {
         let model = self.model.clone();
         let byte_stream = response.bytes_stream();
 
-        // State tuple: (byte_stream, buffer, timeout_occurred, consecutive_parse_errors, total_parse_errors)
+        // State: byte_stream, buffer, timeout / parse error counters, accumulated tool-call
+        // fragments from `delta.tool_calls`, and which tool-call indices were announced.
         // - consecutive_parse_errors: Resets on successful parse, triggers error if too high
         // - total_parse_errors: Running count for logging
         const MAX_CONSECUTIVE_PARSE_ERRORS: u32 = 5;
 
         // Use a stateful stream that buffers incomplete lines with timeout protection
         let stream = futures::stream::unfold(
-            (byte_stream, String::new(), false, 0u32, 0u32), // Extended state with error tracking
+            (
+                byte_stream,
+                String::new(),
+                false,
+                0u32,
+                0u32,
+                HashMap::<u32, OpenAiStreamToolAccum>::new(),
+                HashSet::<u32>::new(),
+            ),
             move |(
                 mut byte_stream,
                 mut buffer,
                 timeout_occurred,
                 mut consecutive_parse_errors,
                 mut total_parse_errors,
+                mut tool_call_accum,
+                mut announced_tool_indices,
             )| {
                 let model = model.clone();
                 async move {
@@ -399,69 +409,80 @@ impl LlmProviderTrait for OpenAiProvider {
                     }
 
                     loop {
-                        // Apply timeout to each chunk read to prevent indefinite hanging
-                        let chunk_result = match timeout(CHUNK_TIMEOUT, byte_stream.next()).await {
-                            Ok(Some(result)) => result,
-                            Ok(None) => {
-                                // Stream naturally ended
-                                // Log if there were parse errors during the stream
-                                if total_parse_errors > 0 {
-                                    tracing::warn!(
-                                        "Stream ended with {} total parse errors. Some data may have been lost.",
-                                        total_parse_errors
-                                    );
+                        // If the buffer has no complete line yet, read more bytes.
+                        // This ensures we don't block waiting for network data while
+                        // already-buffered SSE lines (e.g. terminal usage chunk) are pending.
+                        if buffer.find('\n').is_none() {
+                            // Apply timeout to each chunk read to prevent indefinite hanging
+                            let chunk_result = match timeout(CHUNK_TIMEOUT, byte_stream.next())
+                                .await
+                            {
+                                Ok(Some(result)) => result,
+                                Ok(None) => {
+                                    // Stream naturally ended
+                                    // Log if there were parse errors during the stream
+                                    if total_parse_errors > 0 {
+                                        tracing::warn!(
+                                            "Stream ended with {} total parse errors. Some data may have been lost.",
+                                            total_parse_errors
+                                        );
+                                    }
+                                    return None;
                                 }
-                                return None;
-                            }
-                            Err(_) => {
-                                // Timeout occurred - OpenAI stopped responding
-                                // Return an error so user knows the response may be incomplete
-                                tracing::warn!(
-                                    "Stream chunk timeout after {:?} - OpenAI stopped responding. \
-                                     Response may be incomplete.",
-                                    CHUNK_TIMEOUT
-                                );
-                                // Return error to notify user, then end stream
-                                return Some((
-                                    Err(GraphBitError::llm_provider(
-                                        "openai",
-                                        format!(
-                                            "Stream timeout after {:?} - response may be incomplete",
-                                            CHUNK_TIMEOUT
+                                Err(_) => {
+                                    // Timeout occurred - OpenAI stopped responding
+                                    // Return an error so user knows the response may be incomplete
+                                    tracing::warn!(
+                                        "Stream chunk timeout after {:?} - OpenAI stopped responding. \
+                                             Response may be incomplete.",
+                                        CHUNK_TIMEOUT
+                                    );
+                                    // Return error to notify user, then end stream
+                                    return Some((
+                                        Err(GraphBitError::llm_provider(
+                                            "openai",
+                                            format!(
+                                                "Stream timeout after {:?} - response may be incomplete",
+                                                CHUNK_TIMEOUT
+                                            ),
+                                        )),
+                                        (
+                                            byte_stream,
+                                            buffer,
+                                            true,
+                                            consecutive_parse_errors,
+                                            total_parse_errors,
+                                            tool_call_accum,
+                                            announced_tool_indices,
                                         ),
-                                    )),
-                                    (
-                                        byte_stream,
-                                        buffer,
-                                        true,
-                                        consecutive_parse_errors,
-                                        total_parse_errors,
-                                    ),
-                                ));
-                            }
-                        };
+                                    ));
+                                }
+                            };
 
-                        let chunk = match chunk_result {
-                            Ok(c) => c,
-                            Err(e) => {
-                                return Some((
-                                    Err(GraphBitError::llm_provider(
-                                        "openai",
-                                        format!("Stream error: {e}"),
-                                    )),
-                                    (
-                                        byte_stream,
-                                        buffer,
-                                        false,
-                                        consecutive_parse_errors,
-                                        total_parse_errors,
-                                    ),
-                                ));
-                            }
-                        };
+                            let chunk = match chunk_result {
+                                Ok(c) => c,
+                                Err(e) => {
+                                    return Some((
+                                        Err(GraphBitError::llm_provider(
+                                            "openai",
+                                            format!("Stream error: {e}"),
+                                        )),
+                                        (
+                                            byte_stream,
+                                            buffer,
+                                            false,
+                                            consecutive_parse_errors,
+                                            total_parse_errors,
+                                            tool_call_accum,
+                                            announced_tool_indices,
+                                        ),
+                                    ));
+                                }
+                            };
 
-                        // Append new data to buffer
-                        buffer.push_str(&String::from_utf8_lossy(&chunk));
+                            // Append new data to buffer
+                            buffer.push_str(&String::from_utf8_lossy(&chunk));
+                        }
 
                         // Process complete lines using drain() to avoid allocations
                         while let Some(newline_pos) = buffer.find('\n') {
@@ -494,27 +515,162 @@ impl LlmProviderTrait for OpenAiProvider {
                                         // Reset consecutive error counter on success
                                         consecutive_parse_errors = 0;
 
-                                        if let Some(choice) = stream_chunk.choices.first() {
-                                            if let Some(content) = &choice.delta.content {
-                                                if !content.is_empty() {
-                                                    let response =
-                                                        LlmResponse::new(content.clone(), &model)
-                                                            .with_id(stream_chunk.id);
-                                                    return Some((
-                                                        Ok(response),
-                                                        (
-                                                            byte_stream,
-                                                            buffer,
-                                                            false,
-                                                            consecutive_parse_errors,
-                                                            total_parse_errors,
-                                                        ),
-                                                    ));
+                                        let OpenAiStreamChunk { id, choices, usage } = stream_chunk;
+                                        let mut tool_fragment = String::new();
+                                        if let Some(choice) = choices.first() {
+                                            merge_openai_stream_tool_deltas(
+                                                &mut tool_call_accum,
+                                                &choice.delta.tool_calls,
+                                            );
+                                            tool_fragment = render_tool_call_delta_fragment(
+                                                &choice.delta.tool_calls,
+                                                &tool_call_accum,
+                                                &mut announced_tool_indices,
+                                            );
+                                        }
+                                        let streamed_tool_calls =
+                                            tool_accum_map_to_llm_calls(&tool_call_accum);
+                                        let usage = usage.map(|u| {
+                                            LlmUsage::new(u.prompt_tokens, u.completion_tokens)
+                                        });
+                                        let finish_reason = choices
+                                            .first()
+                                            .and_then(|c| c.finish_reason.as_deref())
+                                            .map(|reason| parse_finish_reason(Some(reason)));
+
+                                        if let Some(choice) = choices.first() {
+                                            let content =
+                                                choice.delta.content.clone().unwrap_or_default();
+                                            let streamed_content =
+                                                format!("{tool_fragment}{content}");
+                                            if !streamed_content.is_empty() {
+                                                let mut response =
+                                                    LlmResponse::new(streamed_content, &model)
+                                                        .with_id(id.clone())
+                                                        .with_tool_calls(
+                                                            streamed_tool_calls.clone(),
+                                                        );
+                                                if let Some(usage) = usage.clone() {
+                                                    response = response.with_usage(usage);
                                                 }
+                                                if let Some(finish_reason) = finish_reason.clone() {
+                                                    response =
+                                                        response.with_finish_reason(finish_reason);
+                                                }
+                                                return Some((
+                                                    Ok(response),
+                                                    (
+                                                        byte_stream,
+                                                        buffer,
+                                                        false,
+                                                        consecutive_parse_errors,
+                                                        total_parse_errors,
+                                                        tool_call_accum,
+                                                        announced_tool_indices,
+                                                    ),
+                                                ));
                                             }
+                                        }
+
+                                        // Terminal usage chunks are often emitted without content.
+                                        // Surface them so caller can preserve usage in final metadata.
+                                        if usage.is_some() || finish_reason.is_some() {
+                                            let text = stream_assistant_text_for_tool_calls(
+                                                String::new(),
+                                                &streamed_tool_calls,
+                                            );
+                                            let mut response = LlmResponse::new(text, &model)
+                                                .with_id(id)
+                                                .with_tool_calls(streamed_tool_calls);
+                                            if let Some(usage) = usage {
+                                                response = response.with_usage(usage);
+                                            }
+                                            if let Some(finish_reason) = finish_reason {
+                                                response =
+                                                    response.with_finish_reason(finish_reason);
+                                            }
+                                            return Some((
+                                                Ok(response),
+                                                (
+                                                    byte_stream,
+                                                    buffer,
+                                                    false,
+                                                    consecutive_parse_errors,
+                                                    total_parse_errors,
+                                                    tool_call_accum,
+                                                    announced_tool_indices,
+                                                ),
+                                            ));
                                         }
                                     }
                                     Err(e) => {
+                                        // Fallback: OpenAI may evolve chunk schema in ways our typed
+                                        // deserializer doesn't yet model. Try a best-effort JSON parse
+                                        // and extract terminal usage so workflow metadata remains accurate.
+                                        if let Ok(value) =
+                                            serde_json::from_str::<serde_json::Value>(data)
+                                        {
+                                            let prompt_tokens = value
+                                                .get("usage")
+                                                .and_then(|u| u.get("prompt_tokens"))
+                                                .and_then(|v| v.as_u64())
+                                                .unwrap_or(0)
+                                                as u32;
+                                            let completion_tokens = value
+                                                .get("usage")
+                                                .and_then(|u| u.get("completion_tokens"))
+                                                .and_then(|v| v.as_u64())
+                                                .unwrap_or(0)
+                                                as u32;
+
+                                            if prompt_tokens > 0 || completion_tokens > 0 {
+                                                let id = value
+                                                    .get("id")
+                                                    .and_then(|v| v.as_str())
+                                                    .unwrap_or_default()
+                                                    .to_string();
+                                                let finish_reason = value
+                                                    .get("choices")
+                                                    .and_then(|c| c.as_array())
+                                                    .and_then(|arr| arr.first())
+                                                    .and_then(|c| c.get("finish_reason"))
+                                                    .and_then(|v| v.as_str())
+                                                    .map(|r| parse_finish_reason(Some(r)));
+
+                                                let streamed_tool_calls =
+                                                    tool_accum_map_to_llm_calls(&tool_call_accum);
+                                                let text = stream_assistant_text_for_tool_calls(
+                                                    String::new(),
+                                                    &streamed_tool_calls,
+                                                );
+                                                let mut response = LlmResponse::new(text, &model)
+                                                    .with_usage(LlmUsage::new(
+                                                        prompt_tokens,
+                                                        completion_tokens,
+                                                    ))
+                                                    .with_tool_calls(streamed_tool_calls);
+                                                if !id.is_empty() {
+                                                    response = response.with_id(id);
+                                                }
+                                                if let Some(finish_reason) = finish_reason {
+                                                    response =
+                                                        response.with_finish_reason(finish_reason);
+                                                }
+                                                return Some((
+                                                    Ok(response),
+                                                    (
+                                                        byte_stream,
+                                                        buffer,
+                                                        false,
+                                                        consecutive_parse_errors,
+                                                        total_parse_errors,
+                                                        tool_call_accum,
+                                                        announced_tool_indices,
+                                                    ),
+                                                ));
+                                            }
+                                        }
+
                                         // Track parse errors
                                         consecutive_parse_errors += 1;
                                         total_parse_errors += 1;
@@ -547,6 +703,8 @@ impl LlmProviderTrait for OpenAiProvider {
                                                     true,
                                                     consecutive_parse_errors,
                                                     total_parse_errors,
+                                                    tool_call_accum,
+                                                    announced_tool_indices,
                                                 ),
                                             ));
                                         }
@@ -614,6 +772,13 @@ struct OpenAiRequest {
     tool_choice: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     stream: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    stream_options: Option<OpenAiStreamOptions>,
+}
+
+#[derive(Debug, Serialize)]
+struct OpenAiStreamOptions {
+    include_usage: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -687,12 +852,36 @@ where
 struct OpenAiStreamChunk {
     id: String,
     choices: Vec<OpenAiStreamChoice>,
+    #[serde(default)]
+    usage: Option<OpenAiUsage>,
 }
 
 #[derive(Debug, Deserialize)]
 struct OpenAiStreamChoice {
     delta: OpenAiDelta,
-    _finish_reason: Option<String>,
+    #[serde(default)]
+    finish_reason: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct OpenAiDeltaToolCall {
+    #[serde(default)]
+    index: Option<u32>,
+    #[serde(default)]
+    id: Option<String>,
+    #[serde(rename = "type")]
+    #[allow(dead_code)]
+    tool_type: Option<String>,
+    #[serde(default)]
+    function: Option<OpenAiDeltaFunctionPart>,
+}
+
+#[derive(Debug, Deserialize)]
+struct OpenAiDeltaFunctionPart {
+    #[serde(default)]
+    name: Option<String>,
+    #[serde(default)]
+    arguments: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -701,4 +890,243 @@ struct OpenAiDelta {
     content: Option<String>,
     #[serde(default)]
     _role: Option<String>,
+    #[serde(default)]
+    tool_calls: Vec<OpenAiDeltaToolCall>,
+}
+
+/// One tool-call slot in an SSE stream (`index`), merged across chunks.
+#[derive(Debug, Default, Clone)]
+struct OpenAiStreamToolAccum {
+    id: String,
+    name: String,
+    arguments: String,
+}
+
+fn merge_openai_stream_tool_deltas(
+    acc: &mut HashMap<u32, OpenAiStreamToolAccum>,
+    deltas: &[OpenAiDeltaToolCall],
+) {
+    for d in deltas {
+        let idx = d.index.unwrap_or(0);
+        let entry = acc.entry(idx).or_default();
+        if let Some(id) = &d.id {
+            if !id.is_empty() {
+                entry.id.clone_from(id);
+            }
+        }
+        if let Some(f) = &d.function {
+            if let Some(name) = &f.name {
+                if !name.is_empty() {
+                    entry.name.clone_from(name);
+                }
+            }
+            if let Some(args) = &f.arguments {
+                entry.arguments.push_str(args);
+            }
+        }
+    }
+}
+
+/// Render user-facing incremental text for tool-call deltas.
+/// This keeps streaming behavior close to normal token output:
+/// - one header per tool call (when first seen)
+/// - raw argument fragments appended as they arrive
+fn render_tool_call_delta_fragment(
+    deltas: &[OpenAiDeltaToolCall],
+    acc: &HashMap<u32, OpenAiStreamToolAccum>,
+    announced: &mut HashSet<u32>,
+) -> String {
+    let mut out = String::new();
+    for d in deltas {
+        let idx = d.index.unwrap_or(0);
+        if !announced.contains(&idx) {
+            let name = d
+                .function
+                .as_ref()
+                .and_then(|f| f.name.as_deref())
+                .or_else(|| acc.get(&idx).map(|t| t.name.as_str()))
+                .unwrap_or("tool");
+            out.push_str(&format!("[tool_call:{name}] "));
+            announced.insert(idx);
+        }
+        if let Some(args) = d.function.as_ref().and_then(|f| f.arguments.as_deref()) {
+            out.push_str(args);
+        }
+    }
+    out
+}
+
+fn tool_accum_map_to_llm_calls(acc: &HashMap<u32, OpenAiStreamToolAccum>) -> Vec<LlmToolCall> {
+    let mut pairs: Vec<(u32, &OpenAiStreamToolAccum)> = acc.iter().map(|(i, t)| (*i, t)).collect();
+    pairs.sort_by_key(|(i, _)| *i);
+    pairs
+        .into_iter()
+        .map(|(_, tc)| {
+            let parameters = if tc.arguments.trim().is_empty() {
+                serde_json::Value::Object(serde_json::Map::new())
+            } else {
+                match serde_json::from_str(&tc.arguments) {
+                    Ok(p) => p,
+                    Err(e) => {
+                        tracing::warn!(
+                            "Failed to parse streamed tool call arguments for '{}': {e}",
+                            tc.name
+                        );
+                        serde_json::json!(
+                            { "raw_arguments": tc.arguments }
+                        )
+                    }
+                }
+            };
+            LlmToolCall {
+                id: tc.id.clone(),
+                name: tc.name.clone(),
+                parameters,
+            }
+        })
+        .collect()
+}
+
+/// For streaming, keep textual content as-is; tool-call details are surfaced via
+/// `LlmResponse.tool_calls` and consumed by higher layers.
+fn stream_assistant_text_for_tool_calls(content: String, tool_calls: &[LlmToolCall]) -> String {
+    let _ = tool_calls;
+    content
+}
+
+fn parse_finish_reason(reason: Option<&str>) -> FinishReason {
+    match reason {
+        Some("stop") => FinishReason::Stop,
+        Some("length") => FinishReason::Length,
+        Some("tool_calls") => FinishReason::ToolCalls,
+        Some("content_filter") => FinishReason::ContentFilter,
+        Some(other) => FinishReason::Other(other.to_string()),
+        None => FinishReason::Stop,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn stream_usage_chunk_parses_with_empty_choices() {
+        let chunk = r#"{
+            "id":"chatcmpl-test",
+            "object":"chat.completion.chunk",
+            "created":1775204971,
+            "model":"gpt-4o-mini-2024-07-18",
+            "choices":[],
+            "usage":{"prompt_tokens":15,"completion_tokens":14,"total_tokens":29}
+        }"#;
+
+        let parsed: OpenAiStreamChunk =
+            serde_json::from_str(chunk).expect("usage chunk should parse");
+        assert!(parsed.choices.is_empty());
+        let usage = parsed.usage.expect("usage should be present");
+        assert_eq!(usage.prompt_tokens, 15);
+        assert_eq!(usage.completion_tokens, 14);
+    }
+
+    #[test]
+    fn stream_tool_call_deltas_merge_to_llm_calls() {
+        let chunk1: OpenAiStreamChunk = serde_json::from_value(serde_json::json!({
+            "id": "chatcmpl-toolstream",
+            "choices": [{
+                "delta": {
+                    "tool_calls": [{
+                        "index": 0,
+                        "id": "call_abc",
+                        "type": "function",
+                        "function": { "name": "add", "arguments": "" }
+                    }]
+                }
+            }]
+        }))
+        .expect("chunk1");
+
+        let chunk2: OpenAiStreamChunk = serde_json::from_value(serde_json::json!({
+            "id": "chatcmpl-toolstream",
+            "choices": [{
+                "delta": {
+                    "tool_calls": [{
+                        "index": 0,
+                        "function": { "arguments": "{\"a\": 10, \"b\": 20}" }
+                    }]
+                },
+                "finish_reason": "tool_calls"
+            }]
+        }))
+        .expect("chunk2");
+
+        let mut acc = HashMap::new();
+        merge_openai_stream_tool_deltas(&mut acc, &chunk1.choices[0].delta.tool_calls);
+        merge_openai_stream_tool_deltas(&mut acc, &chunk2.choices[0].delta.tool_calls);
+        let calls = tool_accum_map_to_llm_calls(&acc);
+        assert_eq!(calls.len(), 1);
+        assert_eq!(calls[0].id, "call_abc");
+        assert_eq!(calls[0].name, "add");
+        assert_eq!(calls[0].parameters["a"], 10);
+        assert_eq!(calls[0].parameters["b"], 20);
+    }
+
+    #[test]
+    fn stream_request_serializes_include_usage_option() {
+        let req = OpenAiRequest {
+            model: "gpt-4o-mini".to_string(),
+            messages: vec![OpenAiMessage {
+                role: "user".to_string(),
+                content: "hello".to_string(),
+                tool_calls: None,
+                tool_call_id: None,
+            }],
+            max_completion_tokens: None,
+            temperature: None,
+            top_p: None,
+            tools: None,
+            tool_choice: None,
+            stream: Some(true),
+            stream_options: Some(OpenAiStreamOptions {
+                include_usage: true,
+            }),
+        };
+
+        let value = serde_json::to_value(req).expect("request should serialize");
+        assert_eq!(value.get("stream").and_then(|v| v.as_bool()), Some(true));
+        assert_eq!(
+            value
+                .get("stream_options")
+                .and_then(|v| v.get("include_usage"))
+                .and_then(|v| v.as_bool()),
+            Some(true)
+        );
+    }
+
+    #[test]
+    fn fallback_json_usage_extraction_shape_is_supported() {
+        let chunk = serde_json::json!({
+            "id": "chatcmpl-fallback",
+            "object": "chat.completion.chunk",
+            // Intentionally omit "choices" to mimic a schema variant that would fail typed parsing.
+            "usage": {
+                "prompt_tokens": 21,
+                "completion_tokens": 9,
+                "total_tokens": 30
+            }
+        });
+
+        let prompt_tokens = chunk
+            .get("usage")
+            .and_then(|u| u.get("prompt_tokens"))
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0) as u32;
+        let completion_tokens = chunk
+            .get("usage")
+            .and_then(|u| u.get("completion_tokens"))
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0) as u32;
+
+        assert_eq!(prompt_tokens, 21);
+        assert_eq!(completion_tokens, 9);
+    }
 }
