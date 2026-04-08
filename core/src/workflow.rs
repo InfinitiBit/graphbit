@@ -319,30 +319,67 @@ impl WorkflowExecutor {
     ///
     /// When `guardrail_enforcer` is `Some`, PII is encoded before each LLM call and
     /// decoded on LLM output; tool-call boundaries are handled by the executor layer.
+    ///
+    /// This is the non-streaming entry point. It delegates to [`execute_internal`]
+    /// with no event channel, so zero overhead is added to the hot path.
     pub async fn execute(
         &self,
         workflow: Workflow,
         guardrail_enforcer: Option<Arc<Enforcer>>,
     ) -> GraphBitResult<WorkflowContext> {
         let context = WorkflowContext::new(workflow.id.clone());
-        self.execute_with_context_internal(workflow, guardrail_enforcer, context).await
+        self.execute_internal(
+            workflow,
+            guardrail_enforcer,
+            None,
+            crate::stream::StreamMode::Updates,
+            context,
+        )
+        .await
     }
 
-    pub async fn execute_with_context(
+    /// Execute a workflow with real-time streaming events.
+    ///
+    /// Identical to [`execute`] but emits [`StreamEvent`]s through `event_tx`
+    /// at every node boundary. The caller consumes events from the corresponding
+    /// `mpsc::Receiver` while this future runs (typically in a spawned task).
+    ///
+    /// # Arguments
+    /// * `workflow` — the workflow to execute
+    /// * `guardrail_enforcer` — optional PII masking enforcer
+    /// * `event_tx` — sender half of an `mpsc` channel for streaming events
+    /// * `stream_mode` — controls which event categories are emitted
+    ///
+    /// # Fire-and-forget semantics
+    /// If the receiver is dropped (e.g. the caller stops iterating early),
+    /// send failures are silently ignored — the workflow still runs to completion.
+    pub async fn execute_streaming(
         &self,
         workflow: Workflow,
         guardrail_enforcer: Option<Arc<Enforcer>>,
-        context: WorkflowContext,
+        event_tx: tokio::sync::mpsc::Sender<crate::stream::StreamEvent>,
+        stream_mode: crate::stream::StreamMode,
     ) -> GraphBitResult<WorkflowContext> {
-        self.execute_with_context_internal(workflow, guardrail_enforcer, context).await
+        let context = WorkflowContext::new(workflow.id.clone());
+        self.execute_internal(workflow, guardrail_enforcer, Some(event_tx), stream_mode, context)
+            .await
     }
 
-    async fn execute_with_context_internal(
+    /// Shared execution engine used by both [`execute`] and [`execute_streaming`].
+    ///
+    /// When `event_tx` is `Some`, node-level [`StreamEvent`]s are emitted at every
+    /// milestone. When `None` (non-streaming path) no channel operations occur, so
+    /// performance is identical to the original `execute()`.
+    async fn execute_internal(
         &self,
         workflow: Workflow,
         guardrail_enforcer: Option<Arc<Enforcer>>,
+        event_tx: Option<tokio::sync::mpsc::Sender<crate::stream::StreamEvent>>,
+        stream_mode: crate::stream::StreamMode,
         mut context: WorkflowContext,
     ) -> GraphBitResult<WorkflowContext> {
+        use crate::stream::{StreamEvent, error_type_from_graphbit_error, error_type_from_string};
+
         let start_time = std::time::Instant::now();
 
         // Set initial workflow state
@@ -351,15 +388,31 @@ impl WorkflowExecutor {
         };
 
         // Validate workflow before execution
-        workflow.validate()?;
+        if let Err(e) = workflow.validate() {
+            if let Some(ref tx) = event_tx {
+                let _ = tx
+                    .send(StreamEvent::WorkflowFailed {
+                        error: e.to_string(),
+                        error_type: error_type_from_graphbit_error(&e),
+                    })
+                    .await;
+            }
+            return Err(e);
+        }
 
         // PERFORMANCE FIX: Auto-register agents for all agent nodes found in workflow
         let agent_ids = extract_agent_ids_from_workflow(&workflow);
         if agent_ids.is_empty() {
-            return Err(GraphBitError::validation(
-                "workflow",
-                "No agents found in workflow",
-            ));
+            let err = GraphBitError::validation("workflow", "No agents found in workflow");
+            if let Some(ref tx) = event_tx {
+                let _ = tx
+                    .send(StreamEvent::WorkflowFailed {
+                        error: err.to_string(),
+                        error_type: error_type_from_graphbit_error(&err),
+                    })
+                    .await;
+            }
+            return Err(err);
         }
 
         // Auto-register missing agents to prevent lookup failures
@@ -388,7 +441,8 @@ impl WorkflowExecutor {
                                 // Extract system_prompt: Priority is AgentNodeConfig.system_prompt_override > node.config["system_prompt"]
                                 if let Some(sys_override) = &config.system_prompt_override {
                                     system_prompt = sys_override.clone();
-                                } else if let Some(prompt_value) = node.config.get("system_prompt") {
+                                } else if let Some(prompt_value) = node.config.get("system_prompt")
+                                {
                                     if let Some(prompt_str) = prompt_value.as_str() {
                                         system_prompt = prompt_str.to_string();
                                     }
@@ -448,9 +502,18 @@ impl WorkflowExecutor {
                             tracing::debug!("Auto-registered agent: {agent_id}");
                         }
                         Err(e) => {
-                            return Err(GraphBitError::workflow_execution(format!(
+                            let err = GraphBitError::workflow_execution(format!(
                                 "Failed to create agent '{agent_id_str}': {e}. This may be due to invalid API key or configuration.",
-                            )));
+                            ));
+                            if let Some(ref tx) = event_tx {
+                                let _ = tx
+                                    .send(StreamEvent::WorkflowFailed {
+                                        error: err.to_string(),
+                                        error_type: error_type_from_graphbit_error(&err),
+                                    })
+                                    .await;
+                            }
+                            return Err(err);
                         }
                     }
                 }
@@ -498,7 +561,26 @@ impl WorkflowExecutor {
         let nodes = Self::collect_executable_nodes(&workflow.graph)?;
         if nodes.is_empty() {
             context.complete();
+            // Streaming: emit WorkflowCompleted even for an empty workflow
+            if let Some(ref tx) = event_tx {
+                let _ = tx
+                    .send(StreamEvent::WorkflowCompleted {
+                        context: context.clone(),
+                    })
+                    .await;
+            }
             return Ok(context);
+        }
+
+        // ── Streaming: emit WorkflowStarted ──────────────────────────────────────
+        if let Some(ref tx) = event_tx {
+            let _ = tx
+                .send(StreamEvent::WorkflowStarted {
+                    workflow_id: workflow.id.to_string(),
+                    workflow_name: workflow.name.clone(),
+                    total_nodes: nodes.len(),
+                })
+                .await;
         }
 
         let mut total_executed = 0;
@@ -547,15 +629,33 @@ impl WorkflowExecutor {
                 .collect();
 
             if ready.is_empty() {
-                return Err(GraphBitError::workflow_execution(
-                    "No runnable nodes but workflow not finished (cycle or invalid scheduling state)"
-                        .to_string(),
-                ));
+                let err_msg = "No runnable nodes but workflow not finished (cycle or invalid scheduling state)".to_string();
+                if let Some(ref tx) = event_tx {
+                    let _ = tx
+                        .send(StreamEvent::WorkflowFailed {
+                            error: err_msg.clone(),
+                            error_type: "runtime_error".to_string(),
+                        })
+                        .await;
+                }
+                return Err(GraphBitError::workflow_execution(err_msg));
             }
 
             let batch_size = ready.len();
             let batch_ids: Vec<String> = ready.iter().map(|n| n.id.to_string()).collect();
             tracing::info!(batch_size, batch_node_ids = ?batch_ids, "Executing dynamic batch");
+
+            // ── Streaming: emit NodeStarted for each node about to run ────────────
+            if let Some(ref tx) = event_tx {
+                for node in &ready {
+                    let _ = tx
+                        .send(StreamEvent::NodeStarted {
+                            node_id: node.id.to_string(),
+                            node_name: node.name.clone(),
+                        })
+                        .await;
+                }
+            }
 
             let shared_context = Arc::new(Mutex::new(context));
             let mut tasks = Vec::with_capacity(batch_size);
@@ -571,6 +671,9 @@ impl WorkflowExecutor {
                 let node_parents = node_parents.clone();
                 let conditional_handlers = conditional_handlers.clone();
                 let workflow_graph = workflow_graph.clone();
+                // Clone the event channel sender for this task (cheap Arc clone inside Sender)
+                let task_event_tx = event_tx.clone();
+                let task_stream_mode = stream_mode;
 
                 let task = tokio::spawn(async move {
                     let task_info = TaskInfo::from_node_type(&node.node_type, &node.id);
@@ -602,6 +705,8 @@ impl WorkflowExecutor {
                         node_parents,
                         conditional_handlers,
                         workflow_graph,
+                        task_event_tx,
+                        task_stream_mode,
                     )
                     .await
                 });
@@ -621,6 +726,39 @@ impl WorkflowExecutor {
                             total_successful += 1;
                         }
                         resolved.insert(node_result.node_id.clone());
+
+                        // ── Streaming: emit NodeCompleted or NodeFailed ───────────────────
+                        if let Some(ref tx) = event_tx {
+                            let node_name = workflow
+                                .graph
+                                .get_node(&node_result.node_id)
+                                .map(|n| n.name.clone())
+                                .unwrap_or_default();
+
+                            if node_result.success {
+                                let _ = tx
+                                    .send(StreamEvent::NodeCompleted {
+                                        node_id: node_result.node_id.to_string(),
+                                        node_name,
+                                        output: node_result.output.clone(),
+                                    })
+                                    .await;
+                            } else {
+                                let error_msg = node_result
+                                    .error
+                                    .as_deref()
+                                    .unwrap_or("Unknown error")
+                                    .to_string();
+                                let _ = tx
+                                    .send(StreamEvent::NodeFailed {
+                                        node_id: node_result.node_id.to_string(),
+                                        node_name,
+                                        error: error_msg.clone(),
+                                        error_type: error_type_from_string(&error_msg),
+                                    })
+                                    .await;
+                            }
+                        }
 
                         {
                             let mut ctx = shared_context.lock().await;
@@ -757,9 +895,22 @@ impl WorkflowExecutor {
 
             if should_fail_fast {
                 let mut ctx = shared_context.lock().await;
-                ctx.fail(failure_message);
+                ctx.fail(failure_message.clone());
                 drop(ctx);
-                return Ok(Arc::try_unwrap(shared_context).unwrap().into_inner());
+                let final_ctx = Arc::try_unwrap(shared_context).unwrap().into_inner();
+
+                // ── Streaming: emit WorkflowFailed on fail-fast ──────────────────
+                if let Some(ref tx) = event_tx {
+                    let error_type = error_type_from_string(&failure_message);
+                    let _ = tx
+                        .send(StreamEvent::WorkflowFailed {
+                            error: failure_message,
+                            error_type,
+                        })
+                        .await;
+                }
+
+                return Ok(final_ctx);
             }
 
             context = Arc::try_unwrap(shared_context).unwrap().into_inner();
@@ -781,6 +932,15 @@ impl WorkflowExecutor {
 
         context.set_stats(stats);
         context.complete();
+
+        // ── Streaming: emit WorkflowCompleted ────────────────────────────────────
+        if let Some(ref tx) = event_tx {
+            let _ = tx
+                .send(StreamEvent::WorkflowCompleted {
+                    context: context.clone(),
+                })
+                .await;
+        }
 
         Ok(context)
     }
@@ -865,10 +1025,7 @@ impl WorkflowExecutor {
         handlers: Arc<HashMap<String, ConditionalRouteFn>>,
         graph: Arc<WorkflowGraph>,
     ) -> GraphBitResult<serde_json::Value> {
-        let parents = parents_map
-            .get(&node.id)
-            .cloned()
-            .unwrap_or_default();
+        let parents = parents_map.get(&node.id).cloned().unwrap_or_default();
         if parents.len() != 1 {
             return Err(GraphBitError::workflow_execution(format!(
                 "Condition node '{}' must have exactly one incoming dependency, found {}",
@@ -938,6 +1095,8 @@ impl WorkflowExecutor {
         node_parents: Arc<HashMap<NodeId, Vec<NodeId>>>,
         conditional_handlers: Arc<HashMap<String, ConditionalRouteFn>>,
         workflow_graph: Arc<WorkflowGraph>,
+        event_tx: Option<tokio::sync::mpsc::Sender<crate::stream::StreamEvent>>,
+        stream_mode: crate::stream::StreamMode,
     ) -> GraphBitResult<NodeExecutionResult> {
         let start_time = std::time::Instant::now();
         let mut attempt = 0;
@@ -995,6 +1154,8 @@ impl WorkflowExecutor {
                         context.clone(),
                         agents.clone(),
                         guardrail_enforcer.clone(),
+                        event_tx.clone(),
+                        stream_mode,
                     )
                     .await
                 }
@@ -1117,6 +1278,9 @@ impl WorkflowExecutor {
 
     /// Execute an agent node (static version).
     /// When `guardrail_enforcer` is `Some`, encodes prompt before LLM and decodes response after.
+    /// When `stream_mode.emits_tokens()` and the provider supports streaming, emits `Token`
+    /// events per chunk via `event_tx` and accumulates into a full response. Falls back to
+    /// `complete()` if the provider does not support streaming.
     async fn execute_agent_node_static(
         current_node_id: &NodeId,
         agent_node_config: &AgentNodeConfig,
@@ -1124,6 +1288,8 @@ impl WorkflowExecutor {
         context: Arc<Mutex<WorkflowContext>>,
         agents: Arc<RwLock<HashMap<crate::types::AgentId, Arc<dyn AgentTrait>>>>,
         guardrail_enforcer: Option<Arc<Enforcer>>,
+        event_tx: Option<tokio::sync::mpsc::Sender<crate::stream::StreamEvent>>,
+        stream_mode: crate::stream::StreamMode,
     ) -> GraphBitResult<serde_json::Value> {
         let agent_id = &agent_node_config.agent_id;
         let prompt_template = &agent_node_config.prompt_template;
@@ -1304,6 +1470,8 @@ impl WorkflowExecutor {
                 &node_name,
                 context.clone(),
                 guardrail_enforcer.clone(),
+                event_tx.clone(),
+                stream_mode,
             )
             .await;
             tracing::info!("Agent with tools execution result: {:?}", result);
@@ -1394,13 +1562,14 @@ impl WorkflowExecutor {
             use crate::llm::{LlmMessage, LlmRequest};
 
             // Resolve system prompt: Priority is Node Override > Agent Default
-            let system_prompt = if let Some(sys_override) = &agent_node_config.system_prompt_override {
-                Some(sys_override.clone())
-            } else if !agent.config().system_prompt.is_empty() {
-                Some(agent.config().system_prompt.clone())
-            } else {
-                None
-            };
+            let system_prompt =
+                if let Some(sys_override) = &agent_node_config.system_prompt_override {
+                    Some(sys_override.clone())
+                } else if !agent.config().system_prompt.is_empty() {
+                    Some(agent.config().system_prompt.clone())
+                } else {
+                    None
+                };
 
             // Build messages array
             let mut messages = Vec::with_capacity(2);
@@ -1426,10 +1595,136 @@ impl WorkflowExecutor {
 
             // Measure LLM call duration and capture execution timestamp
             let execution_timestamp = chrono::Utc::now();
+
+            // Emit live LLM lifecycle events for non-tool agent execution.
+            let llm_call_id_hint = format!("{}-llm-1", current_node_id);
+            if let Some(ref tx) = event_tx {
+                let _ = tx
+                    .send(crate::stream::StreamEvent::LlmCallStarted {
+                        node_id: current_node_id.to_string(),
+                        node_name: {
+                            let ctx = context.lock().await;
+                            ctx.metadata
+                                .get("node_id_to_name")
+                                .and_then(|m| m.as_object())
+                                .and_then(|m| m.get(&current_node_id.to_string()))
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("unknown")
+                                .to_string()
+                        },
+                        llm_call_id: llm_call_id_hint.clone(),
+                        iteration: 1,
+                        model: agent.llm_provider().config().model_name().to_string(),
+                    })
+                    .await;
+            }
+
             let llm_start = std::time::Instant::now();
-            let llm_response = agent.llm_provider().complete(request).await?;
+
+            // ── Token-level streaming (stream_mode = Messages | All) ──────────────
+            // When the mode requests tokens AND the provider supports streaming,
+            // drive the stream and emit a Token event per chunk, accumulating the
+            // full content for metadata/context. Falls back to complete() transparently.
+            let llm_response = if stream_mode.emits_tokens()
+                && event_tx.is_some()
+                && agent.llm_provider().provider().supports_streaming()
+            {
+                use crate::stream::StreamEvent;
+                use futures::StreamExt;
+
+                // Get the node name for Token events (best-effort, doesn't block)
+                let token_node_name = {
+                    let ctx = context.lock().await;
+                    ctx.metadata
+                        .get("node_id_to_name")
+                        .and_then(|m| m.as_object())
+                        .and_then(|m| m.get(&current_node_id.to_string()))
+                        .and_then(|v| v.as_str())
+                        .map(str::to_string)
+                        .unwrap_or_else(|| "unknown".to_string())
+                };
+
+                // Drive the streaming response
+                // Pre-clone the request for the empty-stream fallback before moving into stream()
+                let fallback_request = request.clone();
+                let mut stream = agent.llm_provider().stream(request).await?;
+
+                // Accumulate content and keep the last full LlmResponse for metadata
+                let mut accumulated_content = String::new();
+                let mut last_response: Option<crate::llm::LlmResponse> = None;
+
+                while let Some(chunk_result) = stream.next().await {
+                    let chunk = chunk_result?;
+
+                    // Only emit non-empty content chunks as Token events
+                    if !chunk.content.is_empty() {
+                        if let Some(ref tx) = event_tx {
+                            let _ = tx
+                                .send(StreamEvent::Token {
+                                    node_id: current_node_id.to_string(),
+                                    node_name: token_node_name.clone(),
+                                    llm_call_id: llm_call_id_hint.clone(),
+                                    content: chunk.content.clone(),
+                                })
+                                .await;
+                        }
+                        accumulated_content.push_str(&chunk.content);
+                    }
+                    last_response = Some(chunk);
+                }
+
+                // Build a complete LlmResponse from the accumulated stream
+                match last_response {
+                    Some(mut final_resp) => {
+                        // Streamed text tokens; keep provider `content` when no deltas had text
+                        // (e.g. tool-only streams still set placeholder + tool_calls on the last chunk).
+                        if !accumulated_content.is_empty() {
+                            final_resp.content = accumulated_content;
+                        }
+                        final_resp
+                    }
+                    None => {
+                        // Empty stream — fall back to complete() to get a proper response
+                        tracing::warn!(
+                            node_id = %current_node_id,
+                            "LLM stream returned 0 chunks; falling back to complete()"
+                        );
+                        agent.llm_provider().complete(fallback_request).await?
+                    }
+                }
+            } else {
+                // Standard (non-streaming) path — identical to previous behaviour
+                agent.llm_provider().complete(request).await?
+            };
+
             let llm_duration_ms = llm_start.elapsed().as_secs_f64() * 1000.0;
             let llm_end_timestamp = chrono::Utc::now();
+
+            if let Some(ref tx) = event_tx {
+                let _ = tx
+                    .send(crate::stream::StreamEvent::LlmCallCompleted {
+                        node_id: current_node_id.to_string(),
+                        node_name: {
+                            let ctx = context.lock().await;
+                            ctx.metadata
+                                .get("node_id_to_name")
+                                .and_then(|m| m.as_object())
+                                .and_then(|m| m.get(&current_node_id.to_string()))
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("unknown")
+                                .to_string()
+                        },
+                        llm_call_id: llm_response.id.clone().unwrap_or(llm_call_id_hint),
+                        iteration: 1,
+                        finish_reason: format!("{}", llm_response.finish_reason),
+                        output: Self::append_tool_calls_to_llm_output(
+                            &llm_response.content,
+                            &llm_response.tool_calls,
+                        ),
+                        duration_ms: llm_duration_ms,
+                    })
+                    .await;
+            }
 
             // Get provider name for metadata
             let provider_name = agent.llm_provider().config().provider_name().to_string();
@@ -1601,6 +1896,15 @@ impl WorkflowExecutor {
 
     /// Execute an agent with tool calling orchestration.
     /// When `guardrail_enforcer` is `Some`, encodes prompt before LLM and decodes response after.
+    /// When `stream_mode.emits_tool_events()` and `event_tx` is `Some`, emits `ToolCallStarted`
+    /// for each tool call requested by the LLM before returning the `tool_calls_required` response
+    /// to the Python layer (which handles actual execution and must emit `ToolCallCompleted` /
+    /// `ToolCallFailed`).
+    ///
+    /// When `stream_mode.emits_tokens()`, `event_tx` is `Some`, and the provider supports
+    /// streaming, the initial tool-selection LLM call uses [`LlmProvider::stream`] and emits
+    /// [`crate::stream::StreamEvent::Token`] per chunk; otherwise that call uses
+    /// [`LlmProvider::complete`] (same as non-streaming `execute()`).
     async fn execute_agent_with_tools(
         _agent_id: &crate::types::AgentId,
         agent_node_config: &AgentNodeConfig,
@@ -1613,6 +1917,8 @@ impl WorkflowExecutor {
         node_name: &str,
         context: Arc<Mutex<WorkflowContext>>,
         guardrail_enforcer: Option<Arc<Enforcer>>,
+        event_tx: Option<tokio::sync::mpsc::Sender<crate::stream::StreamEvent>>,
+        stream_mode: crate::stream::StreamMode,
     ) -> GraphBitResult<serde_json::Value> {
         tracing::info!("Starting execute_agent_with_tools for agent: {_agent_id}");
         use crate::llm::{LlmMessage, LlmRequest, LlmTool};
@@ -1783,12 +2089,95 @@ impl WorkflowExecutor {
             request.tools.len()
         );
 
+        // Emit live LLM call lifecycle events for the initial tool-selection call.
+        let initial_llm_call_id = format!("{}-llm-1", node_id);
+        if let Some(ref tx) = event_tx {
+            let _ = tx
+                .send(crate::stream::StreamEvent::LlmCallStarted {
+                    node_id: node_id.to_string(),
+                    node_name: node_name.to_string(),
+                    llm_call_id: initial_llm_call_id.clone(),
+                    iteration: 1,
+                    model: agent.llm_provider().config().model_name().to_string(),
+                })
+                .await;
+        }
+
         // Measure LLM call duration and capture execution timestamp
         let execution_timestamp = chrono::Utc::now();
         let llm_start = std::time::Instant::now();
-        let mut llm_response = agent.llm_provider().complete(request).await?;
+        // Token streaming only when explicitly requested and a stream channel exists — matches
+        // the no-tools agent path. Non-streaming `execute()` uses `event_tx: None` / Updates mode.
+        let mut llm_response = if stream_mode.emits_tokens()
+            && event_tx.is_some()
+            && agent.llm_provider().provider().supports_streaming()
+        {
+            use crate::stream::StreamEvent;
+            use futures::StreamExt;
+
+            let token_node_name = node_name.to_string();
+            let fallback_request = request.clone();
+            let mut stream = agent.llm_provider().stream(request).await?;
+
+            let mut accumulated_content = String::new();
+            let mut last_response: Option<crate::llm::LlmResponse> = None;
+
+            while let Some(chunk_result) = stream.next().await {
+                let chunk = chunk_result?;
+
+                if !chunk.content.is_empty() {
+                    if let Some(ref tx) = event_tx {
+                        let _ = tx
+                            .send(StreamEvent::Token {
+                                node_id: node_id.to_string(),
+                                node_name: token_node_name.clone(),
+                                llm_call_id: initial_llm_call_id.clone(),
+                                content: chunk.content.clone(),
+                            })
+                            .await;
+                    }
+                    accumulated_content.push_str(&chunk.content);
+                }
+                last_response = Some(chunk);
+            }
+
+            match last_response {
+                Some(mut final_resp) => {
+                    if !accumulated_content.is_empty() {
+                        final_resp.content = accumulated_content;
+                    }
+                    final_resp
+                }
+                None => {
+                    tracing::warn!(
+                        node_id = %node_id,
+                        "LLM stream returned 0 chunks (tool path); falling back to complete()"
+                    );
+                    agent.llm_provider().complete(fallback_request).await?
+                }
+            }
+        } else {
+            agent.llm_provider().complete(request).await?
+        };
         let llm_duration_ms = llm_start.elapsed().as_secs_f64() * 1000.0;
         let llm_end_timestamp = chrono::Utc::now();
+
+        if let Some(ref tx) = event_tx {
+            let _ = tx
+                .send(crate::stream::StreamEvent::LlmCallCompleted {
+                    node_id: node_id.to_string(),
+                    node_name: node_name.to_string(),
+                    llm_call_id: llm_response.id.clone().unwrap_or(initial_llm_call_id),
+                    iteration: 1,
+                    finish_reason: format!("{}", llm_response.finish_reason),
+                    output: Self::append_tool_calls_to_llm_output(
+                        &llm_response.content,
+                        &llm_response.tool_calls,
+                    ),
+                    duration_ms: llm_duration_ms,
+                })
+                .await;
+        }
 
         // Get provider name for metadata
         let provider_name = agent.llm_provider().config().provider_name().to_string();
@@ -1979,6 +2368,35 @@ impl WorkflowExecutor {
                 "LLM made {} tool calls - these should be executed by the Python layer",
                 llm_response.tool_calls.len()
             );
+
+            // ── Streaming: emit ToolCallStarted per requested tool call ──────────
+            // Parameters are masked when guardrail is active (use the encoded params
+            // from the metadata array which was built with encoding applied above).
+            if let Some(ref tx) = event_tx {
+                for tool_call in &llm_response.tool_calls {
+                    // Mask parameters if guardrail is active
+                    let params_for_event = if let Some(ref enforcer) = guardrail_enforcer {
+                        let enc = enforcer.encode(tool_call.parameters.clone(), EncodeContext::Llm);
+                        if enc.payload.is_object() {
+                            enc.payload
+                        } else {
+                            tool_call.parameters.clone()
+                        }
+                    } else {
+                        tool_call.parameters.clone()
+                    };
+
+                    let _ = tx
+                        .send(crate::stream::StreamEvent::ToolCallStarted {
+                            node_id: node_id.to_string(),
+                            node_name: node_name.to_string(),
+                            tool_name: tool_call.name.clone(),
+                            tool_call_id: tool_call.id.clone(),
+                            parameters: params_for_event,
+                        })
+                        .await;
+                }
+            }
 
             // Instead of executing tools in Rust, return a structured response that indicates
             // tool calls need to be executed by the Python layer
@@ -2272,6 +2690,29 @@ impl WorkflowExecutor {
         // Simple topological sort - can be enhanced for better parallelism
         let nodes: Vec<WorkflowNode> = graph.get_nodes().values().cloned().collect();
         Ok(nodes)
+    }
+
+    /// Format LLM output for streaming lifecycle events.
+    /// If tool calls are present, append them so function-call fragments are visible
+    /// in `llm_call_completed.output` without introducing a new event type.
+    fn append_tool_calls_to_llm_output(
+        content: &str,
+        tool_calls: &[crate::llm::LlmToolCall],
+    ) -> String {
+        if tool_calls.is_empty() {
+            return content.to_string();
+        }
+
+        let tool_calls_json =
+            serde_json::to_string(tool_calls).unwrap_or_else(|_| "[]".to_string());
+        if content.contains("[tool_calls]") {
+            return content.to_string();
+        }
+        if content.trim().is_empty() {
+            format!("[tool_calls] {tool_calls_json}")
+        } else {
+            format!("{content}\n[tool_calls] {tool_calls_json}")
+        }
     }
 
     /// Create with custom concurrency configuration

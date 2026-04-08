@@ -37,6 +37,7 @@ pub mod errors;
 pub mod graph;
 pub mod llm;
 pub mod memory;
+pub mod stream;
 pub mod text_splitter;
 pub mod types;
 pub mod validation;
@@ -54,6 +55,7 @@ pub use llm::{LlmConfig, LlmProvider, LlmResponse};
 pub use memory::{
     Memory, MemoryConfig, MemoryHistory, MemoryId, MemoryScope, MemoryService, ScoredMemory,
 };
+pub use stream::{StreamEvent, StreamMode, error_type_from_graphbit_error, error_type_from_string};
 pub use text_splitter::{
     CharacterSplitter, RecursiveSplitter, SentenceSplitter, SplitterStrategy, TextChunk,
     TextSplitterConfig, TextSplitterFactory, TextSplitterTrait, TokenSplitter,
