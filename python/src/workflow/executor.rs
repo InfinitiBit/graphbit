@@ -11,6 +11,7 @@ use graphbit_core::workflow::WorkflowExecutor as CoreWorkflowExecutor;
 use graphbit_core::{DecodeContext, EncodeContext, Enforcer, GuardRail};
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyDict};
+use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tracing::{debug, error, info, instrument, warn};
@@ -465,12 +466,91 @@ impl Executor {
         );
 
         // Check if any node outputs contain tool_calls_required responses and handle them
-        context = Self::handle_tool_calls_in_context(
-            context,
-            &workflow,
-            guardrail_enforcer.as_ref().map(|arc| arc.as_ref()),
-        )
-        .await?;
+        let mut context = context;
+        let mut rerun_attempts = 0;
+        loop {
+            let (ctx, nodes_with_tool_calls) = Self::handle_tool_calls_in_context(
+                context,
+                &workflow,
+                guardrail_enforcer.as_ref().map(|arc| arc.as_ref()),
+            )
+            .await?;
+            context = ctx;
+
+            if nodes_with_tool_calls.is_empty() {
+                break;
+            }
+
+            // Identify downstream nodes that depend on tool-resolved outputs and need rerun.
+            // This includes nodes that themselves may have tool calls, as they can still depend on
+            // upstream nodes whose outputs were just resolved.
+            let mut downstream_nodes: HashSet<String> = HashSet::new();
+            if let Some(deps_obj) = context.metadata.get("node_dependencies").and_then(|v| v.as_object()) {
+                let mut queue: Vec<String> = nodes_with_tool_calls.clone();
+                while let Some(parent_id) = queue.pop() {
+                    for (node_id, parents) in deps_obj.iter() {
+                        if downstream_nodes.contains(node_id) {
+                            continue;
+                        }
+                        if let Some(parent_array) = parents.as_array() {
+                            if parent_array.iter().any(|p| p.as_str() == Some(&parent_id)) {
+                                downstream_nodes.insert(node_id.clone());
+                                queue.push(node_id.clone());
+                            }
+                        }
+                    }
+                }
+            }
+
+            if downstream_nodes.is_empty() {
+                break;
+            }
+
+            tracing::info!(
+                "Rerunning downstream nodes after tool resolution: {:?}",
+                downstream_nodes
+            );
+
+            // Clear outputs and metadata for downstream nodes so they will re-execute
+            if let Some(id_name_map) = context
+                .metadata
+                .get("node_id_to_name")
+                .and_then(|v| v.as_object())
+                .cloned()
+            {
+                for node_id in &downstream_nodes {
+                    context.node_outputs.remove(node_id);
+                    context.variables.remove(node_id);
+                    context.metadata.remove(&format!("node_response_{}", node_id));
+
+                    if let Some(node_name_value) = id_name_map
+                        .get(node_id)
+                        .and_then(|v| v.as_str())
+                    {
+                        context.node_outputs.remove(node_name_value);
+                        context.variables.remove(node_name_value);
+                        context.metadata.remove(&format!("node_response_{}", node_name_value));
+                    }
+                }
+            }
+
+            let conditional_handlers = crate::workflow::node::build_core_conditional_handlers(&workflow)?;
+            let executor_clone = CoreWorkflowExecutor::new()
+                .with_default_llm_config(llm_config.clone())
+                .with_conditional_handlers(conditional_handlers);
+
+            context = executor_clone
+                .execute_with_context(workflow.clone(), guardrail_enforcer.clone(), context)
+                .await?;
+
+            rerun_attempts += 1;
+            if rerun_attempts >= 3 {
+                tracing::warn!(
+                    "Maximum rerun attempts reached while resolving tool-dependent nodes"
+                );
+                break;
+            }
+        }
 
         Ok(context)
     }
@@ -492,12 +572,13 @@ impl Executor {
         mut context: graphbit_core::types::WorkflowContext,
         workflow: &graphbit_core::workflow::Workflow,
         guardrail_enforcer: Option<&Enforcer>,
-    ) -> Result<graphbit_core::types::WorkflowContext, graphbit_core::errors::GraphBitError> {
+    ) -> Result<(graphbit_core::types::WorkflowContext, Vec<String>), graphbit_core::errors::GraphBitError> {
         use crate::workflow::node::execute_production_tool_calls;
         use graphbit_core::llm::{LlmMessage, LlmProvider, LlmRequest, LlmTool, LlmToolCall};
 
         // Check each node output for tool_calls_required responses
         let node_outputs = context.node_outputs.clone();
+        let mut nodes_with_tool_calls: Vec<String> = Vec::new();
 
         for (node_id, output) in node_outputs {
             if let Ok(response_obj) = serde_json::from_value::<serde_json::Value>(output.clone()) {
@@ -527,6 +608,8 @@ impl Executor {
                             ) {
                                 continue;
                             }
+
+                            nodes_with_tool_calls.push(node.id.to_string());
 
                             // Get node name for metadata storage
                             let node_name = workflow
@@ -1267,18 +1350,74 @@ impl Executor {
                                 .metadata
                                 .insert(format!("node_response_{}", node_name), node_meta);
 
-                            let final_value = serde_json::Value::String(final_content.clone());
+                            // Create completely raw, unstructured output
+                            let tool_results_summary = all_tool_executions
+                                .iter()
+                                .map(|result| {
+                                    let success = result
+                                        .get("success")
+                                        .and_then(|v| v.as_bool())
+                                        .unwrap_or(false);
+                                    if success {
+                                        let output = result
+                                            .get("output")
+                                            .and_then(|v| v.as_str())
+                                            .unwrap_or("");
+                                        output.to_string()
+                                    } else {
+                                        let err = result
+                                            .get("error")
+                                            .and_then(|v| v.as_str())
+                                            .unwrap_or("Tool execution failed");
+                                        err.to_string()
+                                    }
+                                })
+                                .collect::<Vec<String>>()
+                                .join("\n");
+
+                            // Build completely raw, unstructured conversation output
+                            let mut comprehensive_output = String::new();
+                            
+                            // Add original prompt (raw)
+                            comprehensive_output.push_str(&original_prompt);
+                            comprehensive_output.push_str("\n\n");
+                            
+                            // Add tool results if any were made (raw)
+                            if !tool_results_summary.is_empty() {
+                                comprehensive_output.push_str(&tool_results_summary);
+                                comprehensive_output.push_str("\n\n");
+                            }
+                            
+                            // Add final answer (raw)
+                            comprehensive_output.push_str(&final_content);
+                            
+                            let final_value = serde_json::Value::String(comprehensive_output.clone());
+                            
+                            // CRITICAL: Update node outputs with resolved answer (replaces tool_calls_required)
+                            tracing::info!(
+                                "Storing resolved tool output for node '{}' ({}): {}",
+                                node_name,
+                                node.id,
+                                &comprehensive_output.chars().take(200).collect::<String>()
+                            );
+                            
                             context.set_node_output(&node.id, final_value.clone());
                             context.set_node_output_by_name(&node_name, final_value.clone());
                             context.set_variable(node_name.clone(), final_value.clone());
                             context.set_variable(node.id.to_string(), final_value);
+                            
+                            tracing::info!(
+                                "Node outputs updated: {} and {}",
+                                node.id.to_string(),
+                                node_name
+                            );
                         }
                     }
                 }
             }
         }
 
-        Ok(context)
+        Ok((context, nodes_with_tool_calls))
     }
 
     /// Update execution statistics

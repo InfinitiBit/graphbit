@@ -88,7 +88,7 @@ impl Workflow {
 
     /// Validate the workflow
     pub fn validate(&self) -> GraphBitResult<()> {
-        tracing::debug!("Workflow '{:#?}' validated successfully", self.graph);
+        // tracing::debug!("Workflow '{:#?}' validated successfully", self.graph);
         self.graph.validate()
     }
 
@@ -324,10 +324,26 @@ impl WorkflowExecutor {
         workflow: Workflow,
         guardrail_enforcer: Option<Arc<Enforcer>>,
     ) -> GraphBitResult<WorkflowContext> {
-        let start_time = std::time::Instant::now();
+        let context = WorkflowContext::new(workflow.id.clone());
+        self.execute_with_context_internal(workflow, guardrail_enforcer, context).await
+    }
 
-        // Initialize workflow context with simple constructor
-        let mut context = WorkflowContext::new(workflow.id.clone());
+    pub async fn execute_with_context(
+        &self,
+        workflow: Workflow,
+        guardrail_enforcer: Option<Arc<Enforcer>>,
+        context: WorkflowContext,
+    ) -> GraphBitResult<WorkflowContext> {
+        self.execute_with_context_internal(workflow, guardrail_enforcer, context).await
+    }
+
+    async fn execute_with_context_internal(
+        &self,
+        workflow: Workflow,
+        guardrail_enforcer: Option<Arc<Enforcer>>,
+        mut context: WorkflowContext,
+    ) -> GraphBitResult<WorkflowContext> {
+        let start_time = std::time::Instant::now();
 
         // Set initial workflow state
         context.state = WorkflowState::Running {
@@ -896,6 +912,20 @@ impl WorkflowExecutor {
         Ok(serde_json::Value::String(trimmed))
     }
 
+    fn is_tool_calls_required_output(value: &serde_json::Value) -> bool {
+        if let Some(obj) = value.as_object() {
+            if let Some(ty) = obj.get("type").and_then(|v| v.as_str()) {
+                return ty == "tool_calls_required";
+            }
+        }
+        if let Some(s) = value.as_str() {
+            if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(s) {
+                return Self::is_tool_calls_required_output(&parsed);
+            }
+        }
+        false
+    }
+
     /// Execute a node with retry logic and circuit breaker
     async fn execute_node_with_retry(
         node: WorkflowNode,
@@ -925,6 +955,20 @@ impl WorkflowExecutor {
         } else {
             None
         };
+
+        // Check whether this node already has a final resolved output in the provided context.
+        // This avoids rerunning unchanged resolved nodes during the downstream rerun pass.
+        if let Some(existing_output) = {
+            let ctx = context.lock().await;
+            ctx.get_node_output(&node.id.to_string()).cloned()
+        } {
+            if !Self::is_tool_calls_required_output(&existing_output) {
+                tracing::debug!(node_id = %node.id, node_name = %node.name, "Skipping already-resolved node execution");
+                return Ok(NodeExecutionResult::success(existing_output, node.id.clone())
+                    .with_duration(start_time.elapsed().as_millis() as u64)
+                    .with_retry_count(attempt));
+            }
+        }
 
         loop {
             // Check circuit breaker before attempting execution
@@ -1958,6 +2002,8 @@ impl WorkflowExecutor {
                 "original_prompt": original_prompt_for_response,
                 "initial_tokens_used": llm_response.usage.completion_tokens,
                 "max_tokens_configured": node_config.get("max_tokens").and_then(|v| v.as_u64()),
+                "node_id": node_id.to_string(),
+                "node_name": node_name.to_string(),
                 "message": "Tool execution should be handled by Python layer with proper tool registry"
             }))
         } else {
