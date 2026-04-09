@@ -421,7 +421,8 @@ def create_provider_optimized_agents():
         
         Please be thorough in your analysis and explain your reasoning.
         """,
-        agent_id="claude_analyzer"
+        agent_id="claude_analyzer",
+        enable_prompt_caching=True  # Enable Anthropic prompt caching for cost savings
     )
     
     # Ollama-optimized agent (concise prompts for local models)

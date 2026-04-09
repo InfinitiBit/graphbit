@@ -57,6 +57,7 @@ LLM provider abstraction:
 
 - `src/llm/mod.rs`
   - `LlmRequest`, `LlmMessage`, tool calling types (`LlmTool`, `LlmToolCall`)
+  - `LlmRequest.enable_prompt_caching` — enables Anthropic prompt caching (`cache_control` breakpoints)
   - `LlmProviderFactory` (maps `LlmConfig` → concrete provider)
 - `src/llm/providers.rs`
   - `LlmConfig` enum (provider config variants)
@@ -167,6 +168,13 @@ LLM integrations implement `LlmProviderTrait`:
 ### Tool calling
 
 `LlmRequest` can carry `tools: Vec<LlmTool>`.
+
+### Prompt caching (Anthropic)
+
+`LlmRequest.enable_prompt_caching` (bool) controls Anthropic prompt caching. When `true`, the
+Anthropic provider attaches `cache_control: {"type": "ephemeral"}` to the system prompt and the
+last tool definition, and sends the `anthropic-beta: prompt-caching-2024-07-31` header.
+`LlmUsage` includes `cache_read_tokens` and `cache_creation_tokens` for tracking cache savings.
 
 In `WorkflowExecutor`, if an agent node has `tool_schemas` in `WorkflowNode.config`, the executor will:
 

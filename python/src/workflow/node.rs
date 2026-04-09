@@ -113,7 +113,7 @@ pub struct Node {
 #[pymethods]
 impl Node {
     #[staticmethod]
-    #[pyo3(signature = (name, prompt, context=None, agent_id=None, output_name=None, tools=None, system_prompt=None, llm_config=None, temperature=None, max_tokens=None, max_iterations=None))]
+    #[pyo3(signature = (name, prompt, context=None, agent_id=None, output_name=None, tools=None, system_prompt=None, llm_config=None, temperature=None, max_tokens=None, max_iterations=None, enable_prompt_caching=false))]
     fn agent(
         name: String,
         prompt: String,
@@ -126,6 +126,7 @@ impl Node {
         temperature: Option<f32>,
         max_tokens: Option<u32>,
         max_iterations: Option<u32>,
+        enable_prompt_caching: bool,
     ) -> PyResult<Self> {
         // Validate required parameters
         if name.trim().is_empty() {
@@ -243,6 +244,14 @@ impl Node {
             node.config.insert(
                 "max_iterations".to_string(),
                 serde_json::Value::Number(serde_json::Number::from(iterations)),
+            );
+        }
+
+        // Store enable_prompt_caching flag in metadata
+        if enable_prompt_caching {
+            node.config.insert(
+                "enable_prompt_caching".to_string(),
+                serde_json::Value::Bool(true),
             );
         }
 

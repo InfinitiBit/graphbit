@@ -34,12 +34,19 @@ impl AnthropicProvider {
         })
     }
 
-    /// Convert `GraphBit` tool to `Anthropic` tool format
-    fn convert_tool(tool: &LlmTool) -> AnthropicTool {
+    /// Convert `GraphBit` tool to `Anthropic` tool format.
+    /// When `with_cache` is `true`, adds a `cache_control` breakpoint so Anthropic
+    /// caches the entire tool-definition block up to this point.
+    fn convert_tool(tool: &LlmTool, with_cache: bool) -> AnthropicTool {
         AnthropicTool {
             name: tool.name.clone(),
             description: tool.description.clone(),
             input_schema: tool.parameters.clone(),
+            cache_control: if with_cache {
+                Some(CacheControl::ephemeral())
+            } else {
+                None
+            },
         }
     }
 
@@ -48,14 +55,20 @@ impl AnthropicProvider {
     /// Anthropic uses structured content blocks for tool interactions:
     /// - Assistant tool calls → `tool_use` content blocks
     /// - Tool results → `user` message with `tool_result` content blocks
-    fn convert_messages(messages: &[LlmMessage]) -> (Option<String>, Vec<AnthropicMessage>) {
-        let mut system_prompt = None;
+    ///
+    /// When `enable_caching` is `true`, the system prompt is returned as a JSON
+    /// content-block array with a `cache_control` breakpoint so Anthropic caches it.
+    fn convert_messages(
+        messages: &[LlmMessage],
+        enable_caching: bool,
+    ) -> (Option<serde_json::Value>, Vec<AnthropicMessage>) {
+        let mut system_text: Option<String> = None;
         let mut anthropic_messages: Vec<AnthropicMessage> = Vec::new();
 
         for message in messages {
             match message.role {
                 LlmRole::System => {
-                    system_prompt = Some(message.content.clone());
+                    system_text = Some(message.content.clone());
                 }
                 LlmRole::User => {
                     anthropic_messages.push(AnthropicMessage {
@@ -116,7 +129,21 @@ impl AnthropicProvider {
             }
         }
 
-        (system_prompt, anthropic_messages)
+        // Build system value: plain string when not caching, content-block array when caching
+        // (required for `cache_control` to work on the system prompt).
+        let system = system_text.map(|text| {
+            if enable_caching {
+                serde_json::json!([{
+                    "type": "text",
+                    "text": text,
+                    "cache_control": { "type": "ephemeral" }
+                }])
+            } else {
+                serde_json::Value::String(text)
+            }
+        });
+
+        (system, anthropic_messages)
     }
 
     /// Parse `Anthropic` response to `GraphBit` response
@@ -160,7 +187,26 @@ impl AnthropicProvider {
             None => FinishReason::Stop,
         };
 
-        let usage = LlmUsage::new(response.usage.input_tokens, response.usage.output_tokens);
+        let usage = LlmUsage::new_with_cache(
+            response.usage.input_tokens,
+            response.usage.output_tokens,
+            response.usage.cache_read_input_tokens,
+            response.usage.cache_creation_input_tokens,
+        );
+
+        // Log cache savings when caching is active
+        if let Some(read) = response.usage.cache_read_input_tokens {
+            if read > 0 {
+                tracing::debug!(
+                    "Anthropic cache hit: {} tokens read from cache, {} creation tokens",
+                    read,
+                    response
+                        .usage
+                        .cache_creation_input_tokens
+                        .unwrap_or(0)
+                );
+            }
+        }
 
         let mut llm_response = LlmResponse::new(content_text, &self.model)
             .with_usage(usage)
@@ -189,15 +235,25 @@ impl LlmProviderTrait for AnthropicProvider {
     async fn complete(&self, request: LlmRequest) -> GraphBitResult<LlmResponse> {
         let url = format!("{}/messages", self.base_url);
 
-        let (system_prompt, messages) = Self::convert_messages(&request.messages);
+        let enable_caching = request.enable_prompt_caching;
+        let (system_prompt, messages) = Self::convert_messages(&request.messages, enable_caching);
 
-        // Convert tools to `Anthropic` format
+        // Convert tools to `Anthropic` format, adding cache_control to the last tool
+        // when prompt caching is enabled (caches the entire tool-definition block).
         let tools: Option<Vec<AnthropicTool>> = if request.tools.is_empty() {
             tracing::info!("No tools provided in request");
             None
         } else {
             tracing::info!("Converting {} tools for Anthropic", request.tools.len());
-            Some(request.tools.iter().map(Self::convert_tool).collect())
+            let last_idx = request.tools.len() - 1;
+            Some(
+                request
+                    .tools
+                    .iter()
+                    .enumerate()
+                    .map(|(i, t)| Self::convert_tool(t, enable_caching && i == last_idx))
+                    .collect(),
+            )
         };
 
         let body = AnthropicRequest {
@@ -211,22 +267,26 @@ impl LlmProviderTrait for AnthropicProvider {
         };
 
         tracing::info!(
-            "Sending request to Anthropic with {} tools",
-            body.tools.as_ref().map_or(0, Vec::len)
+            "Sending request to Anthropic with {} tools (prompt_caching={})",
+            body.tools.as_ref().map_or(0, Vec::len),
+            enable_caching
         );
 
-        let response = self
+        let mut req_builder = self
             .client
             .post(&url)
             .header("x-api-key", &self.api_key)
             .header("Content-Type", "application/json")
-            .header("anthropic-version", "2023-06-01")
-            .json(&body)
-            .send()
-            .await
-            .map_err(|e| {
-                GraphBitError::llm_provider("anthropic", format!("Request failed: {e}"))
-            })?;
+            .header("anthropic-version", "2023-06-01");
+
+        if enable_caching {
+            req_builder =
+                req_builder.header("anthropic-beta", "prompt-caching-2024-07-31");
+        }
+
+        let response = req_builder.json(&body).send().await.map_err(|e| {
+            GraphBitError::llm_provider("anthropic", format!("Request failed: {e}"))
+        })?;
 
         if !response.status().is_success() {
             let error_text = response
@@ -265,13 +325,22 @@ impl LlmProviderTrait for AnthropicProvider {
     ) -> GraphBitResult<Box<dyn Stream<Item = GraphBitResult<LlmResponse>> + Unpin + Send>> {
         let url = format!("{}/messages", self.base_url);
 
-        let (system_prompt, messages) = Self::convert_messages(&request.messages);
+        let enable_caching = request.enable_prompt_caching;
+        let (system_prompt, messages) = Self::convert_messages(&request.messages, enable_caching);
 
         // Convert tools to `Anthropic` format
         let tools: Option<Vec<AnthropicTool>> = if request.tools.is_empty() {
             None
         } else {
-            Some(request.tools.iter().map(Self::convert_tool).collect())
+            let last_idx = request.tools.len() - 1;
+            Some(
+                request
+                    .tools
+                    .iter()
+                    .enumerate()
+                    .map(|(i, t)| Self::convert_tool(t, enable_caching && i == last_idx))
+                    .collect(),
+            )
         };
 
         let body = AnthropicStreamRequest {
@@ -291,16 +360,19 @@ impl LlmProviderTrait for AnthropicProvider {
         const CHUNK_TIMEOUT: Duration = Duration::from_secs(30);
 
         // Apply timeout to initial connection
-        let response = timeout(
-            CONNECTION_TIMEOUT,
-            self.client
-                .post(&url)
-                .header("x-api-key", &self.api_key)
-                .header("Content-Type", "application/json")
-                .header("anthropic-version", "2023-06-01")
-                .json(&body)
-                .send(),
-        )
+        let mut stream_req = self
+            .client
+            .post(&url)
+            .header("x-api-key", &self.api_key)
+            .header("Content-Type", "application/json")
+            .header("anthropic-version", "2023-06-01");
+
+        if enable_caching {
+            stream_req =
+                stream_req.header("anthropic-beta", "prompt-caching-2024-07-31");
+        }
+
+        let response = timeout(CONNECTION_TIMEOUT, stream_req.json(&body).send())
         .await
         .map_err(|_| {
             GraphBitError::llm_provider(
@@ -551,7 +623,7 @@ struct AnthropicRequest {
     max_tokens: u32,
     messages: Vec<AnthropicMessage>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    system: Option<String>,
+    system: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     temperature: Option<f32>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -566,11 +638,28 @@ struct AnthropicMessage {
     content: serde_json::Value,
 }
 
+/// `cache_control` breakpoint marker for Anthropic prompt caching
+#[derive(Debug, Serialize, Clone)]
+struct CacheControl {
+    #[serde(rename = "type")]
+    cache_type: String, // always "ephemeral"
+}
+
+impl CacheControl {
+    fn ephemeral() -> Self {
+        Self {
+            cache_type: "ephemeral".to_string(),
+        }
+    }
+}
+
 #[derive(Debug, Serialize)]
 struct AnthropicTool {
     name: String,
     description: String,
     input_schema: serde_json::Value,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    cache_control: Option<CacheControl>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -595,6 +684,12 @@ struct ContentBlock {
 struct AnthropicUsage {
     input_tokens: u32,
     output_tokens: u32,
+    /// Tokens read from the prompt cache (costs ~10% of normal input price)
+    #[serde(default)]
+    cache_read_input_tokens: Option<u32>,
+    /// Tokens written to the prompt cache (costs ~125% of normal input price, one-time)
+    #[serde(default)]
+    cache_creation_input_tokens: Option<u32>,
 }
 
 // Streaming-specific types
@@ -606,7 +701,7 @@ struct AnthropicStreamRequest {
     max_tokens: u32,
     messages: Vec<AnthropicMessage>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    system: Option<String>,
+    system: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     temperature: Option<f32>,
     #[serde(skip_serializing_if = "Option::is_none")]

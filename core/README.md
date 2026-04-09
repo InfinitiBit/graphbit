@@ -241,6 +241,12 @@ let provider = LlmProvider::new(provider_trait, openai_config);
 let request = LlmRequest::new("Hello, how are you?");
 let response = provider.complete(request).await?;
 println!("Response: {}", response.content);
+
+// With Anthropic prompt caching enabled
+let cached_request = LlmRequest::new("Analyze this text")
+    .with_prompt_caching(true);
+let cached_response = provider.complete(cached_request).await?;
+println!("Cache read tokens: {:?}", cached_response.usage.cache_read_tokens);
 ```
 
 ### Workflow Execution

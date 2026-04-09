@@ -76,6 +76,10 @@ llm_config = LlmConfig.anthropic(
 llm_config = LlmConfig.anthropic("your-anthropic-key")
 ```
 
+> **Prompt Caching:** Anthropic supports prompt caching to reduce costs by up to 90% on repeated calls.
+> Enable it per-node with `enable_prompt_caching=True` on `Node.agent()`, or per-request with
+> `enable_prompt_caching=True` on `LlmClient` methods. See [Anthropic Prompt Caching](../user-guide/llm-providers.md#anthropic-prompt-caching) for details.
+
 ### Azure LLM Configuration
 
 ```python

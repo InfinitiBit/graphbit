@@ -2254,6 +2254,9 @@ impl Executor {
                                         next_request = next_request.with_top_p(top_p_num as f32);
                                     }
                                 }
+                                if node.config.get("enable_prompt_caching").and_then(|v| v.as_bool()).unwrap_or(false) {
+                                    next_request = next_request.with_prompt_caching(true);
+                                }
 
                                 let llm_start = std::time::Instant::now();
                                 let next_response = match llm_provider.complete(next_request).await
@@ -2397,7 +2400,8 @@ impl Executor {
                                         "completion_tokens": next_response.usage.completion_tokens,
                                         "total_tokens": next_response.usage.total_tokens,
                                         "prompt_tokens_details": {
-                                            "cached_tokens": 0,
+                                            "cached_tokens": next_response.usage.cache_read_tokens.unwrap_or(0),
+                                            "cache_creation_tokens": next_response.usage.cache_creation_tokens.unwrap_or(0),
                                             "audio_tokens": 0
                                         },
                                         "completion_tokens_details": {
@@ -2449,6 +2453,8 @@ impl Executor {
                             let mut total_prompt_tokens: u32 = 0;
                             let mut total_completion_tokens: u32 = 0;
                             let mut total_tokens: u32 = 0;
+                            let mut total_cached_tokens: u32 = 0;
+                            let mut total_cache_creation_tokens: u32 = 0;
                             for exec in &executions {
                                 if exec.get("type").and_then(|v| v.as_str()) == Some("llm_call") {
                                     if let Some(usage) = exec.get("usage") {
@@ -2467,6 +2473,18 @@ impl Executor {
                                             .and_then(|v| v.as_u64())
                                             .unwrap_or(0)
                                             as u32;
+                                        if let Some(details) = usage.get("prompt_tokens_details") {
+                                            total_cached_tokens += details
+                                                .get("cached_tokens")
+                                                .and_then(|v| v.as_u64())
+                                                .unwrap_or(0)
+                                                as u32;
+                                            total_cache_creation_tokens += details
+                                                .get("cache_creation_tokens")
+                                                .and_then(|v| v.as_u64())
+                                                .unwrap_or(0)
+                                                as u32;
+                                        }
                                     }
                                 }
                             }
@@ -2554,7 +2572,8 @@ impl Executor {
                                         "completion_tokens": total_completion_tokens,
                                         "total_tokens": total_tokens,
                                         "prompt_tokens_details": {
-                                            "cached_tokens": 0,
+                                            "cached_tokens": total_cached_tokens,
+                                            "cache_creation_tokens": total_cache_creation_tokens,
                                             "audio_tokens": 0
                                         },
                                         "completion_tokens_details": {
