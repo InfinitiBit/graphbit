@@ -145,7 +145,7 @@ fn test_graph_serialization_deserialization() {
         .with_timeout(30)
         .with_tags(vec!["test".to_string(), "complex".to_string()]);
 
-    let node1_id = node1.id.clone();
+   let node1_id = node1.id.clone();
     graph.add_node(node1).unwrap();
 
     // Serialize

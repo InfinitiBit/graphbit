@@ -1,10 +1,9 @@
-//! Graph-based workflow system for `GraphBit`
+//! Graph workflow core implementation.
 //!
-//! This module provides a directed graph structure for defining and executing
-//! agentic workflows with proper dependency management and parallel execution.
+//! Contains the graph structure and adjacency management for workflow execution.
 
 use crate::errors::{GraphBitError, GraphBitResult};
-use crate::types::{AgentId, NodeId, RetryConfig};
+use crate::types::NodeId;
 use petgraph::{
     Direction,
     algo::{is_cyclic_directed, toposort},
@@ -12,6 +11,8 @@ use petgraph::{
 };
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
+
+use super::{NodeType, WorkflowEdge, WorkflowNode};
 
 /// A workflow graph that defines the structure and execution flow
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -22,6 +23,9 @@ pub struct WorkflowGraph {
     /// Mapping from `NodeId` to graph indices
     #[serde(skip)]
     node_map: HashMap<NodeId, NodeIndex>,
+    /// Reverse mapping from graph index to `NodeId`
+    #[serde(skip)]
+    index_to_id: HashMap<NodeIndex, NodeId>,
     /// Serializable representation of nodes
     nodes: HashMap<NodeId, WorkflowNode>,
     /// Serializable representation of edges
@@ -33,6 +37,15 @@ pub struct WorkflowGraph {
     dependencies_cache: HashMap<NodeId, Vec<NodeId>>,
     #[serde(skip)]
     dependents_cache: HashMap<NodeId, Vec<NodeId>>,
+    /// Cached outgoing adjacency lists (source -> successors)
+    #[serde(skip)]
+    outgoing: HashMap<NodeId, Vec<NodeId>>,
+    /// Cached incoming adjacency lists (target -> predecessors)
+    #[serde(skip)]
+    incoming: HashMap<NodeId, Vec<NodeId>>,
+    /// Cached node name lookup (first-wins when duplicate names exist)
+    #[serde(skip)]
+    name_to_id: HashMap<String, NodeId>,
     /// Cached root and leaf nodes
     #[serde(skip)]
     root_nodes_cache: Option<Vec<NodeId>>,
@@ -46,11 +59,15 @@ impl WorkflowGraph {
         Self {
             graph: DiGraph::new(),
             node_map: HashMap::with_capacity(16), // Pre-allocate capacity
+            index_to_id: HashMap::with_capacity(16),
             nodes: HashMap::with_capacity(16),    // Pre-allocate capacity
             edges: Vec::with_capacity(16),        // Pre-allocate capacity
             metadata: HashMap::new(),
             dependencies_cache: HashMap::with_capacity(16),
             dependents_cache: HashMap::with_capacity(16),
+            outgoing: HashMap::with_capacity(16),
+            incoming: HashMap::with_capacity(16),
+            name_to_id: HashMap::with_capacity(16),
             root_nodes_cache: None,
             leaf_nodes_cache: None,
         }
@@ -64,38 +81,77 @@ impl WorkflowGraph {
         self.leaf_nodes_cache = None;
     }
 
-    /// Rebuild the graph structure from serialized data
-    /// This must be called after deserialization since `graph` and `node_map` are not serialized
-    pub fn rebuild_graph(&mut self) -> GraphBitResult<()> {
-        // Clear existing graph structures
+    /// Refresh outgoing/incoming adjacency maps from canonical `edges`.
+    fn refresh_adjacency_from_edges(&mut self) {
+        self.outgoing.clear();
+        self.incoming.clear();
+        self.outgoing.reserve(self.nodes.len());
+        self.incoming.reserve(self.nodes.len());
+
+        for (from, to, _) in &self.edges {
+            self.outgoing
+                .entry(from.clone())
+                .or_default()
+                .push(to.clone());
+            self.incoming
+                .entry(to.clone())
+                .or_default()
+                .push(from.clone());
+        }
+    }
+
+    /// Rebuild `name_to_id` deterministically using first-wins semantics.
+    fn rebuild_name_map_from_nodes(&mut self) {
+        self.name_to_id.clear();
+        self.name_to_id.reserve(self.nodes.len());
+
+        let mut ordered: Vec<(&NodeId, &WorkflowNode)> = self.nodes.iter().collect();
+        ordered.sort_by(|(a, _), (b, _)| a.to_string().cmp(&b.to_string()));
+
+        for (id, node) in ordered {
+            self.name_to_id
+                .entry(node.name.clone())
+                .or_insert_with(|| id.clone());
+        }
+    }
+
+    /// Rebuild petgraph structures and node id/index maps from `nodes` + `edges`.
+    fn rebuild_petgraph_and_id_maps(&mut self) -> GraphBitResult<()> {
         self.graph = DiGraph::new();
         self.node_map.clear();
-        self.invalidate_caches();
+        self.index_to_id.clear();
 
-        // Pre-allocate capacity based on existing data
         self.node_map.reserve(self.nodes.len());
+        self.index_to_id.reserve(self.nodes.len());
 
-        // Re-add all nodes to the graph
         for (node_id, node) in &self.nodes {
             let graph_index = self.graph.add_node(node.clone());
             self.node_map.insert(node_id.clone(), graph_index);
+            self.index_to_id.insert(graph_index, node_id.clone());
         }
 
-        // Re-add all edges to the graph
         for (from, to, edge) in &self.edges {
             let from_index = self
                 .node_map
                 .get(from)
                 .ok_or_else(|| GraphBitError::graph(format!("Source node {from} not found")))?;
-
             let to_index = self
                 .node_map
                 .get(to)
                 .ok_or_else(|| GraphBitError::graph(format!("Target node {to} not found")))?;
-
             self.graph.add_edge(*from_index, *to_index, edge.clone());
         }
 
+        Ok(())
+    }
+
+    /// Rebuild the graph structure from serialized data
+    /// This must be called after deserialization since `graph` and `node_map` are not serialized
+    pub fn rebuild_graph(&mut self) -> GraphBitResult<()> {
+        self.rebuild_petgraph_and_id_maps()?;
+        self.refresh_adjacency_from_edges();
+        self.rebuild_name_map_from_nodes();
+        self.invalidate_caches();
         Ok(())
     }
 
@@ -117,6 +173,10 @@ impl WorkflowGraph {
 
         let graph_index = self.graph.add_node(node.clone());
         self.node_map.insert(node_id.clone(), graph_index);
+        self.index_to_id.insert(graph_index, node_id.clone());
+        self.name_to_id
+            .entry(node.name.clone())
+            .or_insert_with(|| node_id.clone());
         self.nodes.insert(node_id, node);
 
         // Invalidate caches since graph structure changed
@@ -138,7 +198,9 @@ impl WorkflowGraph {
             .ok_or_else(|| GraphBitError::graph(format!("Target node {to} not found")))?;
 
         self.graph.add_edge(*from_index, *to_index, edge.clone());
-        self.edges.push((from, to, edge));
+        self.edges.push((from.clone(), to.clone(), edge));
+        self.outgoing.entry(from.clone()).or_default().push(to.clone());
+        self.incoming.entry(to.clone()).or_default().push(from.clone());
 
         // Invalidate caches since graph structure changed
         self.invalidate_caches();
@@ -148,17 +210,43 @@ impl WorkflowGraph {
 
     /// Remove a node from the graph
     pub fn remove_node(&mut self, node_id: &NodeId) -> GraphBitResult<()> {
-        let graph_index = self
-            .node_map
-            .remove(node_id)
-            .ok_or_else(|| GraphBitError::graph(format!("Node {node_id} not found")))?;
-
-        self.graph.remove_node(graph_index);
-        self.nodes.remove(node_id);
+        if self.nodes.remove(node_id).is_none() {
+            return Err(GraphBitError::graph(format!("Node {node_id} not found")));
+        }
 
         // Remove edges involving this node
         self.edges
             .retain(|(from, to, _)| from != node_id && to != node_id);
+
+        // Update adjacency maps incrementally for the removed node.
+        // Remove any outgoing entries for this node and drop this node from predecessors.
+        if let Some(successors) = self.outgoing.remove(node_id) {
+            for successor in successors {
+                if let Some(predecessors) = self.incoming.get_mut(&successor) {
+                    predecessors.retain(|source| source != node_id);
+                    if predecessors.is_empty() {
+                        self.incoming.remove(&successor);
+                    }
+                }
+            }
+        }
+
+        // Remove any incoming entries for this node and drop this node from successors.
+        if let Some(predecessors) = self.incoming.remove(node_id) {
+            for predecessor in predecessors {
+                if let Some(successors) = self.outgoing.get_mut(&predecessor) {
+                    successors.retain(|target| target != node_id);
+                    if successors.is_empty() {
+                        self.outgoing.remove(&predecessor);
+                    }
+                }
+            }
+        }
+
+        // Rebuild full graph/index structures to avoid stale NodeIndex entries
+        self.rebuild_petgraph_and_id_maps()?;
+        self.refresh_adjacency_from_edges();
+        self.rebuild_name_map_from_nodes();
 
         // Invalidate caches since graph structure changed
         self.invalidate_caches();
@@ -198,13 +286,13 @@ impl WorkflowGraph {
         // Pre-allocate with known capacity
         let mut sorted_nodes = Vec::with_capacity(sorted_indices.len());
         for index in sorted_indices {
-            // Find the NodeId for this graph index
-            for (node_id, &node_index) in &self.node_map {
-                if node_index == index {
-                    sorted_nodes.push(node_id.clone());
-                    break;
-                }
-            }
+            let node_id = self.index_to_id.get(&index).ok_or_else(|| {
+                GraphBitError::graph(format!(
+                    "Missing NodeId mapping for graph index {:?} during topological sort",
+                    index
+                ))
+            })?;
+            sorted_nodes.push(node_id.clone());
         }
 
         Ok(sorted_nodes)
@@ -225,12 +313,8 @@ impl WorkflowGraph {
                 .neighbors_directed(node_index, Direction::Incoming);
 
             for neighbor_index in incoming {
-                // Find the NodeId for this neighbor
-                for (neighbor_id, &idx) in &self.node_map {
-                    if idx == neighbor_index {
-                        dependencies.push(neighbor_id.clone());
-                        break;
-                    }
+                if let Some(neighbor_id) = self.index_to_id.get(&neighbor_index) {
+                    dependencies.push(neighbor_id.clone());
                 }
             }
         }
@@ -256,12 +340,8 @@ impl WorkflowGraph {
                 .neighbors_directed(node_index, Direction::Outgoing);
 
             for neighbor_index in outgoing {
-                // Find the NodeId for this neighbor
-                for (neighbor_id, &idx) in &self.node_map {
-                    if idx == neighbor_index {
-                        dependents.push(neighbor_id.clone());
-                        break;
-                    }
+                if let Some(neighbor_id) = self.index_to_id.get(&neighbor_index) {
+                    dependents.push(neighbor_id.clone());
                 }
             }
         }
@@ -482,20 +562,17 @@ impl WorkflowGraph {
         self.edges.len()
     }
 
-    /// Get node ID by name
+    /// Get node ID by node name in O(1).
+    ///
+    /// If duplicate node names exist, this returns the canonical first-wins
+    /// entry in the internal name index.
     pub fn get_node_id_by_name(&self, name: &str) -> Option<NodeId> {
-        self.nodes
-            .values()
-            .find(|node| node.name == name)
-            .map(|node| node.id.clone())
+        self.name_to_id.get(name).cloned()
     }
 
     /// Direct successors along control/data edges (`from` → `to`).
     pub fn direct_successors(&self, from: &NodeId) -> Vec<NodeId> {
-        self.edges
-            .iter()
-            .filter_map(|(a, b, _)| (a == from).then_some(b.clone()))
-            .collect()
+        self.outgoing.get(from).cloned().unwrap_or_default()
     }
 
     /// All nodes reachable from `start` (including `start`) following outgoing edges.
@@ -520,341 +597,193 @@ impl Default for WorkflowGraph {
     }
 }
 
-/// A node in the workflow graph representing a single execution unit
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct WorkflowNode {
-    /// Unique identifier for the node
-    pub id: NodeId,
-    /// Human-readable name
-    pub name: String,
-    /// Description of what this node does
-    pub description: String,
-    /// Type of the node
-    pub node_type: NodeType,
-    /// Configuration for the node
-    pub config: HashMap<String, serde_json::Value>,
-    /// Input schema for validation
-    pub input_schema: Option<serde_json::Value>,
-    /// Output schema for validation
-    pub output_schema: Option<serde_json::Value>,
-    /// Retry configuration
-    pub retry_config: RetryConfig,
-    /// Timeout in seconds
-    pub timeout_seconds: Option<u64>,
-    /// Tags for categorization
-    pub tags: Vec<String>,
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-impl AgentNodeConfig {
-    /// Create a new agent node configuration with required fields
-    pub fn new(agent_id: AgentId, prompt_template: impl Into<String>) -> Self {
-        Self {
-            agent_id,
-            prompt_template: prompt_template.into(),
-            conversational_context: None,
-            system_prompt_override: None,
-        }
+    #[test]
+    fn test_forward_reachable_from_small_dag() {
+        let mut graph = WorkflowGraph::new();
+        let a = WorkflowNode::new(
+            "a",
+            "",
+            NodeType::Transform {
+                transformation: "a".to_string(),
+            },
+        );
+        let b = WorkflowNode::new(
+            "b",
+            "",
+            NodeType::Transform {
+                transformation: "b".to_string(),
+            },
+        );
+        let c = WorkflowNode::new(
+            "c",
+            "",
+            NodeType::Transform {
+                transformation: "c".to_string(),
+            },
+        );
+        let d = WorkflowNode::new(
+            "d",
+            "",
+            NodeType::Transform {
+                transformation: "d".to_string(),
+            },
+        );
+
+        let a_id = a.id.clone();
+        let b_id = b.id.clone();
+        let c_id = c.id.clone();
+        let d_id = d.id.clone();
+
+        graph.add_node(a).expect("add node a");
+        graph.add_node(b).expect("add node b");
+        graph.add_node(c).expect("add node c");
+        graph.add_node(d).expect("add node d");
+
+        graph
+            .add_edge(a_id.clone(), b_id.clone(), WorkflowEdge::data_flow())
+            .expect("add edge a->b");
+        graph
+            .add_edge(a_id.clone(), c_id.clone(), WorkflowEdge::data_flow())
+            .expect("add edge a->c");
+        graph
+            .add_edge(c_id.clone(), d_id.clone(), WorkflowEdge::data_flow())
+            .expect("add edge c->d");
+
+        let reachable = graph.forward_reachable_from(&a_id);
+        assert!(reachable.contains(&a_id));
+        assert!(reachable.contains(&b_id));
+        assert!(reachable.contains(&c_id));
+        assert!(reachable.contains(&d_id));
+        assert_eq!(reachable.len(), 4);
     }
 
-    /// Add conversational context string to the configuration
-    pub fn with_context(mut self, context: impl Into<String>) -> Self {
-        self.conversational_context = Some(context.into());
-        self
+    #[test]
+    fn test_remove_node_keeps_indexes_and_lookups_consistent() {
+        let mut graph = WorkflowGraph::new();
+        let a = WorkflowNode::new(
+            "a",
+            "",
+            NodeType::Transform {
+                transformation: "a".to_string(),
+            },
+        );
+        let b = WorkflowNode::new(
+            "b",
+            "",
+            NodeType::Transform {
+                transformation: "b".to_string(),
+            },
+        );
+        let c = WorkflowNode::new(
+            "c",
+            "",
+            NodeType::Transform {
+                transformation: "c".to_string(),
+            },
+        );
+
+        let a_id = a.id.clone();
+        let b_id = b.id.clone();
+        let c_id = c.id.clone();
+
+        graph.add_node(a).expect("add node a");
+        graph.add_node(b).expect("add node b");
+        graph.add_node(c).expect("add node c");
+        graph
+            .add_edge(a_id.clone(), b_id.clone(), WorkflowEdge::data_flow())
+            .expect("add edge a->b");
+        graph
+            .add_edge(b_id.clone(), c_id.clone(), WorkflowEdge::data_flow())
+            .expect("add edge b->c");
+
+        graph.remove_node(&b_id).expect("remove b");
+
+        assert!(graph.get_node(&b_id).is_none());
+        assert!(graph.get_node_id_by_name("b").is_none());
+        assert!(graph.get_dependencies(&c_id).is_empty());
+        assert!(graph.direct_successors(&a_id).is_empty());
+
+        let sorted = graph.topological_sort().expect("topological sort after removal");
+        assert!(sorted.contains(&a_id));
+        assert!(sorted.contains(&c_id));
+        assert_eq!(sorted.len(), 2);
     }
 
-    /// Add a system prompt override to the configuration
-    pub fn with_system_prompt_override(mut self, system_prompt: impl Into<String>) -> Self {
-        self.system_prompt_override = Some(system_prompt.into());
-        self
-    }
-}
+    #[test]
+    fn test_add_edge_updates_adjacency_incrementally() {
+        let mut graph = WorkflowGraph::new();
+        let a = WorkflowNode::new(
+            "a",
+            "",
+            NodeType::Transform {
+                transformation: "a".to_string(),
+            },
+        );
+        let b = WorkflowNode::new(
+            "b",
+            "",
+            NodeType::Transform {
+                transformation: "b".to_string(),
+            },
+        );
 
-impl WorkflowNode {
-    /// Create a new workflow node
-    pub fn new(
-        name: impl Into<String>,
-        description: impl Into<String>,
-        node_type: NodeType,
-    ) -> Self {
-        Self {
-            id: NodeId::new(),
-            name: name.into(),
-            description: description.into(),
-            node_type,
-            config: HashMap::with_capacity(8), // Pre-allocate for config parameters
-            input_schema: None,
-            output_schema: None,
-            retry_config: RetryConfig::default(),
-            timeout_seconds: None,
-            tags: Vec::new(),
-        }
-    }
+        let a_id = a.id.clone();
+        let b_id = b.id.clone();
 
-    /// Set node configuration
-    pub fn with_config(mut self, key: String, value: serde_json::Value) -> Self {
-        self.config.insert(key, value);
-        self
-    }
+        graph.add_node(a).expect("add node a");
+        graph.add_node(b).expect("add node b");
 
-    /// Set input schema
-    pub fn with_input_schema(mut self, schema: serde_json::Value) -> Self {
-        self.input_schema = Some(schema);
-        self
+        assert!(graph.get_dependencies(&b_id).is_empty());
+        assert!(graph.get_dependents(&a_id).is_empty());
+        assert!(graph.direct_successors(&a_id).is_empty());
+
+        graph
+            .add_edge(a_id.clone(), b_id.clone(), WorkflowEdge::data_flow())
+            .expect("add edge a->b");
+
+        assert_eq!(graph.get_dependencies(&b_id), vec![a_id.clone()]);
+        assert_eq!(graph.get_dependents(&a_id), vec![b_id.clone()]);
+        assert_eq!(graph.direct_successors(&a_id), vec![b_id.clone()]);
     }
 
-    /// Set output schema
-    pub fn with_output_schema(mut self, schema: serde_json::Value) -> Self {
-        self.output_schema = Some(schema);
-        self
+    #[test]
+    fn test_get_node_id_by_name_duplicate_names_first_wins_then_fallback() {
+        let mut graph = WorkflowGraph::new();
+        let n1 = WorkflowNode::new(
+            "dup",
+            "",
+            NodeType::Transform {
+                transformation: "one".to_string(),
+            },
+        );
+        let n2 = WorkflowNode::new(
+            "dup",
+            "",
+            NodeType::Transform {
+                transformation: "two".to_string(),
+            },
+        );
+        let n1_id = n1.id.clone();
+        let n2_id = n2.id.clone();
+
+        graph.add_node(n1).expect("add first dup");
+        graph.add_node(n2).expect("add second dup");
+
+        let winner = graph
+            .get_node_id_by_name("dup")
+            .expect("winner should exist");
+        assert!(winner == n1_id || winner == n2_id);
+
+        graph
+            .remove_node(&winner)
+            .expect("remove canonical duplicate name");
+        let fallback = graph
+            .get_node_id_by_name("dup")
+            .expect("fallback should exist after removing winner");
+        assert_ne!(fallback, winner);
     }
-
-    /// Set retry configuration
-    pub fn with_retry_config(mut self, retry_config: RetryConfig) -> Self {
-        self.retry_config = retry_config;
-        self
-    }
-
-    /// Set timeout
-    pub fn with_timeout(mut self, timeout_seconds: u64) -> Self {
-        self.timeout_seconds = Some(timeout_seconds);
-        self
-    }
-
-    /// Add tags
-    pub fn with_tags(mut self, tags: Vec<String>) -> Self {
-        self.tags = tags;
-        self
-    }
-
-    /// Validate the node configuration
-    pub fn validate(&self) -> GraphBitResult<()> {
-        // Validate node type specific requirements
-        match &self.node_type {
-            NodeType::Agent { config } => {
-                if config.agent_id.to_string().is_empty() {
-                    return Err(GraphBitError::graph(
-                        "Agent node must have a valid agent_id",
-                    ));
-                }
-
-                // Production-grade validation for prompt templates
-                Self::validate_template_syntax(&config.prompt_template, "prompt_template")?;
-                if let Some(ctx) = &config.conversational_context {
-                    Self::validate_template_syntax(ctx, "conversational_context")?;
-                }
-                if let Some(sys) = &config.system_prompt_override {
-                    Self::validate_template_syntax(sys, "system_prompt_override")?;
-                }
-            }
-            NodeType::Condition { handler_id } => {
-                if handler_id.trim().is_empty() {
-                    return Err(GraphBitError::graph(
-                        "Condition node must have a non-empty handler_id",
-                    ));
-                }
-            }
-            NodeType::Transform { transformation } => {
-                if transformation.is_empty() {
-                    return Err(GraphBitError::graph(
-                        "Transform node must have a transformation",
-                    ));
-                }
-            }
-            NodeType::DocumentLoader {
-                document_type,
-                source_path,
-                ..
-            } => {
-                if document_type.is_empty() {
-                    return Err(GraphBitError::graph(
-                        "DocumentLoader node must have a document_type",
-                    ));
-                }
-                if source_path.is_empty() {
-                    return Err(GraphBitError::graph(
-                        "DocumentLoader node must have a source_path",
-                    ));
-                }
-                // Validate supported document types
-                let supported_types = ["pdf", "txt", "docx", "json", "csv", "xml", "html"];
-                if !supported_types.contains(&document_type.to_lowercase().as_str()) {
-                    return Err(GraphBitError::graph(format!(
-                        "Unsupported document type: {document_type}. Supported types: {supported_types:?}"
-                    )));
-                }
-            }
-            _ => {}
-        }
-
-        Ok(())
-    }
-
-    /// Basic syntax validation for template strings (checks for balanced braces)
-    fn validate_template_syntax(template: &str, field_name: &str) -> GraphBitResult<()> {
-        let mut brace_level = 0;
-        let bytes = template.as_bytes();
-        let mut i = 0;
-
-        while i < bytes.len() {
-            if i + 1 < bytes.len() && bytes[i] == b'{' && bytes[i + 1] == b'{' {
-                brace_level += 1;
-                i += 2;
-            } else if i + 1 < bytes.len() && bytes[i] == b'}' && bytes[i + 1] == b'}' {
-                brace_level -= 1;
-                i += 2;
-                if brace_level < 0 {
-                    return Err(GraphBitError::graph(format!(
-                        "Invalid template syntax in {field_name}: unexpected closing braces '}}' at byte offset {i}"
-                    )));
-                }
-            } else {
-                i += 1;
-            }
-        }
-
-        if brace_level != 0 {
-            return Err(GraphBitError::graph(format!(
-                "Invalid template syntax in {field_name}: unbalanced braces (level {brace_level})"
-            )));
-        }
-
-        Ok(())
-    }
-}
-
-/// Configuration for an Agent execution node
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AgentNodeConfig {
-    /// Unique identifier for the agent
-    pub agent_id: crate::types::AgentId,
-    /// Template for the prompt to send to the agent
-    pub prompt_template: String,
-    /// Optional conversational context template
-    pub conversational_context: Option<String>,
-    /// Optional system prompt override (Node-level wins over Agent-level)
-    pub system_prompt_override: Option<String>,
-}
-
-/// Types of workflow nodes
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type")]
-pub enum NodeType {
-    /// Agent execution node
-    Agent {
-        /// Flatten into the outer object to maintain JSON backwards compatibility
-        #[serde(flatten)]
-        config: AgentNodeConfig,
-    },
-    /// Conditional branch: parent output and workflow snapshot are passed to a runtime-registered handler; handler returns the next node name (string).
-    Condition {
-        /// Opaque id matching an entry in `WorkflowExecutor`'s conditional handler map.
-        handler_id: String,
-    },
-    /// Data transformation node
-    Transform {
-        /// Transformation logic to apply
-        transformation: String,
-    },
-    /// Parallel execution splitter
-    Split,
-    /// Parallel execution joiner
-    Join,
-    /// Delay/wait node
-    Delay {
-        /// Duration to wait in seconds
-        duration_seconds: u64,
-    },
-    /// HTTP request node
-    HttpRequest {
-        /// Target URL for the request
-        url: String,
-        /// HTTP method (GET, POST, etc.)
-        method: String,
-        /// HTTP headers to include
-        headers: HashMap<String, String>,
-    },
-    /// Custom function node
-    Custom {
-        /// Name of the custom function to execute
-        function_name: String,
-    },
-    /// Document loading node
-    DocumentLoader {
-        /// Type of document to load
-        document_type: String,
-        /// Path to the source document
-        source_path: String,
-        /// Optional encoding specification
-        encoding: Option<String>,
-    },
-}
-
-/// An edge in the workflow graph representing data flow and dependencies
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct WorkflowEdge {
-    /// Type of the edge
-    pub edge_type: EdgeType,
-    /// Condition for edge traversal
-    pub condition: Option<String>,
-    /// Data transformation applied to values flowing through this edge
-    pub transform: Option<String>,
-    /// Edge metadata
-    pub metadata: HashMap<String, serde_json::Value>,
-}
-
-impl WorkflowEdge {
-    /// Create a new data flow edge
-    pub fn data_flow() -> Self {
-        Self {
-            edge_type: EdgeType::DataFlow,
-            condition: None,
-            transform: None,
-            metadata: HashMap::with_capacity(4), // Pre-allocate for metadata
-        }
-    }
-
-    /// Create a new control flow edge
-    pub fn control_flow() -> Self {
-        Self {
-            edge_type: EdgeType::ControlFlow,
-            condition: None,
-            transform: None,
-            metadata: HashMap::with_capacity(4), // Pre-allocate for metadata
-        }
-    }
-
-    /// Create a conditional edge
-    pub fn conditional(condition: impl Into<String>) -> Self {
-        Self {
-            edge_type: EdgeType::Conditional,
-            condition: Some(condition.into()),
-            transform: None,
-            metadata: HashMap::with_capacity(4), // Pre-allocate for metadata
-        }
-    }
-
-    /// Add a transformation to the edge
-    pub fn with_transform(mut self, transform: impl Into<String>) -> Self {
-        self.transform = Some(transform.into());
-        self
-    }
-
-    /// Add metadata to the edge
-    pub fn with_metadata(mut self, key: String, value: serde_json::Value) -> Self {
-        self.metadata.insert(key, value);
-        self
-    }
-}
-
-/// Types of edges in the workflow graph
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum EdgeType {
-    /// Data flows from one node to another
-    DataFlow,
-    /// Control dependency (execution order)
-    ControlFlow,
-    /// Conditional edge (only traversed if condition is true)
-    Conditional,
-    /// Error handling edge
-    ErrorHandling,
 }
