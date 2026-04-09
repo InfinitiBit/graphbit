@@ -12,6 +12,7 @@ use graphbit_core::workflow::WorkflowExecutor as CoreWorkflowExecutor;
 use graphbit_core::{DecodeContext, EncodeContext, Enforcer, GuardRail};
 use pyo3::exceptions::PyStopIteration;
 use pyo3::prelude::*;
+use std::collections::HashSet;
 use pyo3::types::{PyAny, PyDict, PyList};
 use serde::Serialize;
 use std::sync::Arc;
@@ -551,7 +552,7 @@ impl Executor {
         let processor_llm_config = self.llm_config.inner.clone();
         let user_stream_mode = mode;
         get_runtime().spawn(async move {
-            use std::collections::HashMap;
+            use std::collections::{HashMap, HashSet};
             let mut live_node_outcomes: HashMap<
                 String,
                 (String, String, Vec<serde_json::Value>, Vec<String>, String),
@@ -625,6 +626,8 @@ impl Executor {
                         }
                     }
                     StreamEvent::WorkflowCompleted { mut context } => {
+                        let resolved_tool_node_ids: HashSet<String> =
+                            live_node_outcomes.keys().cloned().collect();
                         for (
                             node_id,
                             (node_name, final_output, executions, tools_used, finish_reason),
@@ -640,6 +643,39 @@ impl Executor {
                                 &finish_reason,
                             );
                         }
+
+                        if !resolved_tool_node_ids.is_empty() {
+                            match Executor::rerun_streaming_downstream_after_tool_resolution(
+                                context,
+                                resolved_tool_node_ids,
+                                &processor_workflow,
+                                processor_llm_config.clone(),
+                                guardrail_for_iterator.clone(),
+                                user_stream_mode,
+                                tool_loop_stream_mode,
+                                &event_tx,
+                            )
+                            .await
+                            {
+                                Ok(updated_context) => {
+                                    context = updated_context;
+                                }
+                                Err(e) => {
+                                    let err = e.to_string();
+                                    Executor::send_stream_event(
+                                        &event_tx,
+                                        StreamEvent::WorkflowFailed {
+                                            error: err.clone(),
+                                            error_type: graphbit_core::error_type_from_string(&err),
+                                        },
+                                    )
+                                    .await;
+                                    saw_terminal_event = true;
+                                    break;
+                                }
+                            }
+                        }
+
                         let event = StreamEvent::WorkflowCompleted { context };
                         if Executor::should_forward_event_to_user(user_stream_mode, &event) {
                             Executor::send_stream_event(&event_tx, event).await;
@@ -884,6 +920,259 @@ impl Executor {
                 "Streaming channel backpressure detected while sending event"
             );
         }
+    }
+
+    #[inline]
+    fn stream_event_node_id(event: &StreamEvent) -> Option<&str> {
+        match event {
+            StreamEvent::NodeStarted { node_id, .. }
+            | StreamEvent::NodeCompleted { node_id, .. }
+            | StreamEvent::NodeFailed { node_id, .. }
+            | StreamEvent::Token { node_id, .. }
+            | StreamEvent::LlmCallStarted { node_id, .. }
+            | StreamEvent::LlmCallCompleted { node_id, .. }
+            | StreamEvent::ToolCallStarted { node_id, .. }
+            | StreamEvent::ToolCallCompleted { node_id, .. }
+            | StreamEvent::ToolCallFailed { node_id, .. } => Some(node_id.as_str()),
+            StreamEvent::WorkflowStarted { .. }
+            | StreamEvent::WorkflowCompleted { .. }
+            | StreamEvent::WorkflowFailed { .. } => None,
+        }
+    }
+
+    fn collect_downstream_nodes_from_context(
+        context: &graphbit_core::types::WorkflowContext,
+        parent_node_ids: &std::collections::HashSet<String>,
+    ) -> std::collections::HashSet<String> {
+        let mut downstream_nodes: std::collections::HashSet<String> = std::collections::HashSet::new();
+        let Some(deps_obj) = context
+            .metadata
+            .get("node_dependencies")
+            .and_then(|v| v.as_object())
+        else {
+            return downstream_nodes;
+        };
+
+        let mut queue: Vec<String> = parent_node_ids.iter().cloned().collect();
+        while let Some(parent_id) = queue.pop() {
+            for (node_id, parents) in deps_obj {
+                if downstream_nodes.contains(node_id) || parent_node_ids.contains(node_id) {
+                    continue;
+                }
+                let Some(parent_array) = parents.as_array() else {
+                    continue;
+                };
+                if parent_array.iter().any(|p| p.as_str() == Some(parent_id.as_str())) {
+                    downstream_nodes.insert(node_id.clone());
+                    queue.push(node_id.clone());
+                }
+            }
+        }
+        downstream_nodes
+    }
+
+    fn clear_context_for_node_ids(
+        context: &mut graphbit_core::types::WorkflowContext,
+        node_ids: &std::collections::HashSet<String>,
+    ) {
+        let id_name_map = context
+            .metadata
+            .get("node_id_to_name")
+            .and_then(|v| v.as_object())
+            .cloned();
+
+        for node_id in node_ids {
+            context.node_outputs.remove(node_id);
+            context.variables.remove(node_id);
+            context.metadata.remove(&format!("node_response_{node_id}"));
+
+            if let Some(node_name_value) = id_name_map
+                .as_ref()
+                .and_then(|map| map.get(node_id))
+                .and_then(|v| v.as_str())
+            {
+                context.node_outputs.remove(node_name_value);
+                context.variables.remove(node_name_value);
+                context
+                    .metadata
+                    .remove(&format!("node_response_{node_name_value}"));
+            }
+        }
+    }
+
+    async fn rerun_streaming_downstream_after_tool_resolution(
+        mut context: graphbit_core::types::WorkflowContext,
+        mut parent_node_ids: std::collections::HashSet<String>,
+        workflow: &graphbit_core::workflow::Workflow,
+        llm_config: graphbit_core::llm::LlmConfig,
+        guardrail_enforcer: Option<Arc<Enforcer>>,
+        user_stream_mode: StreamMode,
+        tool_loop_stream_mode: StreamMode,
+        event_tx: &tokio::sync::mpsc::Sender<TimedStreamEvent>,
+    ) -> Result<graphbit_core::types::WorkflowContext, graphbit_core::errors::GraphBitError> {
+        while !parent_node_ids.is_empty() {
+            let downstream_nodes =
+                Self::collect_downstream_nodes_from_context(&context, &parent_node_ids);
+            if downstream_nodes.is_empty() {
+                break;
+            }
+
+            tracing::info!(
+                "Streaming tool resolution rerun for downstream nodes: {:?}",
+                downstream_nodes
+            );
+
+            Self::clear_context_for_node_ids(&mut context, &downstream_nodes);
+
+            let conditional_handlers = crate::workflow::node::build_core_conditional_handlers(workflow)?;
+            let executor = CoreWorkflowExecutor::new()
+                .with_default_llm_config(llm_config.clone())
+                .with_conditional_handlers(conditional_handlers);
+
+            let (rerun_core_tx, mut rerun_core_rx) =
+                tokio::sync::mpsc::channel::<StreamEvent>(256);
+            let rerun_context_input = context;
+            let workflow_clone = workflow.clone();
+            let guardrail_for_rerun = guardrail_enforcer.clone();
+            let rerun_user_mode = user_stream_mode;
+            let rerun_handle = get_runtime().spawn(async move {
+                executor
+                    .execute_with_context(
+                        workflow_clone,
+                        guardrail_for_rerun,
+                        Some(rerun_core_tx),
+                        rerun_user_mode,
+                        rerun_context_input,
+                    )
+                    .await
+            });
+
+            let mut rerun_live_outcomes: std::collections::HashMap<
+                String,
+                (String, String, Vec<serde_json::Value>, Vec<String>, String),
+            > = std::collections::HashMap::new();
+            let mut rerun_context: Option<graphbit_core::types::WorkflowContext> = None;
+
+            while let Some(event) = rerun_core_rx.recv().await {
+                match event {
+                    StreamEvent::NodeCompleted {
+                        node_id,
+                        node_name,
+                        output,
+                    } => {
+                        if !downstream_nodes.contains(&node_id) {
+                            continue;
+                        }
+                        if !Self::is_tool_calls_required(&output) {
+                            let event = StreamEvent::NodeCompleted {
+                                node_id,
+                                node_name,
+                                output,
+                            };
+                            if Self::should_forward_event_to_user(user_stream_mode, &event) {
+                                Self::send_stream_event(event_tx, event).await;
+                            }
+                            continue;
+                        }
+
+                        let (final_output, executions, tools_used, finish_reason) =
+                            Self::run_live_tool_loop_for_node(
+                                &node_id,
+                                &node_name,
+                                &output,
+                                workflow,
+                                llm_config.clone(),
+                                guardrail_enforcer.clone(),
+                                event_tx,
+                                tool_loop_stream_mode,
+                            )
+                            .await?;
+                        rerun_live_outcomes.insert(
+                            node_id.clone(),
+                            (
+                                node_name.clone(),
+                                final_output.clone(),
+                                executions,
+                                tools_used,
+                                finish_reason,
+                            ),
+                        );
+
+                        let event = StreamEvent::NodeCompleted {
+                            node_id,
+                            node_name,
+                            output: serde_json::Value::String(final_output),
+                        };
+                        if Self::should_forward_event_to_user(user_stream_mode, &event) {
+                            Self::send_stream_event(event_tx, event).await;
+                        }
+                    }
+                    StreamEvent::WorkflowCompleted { context: completed_ctx } => {
+                        rerun_context = Some(completed_ctx);
+                        break;
+                    }
+                    StreamEvent::WorkflowFailed { error, error_type } => {
+                        return Err(graphbit_core::errors::GraphBitError::workflow_execution(
+                            format!("{error_type}: {error}"),
+                        ));
+                    }
+                    other => {
+                        if let Some(node_id) = Self::stream_event_node_id(&other) {
+                            if !downstream_nodes.contains(node_id) {
+                                continue;
+                            }
+                        } else {
+                            // Rerun pass is internal orchestration: suppress workflow-level events.
+                            continue;
+                        }
+
+                        if Self::should_forward_event_to_user(user_stream_mode, &other) {
+                            Self::send_stream_event(event_tx, other).await;
+                        }
+                    }
+                }
+            }
+
+            let rerun_result = rerun_handle.await.map_err(|e| {
+                graphbit_core::errors::GraphBitError::workflow_execution(format!(
+                    "Streaming rerun task join failure: {e}",
+                ))
+            })?;
+            let _ = rerun_result?;
+
+            let mut updated_context = rerun_context.ok_or_else(|| {
+                graphbit_core::errors::GraphBitError::workflow_execution(
+                    "Streaming rerun ended without WorkflowCompleted event".to_string(),
+                )
+            })?;
+
+            let next_parent_node_ids: std::collections::HashSet<String> =
+                rerun_live_outcomes.keys().cloned().collect();
+            for (
+                node_id,
+                (node_name, final_output, executions, tools_used, finish_reason),
+            ) in rerun_live_outcomes
+            {
+                Self::merge_live_outcome_into_context(
+                    &mut updated_context,
+                    &node_id,
+                    &node_name,
+                    &final_output,
+                    executions,
+                    tools_used,
+                    &finish_reason,
+                );
+            }
+
+            context = updated_context;
+            parent_node_ids = next_parent_node_ids;
+
+            if parent_node_ids.is_empty() {
+                break;
+            }
+        }
+
+        Ok(context)
     }
 
     async fn run_live_tool_loop_for_node(
@@ -1403,12 +1692,91 @@ impl Executor {
         );
 
         // Check if any node outputs contain tool_calls_required responses and handle them
-        context = Self::handle_tool_calls_in_context(
-            context,
-            &workflow,
-            guardrail_enforcer.as_ref().map(|arc| arc.as_ref()),
-        )
-        .await?;
+        let mut context = context;
+        let mut rerun_attempts = 0;
+        loop {
+            let (ctx, nodes_with_tool_calls) = Self::handle_tool_calls_in_context(
+                context,
+                &workflow,
+                guardrail_enforcer.as_ref().map(|arc| arc.as_ref()),
+            )
+            .await?;
+            context = ctx;
+
+            if nodes_with_tool_calls.is_empty() {
+                break;
+            }
+
+            // Identify downstream nodes that depend on tool-resolved outputs and need rerun.
+            // This includes nodes that themselves may have tool calls, as they can still depend on
+            // upstream nodes whose outputs were just resolved.
+            let mut downstream_nodes: HashSet<String> = HashSet::new();
+            if let Some(deps_obj) = context.metadata.get("node_dependencies").and_then(|v| v.as_object()) {
+                let mut queue: Vec<String> = nodes_with_tool_calls.clone();
+                while let Some(parent_id) = queue.pop() {
+                    for (node_id, parents) in deps_obj.iter() {
+                        if downstream_nodes.contains(node_id) {
+                            continue;
+                        }
+                        if let Some(parent_array) = parents.as_array() {
+                            if parent_array.iter().any(|p| p.as_str() == Some(&parent_id)) {
+                                downstream_nodes.insert(node_id.clone());
+                                queue.push(node_id.clone());
+                            }
+                        }
+                    }
+                }
+            }
+
+            if downstream_nodes.is_empty() {
+                break;
+            }
+
+            tracing::info!(
+                "Rerunning downstream nodes after tool resolution: {:?}",
+                downstream_nodes
+            );
+
+            // Clear outputs and metadata for downstream nodes so they will re-execute
+            if let Some(id_name_map) = context
+                .metadata
+                .get("node_id_to_name")
+                .and_then(|v| v.as_object())
+                .cloned()
+            {
+                for node_id in &downstream_nodes {
+                    context.node_outputs.remove(node_id);
+                    context.variables.remove(node_id);
+                    context.metadata.remove(&format!("node_response_{}", node_id));
+
+                    if let Some(node_name_value) = id_name_map
+                        .get(node_id)
+                        .and_then(|v| v.as_str())
+                    {
+                        context.node_outputs.remove(node_name_value);
+                        context.variables.remove(node_name_value);
+                        context.metadata.remove(&format!("node_response_{}", node_name_value));
+                    }
+                }
+            }
+
+            let conditional_handlers = crate::workflow::node::build_core_conditional_handlers(&workflow)?;
+            let executor_clone = CoreWorkflowExecutor::new()
+                .with_default_llm_config(llm_config.clone())
+                .with_conditional_handlers(conditional_handlers);
+
+            context = executor_clone
+                .execute_with_context(workflow.clone(), guardrail_enforcer.clone(), None, StreamMode::Updates, context)
+                .await?;
+
+            rerun_attempts += 1;
+            if rerun_attempts >= 3 {
+                tracing::warn!(
+                    "Maximum rerun attempts reached while resolving tool-dependent nodes"
+                );
+                break;
+            }
+        }
 
         Ok(context)
     }
@@ -1430,12 +1798,13 @@ impl Executor {
         mut context: graphbit_core::types::WorkflowContext,
         workflow: &graphbit_core::workflow::Workflow,
         guardrail_enforcer: Option<&Enforcer>,
-    ) -> Result<graphbit_core::types::WorkflowContext, graphbit_core::errors::GraphBitError> {
+    ) -> Result<(graphbit_core::types::WorkflowContext, Vec<String>), graphbit_core::errors::GraphBitError> {
         use crate::workflow::node::execute_production_tool_calls;
         use graphbit_core::llm::{LlmMessage, LlmProvider, LlmRequest, LlmTool, LlmToolCall};
 
         // Check each node output for tool_calls_required responses
         let node_outputs = context.node_outputs.clone();
+        let mut nodes_with_tool_calls: Vec<String> = Vec::new();
 
         for (node_id, output) in node_outputs {
             if let Ok(response_obj) = serde_json::from_value::<serde_json::Value>(output.clone()) {
@@ -1465,6 +1834,8 @@ impl Executor {
                             ) {
                                 continue;
                             }
+
+                            nodes_with_tool_calls.push(node.id.to_string());
 
                             // Get node name for metadata storage
                             let node_name = workflow
@@ -2207,18 +2578,74 @@ impl Executor {
                                 .metadata
                                 .insert(format!("node_response_{}", node_name), node_meta);
 
-                            let final_value = serde_json::Value::String(final_content.clone());
+                            // Create completely raw, unstructured output
+                            let tool_results_summary = all_tool_executions
+                                .iter()
+                                .map(|result| {
+                                    let success = result
+                                        .get("success")
+                                        .and_then(|v| v.as_bool())
+                                        .unwrap_or(false);
+                                    if success {
+                                        let output = result
+                                            .get("output")
+                                            .and_then(|v| v.as_str())
+                                            .unwrap_or("");
+                                        output.to_string()
+                                    } else {
+                                        let err = result
+                                            .get("error")
+                                            .and_then(|v| v.as_str())
+                                            .unwrap_or("Tool execution failed");
+                                        err.to_string()
+                                    }
+                                })
+                                .collect::<Vec<String>>()
+                                .join("\n");
+
+                            // Build completely raw, unstructured conversation output
+                            let mut comprehensive_output = String::new();
+                            
+                            // Add original prompt (raw)
+                            comprehensive_output.push_str(&original_prompt);
+                            comprehensive_output.push_str("\n\n");
+                            
+                            // Add tool results if any were made (raw)
+                            if !tool_results_summary.is_empty() {
+                                comprehensive_output.push_str(&tool_results_summary);
+                                comprehensive_output.push_str("\n\n");
+                            }
+                            
+                            // Add final answer (raw)
+                            comprehensive_output.push_str(&final_content);
+                            
+                            let final_value = serde_json::Value::String(comprehensive_output.clone());
+                            
+                            // CRITICAL: Update node outputs with resolved answer (replaces tool_calls_required)
+                            tracing::info!(
+                                "Storing resolved tool output for node '{}' ({}): {}",
+                                node_name,
+                                node.id,
+                                &comprehensive_output.chars().take(200).collect::<String>()
+                            );
+                            
                             context.set_node_output(&node.id, final_value.clone());
                             context.set_node_output_by_name(&node_name, final_value.clone());
                             context.set_variable(node_name.clone(), final_value.clone());
                             context.set_variable(node.id.to_string(), final_value);
+                            
+                            tracing::info!(
+                                "Node outputs updated: {} and {}",
+                                node.id.to_string(),
+                                node_name
+                            );
                         }
                     }
                 }
             }
         }
 
-        Ok(context)
+        Ok((context, nodes_with_tool_calls))
     }
 
     /// Update execution statistics

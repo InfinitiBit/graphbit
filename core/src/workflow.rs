@@ -88,7 +88,7 @@ impl Workflow {
 
     /// Validate the workflow
     pub fn validate(&self) -> GraphBitResult<()> {
-        tracing::debug!("Workflow '{:#?}' validated successfully", self.graph);
+        // tracing::debug!("Workflow '{:#?}' validated successfully", self.graph);
         self.graph.validate()
     }
 
@@ -327,11 +327,31 @@ impl WorkflowExecutor {
         workflow: Workflow,
         guardrail_enforcer: Option<Arc<Enforcer>>,
     ) -> GraphBitResult<WorkflowContext> {
+        let context = WorkflowContext::new(workflow.id.clone());
         self.execute_internal(
             workflow,
             guardrail_enforcer,
             None,
             crate::stream::StreamMode::Updates,
+            context,
+        )
+        .await
+    }
+
+    pub async fn execute_with_context(
+        &self,
+        workflow: Workflow,
+        guardrail_enforcer: Option<Arc<Enforcer>>,
+        event_tx: Option<tokio::sync::mpsc::Sender<crate::stream::StreamEvent>>,
+        stream_mode: crate::stream::StreamMode,
+        mut context: WorkflowContext,
+    ) -> GraphBitResult<WorkflowContext> {
+        self.execute_internal(
+            workflow,
+            guardrail_enforcer,
+            event_tx,
+            stream_mode,
+            context,
         )
         .await
     }
@@ -358,7 +378,8 @@ impl WorkflowExecutor {
         event_tx: tokio::sync::mpsc::Sender<crate::stream::StreamEvent>,
         stream_mode: crate::stream::StreamMode,
     ) -> GraphBitResult<WorkflowContext> {
-        self.execute_internal(workflow, guardrail_enforcer, Some(event_tx), stream_mode)
+        let context = WorkflowContext::new(workflow.id.clone());
+        self.execute_internal(workflow, guardrail_enforcer, Some(event_tx), stream_mode, context)
             .await
     }
 
@@ -373,13 +394,11 @@ impl WorkflowExecutor {
         guardrail_enforcer: Option<Arc<Enforcer>>,
         event_tx: Option<tokio::sync::mpsc::Sender<crate::stream::StreamEvent>>,
         stream_mode: crate::stream::StreamMode,
+        mut context: WorkflowContext,
     ) -> GraphBitResult<WorkflowContext> {
         use crate::stream::{StreamEvent, error_type_from_graphbit_error, error_type_from_string};
 
         let start_time = std::time::Instant::now();
-
-        // Initialize workflow context with simple constructor
-        let mut context = WorkflowContext::new(workflow.id.clone());
 
         // Set initial workflow state
         context.state = WorkflowState::Running {
@@ -607,13 +626,20 @@ impl WorkflowExecutor {
         let total_node_count = workflow.graph.node_count();
         let mut resolved: HashSet<NodeId> = HashSet::new();
         let mut skipped: HashSet<NodeId> = HashSet::new();
+        // Streaming-only coordination: nodes that emitted `tool_calls_required` are treated as
+        // pending until the Python streaming layer resolves them and performs a downstream rerun.
+        let mut pending_tool_resolution: HashSet<NodeId> = HashSet::new();
 
         while resolved.len() + skipped.len() < total_node_count {
             let ready: Vec<WorkflowNode> = workflow
                 .graph
                 .get_nodes()
                 .iter()
-                .filter(|(id, _)| !resolved.contains(*id) && !skipped.contains(*id))
+                .filter(|(id, _)| {
+                    !resolved.contains(*id)
+                        && !skipped.contains(*id)
+                        && !pending_tool_resolution.contains(*id)
+                })
                 .filter(|(id, _)| {
                     node_parents
                         .get(*id)
@@ -628,6 +654,24 @@ impl WorkflowExecutor {
                 .collect();
 
             if ready.is_empty() {
+                if event_tx.is_some() && !pending_tool_resolution.is_empty() {
+                    let blocked_node_ids: Vec<String> = workflow
+                        .graph
+                        .get_nodes()
+                        .iter()
+                        .filter(|(id, _)| {
+                            !resolved.contains(*id)
+                                && !skipped.contains(*id)
+                                && !pending_tool_resolution.contains(*id)
+                        })
+                        .map(|(id, _)| id.to_string())
+                        .collect();
+                    tracing::info!(
+                        blocked_node_ids = ?blocked_node_ids,
+                        "Deferring downstream nodes blocked on unresolved tool calls"
+                    );
+                    break;
+                }
                 let err_msg = "No runnable nodes but workflow not finished (cycle or invalid scheduling state)".to_string();
                 if let Some(ref tx) = event_tx {
                     let _ = tx
@@ -724,7 +768,13 @@ impl WorkflowExecutor {
                         if node_result.success {
                             total_successful += 1;
                         }
-                        resolved.insert(node_result.node_id.clone());
+                        let node_requires_tool_resolution = event_tx.is_some()
+                            && Self::is_tool_calls_required_output(&node_result.output);
+                        if node_requires_tool_resolution {
+                            pending_tool_resolution.insert(node_result.node_id.clone());
+                        } else {
+                            resolved.insert(node_result.node_id.clone());
+                        }
 
                         // ── Streaming: emit NodeCompleted or NodeFailed ───────────────────
                         if let Some(ref tx) = event_tx {
@@ -1068,6 +1118,20 @@ impl WorkflowExecutor {
         Ok(serde_json::Value::String(trimmed))
     }
 
+    fn is_tool_calls_required_output(value: &serde_json::Value) -> bool {
+        if let Some(obj) = value.as_object() {
+            if let Some(ty) = obj.get("type").and_then(|v| v.as_str()) {
+                return ty == "tool_calls_required";
+            }
+        }
+        if let Some(s) = value.as_str() {
+            if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(s) {
+                return Self::is_tool_calls_required_output(&parsed);
+            }
+        }
+        false
+    }
+
     /// Execute a node with retry logic and circuit breaker
     async fn execute_node_with_retry(
         node: WorkflowNode,
@@ -1099,6 +1163,20 @@ impl WorkflowExecutor {
         } else {
             None
         };
+
+        // Check whether this node already has a final resolved output in the provided context.
+        // This avoids rerunning unchanged resolved nodes during the downstream rerun pass.
+        if let Some(existing_output) = {
+            let ctx = context.lock().await;
+            ctx.get_node_output(&node.id.to_string()).cloned()
+        } {
+            if !Self::is_tool_calls_required_output(&existing_output) {
+                tracing::debug!(node_id = %node.id, node_name = %node.name, "Skipping already-resolved node execution");
+                return Ok(NodeExecutionResult::success(existing_output, node.id.clone())
+                    .with_duration(start_time.elapsed().as_millis() as u64)
+                    .with_retry_count(attempt));
+            }
+        }
 
         loop {
             // Check circuit breaker before attempting execution
@@ -1590,6 +1668,8 @@ impl WorkflowExecutor {
                     .await;
             }
 
+            tracing::info!("Final LLM Prompt: \n{}", prompt_for_llm);
+            
             let llm_start = std::time::Instant::now();
 
             // ── Token-level streaming (stream_mode = Messages | All) ──────────────
@@ -2391,6 +2471,8 @@ impl WorkflowExecutor {
                 "original_prompt": original_prompt_for_response,
                 "initial_tokens_used": llm_response.usage.completion_tokens,
                 "max_tokens_configured": node_config.get("max_tokens").and_then(|v| v.as_u64()),
+                "node_id": node_id.to_string(),
+                "node_name": node_name.to_string(),
                 "message": "Tool execution should be handled by Python layer with proper tool registry"
             }))
         } else {
