@@ -1,3 +1,29 @@
+## [0.6.7] - 2026-04-09
+
+### ✨ New Features
+
+- **Introduce AgentNodeConfig for agent nodes** by @JunaidHossain04 in [#488](https://github.com/InfinitiBit/graphbit/pull/488)
+- **Conditional Node Support** by @annur-infinitibit in [#487](https://github.com/InfinitiBit/graphbit/pull/487)
+- **Implement end-to-end workflow streaming architecture with Python bindings** by @JunaidHossain04 in [#494](https://github.com/InfinitiBit/graphbit/pull/494)
+- **Implemented anthropic prompt caching - available in node agent and llmclient methods** by @rupakInfinitiBit in [#492](https://github.com/InfinitiBit/graphbit/pull/492)
+
+### 🐛 Bug Fixes
+
+- **Agent Tool output passing** by @annur-infinitibit in [#495](https://github.com/InfinitiBit/graphbit/pull/495)
+
+### 📚 Documentation
+
+- **Conditional node docs updated** by @annur-infinitibit in [#490](https://github.com/InfinitiBit/graphbit/pull/490)
+
+### 🔧 Maintenance
+
+- **Tests for conditional node + doctests** by @annur-infinitibit in [#489](https://github.com/InfinitiBit/graphbit/pull/489)
+- **Core Graph + Type in Core Refactoring and Optimization** by @annur-infinitibit in [#493](https://github.com/InfinitiBit/graphbit/pull/493)
+
+---
+**Total Changes**: 8
+**Changes by Category**: ✨ New Features: 4 | 🐛 Bug Fixes: 1 | 📚 Documentation: 1 | 🔧 Maintenance: 2
+
 ## [0.6.6] - 2026-03-25
 
 ### ✨ New Features
