@@ -1,9 +1,12 @@
 use async_trait::async_trait;
+use futures::stream;
 use graphbit_core::types::RetryConfig;
 use graphbit_core::*;
 use serde_json::json;
 use std::sync::Arc;
+use std::sync::Mutex;
 use std::time::Duration;
+use tokio::sync::mpsc;
 
 fn has_openai_key() -> bool {
     std::env::var("OPENAI_API_KEY").is_ok()
@@ -38,6 +41,18 @@ fn test_resolve_template_variables_node_and_vars() {
 // ---- Dummy LLM provider for testing ----
 struct DummyLlmProvider;
 
+#[derive(Debug, Default)]
+struct ProviderCallCounts {
+    complete_calls: usize,
+    stream_calls: usize,
+}
+
+struct ScriptedStreamingProvider {
+    counts: Arc<Mutex<ProviderCallCounts>>,
+    stream_chunks: Vec<graphbit_core::llm::LlmResponse>,
+    complete_response: graphbit_core::llm::LlmResponse,
+}
+
 #[async_trait]
 impl graphbit_core::llm::LlmProviderTrait for DummyLlmProvider {
     fn provider_name(&self) -> &str {
@@ -55,17 +70,63 @@ impl graphbit_core::llm::LlmProviderTrait for DummyLlmProvider {
         // Return a dummy response
         Ok(graphbit_core::llm::LlmResponse {
             content: "dummy response".to_string(),
-            usage: graphbit_core::llm::LlmUsage {
-                prompt_tokens: 10,
-                completion_tokens: 5,
-                total_tokens: 15,
-            },
+            usage: graphbit_core::llm::LlmUsage::new(10, 5),
             finish_reason: graphbit_core::llm::FinishReason::Stop,
             model: "dummy-model".to_string(),
             tool_calls: vec![],
             metadata: std::collections::HashMap::new(),
             id: Some("dummy-id".to_string()),
         })
+    }
+}
+
+#[async_trait]
+impl graphbit_core::llm::LlmProviderTrait for ScriptedStreamingProvider {
+    fn provider_name(&self) -> &str {
+        "scripted"
+    }
+
+    fn model_name(&self) -> &str {
+        "scripted-model"
+    }
+
+    async fn complete(
+        &self,
+        _request: graphbit_core::llm::LlmRequest,
+    ) -> graphbit_core::errors::GraphBitResult<graphbit_core::llm::LlmResponse> {
+        let mut counts = self.counts.lock().expect("counts lock poisoned");
+        counts.complete_calls += 1;
+        Ok(self.complete_response.clone())
+    }
+
+    async fn stream(
+        &self,
+        _request: graphbit_core::llm::LlmRequest,
+    ) -> graphbit_core::errors::GraphBitResult<
+        Box<
+            dyn futures::Stream<
+                    Item = graphbit_core::errors::GraphBitResult<graphbit_core::llm::LlmResponse>,
+                > + Unpin
+                + Send,
+        >,
+    > {
+        let mut counts = self.counts.lock().expect("counts lock poisoned");
+        counts.stream_calls += 1;
+        let items = self
+            .stream_chunks
+            .clone()
+            .into_iter()
+            .map(Ok)
+            .collect::<Vec<_>>();
+        Ok(Box::new(stream::iter(items)))
+    }
+
+    fn supports_streaming(&self) -> bool {
+        true
+    }
+
+    fn supports_function_calling(&self) -> bool {
+        true
     }
 }
 
@@ -147,6 +208,244 @@ fn build_dummy_agent(name: &str) -> (graphbit_core::types::AgentId, std::sync::A
     )
 }
 
+fn build_scripted_streaming_agent(
+    name: &str,
+    stream_chunks: Vec<graphbit_core::llm::LlmResponse>,
+    complete_response: graphbit_core::llm::LlmResponse,
+) -> (
+    graphbit_core::types::AgentId,
+    std::sync::Arc<DummyAgent>,
+    Arc<Mutex<ProviderCallCounts>>,
+) {
+    let id = graphbit_core::types::AgentId::new();
+    let cfg = graphbit_core::agents::AgentConfig::new(
+        name,
+        "scripted",
+        graphbit_core::llm::LlmConfig::default(),
+    )
+    .with_id(id.clone())
+    .with_capabilities(vec![graphbit_core::types::AgentCapability::TextProcessing]);
+
+    let counts = Arc::new(Mutex::new(ProviderCallCounts::default()));
+    let provider = Box::new(ScriptedStreamingProvider {
+        counts: counts.clone(),
+        stream_chunks,
+        complete_response,
+    });
+    let llm_provider =
+        graphbit_core::llm::LlmProvider::new(provider, graphbit_core::llm::LlmConfig::default());
+
+    (
+        id.clone(),
+        std::sync::Arc::new(DummyAgent { cfg, llm_provider }),
+        counts,
+    )
+}
+
+async fn collect_stream_events(
+    mut rx: mpsc::Receiver<graphbit_core::stream::StreamEvent>,
+) -> Vec<graphbit_core::stream::StreamEvent> {
+    let mut events = Vec::new();
+    while let Some(event) = rx.recv().await {
+        events.push(event);
+    }
+    events
+}
+
+fn build_single_agent_workflow(
+    agent_id: graphbit_core::types::AgentId,
+    node_name: &str,
+    prompt_template: &str,
+    tool_schemas: Option<serde_json::Value>,
+) -> (Workflow, NodeId) {
+    use graphbit_core::graph::{NodeType, WorkflowNode};
+
+    let agent_node = {
+        let base = WorkflowNode::new(
+            node_name,
+            "agent node",
+            NodeType::Agent {
+                config: AgentNodeConfig {
+                    agent_id,
+                    prompt_template: prompt_template.to_string(),
+                    conversational_context: None,
+                    system_prompt_override: None,
+                },
+            },
+        );
+        if let Some(schemas) = tool_schemas {
+            base.with_config("tool_schemas".to_string(), schemas)
+        } else {
+            base
+        }
+    };
+    let node_id = agent_node.id.clone();
+    let (builder, _) = WorkflowBuilder::new("stream_parity")
+        .add_node(agent_node)
+        .unwrap();
+    (builder.build().unwrap(), node_id)
+}
+
+#[tokio::test]
+async fn test_streaming_empty_stream_falls_back_to_complete_no_tools() {
+    let complete_response =
+        graphbit_core::llm::LlmResponse::new("fallback-content", "scripted-model")
+            .with_usage(graphbit_core::llm::LlmUsage::new(11, 7))
+            .with_finish_reason(graphbit_core::llm::FinishReason::Stop)
+            .with_id("fallback-1".to_string());
+    let (agent_id, agent, counts) =
+        build_scripted_streaming_agent("stream-fallback", vec![], complete_response);
+    let (workflow, node_id) =
+        build_single_agent_workflow(agent_id, "agent_fallback", "Hello", None);
+
+    let executor = WorkflowExecutor::new();
+    executor.register_agent(agent).await;
+    let (tx, rx) = mpsc::channel(32);
+    let context = executor
+        .execute_streaming(
+            workflow,
+            None,
+            tx,
+            graphbit_core::stream::StreamMode::Messages,
+        )
+        .await
+        .expect("streaming execution should succeed");
+    let events = collect_stream_events(rx).await;
+
+    assert_eq!(
+        context.get_node_output(&node_id.to_string()),
+        Some(&serde_json::Value::String("fallback-content".to_string()))
+    );
+    assert!(
+        events
+            .iter()
+            .all(|e| !matches!(e, graphbit_core::stream::StreamEvent::Token { .. }))
+    );
+    assert!(events.iter().any(|e| matches!(
+        e,
+        graphbit_core::stream::StreamEvent::LlmCallCompleted { output, .. }
+            if output == "fallback-content"
+    )));
+
+    let counts = counts.lock().expect("counts lock poisoned");
+    assert_eq!(counts.stream_calls, 1);
+    assert_eq!(counts.complete_calls, 1);
+}
+
+#[tokio::test]
+async fn test_streaming_reconstructs_final_content_from_chunks_no_tools() {
+    let stream_chunks = vec![
+        graphbit_core::llm::LlmResponse::new("Hello ", "scripted-model")
+            .with_finish_reason(graphbit_core::llm::FinishReason::Stop)
+            .with_id("stream-1".to_string()),
+        graphbit_core::llm::LlmResponse::new("world", "scripted-model")
+            .with_usage(graphbit_core::llm::LlmUsage::new(8, 3))
+            .with_finish_reason(graphbit_core::llm::FinishReason::Stop)
+            .with_id("stream-1".to_string()),
+    ];
+    let complete_response =
+        graphbit_core::llm::LlmResponse::new("should-not-be-used", "scripted-model");
+    let (agent_id, agent, counts) =
+        build_scripted_streaming_agent("stream-chunks", stream_chunks, complete_response);
+    let (workflow, node_id) =
+        build_single_agent_workflow(agent_id, "agent_streamed", "Hello world", None);
+
+    let executor = WorkflowExecutor::new();
+    executor.register_agent(agent).await;
+    let (tx, rx) = mpsc::channel(32);
+    let context = executor
+        .execute_streaming(
+            workflow,
+            None,
+            tx,
+            graphbit_core::stream::StreamMode::Messages,
+        )
+        .await
+        .expect("streaming execution should succeed");
+    let events = collect_stream_events(rx).await;
+
+    assert_eq!(
+        context.get_node_output(&node_id.to_string()),
+        Some(&serde_json::Value::String("Hello world".to_string()))
+    );
+    let token_payload = events
+        .iter()
+        .filter_map(|e| match e {
+            graphbit_core::stream::StreamEvent::Token { content, .. } => Some(content.clone()),
+            _ => None,
+        })
+        .collect::<Vec<_>>()
+        .join("");
+    assert_eq!(token_payload, "Hello world");
+
+    let counts = counts.lock().expect("counts lock poisoned");
+    assert_eq!(counts.stream_calls, 1);
+    assert_eq!(counts.complete_calls, 0);
+}
+
+#[tokio::test]
+async fn test_streaming_empty_stream_falls_back_to_complete_with_tools() {
+    let complete_response = graphbit_core::llm::LlmResponse::new("", "scripted-model")
+        .with_tool_calls(vec![graphbit_core::llm::LlmToolCall {
+            id: "call_weather_1".to_string(),
+            name: "get_weather".to_string(),
+            parameters: serde_json::json!({"location":"San Francisco"}),
+        }])
+        .with_usage(graphbit_core::llm::LlmUsage::new(14, 5))
+        .with_finish_reason(graphbit_core::llm::FinishReason::ToolCalls)
+        .with_id("tool-fallback-1".to_string());
+    let (agent_id, agent, counts) =
+        build_scripted_streaming_agent("tool-fallback", vec![], complete_response);
+    let tool_schemas = serde_json::json!([{
+        "name": "get_weather",
+        "description": "Get weather for a city",
+        "parameters": {
+            "type": "object",
+            "properties": { "location": { "type": "string" } },
+            "required": ["location"]
+        }
+    }]);
+    let (workflow, node_id) = build_single_agent_workflow(
+        agent_id,
+        "agent_with_tools",
+        "Use tools",
+        Some(tool_schemas),
+    );
+
+    let executor = WorkflowExecutor::new();
+    executor.register_agent(agent).await;
+    let (tx, rx) = mpsc::channel(32);
+    let context = executor
+        .execute_streaming(workflow, None, tx, graphbit_core::stream::StreamMode::All)
+        .await
+        .expect("streaming execution should succeed");
+    let events = collect_stream_events(rx).await;
+
+    let output = context
+        .get_node_output(&node_id.to_string())
+        .expect("node output should be present");
+    assert_eq!(output["type"], "tool_calls_required");
+    assert_eq!(output["tool_calls"].as_array().map(|a| a.len()), Some(1));
+
+    assert!(events.iter().any(|e| matches!(
+        e,
+        graphbit_core::stream::StreamEvent::ToolCallStarted {
+            tool_name,
+            tool_call_id,
+            ..
+        } if tool_name == "get_weather" && tool_call_id == "call_weather_1"
+    )));
+    assert!(
+        events
+            .iter()
+            .all(|e| !matches!(e, graphbit_core::stream::StreamEvent::Token { .. }))
+    );
+
+    let counts = counts.lock().expect("counts lock poisoned");
+    assert_eq!(counts.stream_calls, 1);
+    assert_eq!(counts.complete_calls, 1);
+}
+
 #[tokio::test]
 async fn test_workflow_execute_with_dummy_agent_success() {
     use graphbit_core::graph::{NodeType, WorkflowEdge, WorkflowNode};
@@ -183,7 +482,10 @@ async fn test_workflow_execute_with_dummy_agent_success() {
     let exec = WorkflowExecutor::new();
     exec.register_agent(agent).await;
 
-    let ctx = exec.execute(wf, None).await.expect("workflow should execute");
+    let ctx = exec
+        .execute(wf, None)
+        .await
+        .expect("workflow should execute");
     assert!(matches!(ctx.state, WorkflowState::Completed));
     let stats = ctx.stats.expect("stats present");
     assert!(stats.total_nodes >= 2);
@@ -646,9 +948,11 @@ fn test_workflow_graph_toposort_and_cycles() {
     // Create a cycle and verify detection via validate()
     graph.add_edge(id2, id1, WorkflowEdge::data_flow()).unwrap();
     let err = graph.validate().unwrap_err();
-    assert!(format!("{err}")
-        .to_lowercase()
-        .contains("graph contains cycles"));
+    assert!(
+        format!("{err}")
+            .to_lowercase()
+            .contains("graph contains cycles")
+    );
 }
 
 #[test]
@@ -775,7 +1079,9 @@ fn test_workflow_builder_metadata_and_build_errors() {
         metadata: Default::default(),
     };
     let err = wf.validate().unwrap_err();
-    assert!(format!("{err}")
-        .to_lowercase()
-        .contains("graph contains cycles"));
+    assert!(
+        format!("{err}")
+            .to_lowercase()
+            .contains("graph contains cycles")
+    );
 }
