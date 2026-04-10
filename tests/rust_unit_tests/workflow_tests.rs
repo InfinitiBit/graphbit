@@ -447,6 +447,192 @@ async fn test_streaming_empty_stream_falls_back_to_complete_with_tools() {
 }
 
 #[tokio::test]
+async fn test_execute_and_execute_streaming_match_final_output_no_tools() {
+    let shared_complete_response =
+        graphbit_core::llm::LlmResponse::new("Parity output", "scripted-model")
+            .with_usage(graphbit_core::llm::LlmUsage::new(9, 4))
+            .with_finish_reason(graphbit_core::llm::FinishReason::Stop)
+            .with_id("parity-1".to_string());
+
+    let stream_chunks = vec![
+        graphbit_core::llm::LlmResponse::new("Parity ", "scripted-model")
+            .with_finish_reason(graphbit_core::llm::FinishReason::Stop)
+            .with_id("parity-1".to_string()),
+        graphbit_core::llm::LlmResponse::new("output", "scripted-model")
+            .with_usage(graphbit_core::llm::LlmUsage::new(9, 4))
+            .with_finish_reason(graphbit_core::llm::FinishReason::Stop)
+            .with_id("parity-1".to_string()),
+    ];
+
+    let (agent_id_complete, agent_complete, complete_counts) = build_scripted_streaming_agent(
+        "parity-complete-agent",
+        stream_chunks.clone(),
+        shared_complete_response.clone(),
+    );
+    let (workflow_complete, node_id_complete) = build_single_agent_workflow(
+        agent_id_complete,
+        "parity_node_complete",
+        "Prompt parity",
+        None,
+    );
+    let complete_executor = WorkflowExecutor::new();
+    complete_executor.register_agent(agent_complete).await;
+    let complete_ctx = complete_executor
+        .execute(workflow_complete, None)
+        .await
+        .expect("non-streaming execution should succeed");
+
+    let (agent_id_stream, agent_stream, stream_counts) = build_scripted_streaming_agent(
+        "parity-stream-agent",
+        stream_chunks,
+        shared_complete_response,
+    );
+    let (workflow_stream, node_id_stream) =
+        build_single_agent_workflow(agent_id_stream, "parity_node_stream", "Prompt parity", None);
+    let streaming_executor = WorkflowExecutor::new();
+    streaming_executor.register_agent(agent_stream).await;
+    let (tx, rx) = mpsc::channel(32);
+    let stream_ctx = streaming_executor
+        .execute_streaming(
+            workflow_stream,
+            None,
+            tx,
+            graphbit_core::stream::StreamMode::Messages,
+        )
+        .await
+        .expect("streaming execution should succeed");
+    let events = collect_stream_events(rx).await;
+
+    let complete_output = complete_ctx
+        .get_node_output(&node_id_complete.to_string())
+        .cloned()
+        .expect("non-streaming node output should exist");
+    let stream_output = stream_ctx
+        .get_node_output(&node_id_stream.to_string())
+        .cloned()
+        .expect("streaming node output should exist");
+    assert_eq!(complete_output, stream_output);
+
+    assert!(
+        events
+            .iter()
+            .any(|e| matches!(e, graphbit_core::stream::StreamEvent::Token { .. }))
+    );
+    assert!(events.iter().any(|e| matches!(
+        e,
+        graphbit_core::stream::StreamEvent::LlmCallCompleted { output, .. }
+            if output == "Parity output"
+    )));
+
+    let complete_counts = complete_counts.lock().expect("counts lock poisoned");
+    assert_eq!(complete_counts.complete_calls, 1);
+    assert_eq!(complete_counts.stream_calls, 0);
+    drop(complete_counts);
+
+    let stream_counts = stream_counts.lock().expect("counts lock poisoned");
+    assert_eq!(stream_counts.complete_calls, 0);
+    assert_eq!(stream_counts.stream_calls, 1);
+}
+
+#[tokio::test]
+async fn test_execute_and_execute_streaming_match_tool_calls_required_shape() {
+    let tool_response = graphbit_core::llm::LlmResponse::new("", "scripted-model")
+        .with_tool_calls(vec![graphbit_core::llm::LlmToolCall {
+            id: "tool-call-99".to_string(),
+            name: "lookup_price".to_string(),
+            parameters: serde_json::json!({"symbol":"GBIT"}),
+        }])
+        .with_usage(graphbit_core::llm::LlmUsage::new(12, 3))
+        .with_finish_reason(graphbit_core::llm::FinishReason::ToolCalls)
+        .with_id("tool-parity-1".to_string());
+    let stream_chunks = vec![tool_response.clone()];
+    let tool_schemas = serde_json::json!([{
+        "name": "lookup_price",
+        "description": "Lookup stock price",
+        "parameters": {
+            "type": "object",
+            "properties": { "symbol": { "type": "string" } },
+            "required": ["symbol"]
+        }
+    }]);
+
+    let (agent_id_complete, agent_complete, complete_counts) = build_scripted_streaming_agent(
+        "tool-parity-complete-agent",
+        stream_chunks.clone(),
+        tool_response.clone(),
+    );
+    let (workflow_complete, node_id_complete) = build_single_agent_workflow(
+        agent_id_complete,
+        "tool_parity_node_complete",
+        "Use pricing tool",
+        Some(tool_schemas.clone()),
+    );
+    let complete_executor = WorkflowExecutor::new();
+    complete_executor.register_agent(agent_complete).await;
+    let complete_ctx = complete_executor
+        .execute(workflow_complete, None)
+        .await
+        .expect("non-streaming tool execution should succeed");
+
+    let (agent_id_stream, agent_stream, stream_counts) =
+        build_scripted_streaming_agent("tool-parity-stream-agent", stream_chunks, tool_response);
+    let (workflow_stream, node_id_stream) = build_single_agent_workflow(
+        agent_id_stream,
+        "tool_parity_node_stream",
+        "Use pricing tool",
+        Some(tool_schemas),
+    );
+    let streaming_executor = WorkflowExecutor::new();
+    streaming_executor.register_agent(agent_stream).await;
+    let (tx, rx) = mpsc::channel(32);
+    let stream_ctx = streaming_executor
+        .execute_streaming(
+            workflow_stream,
+            None,
+            tx,
+            graphbit_core::stream::StreamMode::All,
+        )
+        .await
+        .expect("streaming tool execution should succeed");
+    let events = collect_stream_events(rx).await;
+
+    let complete_output = complete_ctx
+        .get_node_output(&node_id_complete.to_string())
+        .cloned()
+        .expect("non-streaming node output should exist");
+    let stream_output = stream_ctx
+        .get_node_output(&node_id_stream.to_string())
+        .cloned()
+        .expect("streaming node output should exist");
+
+    assert_eq!(complete_output["type"], "tool_calls_required");
+    assert_eq!(stream_output["type"], "tool_calls_required");
+    assert_eq!(complete_output["tool_calls"], stream_output["tool_calls"]);
+    assert_eq!(
+        complete_output["tool_calls"][0]["id"],
+        serde_json::Value::String("tool-call-99".to_string())
+    );
+
+    assert!(events.iter().any(|e| matches!(
+        e,
+        graphbit_core::stream::StreamEvent::ToolCallStarted {
+            tool_name,
+            tool_call_id,
+            ..
+        } if tool_name == "lookup_price" && tool_call_id == "tool-call-99"
+    )));
+
+    let complete_counts = complete_counts.lock().expect("counts lock poisoned");
+    assert_eq!(complete_counts.complete_calls, 1);
+    assert_eq!(complete_counts.stream_calls, 0);
+    drop(complete_counts);
+
+    let stream_counts = stream_counts.lock().expect("counts lock poisoned");
+    assert_eq!(stream_counts.complete_calls, 0);
+    assert_eq!(stream_counts.stream_calls, 1);
+}
+
+#[tokio::test]
 async fn test_workflow_execute_with_dummy_agent_success() {
     use graphbit_core::graph::{NodeType, WorkflowEdge, WorkflowNode};
 

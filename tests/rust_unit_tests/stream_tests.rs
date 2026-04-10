@@ -1,19 +1,25 @@
 use graphbit_core::errors::GraphBitError;
 use graphbit_core::stream::{
-    error_type_from_graphbit_error, error_type_from_string, StreamEvent, StreamMode,
+    StreamEvent, StreamMode, error_type_from_graphbit_error, error_type_from_string,
 };
 
 // ── StreamMode tests ─────────────────────────────────────────────────
 
 #[test]
 fn test_stream_mode_from_str() {
-    assert_eq!(StreamMode::from_str_opt("updates"), Some(StreamMode::Updates));
+    assert_eq!(
+        StreamMode::from_str_opt("updates"),
+        Some(StreamMode::Updates)
+    );
     assert_eq!(
         StreamMode::from_str_opt("messages"),
         Some(StreamMode::Messages)
     );
     assert_eq!(StreamMode::from_str_opt("all"), Some(StreamMode::All));
-    assert_eq!(StreamMode::from_str_opt("UPDATES"), Some(StreamMode::Updates));
+    assert_eq!(
+        StreamMode::from_str_opt("UPDATES"),
+        Some(StreamMode::Updates)
+    );
     assert_eq!(
         StreamMode::from_str_opt("Messages"),
         Some(StreamMode::Messages)
@@ -120,6 +126,40 @@ fn test_token_event() {
     assert_eq!(json["event"], "token");
     assert_eq!(json["llm_call_id"], "call-1");
     assert_eq!(json["content"], "The");
+}
+
+#[test]
+fn test_llm_call_started_event() {
+    let event = StreamEvent::LlmCallStarted {
+        node_id: "node-1".to_string(),
+        node_name: "researcher".to_string(),
+        llm_call_id: "llm-call-1".to_string(),
+        iteration: 1,
+        model: "gpt-4o-mini".to_string(),
+    };
+    let json = serde_json::to_value(&event).unwrap();
+    assert_eq!(json["event"], "llm_call_started");
+    assert_eq!(json["llm_call_id"], "llm-call-1");
+    assert_eq!(json["iteration"], 1);
+    assert_eq!(json["model"], "gpt-4o-mini");
+}
+
+#[test]
+fn test_llm_call_completed_event() {
+    let event = StreamEvent::LlmCallCompleted {
+        node_id: "node-1".to_string(),
+        node_name: "researcher".to_string(),
+        llm_call_id: "llm-call-1".to_string(),
+        iteration: 2,
+        finish_reason: "tool_calls".to_string(),
+        output: "Need a tool call".to_string(),
+        duration_ms: 332.2,
+    };
+    let json = serde_json::to_value(&event).unwrap();
+    assert_eq!(json["event"], "llm_call_completed");
+    assert_eq!(json["finish_reason"], "tool_calls");
+    assert_eq!(json["iteration"], 2);
+    assert_eq!(json["output"], "Need a tool call");
 }
 
 #[test]

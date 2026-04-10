@@ -40,18 +40,24 @@ async fn test_deepseek_message_formatting() {
         .with_top_p(0.9);
 
     assert_eq!(request.messages.len(), 3);
-    assert!(request
-        .messages
-        .iter()
-        .any(|m| matches!(m.role, LlmRole::System)));
-    assert!(request
-        .messages
-        .iter()
-        .any(|m| matches!(m.role, LlmRole::User)));
-    assert!(request
-        .messages
-        .iter()
-        .any(|m| matches!(m.role, LlmRole::Assistant)));
+    assert!(
+        request
+            .messages
+            .iter()
+            .any(|m| matches!(m.role, LlmRole::System))
+    );
+    assert!(
+        request
+            .messages
+            .iter()
+            .any(|m| matches!(m.role, LlmRole::User))
+    );
+    assert!(
+        request
+            .messages
+            .iter()
+            .any(|m| matches!(m.role, LlmRole::Assistant))
+    );
 }
 
 // Tool-calling tests removed per request
@@ -207,18 +213,24 @@ async fn test_fireworks_message_formatting() {
         .with_top_p(0.9);
 
     assert_eq!(request.messages.len(), 3);
-    assert!(request
-        .messages
-        .iter()
-        .any(|m| matches!(m.role, LlmRole::System)));
-    assert!(request
-        .messages
-        .iter()
-        .any(|m| matches!(m.role, LlmRole::User)));
-    assert!(request
-        .messages
-        .iter()
-        .any(|m| matches!(m.role, LlmRole::Assistant)));
+    assert!(
+        request
+            .messages
+            .iter()
+            .any(|m| matches!(m.role, LlmRole::System))
+    );
+    assert!(
+        request
+            .messages
+            .iter()
+            .any(|m| matches!(m.role, LlmRole::User))
+    );
+    assert!(
+        request
+            .messages
+            .iter()
+            .any(|m| matches!(m.role, LlmRole::Assistant))
+    );
 }
 
 #[tokio::test]
@@ -313,18 +325,24 @@ async fn test_xai_message_formatting() {
         .with_top_p(0.9);
 
     assert_eq!(request.messages.len(), 3);
-    assert!(request
-        .messages
-        .iter()
-        .any(|m| matches!(m.role, LlmRole::System)));
-    assert!(request
-        .messages
-        .iter()
-        .any(|m| matches!(m.role, LlmRole::User)));
-    assert!(request
-        .messages
-        .iter()
-        .any(|m| matches!(m.role, LlmRole::Assistant)));
+    assert!(
+        request
+            .messages
+            .iter()
+            .any(|m| matches!(m.role, LlmRole::System))
+    );
+    assert!(
+        request
+            .messages
+            .iter()
+            .any(|m| matches!(m.role, LlmRole::User))
+    );
+    assert!(
+        request
+            .messages
+            .iter()
+            .any(|m| matches!(m.role, LlmRole::Assistant))
+    );
 }
 
 #[tokio::test]
@@ -413,18 +431,24 @@ async fn test_perplexity_message_formatting() {
         .with_top_p(0.9);
 
     assert_eq!(request.messages.len(), 3);
-    assert!(request
-        .messages
-        .iter()
-        .any(|m| matches!(m.role, LlmRole::System)));
-    assert!(request
-        .messages
-        .iter()
-        .any(|m| matches!(m.role, LlmRole::User)));
-    assert!(request
-        .messages
-        .iter()
-        .any(|m| matches!(m.role, LlmRole::Assistant)));
+    assert!(
+        request
+            .messages
+            .iter()
+            .any(|m| matches!(m.role, LlmRole::System))
+    );
+    assert!(
+        request
+            .messages
+            .iter()
+            .any(|m| matches!(m.role, LlmRole::User))
+    );
+    assert!(
+        request
+            .messages
+            .iter()
+            .any(|m| matches!(m.role, LlmRole::Assistant))
+    );
 }
 
 // Provider Factory Tests
@@ -513,6 +537,48 @@ async fn test_provider_common_functionality() {
     }
 }
 
+#[tokio::test]
+async fn test_openai_shape_centralized_providers_support_streaming() {
+    let providers = vec![
+        LlmConfig::OpenAI {
+            api_key: "test-key".to_string(),
+            model: "gpt-4o-mini".to_string(),
+            base_url: None,
+            organization: None,
+        },
+        LlmConfig::DeepSeek {
+            api_key: "test-key".to_string(),
+            model: "deepseek-chat".to_string(),
+            base_url: None,
+        },
+        LlmConfig::Xai {
+            api_key: "test-key".to_string(),
+            model: "grok-4".to_string(),
+            base_url: None,
+        },
+        LlmConfig::Perplexity {
+            api_key: "test-key".to_string(),
+            model: "sonar".to_string(),
+            base_url: None,
+        },
+        LlmConfig::Ai21 {
+            api_key: "test-key".to_string(),
+            model: "jamba-mini".to_string(),
+            base_url: None,
+            organization: None,
+        },
+    ];
+
+    for config in providers {
+        let provider = LlmProviderFactory::create_provider(config).unwrap();
+        assert!(
+            provider.supports_streaming(),
+            "expected {} to support streaming",
+            provider.provider_name()
+        );
+    }
+}
+
 // OpenRouter Provider Tests
 #[tokio::test]
 async fn test_openrouter_provider_creation() {
@@ -578,18 +644,24 @@ async fn test_openrouter_message_formatting() {
         .with_top_p(0.9);
 
     assert_eq!(request.messages.len(), 3);
-    assert!(request
-        .messages
-        .iter()
-        .any(|m| matches!(m.role, LlmRole::System)));
-    assert!(request
-        .messages
-        .iter()
-        .any(|m| matches!(m.role, LlmRole::User)));
-    assert!(request
-        .messages
-        .iter()
-        .any(|m| matches!(m.role, LlmRole::Assistant)));
+    assert!(
+        request
+            .messages
+            .iter()
+            .any(|m| matches!(m.role, LlmRole::System))
+    );
+    assert!(
+        request
+            .messages
+            .iter()
+            .any(|m| matches!(m.role, LlmRole::User))
+    );
+    assert!(
+        request
+            .messages
+            .iter()
+            .any(|m| matches!(m.role, LlmRole::Assistant))
+    );
     assert_eq!(request.max_tokens, Some(100));
     assert_eq!(request.temperature, Some(0.7));
     assert_eq!(request.top_p, Some(0.9));
@@ -720,14 +792,18 @@ async fn test_replicate_message_formatting() {
         .with_top_p(0.9);
 
     assert_eq!(request.messages.len(), 2);
-    assert!(request
-        .messages
-        .iter()
-        .any(|m| matches!(m.role, LlmRole::System)));
-    assert!(request
-        .messages
-        .iter()
-        .any(|m| matches!(m.role, LlmRole::User)));
+    assert!(
+        request
+            .messages
+            .iter()
+            .any(|m| matches!(m.role, LlmRole::System))
+    );
+    assert!(
+        request
+            .messages
+            .iter()
+            .any(|m| matches!(m.role, LlmRole::User))
+    );
     assert_eq!(request.max_tokens, Some(100));
     assert_eq!(request.temperature, Some(0.7));
     assert_eq!(request.top_p, Some(0.9));
@@ -854,18 +930,24 @@ async fn test_ai21labs_message_formatting() {
         .with_top_p(0.9);
 
     assert_eq!(request.messages.len(), 3);
-    assert!(request
-        .messages
-        .iter()
-        .any(|m| matches!(m.role, LlmRole::System)));
-    assert!(request
-        .messages
-        .iter()
-        .any(|m| matches!(m.role, LlmRole::User)));
-    assert!(request
-        .messages
-        .iter()
-        .any(|m| matches!(m.role, LlmRole::Assistant)));
+    assert!(
+        request
+            .messages
+            .iter()
+            .any(|m| matches!(m.role, LlmRole::System))
+    );
+    assert!(
+        request
+            .messages
+            .iter()
+            .any(|m| matches!(m.role, LlmRole::User))
+    );
+    assert!(
+        request
+            .messages
+            .iter()
+            .any(|m| matches!(m.role, LlmRole::Assistant))
+    );
 }
 
 // `ByteDance ModelArk` Provider Tests
@@ -936,18 +1018,24 @@ async fn test_bytedance_message_formatting() {
         .with_top_p(0.9);
 
     assert_eq!(request.messages.len(), 3);
-    assert!(request
-        .messages
-        .iter()
-        .any(|m| matches!(m.role, LlmRole::System)));
-    assert!(request
-        .messages
-        .iter()
-        .any(|m| matches!(m.role, LlmRole::User)));
-    assert!(request
-        .messages
-        .iter()
-        .any(|m| matches!(m.role, LlmRole::Assistant)));
+    assert!(
+        request
+            .messages
+            .iter()
+            .any(|m| matches!(m.role, LlmRole::System))
+    );
+    assert!(
+        request
+            .messages
+            .iter()
+            .any(|m| matches!(m.role, LlmRole::User))
+    );
+    assert!(
+        request
+            .messages
+            .iter()
+            .any(|m| matches!(m.role, LlmRole::Assistant))
+    );
 }
 
 #[tokio::test]
