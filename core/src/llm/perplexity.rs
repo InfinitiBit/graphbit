@@ -351,10 +351,117 @@ impl LlmProviderTrait for PerplexityProvider {
                     }
 
                     loop {
+                        // Process already-buffered complete lines before waiting for more bytes.
+                        // A single network chunk can contain multiple SSE events; if we return
+                        // after yielding one token chunk, remaining complete lines must be
+                        // drained first on the next poll or they can be lost at EOF.
+                        while let Some(newline_pos) = buffer.find('\n') {
+                            let line: String = buffer.drain(..=newline_pos).collect();
+                            let line = line.trim();
+
+                            // SSE protocol: skip empty lines (event separators) and comment lines.
+                            if line.is_empty() || line.starts_with(':') {
+                                continue;
+                            }
+
+                            if let Some(data) = line.strip_prefix("data: ") {
+                                if data.trim() == "[DONE]" {
+                                    if total_parse_errors > 0 {
+                                        tracing::warn!(
+                                            "Stream completed with {} total parse errors. Some data may have been lost.",
+                                            total_parse_errors
+                                        );
+                                    }
+                                    return None;
+                                }
+
+                                match serde_json::from_str::<PerplexityStreamChunk>(data) {
+                                    Ok(stream_chunk) => {
+                                        consecutive_parse_errors = 0;
+
+                                        if let Some(choice) = stream_chunk.choices.first()
+                                            && let Some(content) = &choice.delta.content
+                                            && !content.is_empty()
+                                        {
+                                            let response = LlmResponse::new(content.clone(), &model)
+                                                .with_id(stream_chunk.id);
+                                            return Some((
+                                                Ok(response),
+                                                (
+                                                    byte_stream,
+                                                    buffer,
+                                                    false,
+                                                    consecutive_parse_errors,
+                                                    total_parse_errors,
+                                                ),
+                                            ));
+                                        }
+                                    }
+                                    Err(e) => {
+                                        consecutive_parse_errors += 1;
+                                        total_parse_errors += 1;
+
+                                        tracing::warn!(
+                                            "Failed to parse Perplexity stream chunk (consecutive: {}, total: {}): {}, data: {}",
+                                            consecutive_parse_errors,
+                                            total_parse_errors,
+                                            e,
+                                            if data.len() > 200 { &data[..200] } else { data }
+                                        );
+
+                                        if consecutive_parse_errors >= MAX_CONSECUTIVE_PARSE_ERRORS {
+                                            return Some((
+                                                Err(GraphBitError::llm_provider(
+                                                    "perplexity",
+                                                    format!(
+                                                        "Stream corrupted: {} consecutive parse errors. \
+                                                         Last error: {}. Data may be incomplete.",
+                                                        consecutive_parse_errors, e
+                                                    ),
+                                                )),
+                                                (
+                                                    byte_stream,
+                                                    buffer,
+                                                    true,
+                                                    consecutive_parse_errors,
+                                                    total_parse_errors,
+                                                ),
+                                            ));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         // Apply timeout to each chunk read
                         let chunk_result = match timeout(CHUNK_TIMEOUT, byte_stream.next()).await {
                             Ok(Some(result)) => result,
                             Ok(None) => {
+                                // Try to parse a final buffered line without trailing newline.
+                                let tail_line = buffer.trim().to_string();
+                                if let Some(data) = tail_line.strip_prefix("data: ") {
+                                    if data.trim() != "[DONE]"
+                                        && let Ok(stream_chunk) =
+                                            serde_json::from_str::<PerplexityStreamChunk>(data)
+                                        && let Some(choice) = stream_chunk.choices.first()
+                                        && let Some(content) = &choice.delta.content
+                                        && !content.is_empty()
+                                    {
+                                        let response = LlmResponse::new(content.clone(), &model)
+                                            .with_id(stream_chunk.id);
+                                        return Some((
+                                            Ok(response),
+                                            (
+                                                byte_stream,
+                                                String::new(),
+                                                false,
+                                                consecutive_parse_errors,
+                                                total_parse_errors,
+                                            ),
+                                        ));
+                                    }
+                                }
+
                                 // Stream naturally ended
                                 if total_parse_errors > 0 {
                                     tracing::warn!(
@@ -415,108 +522,6 @@ impl LlmProviderTrait for PerplexityProvider {
                         // We use `drain()` to efficiently remove processed lines from the buffer front
                         buffer.push_str(&String::from_utf8_lossy(&chunk));
 
-                        // Process all complete lines (those ending with newline)
-                        // drain() is used to remove processed characters from the front of the buffer,
-                        // preserving any incomplete line data for the next chunk
-                        while let Some(newline_pos) = buffer.find('\n') {
-                            let line: String = buffer.drain(..=newline_pos).collect();
-                            let line = line.trim();
-
-                            // SSE protocol: skip empty lines (event separators) and comment lines (start with ':')
-                            // Comments are often used for keep-alive heartbeats
-                            if line.is_empty() || line.starts_with(':') {
-                                continue;
-                            }
-
-                            // Parse SSE data field format: "data: <json_content>"
-                            // Perplexity uses OpenAI-compatible SSE streaming format
-                            if let Some(data) = line.strip_prefix("data: ") {
-                                // [DONE] is the standard SSE termination marker in OpenAI-compatible APIs
-                                // It indicates the stream has ended successfully (not an error)
-                                if data.trim() == "[DONE]" {
-                                    // Warn if we had parse errors during the stream - data may be incomplete
-                                    if total_parse_errors > 0 {
-                                        tracing::warn!(
-                                            "Stream completed with {} total parse errors. Some data may have been lost.",
-                                            total_parse_errors
-                                        );
-                                    }
-                                    return None; // Signal stream completion to unfold
-                                }
-
-                                // Parse the JSON payload containing the streaming response chunk
-                                // PerplexityStreamChunk follows OpenAI's streaming response format:
-                                // { "id": "...", "choices": [{ "delta": { "content": "..." } }] }
-                                match serde_json::from_str::<PerplexityStreamChunk>(data) {
-                                    Ok(stream_chunk) => {
-                                        // Reset consecutive error counter on successful parse
-                                        consecutive_parse_errors = 0;
-
-                                        // Extract content from the first choice's delta
-                                        // (Perplexity typically returns only one choice per chunk)
-                                        if let Some(choice) = stream_chunk.choices.first() {
-                                            if let Some(content) = &choice.delta.content {
-                                                // Only yield non-empty content to reduce noise
-                                                if !content.is_empty() {
-                                                    let response =
-                                                        LlmResponse::new(content.clone(), &model)
-                                                            .with_id(stream_chunk.id);
-                                                    // Return this chunk and continue streaming
-                                                    return Some((
-                                                        Ok(response),
-                                                        (
-                                                            byte_stream,
-                                                            buffer,
-                                                            false,
-                                                            consecutive_parse_errors,
-                                                            total_parse_errors,
-                                                        ),
-                                                    ));
-                                                }
-                                            }
-                                        }
-                                    }
-                                    Err(e) => {
-                                        // Increment both error counters for circuit breaker logic
-                                        consecutive_parse_errors += 1;
-                                        total_parse_errors += 1;
-
-                                        // Log truncated data (first 200 chars) for debugging
-                                        // while preventing log spam from huge malformed payloads
-                                        tracing::warn!(
-                                            "Failed to parse Perplexity stream chunk (consecutive: {}, total: {}): {}, data: {}",
-                                            consecutive_parse_errors,
-                                            total_parse_errors,
-                                            e,
-                                            if data.len() > 200 { &data[..200] } else { data }
-                                        );
-
-                                        // Circuit breaker: abort stream after too many consecutive errors
-                                        // Prevents infinite loops on corrupted or malformed streams
-                                        if consecutive_parse_errors >= MAX_CONSECUTIVE_PARSE_ERRORS
-                                        {
-                                            return Some((
-                                                Err(GraphBitError::llm_provider(
-                                                    "perplexity",
-                                                    format!(
-                                                        "Stream corrupted: {} consecutive parse errors. \
-                                                         Last error: {}. Data may be incomplete.",
-                                                        consecutive_parse_errors, e
-                                                    ),
-                                                )),
-                                                (
-                                                    byte_stream,
-                                                    buffer,
-                                                    true,
-                                                    consecutive_parse_errors,
-                                                    total_parse_errors,
-                                                ),
-                                            ));
-                                        }
-                                    }
-                                }
-                            }
-                        }
                     }
                 }
             },
