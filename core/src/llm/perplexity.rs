@@ -1,7 +1,7 @@
 //! `Perplexity` AI LLM provider implementation
 
 use crate::errors::{GraphBitError, GraphBitResult};
-use crate::llm::openai_compat::complete::send_chat_completion_request;
+use crate::llm::openai_compat::complete::execute_complete_request;
 use crate::llm::openai_compat::finish_reason::parse_openai_finish_reason;
 use crate::llm::openai_compat::http::build_http_client;
 use crate::llm::openai_compat::request::build_request_json_with_extra_params;
@@ -163,24 +163,17 @@ impl LlmProviderTrait for PerplexityProvider {
             },
         };
 
-        let request_json =
-            build_request_json_with_extra_params("perplexity", &body, request.extra_params)?;
-
-        let response = send_chat_completion_request(
+        execute_complete_request(
             "perplexity",
             &self.client,
             &url,
             &self.api_key,
-            &request_json,
+            &body,
+            request.extra_params,
             |rb| rb.header("Accept", "application/json"),
+            |perplexity_response: PerplexityResponse| self.parse_response(perplexity_response),
         )
-        .await?;
-
-        let perplexity_response: PerplexityResponse = response.json().await.map_err(|e| {
-            GraphBitError::llm_provider("perplexity", format!("Failed to parse response: {e}"))
-        })?;
-
-        self.parse_response(perplexity_response)
+        .await
     }
 
     fn supports_function_calling(&self) -> bool {

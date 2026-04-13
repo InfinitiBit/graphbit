@@ -1,7 +1,7 @@
 //! `OpenAI` LLM provider implementation
 
 use crate::errors::{GraphBitError, GraphBitResult};
-use crate::llm::openai_compat::complete::send_chat_completion_request;
+use crate::llm::openai_compat::complete::execute_complete_request;
 use crate::llm::openai_compat::finish_reason::parse_openai_finish_reason;
 use crate::llm::openai_compat::http::build_http_client;
 use crate::llm::openai_compat::request::build_request_json_with_extra_params;
@@ -214,16 +214,14 @@ impl LlmProviderTrait for OpenAiProvider {
             stream_options: None,
         };
 
-        let request_json =
-            build_request_json_with_extra_params("openai", &body, request.extra_params)?;
-
         let organization = self.organization.clone();
-        let response = send_chat_completion_request(
+        execute_complete_request(
             "openai",
             &self.client,
             &url,
             &self.api_key,
-            &request_json,
+            &body,
+            request.extra_params,
             move |rb| {
                 if let Some(org) = organization {
                     rb.header("OpenAI-Organization", org)
@@ -231,14 +229,9 @@ impl LlmProviderTrait for OpenAiProvider {
                     rb
                 }
             },
+            |openai_response: OpenAiResponse| self.parse_response(openai_response),
         )
-        .await?;
-
-        let openai_response: OpenAiResponse = response.json().await.map_err(|e| {
-            GraphBitError::llm_provider("openai", format!("Failed to parse response: {e}"))
-        })?;
-
-        self.parse_response(openai_response)
+        .await
     }
 
     fn supports_function_calling(&self) -> bool {

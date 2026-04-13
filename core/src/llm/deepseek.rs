@@ -1,7 +1,7 @@
 //! `DeepSeek` LLM provider implementation
 
 use crate::errors::{GraphBitError, GraphBitResult};
-use crate::llm::openai_compat::complete::send_chat_completion_request;
+use crate::llm::openai_compat::complete::execute_complete_request;
 use crate::llm::openai_compat::finish_reason::parse_openai_finish_reason;
 use crate::llm::openai_compat::http::build_http_client;
 use crate::llm::openai_compat::request::build_request_json_with_extra_params;
@@ -164,24 +164,17 @@ impl LlmProviderTrait for DeepSeekProvider {
             },
         };
 
-        let request_json =
-            build_request_json_with_extra_params("deepseek", &body, request.extra_params)?;
-
-        let response = send_chat_completion_request(
+        execute_complete_request(
             "deepseek",
             &self.client,
             &url,
             &self.api_key,
-            &request_json,
+            &body,
+            request.extra_params,
             |rb| rb,
+            |deepseek_response: DeepSeekResponse| self.parse_response(deepseek_response),
         )
-        .await?;
-
-        let deepseek_response: DeepSeekResponse = response.json().await.map_err(|e| {
-            GraphBitError::llm_provider("deepseek", format!("Failed to parse response: {e}"))
-        })?;
-
-        self.parse_response(deepseek_response)
+        .await
     }
 
     fn supports_function_calling(&self) -> bool {

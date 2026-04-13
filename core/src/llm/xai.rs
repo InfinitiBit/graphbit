@@ -1,7 +1,7 @@
 //! `xAI` LLM provider implementation for Grok models
 
 use crate::errors::{GraphBitError, GraphBitResult};
-use crate::llm::openai_compat::complete::send_chat_completion_request;
+use crate::llm::openai_compat::complete::execute_complete_request;
 use crate::llm::openai_compat::finish_reason::parse_openai_finish_reason;
 use crate::llm::openai_compat::http::build_http_client;
 use crate::llm::openai_compat::request::build_request_json_with_extra_params;
@@ -198,23 +198,17 @@ impl LlmProviderTrait for XaiProvider {
             },
         };
 
-        let request_json = build_request_json_with_extra_params("xai", &body, request.extra_params)?;
-
-        let response = send_chat_completion_request(
+        execute_complete_request(
             "xai",
             &self.client,
             &url,
             &self.api_key,
-            &request_json,
+            &body,
+            request.extra_params,
             |rb| rb,
+            |xai_response: XaiResponse| self.parse_response(xai_response),
         )
-        .await?;
-
-        let xai_response: XaiResponse = response.json().await.map_err(|e| {
-            GraphBitError::llm_provider("xai", format!("Failed to parse response: {e}"))
-        })?;
-
-        self.parse_response(xai_response)
+        .await
     }
 
     fn supports_function_calling(&self) -> bool {

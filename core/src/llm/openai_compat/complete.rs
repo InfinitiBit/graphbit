@@ -1,6 +1,11 @@
 use crate::errors::{GraphBitError, GraphBitResult};
+use crate::llm::openai_compat::request::build_request_json_with_extra_params;
+use crate::llm::LlmResponse;
 use reqwest::{Client, RequestBuilder, Response};
+use serde::Serialize;
+use serde::de::DeserializeOwned;
 use serde_json::Value;
+use std::collections::HashMap;
 
 /// Send a chat-completions request with shared auth/error handling.
 pub(crate) async fn send_chat_completion_request<F>(
@@ -37,4 +42,39 @@ where
     }
 
     Ok(response)
+}
+
+/// Execute a non-stream chat completion request end-to-end.
+pub(crate) async fn execute_complete_request<Req, Resp, FH, FP>(
+    provider_name: &str,
+    client: &Client,
+    url: &str,
+    api_key: &str,
+    body: &Req,
+    extra_params: HashMap<String, Value>,
+    customize_builder: FH,
+    parse_response: FP,
+) -> GraphBitResult<LlmResponse>
+where
+    Req: Serialize,
+    Resp: DeserializeOwned,
+    FH: FnOnce(RequestBuilder) -> RequestBuilder,
+    FP: FnOnce(Resp) -> GraphBitResult<LlmResponse>,
+{
+    let request_json = build_request_json_with_extra_params(provider_name, body, extra_params)?;
+    let response = send_chat_completion_request(
+        provider_name,
+        client,
+        url,
+        api_key,
+        &request_json,
+        customize_builder,
+    )
+    .await?;
+
+    let parsed: Resp = response.json().await.map_err(|e| {
+        GraphBitError::llm_provider(provider_name, format!("Failed to parse response: {e}"))
+    })?;
+
+    parse_response(parsed)
 }

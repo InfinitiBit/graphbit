@@ -1,7 +1,7 @@
 //! `AI21` LLM provider implementation (Jamba / Chat + function calling)
 
 use crate::errors::{GraphBitError, GraphBitResult};
-use crate::llm::openai_compat::complete::send_chat_completion_request;
+use crate::llm::openai_compat::complete::execute_complete_request;
 use crate::llm::openai_compat::finish_reason::parse_openai_finish_reason;
 use crate::llm::openai_compat::http::build_http_client;
 use crate::llm::openai_compat::request::build_request_json_with_extra_params;
@@ -197,15 +197,14 @@ impl LlmProviderTrait for Ai21Provider {
             },
         };
 
-        let req_json = build_request_json_with_extra_params("ai21", &body, request.extra_params)?;
-
         let organization = self.organization.clone();
-        let resp = send_chat_completion_request(
+        execute_complete_request(
             "ai21",
             &self.client,
             &url,
             &self.api_key,
-            &req_json,
+            &body,
+            request.extra_params,
             move |rb| {
                 if let Some(org) = organization {
                     rb.header("Ai21-Organization", org)
@@ -213,14 +212,9 @@ impl LlmProviderTrait for Ai21Provider {
                     rb
                 }
             },
+            |ai21_resp: Ai21Response| self.parse_response(ai21_resp),
         )
-        .await?;
-
-        let ai21_resp: Ai21Response = resp.json().await.map_err(|e| {
-            GraphBitError::llm_provider("ai21", format!("Failed to parse response: {e}"))
-        })?;
-
-        self.parse_response(ai21_resp)
+        .await
     }
 
     fn supports_streaming(&self) -> bool {
