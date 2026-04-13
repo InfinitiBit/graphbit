@@ -358,10 +358,117 @@ impl LlmProviderTrait for XaiProvider {
                     }
 
                     loop {
+                        // Process already-buffered complete lines before waiting for more bytes.
+                        // A single network chunk can contain multiple SSE events; if we return
+                        // after yielding one token chunk, remaining complete lines must be
+                        // drained first on the next poll or they can be lost at EOF.
+                        while let Some(newline_pos) = buffer.find('\n') {
+                            let line: String = buffer.drain(..=newline_pos).collect();
+                            let line = line.trim();
+
+                            // Skip empty lines and comments
+                            if line.is_empty() || line.starts_with(':') {
+                                continue;
+                            }
+
+                            if let Some(data) = line.strip_prefix("data: ") {
+                                if data.trim() == "[DONE]" {
+                                    if total_parse_errors > 0 {
+                                        tracing::warn!(
+                                            "Stream completed with {} total parse errors. Some data may have been lost.",
+                                            total_parse_errors
+                                        );
+                                    }
+                                    return None;
+                                }
+
+                                match serde_json::from_str::<XaiStreamChunk>(data) {
+                                    Ok(stream_chunk) => {
+                                        consecutive_parse_errors = 0;
+
+                                        if let Some(choice) = stream_chunk.choices.first()
+                                            && let Some(content) = &choice.delta.content
+                                            && !content.is_empty()
+                                        {
+                                            let response = LlmResponse::new(content.clone(), &model)
+                                                .with_id(stream_chunk.id);
+                                            return Some((
+                                                Ok(response),
+                                                (
+                                                    byte_stream,
+                                                    buffer,
+                                                    false,
+                                                    consecutive_parse_errors,
+                                                    total_parse_errors,
+                                                ),
+                                            ));
+                                        }
+                                    }
+                                    Err(e) => {
+                                        consecutive_parse_errors += 1;
+                                        total_parse_errors += 1;
+
+                                        tracing::warn!(
+                                            "Failed to parse xAI stream chunk (consecutive: {}, total: {}): {}, data: {}",
+                                            consecutive_parse_errors,
+                                            total_parse_errors,
+                                            e,
+                                            if data.len() > 200 { &data[..200] } else { data }
+                                        );
+
+                                        if consecutive_parse_errors >= MAX_CONSECUTIVE_PARSE_ERRORS {
+                                            return Some((
+                                                Err(GraphBitError::llm_provider(
+                                                    "xai",
+                                                    format!(
+                                                        "Stream corrupted: {} consecutive parse errors. \
+                                                         Last error: {}. Data may be incomplete.",
+                                                        consecutive_parse_errors, e
+                                                    ),
+                                                )),
+                                                (
+                                                    byte_stream,
+                                                    buffer,
+                                                    true,
+                                                    consecutive_parse_errors,
+                                                    total_parse_errors,
+                                                ),
+                                            ));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         // Apply timeout to each chunk read
                         let chunk_result = match timeout(CHUNK_TIMEOUT, byte_stream.next()).await {
                             Ok(Some(result)) => result,
                             Ok(None) => {
+                                // Try to parse a final buffered line without trailing newline.
+                                let tail_line = buffer.trim().to_string();
+                                if let Some(data) = tail_line.strip_prefix("data: ") {
+                                    if data.trim() != "[DONE]"
+                                        && let Ok(stream_chunk) =
+                                            serde_json::from_str::<XaiStreamChunk>(data)
+                                        && let Some(choice) = stream_chunk.choices.first()
+                                        && let Some(content) = &choice.delta.content
+                                        && !content.is_empty()
+                                    {
+                                        let response = LlmResponse::new(content.clone(), &model)
+                                            .with_id(stream_chunk.id);
+                                        return Some((
+                                            Ok(response),
+                                            (
+                                                byte_stream,
+                                                String::new(),
+                                                false,
+                                                consecutive_parse_errors,
+                                                total_parse_errors,
+                                            ),
+                                        ));
+                                    }
+                                }
+
                                 // Stream naturally ended
                                 if total_parse_errors > 0 {
                                     tracing::warn!(
@@ -418,91 +525,6 @@ impl LlmProviderTrait for XaiProvider {
 
                         // Append new data to buffer
                         buffer.push_str(&String::from_utf8_lossy(&chunk));
-
-                        // Process complete lines using drain()
-                        while let Some(newline_pos) = buffer.find('\n') {
-                            let line: String = buffer.drain(..=newline_pos).collect();
-                            let line = line.trim();
-
-                            // Skip empty lines and comments
-                            if line.is_empty() || line.starts_with(':') {
-                                continue;
-                            }
-
-                            // Check for data: prefix (OpenAI-compatible SSE format)
-                            if let Some(data) = line.strip_prefix("data: ") {
-                                // Check for [DONE] marker
-                                if data.trim() == "[DONE]" {
-                                    if total_parse_errors > 0 {
-                                        tracing::warn!(
-                                            "Stream completed with {} total parse errors. Some data may have been lost.",
-                                            total_parse_errors
-                                        );
-                                    }
-                                    return None; // End of stream
-                                }
-
-                                // Parse JSON chunk
-                                match serde_json::from_str::<XaiStreamChunk>(data) {
-                                    Ok(stream_chunk) => {
-                                        consecutive_parse_errors = 0;
-
-                                        if let Some(choice) = stream_chunk.choices.first() {
-                                            if let Some(content) = &choice.delta.content {
-                                                if !content.is_empty() {
-                                                    let response =
-                                                        LlmResponse::new(content.clone(), &model)
-                                                            .with_id(stream_chunk.id);
-                                                    return Some((
-                                                        Ok(response),
-                                                        (
-                                                            byte_stream,
-                                                            buffer,
-                                                            false,
-                                                            consecutive_parse_errors,
-                                                            total_parse_errors,
-                                                        ),
-                                                    ));
-                                                }
-                                            }
-                                        }
-                                    }
-                                    Err(e) => {
-                                        consecutive_parse_errors += 1;
-                                        total_parse_errors += 1;
-
-                                        tracing::warn!(
-                                            "Failed to parse xAI stream chunk (consecutive: {}, total: {}): {}, data: {}",
-                                            consecutive_parse_errors,
-                                            total_parse_errors,
-                                            e,
-                                            if data.len() > 200 { &data[..200] } else { data }
-                                        );
-
-                                        if consecutive_parse_errors >= MAX_CONSECUTIVE_PARSE_ERRORS
-                                        {
-                                            return Some((
-                                                Err(GraphBitError::llm_provider(
-                                                    "xai",
-                                                    format!(
-                                                        "Stream corrupted: {} consecutive parse errors. \
-                                                         Last error: {}. Data may be incomplete.",
-                                                        consecutive_parse_errors, e
-                                                    ),
-                                                )),
-                                                (
-                                                    byte_stream,
-                                                    buffer,
-                                                    true,
-                                                    consecutive_parse_errors,
-                                                    total_parse_errors,
-                                                ),
-                                            ));
-                                        }
-                                    }
-                                }
-                            }
-                        }
                     }
                 }
             },
