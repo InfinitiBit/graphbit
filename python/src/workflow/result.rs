@@ -251,6 +251,13 @@ impl WorkflowResult {
             }
         }
 
+        // Sort nodes chronologically by start_time
+        nodes.sort_by(|a, b| {
+            let a_start = a.get("start_time").and_then(|v| v.as_str()).unwrap_or("");
+            let b_start = b.get("start_time").and_then(|v| v.as_str()).unwrap_or("");
+            a_start.cmp(b_start)
+        });
+
         // Aggregate total_usage and total_tool_calls across all nodes
         let mut total_prompt_tokens: u64 = 0;
         let mut total_completion_tokens: u64 = 0;
