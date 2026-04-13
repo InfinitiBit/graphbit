@@ -19,6 +19,16 @@ GraphBit supports these LLM providers:
 - **xAI** - Grok models with real-time information and advanced reasoning capabilities
 - **Ollama** - Local model execution with various open-source models
 
+## OpenAI-Shape Streaming Rollout Status
+
+GraphBit now centralizes request assembly, finish-reason mapping, and shared streaming/tool-call parsing for OpenAI-compatible providers that already expose `stream()`:
+
+- **Centralized providers**: `openai`, `deepseek`, `xai`, `perplexity`, `ai21`
+- **Parity target**: `complete()` and reconstructed `stream()` final outputs stay behaviorally aligned for content, tool calls, finish reason, and usage semantics.
+- **Workflow stream modes**: `Messages` emits token-oriented events; `Updates` emits orchestration lifecycle/tool events; `All` emits both.
+
+Providers intentionally deferred from this rollout (no change in this centralization pass): `bytedance`, `fireworks`, `togetherai`, `openrouter`.
+
 ## Configuration
 
 ### OpenAI Configuration

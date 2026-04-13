@@ -453,11 +453,11 @@ mod tests {
     fn test_max_context_length_skylark_models() {
         let provider =
             ByteDanceProvider::new("test-api-key".to_string(), "skylark-lite".to_string()).unwrap();
-        assert_eq!(provider.max_context_length(), Some(32_768));
+        assert_eq!(provider.max_context_length(), Some(128_000));
 
         let provider =
             ByteDanceProvider::new("test-api-key".to_string(), "skylark-pro".to_string()).unwrap();
-        assert_eq!(provider.max_context_length(), Some(32_768));
+        assert_eq!(provider.max_context_length(), Some(128_000));
     }
 
     #[test]
@@ -465,12 +465,12 @@ mod tests {
         let provider =
             ByteDanceProvider::new("test-api-key".to_string(), "seedance-1.0-lite".to_string())
                 .unwrap();
-        assert_eq!(provider.max_context_length(), Some(32_768));
+        assert_eq!(provider.max_context_length(), Some(256_000));
 
         let provider =
             ByteDanceProvider::new("test-api-key".to_string(), "seedance-1.0-pro".to_string())
                 .unwrap();
-        assert_eq!(provider.max_context_length(), Some(32_768));
+        assert_eq!(provider.max_context_length(), Some(256_000));
     }
 
     #[test]
@@ -489,12 +489,12 @@ mod tests {
         let provider =
             ByteDanceProvider::new("test-api-key".to_string(), "seedance-1.0-lite".to_string())
                 .unwrap();
-        assert_eq!(provider.cost_per_token(), Some((0.000_001_5, 0.000_003)));
+        assert_eq!(provider.cost_per_token(), Some((0.000_001, 0.000_002)));
 
         let provider =
             ByteDanceProvider::new("test-api-key".to_string(), "seedance-1.0-pro".to_string())
                 .unwrap();
-        assert_eq!(provider.cost_per_token(), Some((0.000_003, 0.000_006)));
+        assert_eq!(provider.cost_per_token(), Some((0.000_001, 0.000_002)));
     }
 
     #[test]
