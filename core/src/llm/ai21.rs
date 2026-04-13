@@ -5,8 +5,12 @@ use crate::llm::openai_compat::complete::execute_complete_request;
 use crate::llm::openai_compat::finish_reason::parse_openai_finish_reason;
 use crate::llm::openai_compat::http::build_http_client;
 use crate::llm::openai_compat::request::build_request_json_with_extra_params;
+use crate::llm::openai_compat::response::{
+    TOOL_ONLY_FALLBACK_TEXT, fallback_content_if_tool_only, first_choice_or_error, has_tool_calls,
+    parse_tool_arguments_openai_style, usage_from_prompt_completion,
+};
 use crate::llm::providers::LlmProviderTrait;
-use crate::llm::{LlmMessage, LlmRequest, LlmResponse, LlmRole, LlmTool, LlmToolCall, LlmUsage};
+use crate::llm::{LlmMessage, LlmRequest, LlmResponse, LlmRole, LlmTool, LlmToolCall};
 use async_trait::async_trait;
 use futures::stream::{Stream, StreamExt};
 use reqwest::Client;
@@ -102,57 +106,28 @@ impl Ai21Provider {
 
     /// Parse the AI21 response into your internal `LlmResponse`
     fn parse_response(&self, resp: Ai21Response) -> GraphBitResult<LlmResponse> {
-        let choice = resp
-            .choices
-            .into_iter()
-            .next()
-            .ok_or_else(|| GraphBitError::llm_provider("ai21", "No choices in response"))?;
-
-        let mut content = choice.message.content;
-        // If content is empty but tool_calls are present, we may set default content text
-        if content.trim().is_empty()
-            && !choice
-                .message
-                .tool_calls
-                .as_ref()
-                .unwrap_or(&vec![])
-                .is_empty()
-        {
-            content = "Calling tool to fulfill request.".to_string();
-        }
+        let choice = first_choice_or_error("ai21", resp.choices)?;
+        let content = fallback_content_if_tool_only(
+            choice.message.content,
+            has_tool_calls(choice.message.tool_calls.as_ref()),
+            TOOL_ONLY_FALLBACK_TEXT,
+        );
 
         let tool_calls = choice
             .message
             .tool_calls
             .unwrap_or_default()
             .into_iter()
-            .map(|tc| {
-                let params = if tc.function.arguments.trim().is_empty() {
-                    serde_json::Value::Object(serde_json::Map::new())
-                } else {
-                    match serde_json::from_str(&tc.function.arguments) {
-                        Ok(v) => v,
-                        Err(e) => {
-                            tracing::warn!(
-                                "Failed to parse AI21 tool arguments {}: {}",
-                                tc.function.name,
-                                e
-                            );
-                            serde_json::json!({ "raw_arguments": tc.function.arguments })
-                        }
-                    }
-                };
-                LlmToolCall {
-                    id: tc.id,
-                    name: tc.function.name,
-                    parameters: params,
-                }
+            .map(|tc| LlmToolCall {
+                id: tc.id,
+                name: tc.function.name.clone(),
+                parameters: parse_tool_arguments_openai_style(&tc.function.name, &tc.function.arguments),
             })
             .collect();
 
         let finish_reason = parse_openai_finish_reason(choice.finish_reason.as_deref());
 
-        let usage = LlmUsage::new(resp.usage.prompt_tokens, resp.usage.completion_tokens);
+        let usage = usage_from_prompt_completion(resp.usage.prompt_tokens, resp.usage.completion_tokens);
 
         Ok(LlmResponse::new(content, &self.model)
             .with_tool_calls(tool_calls)

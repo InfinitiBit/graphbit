@@ -5,8 +5,12 @@ use crate::llm::openai_compat::complete::execute_complete_request;
 use crate::llm::openai_compat::finish_reason::parse_openai_finish_reason;
 use crate::llm::openai_compat::http::build_http_client;
 use crate::llm::openai_compat::request::build_request_json_with_extra_params;
+use crate::llm::openai_compat::response::{
+    TOOL_ONLY_FALLBACK_TEXT, fallback_content_if_tool_only, first_choice_or_error, has_tool_calls,
+    parse_tool_arguments_openai_style, usage_from_prompt_completion,
+};
 use crate::llm::providers::LlmProviderTrait;
-use crate::llm::{LlmMessage, LlmRequest, LlmResponse, LlmRole, LlmTool, LlmToolCall, LlmUsage};
+use crate::llm::{LlmMessage, LlmRequest, LlmResponse, LlmRole, LlmTool, LlmToolCall};
 use async_trait::async_trait;
 use futures::stream::{Stream, StreamExt};
 use reqwest::Client;
@@ -94,65 +98,29 @@ impl XaiProvider {
 
     /// Parse `xAI` response to `GraphBit` response
     fn parse_response(&self, response: XaiResponse) -> GraphBitResult<LlmResponse> {
-        let choice = response
-            .choices
-            .into_iter()
-            .next()
-            .ok_or_else(|| GraphBitError::llm_provider("xai", "No choices in response"))?;
-
-        let mut content = choice.message.content.unwrap_or_default();
-        if content.trim().is_empty()
-            && !choice
-                .message
-                .tool_calls
-                .as_ref()
-                .unwrap_or(&vec![])
-                .is_empty()
-        {
-            content = "I'll help you with that using the available tools.".to_string();
-        }
+        let choice = first_choice_or_error("xai", response.choices)?;
+        let content = fallback_content_if_tool_only(
+            choice.message.content.unwrap_or_default(),
+            has_tool_calls(choice.message.tool_calls.as_ref()),
+            TOOL_ONLY_FALLBACK_TEXT,
+        );
 
         let tool_calls: Vec<LlmToolCall> = choice
             .message
             .tool_calls
             .unwrap_or_default()
             .into_iter()
-            .map(|tc| {
-                // Production-grade argument parsing with error handling
-                let parameters = if tc.function.arguments.trim().is_empty() {
-                    serde_json::Value::Object(serde_json::Map::new())
-                } else {
-                    match serde_json::from_str(&tc.function.arguments) {
-                        Ok(params) => params,
-                        Err(e) => {
-                            tracing::warn!(
-                                "Failed to parse tool call arguments for {}: {e}. Arguments: '{}'",
-                                tc.function.name,
-                                tc.function.arguments
-                            );
-                            // Try to create a simple object with the raw arguments
-                            serde_json::json!({ "raw_arguments": tc.function.arguments })
-                        }
-                    }
-                };
-
-                LlmToolCall {
-                    id: tc.id,
-                    name: tc.function.name,
-                    parameters,
-                }
+            .map(|tc| LlmToolCall {
+                id: tc.id,
+                name: tc.function.name.clone(),
+                parameters: parse_tool_arguments_openai_style(&tc.function.name, &tc.function.arguments),
             })
             .collect();
 
         let finish_reason = parse_openai_finish_reason(choice.finish_reason.as_deref());
 
-        let usage = LlmUsage {
-            prompt_tokens: response.usage.prompt_tokens,
-            completion_tokens: response.usage.completion_tokens,
-            total_tokens: response.usage.prompt_tokens + response.usage.completion_tokens,
-            cache_read_tokens: None,
-            cache_creation_tokens: None,
-        };
+        let usage =
+            usage_from_prompt_completion(response.usage.prompt_tokens, response.usage.completion_tokens);
 
         Ok(LlmResponse::new(content, &self.model)
             .with_tool_calls(tool_calls)

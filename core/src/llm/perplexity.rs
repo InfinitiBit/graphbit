@@ -5,8 +5,12 @@ use crate::llm::openai_compat::complete::execute_complete_request;
 use crate::llm::openai_compat::finish_reason::parse_openai_finish_reason;
 use crate::llm::openai_compat::http::build_http_client;
 use crate::llm::openai_compat::request::build_request_json_with_extra_params;
+use crate::llm::openai_compat::response::{
+    TOOL_ONLY_FALLBACK_TEXT, fallback_content_if_tool_only, first_choice_or_error, has_tool_calls,
+    parse_tool_arguments_openai_style, usage_from_prompt_completion,
+};
 use crate::llm::providers::LlmProviderTrait;
-use crate::llm::{LlmMessage, LlmRequest, LlmResponse, LlmRole, LlmTool, LlmToolCall, LlmUsage};
+use crate::llm::{LlmMessage, LlmRequest, LlmResponse, LlmRole, LlmTool, LlmToolCall};
 use async_trait::async_trait;
 use futures::stream::{Stream, StreamExt};
 use reqwest::Client;
@@ -94,12 +98,13 @@ impl PerplexityProvider {
 
     /// Parse `Perplexity` response to `GraphBit` response
     fn parse_response(&self, response: PerplexityResponse) -> GraphBitResult<LlmResponse> {
-        let choice =
-            response.choices.into_iter().next().ok_or_else(|| {
-                GraphBitError::llm_provider("perplexity", "No choices in response")
-            })?;
+        let choice = first_choice_or_error("perplexity", response.choices)?;
 
-        let content = choice.message.content;
+        let content = fallback_content_if_tool_only(
+            choice.message.content,
+            has_tool_calls(choice.message.tool_calls.as_ref()),
+            TOOL_ONLY_FALLBACK_TEXT,
+        );
         let tool_calls = choice
             .message
             .tool_calls
@@ -107,17 +112,15 @@ impl PerplexityProvider {
             .into_iter()
             .map(|tc| LlmToolCall {
                 id: tc.id,
-                name: tc.function.name,
-                parameters: serde_json::from_str(&tc.function.arguments).unwrap_or_default(),
+                name: tc.function.name.clone(),
+                parameters: parse_tool_arguments_openai_style(&tc.function.name, &tc.function.arguments),
             })
             .collect();
 
         let finish_reason = parse_openai_finish_reason(choice.finish_reason.as_deref());
 
-        let usage = LlmUsage::new(
-            response.usage.prompt_tokens,
-            response.usage.completion_tokens,
-        );
+        let usage =
+            usage_from_prompt_completion(response.usage.prompt_tokens, response.usage.completion_tokens);
 
         Ok(LlmResponse::new(content, &self.model)
             .with_tool_calls(tool_calls)
