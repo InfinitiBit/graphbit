@@ -590,8 +590,10 @@ impl WorkflowExecutor {
             return Ok(context);
         }
 
-        // ── Streaming: emit WorkflowStarted ──────────────────────────────────────
-        if let Some(ref tx) = event_tx {
+        // ── Streaming: emit WorkflowStarted in updates/all modes ─────────────────
+        if let Some(ref tx) = event_tx
+            && stream_mode.emits_updates()
+        {
             let _ = tx
                 .send(StreamEvent::WorkflowStarted {
                     workflow_id: workflow.id.to_string(),
@@ -688,8 +690,10 @@ impl WorkflowExecutor {
             let batch_ids: Vec<String> = ready.iter().map(|n| n.id.to_string()).collect();
             tracing::info!(batch_size, batch_node_ids = ?batch_ids, "Executing dynamic batch");
 
-            // ── Streaming: emit NodeStarted for each node about to run ────────────
-            if let Some(ref tx) = event_tx {
+            // ── Streaming: emit NodeStarted for each node (updates/all modes) ─────
+            if let Some(ref tx) = event_tx
+                && stream_mode.emits_updates()
+            {
                 for node in &ready {
                     let _ = tx
                         .send(StreamEvent::NodeStarted {
@@ -776,8 +780,10 @@ impl WorkflowExecutor {
                             resolved.insert(node_result.node_id.clone());
                         }
 
-                        // ── Streaming: emit NodeCompleted or NodeFailed ───────────────────
-                        if let Some(ref tx) = event_tx {
+                        // ── Streaming: emit NodeCompleted/NodeFailed in updates/all modes ──
+                        if let Some(ref tx) = event_tx
+                            && stream_mode.emits_updates()
+                        {
                             let node_name = workflow
                                 .graph
                                 .get_node(&node_result.node_id)
@@ -1652,7 +1658,9 @@ impl WorkflowExecutor {
 
             // Emit live LLM lifecycle events for non-tool agent execution.
             let llm_call_id_hint = format!("{}-llm-1", current_node_id);
-            if let Some(ref tx) = event_tx {
+            if let Some(ref tx) = event_tx
+                && stream_mode.emits_updates()
+            {
                 let _ = tx
                     .send(crate::stream::StreamEvent::LlmCallStarted {
                         node_id: current_node_id.to_string(),
@@ -1756,7 +1764,9 @@ impl WorkflowExecutor {
             let llm_duration_ms = llm_start.elapsed().as_secs_f64() * 1000.0;
             let llm_end_timestamp = chrono::Utc::now();
 
-            if let Some(ref tx) = event_tx {
+            if let Some(ref tx) = event_tx
+                && stream_mode.emits_updates()
+            {
                 let _ = tx
                     .send(crate::stream::StreamEvent::LlmCallCompleted {
                         node_id: current_node_id.to_string(),
@@ -2155,7 +2165,9 @@ impl WorkflowExecutor {
 
         // Emit live LLM call lifecycle events for the initial tool-selection call.
         let initial_llm_call_id = format!("{}-llm-1", node_id);
-        if let Some(ref tx) = event_tx {
+        if let Some(ref tx) = event_tx
+            && stream_mode.emits_updates()
+        {
             let _ = tx
                 .send(crate::stream::StreamEvent::LlmCallStarted {
                     node_id: node_id.to_string(),
@@ -2226,7 +2238,9 @@ impl WorkflowExecutor {
         let llm_duration_ms = llm_start.elapsed().as_secs_f64() * 1000.0;
         let llm_end_timestamp = chrono::Utc::now();
 
-        if let Some(ref tx) = event_tx {
+        if let Some(ref tx) = event_tx
+            && stream_mode.emits_updates()
+        {
             let _ = tx
                 .send(crate::stream::StreamEvent::LlmCallCompleted {
                     node_id: node_id.to_string(),
@@ -2438,7 +2452,9 @@ impl WorkflowExecutor {
             // ── Streaming: emit ToolCallStarted per requested tool call ──────────
             // Parameters are masked when guardrail is active (use the encoded params
             // from the metadata array which was built with encoding applied above).
-            if let Some(ref tx) = event_tx {
+            if let Some(ref tx) = event_tx
+                && stream_mode.emits_tool_events()
+            {
                 for tool_call in &llm_response.tool_calls {
                     // Mask parameters if guardrail is active
                     let params_for_event = if let Some(ref enforcer) = guardrail_enforcer {

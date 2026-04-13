@@ -13,7 +13,8 @@
 //!
 //! Events are divided into three categories:
 //! 1. **Workflow/Node lifecycle** (`Updates`/`All`): `WorkflowStarted`, `NodeStarted`,
-//!    `NodeCompleted`, `NodeFailed`, `WorkflowCompleted`, `WorkflowFailed`
+//!    `NodeCompleted`, `NodeFailed`
+//!    (`WorkflowCompleted`/`WorkflowFailed` are terminal and emitted in all modes)
 //! 2. **Token-level** (`Messages`/`All`): `Token`
 //! 3. **Execution-level** (`Updates`/`All`): `LlmCallStarted`, `LlmCallCompleted`, `ToolCallStarted`,
 //!    `ToolCallCompleted`, `ToolCallFailed`
@@ -91,7 +92,7 @@ impl std::fmt::Display for StreamMode {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "event")]
 pub enum StreamEvent {
-    // ── Node-level events (all modes) ────────────────────────────────────
+    // ── Node-level events (Updates / All; terminal workflow events are all modes) ──
     /// Workflow execution started.
     #[serde(rename = "workflow_started")]
     WorkflowStarted {

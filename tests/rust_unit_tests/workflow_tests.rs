@@ -306,7 +306,7 @@ async fn test_streaming_empty_stream_falls_back_to_complete_no_tools() {
             workflow,
             None,
             tx,
-            graphbit_core::stream::StreamMode::Messages,
+            graphbit_core::stream::StreamMode::All,
         )
         .await
         .expect("streaming execution should succeed");
@@ -377,6 +377,26 @@ async fn test_streaming_reconstructs_final_content_from_chunks_no_tools() {
         .collect::<Vec<_>>()
         .join("");
     assert_eq!(token_payload, "Hello world");
+    assert!(
+        events
+            .iter()
+            .all(|e| !matches!(e, graphbit_core::stream::StreamEvent::NodeStarted { .. }))
+    );
+    assert!(
+        events
+            .iter()
+            .all(|e| !matches!(e, graphbit_core::stream::StreamEvent::NodeCompleted { .. }))
+    );
+    assert!(
+        events
+            .iter()
+            .all(|e| !matches!(e, graphbit_core::stream::StreamEvent::LlmCallStarted { .. }))
+    );
+    assert!(
+        events
+            .iter()
+            .all(|e| !matches!(e, graphbit_core::stream::StreamEvent::LlmCallCompleted { .. }))
+    );
 
     let counts = counts.lock().expect("counts lock poisoned");
     assert_eq!(counts.stream_calls, 1);
@@ -497,7 +517,7 @@ async fn test_execute_and_execute_streaming_match_final_output_no_tools() {
             workflow_stream,
             None,
             tx,
-            graphbit_core::stream::StreamMode::Messages,
+            graphbit_core::stream::StreamMode::All,
         )
         .await
         .expect("streaming execution should succeed");
