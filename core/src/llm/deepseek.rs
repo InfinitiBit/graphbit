@@ -1,6 +1,6 @@
 //! `DeepSeek` LLM provider implementation
 
-use crate::errors::{GraphBitError, GraphBitResult};
+use crate::errors::GraphBitResult;
 use crate::llm::openai_compat::complete::execute_complete_request;
 use crate::llm::openai_compat::finish_reason::parse_openai_finish_reason;
 use crate::llm::openai_compat::http::build_http_client;
@@ -9,14 +9,13 @@ use crate::llm::openai_compat::response::{
     TOOL_ONLY_FALLBACK_TEXT, fallback_content_if_tool_only, first_choice_or_error, has_tool_calls,
     parse_tool_arguments_openai_style, usage_from_prompt_completion,
 };
+use crate::llm::openai_compat::simple_stream::execute_openai_style_text_stream;
 use crate::llm::providers::LlmProviderTrait;
 use crate::llm::{LlmMessage, LlmRequest, LlmResponse, LlmRole, LlmTool, LlmToolCall};
 use async_trait::async_trait;
-use futures::stream::{Stream, StreamExt};
+use futures::stream::Stream;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
-use tokio::time::timeout;
 
 /// `DeepSeek` API provider
 pub struct DeepSeekProvider {
@@ -240,275 +239,33 @@ impl LlmProviderTrait for DeepSeekProvider {
 
         let request_json =
             build_request_json_with_extra_params("deepseek", &body, request.extra_params)?;
-
-        // Timeout constants for different phases of the request
-        // These values balance responsiveness with network variability:
-        // - CONNECTION_TIMEOUT: Generous time for initial TLS handshake and HTTP connection
-        //   (DeepSeek API can be slow to establish connections under load)
-        // - ERROR_BODY_TIMEOUT: Short timeout since error responses are typically small JSON
-        //   (don't want to wait long if API is unresponsive)
-        // - CHUNK_TIMEOUT: Moderate timeout for each SSE chunk; DeepSeek streams can have
-        //   pauses between tokens but should not hang indefinitely
-        const CONNECTION_TIMEOUT: Duration = Duration::from_secs(60);
-        const ERROR_BODY_TIMEOUT: Duration = Duration::from_secs(10);
-        const CHUNK_TIMEOUT: Duration = Duration::from_secs(30);
-
-        // Apply timeout to initial connection
-        let response = timeout(
-            CONNECTION_TIMEOUT,
-            self.client
-                .post(&url)
-                .header("Authorization", format!("Bearer {}", self.api_key))
-                .header("Content-Type", "application/json")
-                .json(&request_json)
-                .send(),
+        execute_openai_style_text_stream(
+            "deepseek",
+            "DeepSeek",
+            &self.client,
+            &url,
+            &self.api_key,
+            &request_json,
+            |rb| rb,
+            self.model.clone(),
+            true,
+            extract_deepseek_stream_text,
         )
         .await
-        .map_err(|_| {
-            GraphBitError::llm_provider(
-                "deepseek",
-                format!(
-                    "Connection timeout after {:?} - DeepSeek did not respond. \
-                     Check network connectivity and DeepSeek status.",
-                    CONNECTION_TIMEOUT
-                ),
-            )
-        })?
-        .map_err(|e| GraphBitError::llm_provider("deepseek", format!("Request failed: {e}")))?;
-
-        if !response.status().is_success() {
-            let error_text = timeout(ERROR_BODY_TIMEOUT, response.text())
-                .await
-                .unwrap_or_else(|_| {
-                    Ok(format!(
-                        "Error body read timeout after {:?}",
-                        ERROR_BODY_TIMEOUT
-                    ))
-                })
-                .unwrap_or_else(|_| "Unknown error (failed to read body)".to_string());
-
-            return Err(GraphBitError::llm_provider(
-                "deepseek",
-                format!("API error: {error_text}"),
-            ));
-        }
-
-        // Parse SSE stream with proper line buffering and per-chunk timeout
-        let model = self.model.clone();
-        let byte_stream = response.bytes_stream();
-
-        // State tuple for stream processing (unfold accumulator):
-        // 0. byte_stream: The HTTP response body stream from reqwest
-        // 1. buffer: String buffer for incomplete SSE lines (SSE events are newline-delimited)
-        // 2. timeout_occurred: Circuit breaker flag - true if any timeout happened, stops further processing
-        // 3. consecutive_parse_errors: Counter for back-to-back JSON parse failures (circuit breaker at MAX)
-        // 4. total_parse_errors: Running count of all parse errors (for end-of-stream warning logs)
-        const MAX_CONSECUTIVE_PARSE_ERRORS: u32 = 5;
-        // Threshold of 5 consecutive errors chosen because:
-        // - 1-2 errors could be transient network glitches
-        // - 3-4 errors suggest potential format issues but may recover
-        // - 5+ errors strongly indicates stream corruption or API malfunction
-        // After this threshold, we abort to prevent infinite loops on corrupted streams
-
-        let stream = futures::stream::unfold(
-            (byte_stream, String::new(), false, 0u32, 0u32),
-            move |(
-                mut byte_stream,
-                mut buffer,
-                timeout_occurred,
-                mut consecutive_parse_errors,
-                mut total_parse_errors,
-            )| {
-                let model = model.clone();
-                async move {
-                    // If we already had a timeout, don't continue
-                    if timeout_occurred {
-                        return None;
-                    }
-
-                    loop {
-                        // Process already-buffered complete lines before waiting for more bytes.
-                        // A single network chunk can contain multiple SSE events; if we return
-                        // after yielding one token chunk, the remaining complete lines must be
-                        // drained first on the next poll or they will be lost at EOF.
-                        while let Some(newline_pos) = buffer.find('\n') {
-                            let line: String = buffer.drain(..=newline_pos).collect();
-                            let line = line.trim();
-
-                            // SSE protocol: skip empty lines (event separators) and comment lines.
-                            if line.is_empty() || line.starts_with(':') {
-                                continue;
-                            }
-
-                            if let Some(data) = line.strip_prefix("data: ") {
-                                if data.trim() == "[DONE]" {
-                                    if total_parse_errors > 0 {
-                                        tracing::warn!(
-                                            "Stream completed with {} total parse errors. Some data may have been lost.",
-                                            total_parse_errors
-                                        );
-                                    }
-                                    return None;
-                                }
-
-                                match serde_json::from_str::<DeepSeekStreamChunk>(data) {
-                                    Ok(stream_chunk) => {
-                                        consecutive_parse_errors = 0;
-
-                                        if let Some(choice) = stream_chunk.choices.first()
-                                            && let Some(content) = &choice.delta.content
-                                            && !content.is_empty()
-                                        {
-                                            let response = LlmResponse::new(content.clone(), &model)
-                                                .with_id(stream_chunk.id);
-                                            return Some((
-                                                Ok(response),
-                                                (
-                                                    byte_stream,
-                                                    buffer,
-                                                    false,
-                                                    consecutive_parse_errors,
-                                                    total_parse_errors,
-                                                ),
-                                            ));
-                                        }
-                                    }
-                                    Err(e) => {
-                                        consecutive_parse_errors += 1;
-                                        total_parse_errors += 1;
-
-                                        tracing::warn!(
-                                            "Failed to parse DeepSeek stream chunk (consecutive: {}, total: {}): {}, data: {}",
-                                            consecutive_parse_errors,
-                                            total_parse_errors,
-                                            e,
-                                            if data.len() > 200 { &data[..200] } else { data }
-                                        );
-
-                                        if consecutive_parse_errors >= MAX_CONSECUTIVE_PARSE_ERRORS {
-                                            return Some((
-                                                Err(GraphBitError::llm_provider(
-                                                    "deepseek",
-                                                    format!(
-                                                        "Stream corrupted: {} consecutive parse errors. \
-                                                         Last error: {}. Data may be incomplete.",
-                                                        consecutive_parse_errors, e
-                                                    ),
-                                                )),
-                                                (
-                                                    byte_stream,
-                                                    buffer,
-                                                    true,
-                                                    consecutive_parse_errors,
-                                                    total_parse_errors,
-                                                ),
-                                            ));
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        // Apply timeout to each chunk read
-                        let chunk_result = match timeout(CHUNK_TIMEOUT, byte_stream.next()).await {
-                            Ok(Some(result)) => result,
-                            Ok(None) => {
-                                // Try to parse a final buffered line without trailing newline.
-                                let tail_line = buffer.trim().to_string();
-                                if let Some(data) = tail_line.strip_prefix("data: ") {
-                                    if data.trim() != "[DONE]"
-                                        && let Ok(stream_chunk) =
-                                            serde_json::from_str::<DeepSeekStreamChunk>(data)
-                                        && let Some(choice) = stream_chunk.choices.first()
-                                        && let Some(content) = &choice.delta.content
-                                        && !content.is_empty()
-                                    {
-                                        let response = LlmResponse::new(content.clone(), &model)
-                                            .with_id(stream_chunk.id);
-                                        return Some((
-                                            Ok(response),
-                                            (
-                                                byte_stream,
-                                                String::new(),
-                                                false,
-                                                consecutive_parse_errors,
-                                                total_parse_errors,
-                                            ),
-                                        ));
-                                    }
-                                }
-
-                                // Stream naturally ended
-                                if total_parse_errors > 0 {
-                                    tracing::warn!(
-                                        "Stream ended with {} total parse errors. Some data may have been lost.",
-                                        total_parse_errors
-                                    );
-                                }
-                                return None;
-                            }
-                            Err(_) => {
-                                // Timeout occurred
-                                tracing::warn!(
-                                    "Stream chunk timeout after {:?} - DeepSeek stopped responding. \
-                                     Response may be incomplete.",
-                                    CHUNK_TIMEOUT
-                                );
-                                return Some((
-                                    Err(GraphBitError::llm_provider(
-                                        "deepseek",
-                                        format!(
-                                            "Stream timeout after {:?} - response may be incomplete",
-                                            CHUNK_TIMEOUT
-                                        ),
-                                    )),
-                                    (
-                                        byte_stream,
-                                        buffer,
-                                        true,
-                                        consecutive_parse_errors,
-                                        total_parse_errors,
-                                    ),
-                                ));
-                            }
-                        };
-
-                        let chunk = match chunk_result {
-                            Ok(c) => c,
-                            Err(e) => {
-                                return Some((
-                                    Err(GraphBitError::llm_provider(
-                                        "deepseek",
-                                        format!("Stream error: {e}"),
-                                    )),
-                                    (
-                                        byte_stream,
-                                        buffer,
-                                        false,
-                                        consecutive_parse_errors,
-                                        total_parse_errors,
-                                    ),
-                                ));
-                            }
-                        };
-
-                        // SSE (Server-Sent Events) buffering strategy:
-                        // HTTP chunks may split SSE events mid-line, so we buffer until complete lines are received.
-                        // SSE format: each event is a line starting with "data: " and ending with \n\n (double newline)
-                        // We use `drain()` to efficiently remove processed lines from the buffer front
-                        buffer.push_str(&String::from_utf8_lossy(&chunk));
-
-                    }
-                }
-            },
-        );
-
-        Ok(Box::new(Box::pin(stream)))
     }
 
     fn supports_streaming(&self) -> bool {
         true // DeepSeek supports streaming via OpenAI-compatible API
     }
+}
+
+fn extract_deepseek_stream_text(chunk: &DeepSeekStreamChunk) -> Option<(String, String)> {
+    chunk
+        .choices
+        .first()
+        .and_then(|choice| choice.delta.content.as_ref())
+        .filter(|content| !content.is_empty())
+        .map(|content| (chunk.id.clone(), content.clone()))
 }
 
 // `DeepSeek` API types (similar to `OpenAI` since `DeepSeek` follows `OpenAI` API format)

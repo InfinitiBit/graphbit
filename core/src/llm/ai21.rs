@@ -1,6 +1,6 @@
 //! `AI21` LLM provider implementation (Jamba / Chat + function calling)
 
-use crate::errors::{GraphBitError, GraphBitResult};
+use crate::errors::GraphBitResult;
 use crate::llm::openai_compat::complete::execute_complete_request;
 use crate::llm::openai_compat::finish_reason::parse_openai_finish_reason;
 use crate::llm::openai_compat::http::build_http_client;
@@ -9,14 +9,13 @@ use crate::llm::openai_compat::response::{
     TOOL_ONLY_FALLBACK_TEXT, fallback_content_if_tool_only, first_choice_or_error, has_tool_calls,
     parse_tool_arguments_openai_style, usage_from_prompt_completion,
 };
+use crate::llm::openai_compat::simple_stream::execute_openai_style_text_stream;
 use crate::llm::providers::LlmProviderTrait;
 use crate::llm::{LlmMessage, LlmRequest, LlmResponse, LlmRole, LlmTool, LlmToolCall};
 use async_trait::async_trait;
-use futures::stream::{Stream, StreamExt};
+use futures::stream::Stream;
 use reqwest::Client;
 use serde::{Deserialize, Deserializer, Serialize};
-use std::time::Duration;
-use tokio::time::timeout;
 
 /// `AI21` (Jamba / chat) API provider
 pub struct Ai21Provider {
@@ -228,225 +227,26 @@ impl LlmProviderTrait for Ai21Provider {
 
         let request_json =
             build_request_json_with_extra_params("ai21", &body, request.extra_params)?;
-
-        // Timeout constants
-        const CONNECTION_TIMEOUT: Duration = Duration::from_secs(60);
-        const ERROR_BODY_TIMEOUT: Duration = Duration::from_secs(10);
-        const CHUNK_TIMEOUT: Duration = Duration::from_secs(30);
-
-        // Build request with auth headers
-        let mut builder = self
-            .client
-            .post(&url)
-            .header("Authorization", format!("Bearer {}", self.api_key))
-            .header("Content-Type", "application/json")
-            .json(&request_json);
-
-        if let Some(org) = &self.organization {
-            builder = builder.header("Ai21-Organization", org);
-        }
-
-        // Apply timeout to initial connection
-        let response = timeout(CONNECTION_TIMEOUT, builder.send())
-            .await
-            .map_err(|_| {
-                GraphBitError::llm_provider(
-                    "ai21",
-                    format!(
-                        "Connection timeout after {:?} - AI21 did not respond. \
-                         Check network connectivity and AI21 status.",
-                        CONNECTION_TIMEOUT
-                    ),
-                )
-            })?
-            .map_err(|e| GraphBitError::llm_provider("ai21", format!("Request failed: {e}")))?;
-
-        if !response.status().is_success() {
-            let error_text = timeout(ERROR_BODY_TIMEOUT, response.text())
-                .await
-                .unwrap_or_else(|_| {
-                    Ok(format!(
-                        "Error body read timeout after {:?}",
-                        ERROR_BODY_TIMEOUT
-                    ))
-                })
-                .unwrap_or_else(|_| "Unknown error (failed to read body)".to_string());
-
-            return Err(GraphBitError::llm_provider(
-                "ai21",
-                format!("API error: {error_text}"),
-            ));
-        }
-
-        // Parse SSE stream (OpenAI-compatible format: "data: " prefix, "[DONE]" terminator)
-        let model = self.model.clone();
-        let byte_stream = response.bytes_stream();
-
-        const MAX_CONSECUTIVE_PARSE_ERRORS: u32 = 5;
-
-        let stream = futures::stream::unfold(
-            (byte_stream, String::new(), false, 0u32, 0u32),
-            move |(
-                mut byte_stream,
-                mut buffer,
-                done,
-                mut consecutive_parse_errors,
-                mut total_parse_errors,
-            )| {
-                let model = model.clone();
-                async move {
-                    if done {
-                        return None;
-                    }
-
-                    loop {
-                        // Process complete lines in the buffer
-                        while let Some(newline_pos) = buffer.find('\n') {
-                            let line: String = buffer.drain(..=newline_pos).collect();
-                            let line = line.trim();
-
-                            // Skip empty lines and SSE comments
-                            if line.is_empty() || line.starts_with(':') {
-                                continue;
-                            }
-
-                            // Check for data: prefix (OpenAI-compatible SSE)
-                            if let Some(data) = line.strip_prefix("data: ") {
-                                // Check for [DONE] marker
-                                if data.trim() == "[DONE]" {
-                                    if total_parse_errors > 0 {
-                                        tracing::warn!(
-                                            "AI21 stream completed with {} total parse errors.",
-                                            total_parse_errors
-                                        );
-                                    }
-                                    return None;
-                                }
-
-                                // Parse JSON chunk
-                                match serde_json::from_str::<Ai21StreamChunk>(data) {
-                                    Ok(chunk) => {
-                                        consecutive_parse_errors = 0;
-
-                                        if let Some(choice) = chunk.choices.first() {
-                                            if let Some(content) = &choice.delta.content {
-                                                if !content.is_empty() {
-                                                    let response =
-                                                        LlmResponse::new(content.clone(), &model)
-                                                            .with_id(chunk.id);
-                                                    return Some((
-                                                        Ok(response),
-                                                        (
-                                                            byte_stream,
-                                                            buffer,
-                                                            false,
-                                                            consecutive_parse_errors,
-                                                            total_parse_errors,
-                                                        ),
-                                                    ));
-                                                }
-                                            }
-                                        }
-                                    }
-                                    Err(e) => {
-                                        consecutive_parse_errors += 1;
-                                        total_parse_errors += 1;
-
-                                        tracing::warn!(
-                                            "Failed to parse AI21 stream chunk (consecutive: {}, total: {}): {}, data: {}",
-                                            consecutive_parse_errors,
-                                            total_parse_errors,
-                                            e,
-                                            if data.len() > 200 { &data[..200] } else { data }
-                                        );
-
-                                        if consecutive_parse_errors >= MAX_CONSECUTIVE_PARSE_ERRORS
-                                        {
-                                            return Some((
-                                                Err(GraphBitError::llm_provider(
-                                                    "ai21",
-                                                    format!(
-                                                        "Stream corrupted: {} consecutive parse errors. \
-                                                         Last error: {}. Data may be incomplete.",
-                                                        consecutive_parse_errors, e
-                                                    ),
-                                                )),
-                                                (
-                                                    byte_stream,
-                                                    buffer,
-                                                    true,
-                                                    consecutive_parse_errors,
-                                                    total_parse_errors,
-                                                ),
-                                            ));
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        // Need more data from the network
-                        let chunk_result = match timeout(CHUNK_TIMEOUT, byte_stream.next()).await {
-                            Ok(Some(result)) => result,
-                            Ok(None) => {
-                                if total_parse_errors > 0 {
-                                    tracing::warn!(
-                                        "AI21 stream ended with {} total parse errors.",
-                                        total_parse_errors
-                                    );
-                                }
-                                return None;
-                            }
-                            Err(_) => {
-                                tracing::warn!(
-                                    "AI21 stream chunk timeout after {:?} - response may be incomplete.",
-                                    CHUNK_TIMEOUT
-                                );
-                                return Some((
-                                    Err(GraphBitError::llm_provider(
-                                        "ai21",
-                                        format!(
-                                            "Stream timeout after {:?} - response may be incomplete",
-                                            CHUNK_TIMEOUT
-                                        ),
-                                    )),
-                                    (
-                                        byte_stream,
-                                        buffer,
-                                        true,
-                                        consecutive_parse_errors,
-                                        total_parse_errors,
-                                    ),
-                                ));
-                            }
-                        };
-
-                        let chunk = match chunk_result {
-                            Ok(c) => c,
-                            Err(e) => {
-                                return Some((
-                                    Err(GraphBitError::llm_provider(
-                                        "ai21",
-                                        format!("Stream error: {e}"),
-                                    )),
-                                    (
-                                        byte_stream,
-                                        buffer,
-                                        false,
-                                        consecutive_parse_errors,
-                                        total_parse_errors,
-                                    ),
-                                ));
-                            }
-                        };
-
-                        buffer.push_str(&String::from_utf8_lossy(&chunk));
-                    }
+        let organization = self.organization.clone();
+        execute_openai_style_text_stream(
+            "ai21",
+            "AI21",
+            &self.client,
+            &url,
+            &self.api_key,
+            &request_json,
+            move |rb| {
+                if let Some(org) = organization {
+                    rb.header("Ai21-Organization", org)
+                } else {
+                    rb
                 }
             },
-        );
-
-        Ok(Box::new(Box::pin(stream)))
+            self.model.clone(),
+            false,
+            extract_ai21_stream_text,
+        )
+        .await
     }
 
     fn supports_function_calling(&self) -> bool {
@@ -474,6 +274,15 @@ impl LlmProviderTrait for Ai21Provider {
             _ => None,                                        // Unknown model, no pricing info
         }
     }
+}
+
+fn extract_ai21_stream_text(chunk: &Ai21StreamChunk) -> Option<(String, String)> {
+    chunk
+        .choices
+        .first()
+        .and_then(|choice| choice.delta.content.as_ref())
+        .filter(|content| !content.is_empty())
+        .map(|content| (chunk.id.clone(), content.clone()))
 }
 
 // Types reflecting AI21’s chat API
