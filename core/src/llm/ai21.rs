@@ -1,6 +1,7 @@
 //! `AI21` LLM provider implementation (Jamba / Chat + function calling)
 
 use crate::errors::{GraphBitError, GraphBitResult};
+use crate::llm::openai_compat::complete::send_chat_completion_request;
 use crate::llm::openai_compat::finish_reason::parse_openai_finish_reason;
 use crate::llm::openai_compat::http::build_http_client;
 use crate::llm::openai_compat::request::build_request_json_with_extra_params;
@@ -198,32 +199,22 @@ impl LlmProviderTrait for Ai21Provider {
 
         let req_json = build_request_json_with_extra_params("ai21", &body, request.extra_params)?;
 
-        let mut builder = self
-            .client
-            .post(&url)
-            .header("Authorization", format!("Bearer {}", self.api_key))
-            .header("Content-Type", "application/json")
-            .json(&req_json);
-
-        if let Some(org) = &self.organization {
-            builder = builder.header("Ai21-Organization", org);
-        }
-
-        let resp = builder
-            .send()
-            .await
-            .map_err(|e| GraphBitError::llm_provider("ai21", format!("Request failed: {e}")))?;
-
-        if !resp.status().is_success() {
-            let text = resp
-                .text()
-                .await
-                .unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(GraphBitError::llm_provider(
-                "ai21",
-                format!("API error: {text}"),
-            ));
-        }
+        let organization = self.organization.clone();
+        let resp = send_chat_completion_request(
+            "ai21",
+            &self.client,
+            &url,
+            &self.api_key,
+            &req_json,
+            move |rb| {
+                if let Some(org) = organization {
+                    rb.header("Ai21-Organization", org)
+                } else {
+                    rb
+                }
+            },
+        )
+        .await?;
 
         let ai21_resp: Ai21Response = resp.json().await.map_err(|e| {
             GraphBitError::llm_provider("ai21", format!("Failed to parse response: {e}"))

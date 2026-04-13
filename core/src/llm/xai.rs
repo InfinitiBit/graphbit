@@ -1,6 +1,7 @@
 //! `xAI` LLM provider implementation for Grok models
 
 use crate::errors::{GraphBitError, GraphBitResult};
+use crate::llm::openai_compat::complete::send_chat_completion_request;
 use crate::llm::openai_compat::finish_reason::parse_openai_finish_reason;
 use crate::llm::openai_compat::http::build_http_client;
 use crate::llm::openai_compat::request::build_request_json_with_extra_params;
@@ -199,26 +200,15 @@ impl LlmProviderTrait for XaiProvider {
 
         let request_json = build_request_json_with_extra_params("xai", &body, request.extra_params)?;
 
-        let response = self
-            .client
-            .post(&url)
-            .header("Authorization", format!("Bearer {}", self.api_key))
-            .header("Content-Type", "application/json")
-            .json(&request_json)
-            .send()
-            .await
-            .map_err(|e| GraphBitError::llm_provider("xai", format!("Request failed: {e}")))?;
-
-        if !response.status().is_success() {
-            let error_text = response
-                .text()
-                .await
-                .unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(GraphBitError::llm_provider(
-                "xai",
-                format!("API error: {error_text}"),
-            ));
-        }
+        let response = send_chat_completion_request(
+            "xai",
+            &self.client,
+            &url,
+            &self.api_key,
+            &request_json,
+            |rb| rb,
+        )
+        .await?;
 
         let xai_response: XaiResponse = response.json().await.map_err(|e| {
             GraphBitError::llm_provider("xai", format!("Failed to parse response: {e}"))

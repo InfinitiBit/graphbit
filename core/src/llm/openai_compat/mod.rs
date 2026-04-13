@@ -5,6 +5,7 @@
 
 pub(crate) mod finish_reason;
 pub(crate) mod http;
+pub(crate) mod complete;
 pub(crate) mod request;
 pub(crate) mod sse;
 pub(crate) mod stream_tools;
