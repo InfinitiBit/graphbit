@@ -1,10 +1,19 @@
 //! `OpenAI` LLM provider implementation
 
 use crate::errors::{GraphBitError, GraphBitResult};
-use crate::llm::providers::LlmProviderTrait;
-use crate::llm::{
-    FinishReason, LlmMessage, LlmRequest, LlmResponse, LlmRole, LlmTool, LlmToolCall, LlmUsage,
+use crate::llm::openai_compat::finish_reason::parse_openai_finish_reason;
+use crate::llm::openai_compat::http::build_http_client;
+use crate::llm::openai_compat::request::build_request_json_with_extra_params;
+use crate::llm::openai_compat::stream_tools::{
+    StreamToolCallAccum as CompatStreamToolCallAccum,
+    StreamToolCallDelta as CompatStreamToolCallDelta,
+    assistant_text_for_tool_calls as compat_assistant_text_for_tool_calls,
+    merge_stream_tool_call_deltas as compat_merge_stream_tool_call_deltas,
+    render_stream_tool_call_delta_fragment as compat_render_stream_tool_call_delta_fragment,
+    stream_tool_accum_to_llm_calls as compat_stream_tool_accum_to_llm_calls,
 };
+use crate::llm::providers::LlmProviderTrait;
+use crate::llm::{LlmMessage, LlmRequest, LlmResponse, LlmRole, LlmTool, LlmToolCall, LlmUsage};
 use async_trait::async_trait;
 use futures::stream::{Stream, StreamExt};
 use reqwest::Client;
@@ -25,16 +34,7 @@ pub struct OpenAiProvider {
 impl OpenAiProvider {
     /// Create a new `OpenAI` provider
     pub fn new(api_key: String, model: String) -> GraphBitResult<Self> {
-        // Optimized client with connection pooling for better performance
-        let client = Client::builder()
-            .timeout(std::time::Duration::from_secs(60))
-            .pool_max_idle_per_host(10) // Increased connection pool size
-            .pool_idle_timeout(std::time::Duration::from_secs(30))
-            .tcp_keepalive(std::time::Duration::from_secs(60))
-            .build()
-            .map_err(|e| {
-                GraphBitError::llm_provider("openai", format!("Failed to create HTTP client: {e}"))
-            })?;
+        let client = build_http_client("openai", None)?;
         let base_url = "https://api.openai.com/v1".to_string();
 
         Ok(Self {
@@ -48,16 +48,7 @@ impl OpenAiProvider {
 
     /// Create a new `OpenAI` provider with custom base URL
     pub fn with_base_url(api_key: String, model: String, base_url: String) -> GraphBitResult<Self> {
-        // Use same optimized client settings
-        let client = Client::builder()
-            .timeout(std::time::Duration::from_secs(60))
-            .pool_max_idle_per_host(10)
-            .pool_idle_timeout(std::time::Duration::from_secs(30))
-            .tcp_keepalive(std::time::Duration::from_secs(60))
-            .build()
-            .map_err(|e| {
-                GraphBitError::llm_provider("openai", format!("Failed to create HTTP client: {e}"))
-            })?;
+        let client = build_http_client("openai", None)?;
 
         Ok(Self {
             client,
@@ -169,7 +160,7 @@ impl OpenAiProvider {
             })
             .collect();
 
-        let finish_reason = parse_finish_reason(choice.finish_reason.as_deref());
+        let finish_reason = parse_openai_finish_reason(choice.finish_reason.as_deref());
 
         let usage = LlmUsage::new(
             response.usage.prompt_tokens,
@@ -222,13 +213,8 @@ impl LlmProviderTrait for OpenAiProvider {
             stream_options: None,
         };
 
-        // Add extra parameters
-        let mut request_json = serde_json::to_value(&body)?;
-        if let serde_json::Value::Object(ref mut map) = request_json {
-            for (key, value) in request.extra_params {
-                map.insert(key, value);
-            }
-        }
+        let request_json =
+            build_request_json_with_extra_params("openai", &body, request.extra_params)?;
 
         let mut req_builder = self
             .client
@@ -307,13 +293,8 @@ impl LlmProviderTrait for OpenAiProvider {
             }),
         };
 
-        // Add extra parameters
-        let mut request_json = serde_json::to_value(&body)?;
-        if let serde_json::Value::Object(ref mut map) = request_json {
-            for (key, value) in request.extra_params {
-                map.insert(key, value);
-            }
-        }
+        let request_json =
+            build_request_json_with_extra_params("openai", &body, request.extra_params)?;
 
         let mut req_builder = self
             .client
@@ -536,7 +517,7 @@ impl LlmProviderTrait for OpenAiProvider {
                                         let finish_reason = choices
                                             .first()
                                             .and_then(|c| c.finish_reason.as_deref())
-                                            .map(|reason| parse_finish_reason(Some(reason)));
+                                            .map(|reason| parse_openai_finish_reason(Some(reason)));
 
                                         if let Some(choice) = choices.first() {
                                             let content =
@@ -635,7 +616,7 @@ impl LlmProviderTrait for OpenAiProvider {
                                                     .and_then(|arr| arr.first())
                                                     .and_then(|c| c.get("finish_reason"))
                                                     .and_then(|v| v.as_str())
-                                                    .map(|r| parse_finish_reason(Some(r)));
+                                                    .map(|r| parse_openai_finish_reason(Some(r)));
 
                                                 let streamed_tool_calls =
                                                     tool_accum_map_to_llm_calls(&tool_call_accum);
@@ -863,26 +844,7 @@ struct OpenAiStreamChoice {
     finish_reason: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
-struct OpenAiDeltaToolCall {
-    #[serde(default)]
-    index: Option<u32>,
-    #[serde(default)]
-    id: Option<String>,
-    #[serde(rename = "type")]
-    #[allow(dead_code)]
-    tool_type: Option<String>,
-    #[serde(default)]
-    function: Option<OpenAiDeltaFunctionPart>,
-}
-
-#[derive(Debug, Deserialize)]
-struct OpenAiDeltaFunctionPart {
-    #[serde(default)]
-    name: Option<String>,
-    #[serde(default)]
-    arguments: Option<String>,
-}
+type OpenAiDeltaToolCall = CompatStreamToolCallDelta;
 
 #[derive(Debug, Deserialize)]
 struct OpenAiDelta {
@@ -895,36 +857,13 @@ struct OpenAiDelta {
 }
 
 /// One tool-call slot in an SSE stream (`index`), merged across chunks.
-#[derive(Debug, Default, Clone)]
-struct OpenAiStreamToolAccum {
-    id: String,
-    name: String,
-    arguments: String,
-}
+type OpenAiStreamToolAccum = CompatStreamToolCallAccum;
 
 fn merge_openai_stream_tool_deltas(
     acc: &mut HashMap<u32, OpenAiStreamToolAccum>,
     deltas: &[OpenAiDeltaToolCall],
 ) {
-    for d in deltas {
-        let idx = d.index.unwrap_or(0);
-        let entry = acc.entry(idx).or_default();
-        if let Some(id) = &d.id {
-            if !id.is_empty() {
-                entry.id.clone_from(id);
-            }
-        }
-        if let Some(f) = &d.function {
-            if let Some(name) = &f.name {
-                if !name.is_empty() {
-                    entry.name.clone_from(name);
-                }
-            }
-            if let Some(args) = &f.arguments {
-                entry.arguments.push_str(args);
-            }
-        }
-    }
+    compat_merge_stream_tool_call_deltas(acc, deltas);
 }
 
 /// Render user-facing incremental text for tool-call deltas.
@@ -936,73 +875,17 @@ fn render_tool_call_delta_fragment(
     acc: &HashMap<u32, OpenAiStreamToolAccum>,
     announced: &mut HashSet<u32>,
 ) -> String {
-    let mut out = String::new();
-    for d in deltas {
-        let idx = d.index.unwrap_or(0);
-        if !announced.contains(&idx) {
-            let name = d
-                .function
-                .as_ref()
-                .and_then(|f| f.name.as_deref())
-                .or_else(|| acc.get(&idx).map(|t| t.name.as_str()))
-                .unwrap_or("tool");
-            out.push_str(&format!("[tool_call:{name}] "));
-            announced.insert(idx);
-        }
-        if let Some(args) = d.function.as_ref().and_then(|f| f.arguments.as_deref()) {
-            out.push_str(args);
-        }
-    }
-    out
+    compat_render_stream_tool_call_delta_fragment(deltas, acc, announced)
 }
 
 fn tool_accum_map_to_llm_calls(acc: &HashMap<u32, OpenAiStreamToolAccum>) -> Vec<LlmToolCall> {
-    let mut pairs: Vec<(u32, &OpenAiStreamToolAccum)> = acc.iter().map(|(i, t)| (*i, t)).collect();
-    pairs.sort_by_key(|(i, _)| *i);
-    pairs
-        .into_iter()
-        .map(|(_, tc)| {
-            let parameters = if tc.arguments.trim().is_empty() {
-                serde_json::Value::Object(serde_json::Map::new())
-            } else {
-                match serde_json::from_str(&tc.arguments) {
-                    Ok(p) => p,
-                    Err(e) => {
-                        tracing::warn!(
-                            "Failed to parse streamed tool call arguments for '{}': {e}",
-                            tc.name
-                        );
-                        serde_json::json!(
-                            { "raw_arguments": tc.arguments }
-                        )
-                    }
-                }
-            };
-            LlmToolCall {
-                id: tc.id.clone(),
-                name: tc.name.clone(),
-                parameters,
-            }
-        })
-        .collect()
+    compat_stream_tool_accum_to_llm_calls(acc)
 }
 
 /// For streaming, keep textual content as-is; tool-call details are surfaced via
 /// `LlmResponse.tool_calls` and consumed by higher layers.
 fn stream_assistant_text_for_tool_calls(content: String, tool_calls: &[LlmToolCall]) -> String {
-    let _ = tool_calls;
-    content
-}
-
-fn parse_finish_reason(reason: Option<&str>) -> FinishReason {
-    match reason {
-        Some("stop") => FinishReason::Stop,
-        Some("length") => FinishReason::Length,
-        Some("tool_calls") => FinishReason::ToolCalls,
-        Some("content_filter") => FinishReason::ContentFilter,
-        Some(other) => FinishReason::Other(other.to_string()),
-        None => FinishReason::Stop,
-    }
+    compat_assistant_text_for_tool_calls(content, tool_calls)
 }
 
 #[cfg(test)]

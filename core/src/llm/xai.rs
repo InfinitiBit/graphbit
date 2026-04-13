@@ -1,10 +1,11 @@
 //! `xAI` LLM provider implementation for Grok models
 
 use crate::errors::{GraphBitError, GraphBitResult};
+use crate::llm::openai_compat::finish_reason::parse_openai_finish_reason;
+use crate::llm::openai_compat::http::build_http_client;
+use crate::llm::openai_compat::request::build_request_json_with_extra_params;
 use crate::llm::providers::LlmProviderTrait;
-use crate::llm::{
-    FinishReason, LlmMessage, LlmRequest, LlmResponse, LlmRole, LlmTool, LlmToolCall, LlmUsage,
-};
+use crate::llm::{LlmMessage, LlmRequest, LlmResponse, LlmRole, LlmTool, LlmToolCall, LlmUsage};
 use async_trait::async_trait;
 use futures::stream::{Stream, StreamExt};
 use reqwest::Client;
@@ -23,16 +24,7 @@ pub struct XaiProvider {
 impl XaiProvider {
     /// Create a new `xAI` provider
     pub fn new(api_key: String, model: String) -> GraphBitResult<Self> {
-        // Optimized client with connection pooling for better performance
-        let client = Client::builder()
-            .timeout(std::time::Duration::from_secs(60))
-            .pool_max_idle_per_host(10) // Increased connection pool size
-            .pool_idle_timeout(std::time::Duration::from_secs(30))
-            .tcp_keepalive(std::time::Duration::from_secs(60))
-            .build()
-            .map_err(|e| {
-                GraphBitError::llm_provider("xai", format!("Failed to create HTTP client: {e}"))
-            })?;
+        let client = build_http_client("xai", None)?;
         let base_url = "https://api.x.ai/v1".to_string();
 
         Ok(Self {
@@ -45,16 +37,7 @@ impl XaiProvider {
 
     /// Create a new `xAI` provider with custom base URL
     pub fn with_base_url(api_key: String, model: String, base_url: String) -> GraphBitResult<Self> {
-        // Use same optimized client settings
-        let client = Client::builder()
-            .timeout(std::time::Duration::from_secs(60))
-            .pool_max_idle_per_host(10)
-            .pool_idle_timeout(std::time::Duration::from_secs(30))
-            .tcp_keepalive(std::time::Duration::from_secs(60))
-            .build()
-            .map_err(|e| {
-                GraphBitError::llm_provider("xai", format!("Failed to create HTTP client: {e}"))
-            })?;
+        let client = build_http_client("xai", None)?;
 
         Ok(Self {
             client,
@@ -160,13 +143,7 @@ impl XaiProvider {
             })
             .collect();
 
-        let finish_reason = match choice.finish_reason.as_deref() {
-            Some("stop") => FinishReason::Stop,
-            Some("length") => FinishReason::Length,
-            Some("tool_calls") => FinishReason::ToolCalls,
-            Some("content_filter") => FinishReason::ContentFilter,
-            _ => FinishReason::Stop,
-        };
+        let finish_reason = parse_openai_finish_reason(choice.finish_reason.as_deref());
 
         let usage = LlmUsage {
             prompt_tokens: response.usage.prompt_tokens,
@@ -220,13 +197,7 @@ impl LlmProviderTrait for XaiProvider {
             },
         };
 
-        // Add extra parameters
-        let mut request_json = serde_json::to_value(&body)?;
-        if let serde_json::Value::Object(ref mut map) = request_json {
-            for (key, value) in request.extra_params {
-                map.insert(key, value);
-            }
-        }
+        let request_json = build_request_json_with_extra_params("xai", &body, request.extra_params)?;
 
         let response = self
             .client
@@ -316,13 +287,7 @@ impl LlmProviderTrait for XaiProvider {
             stream: Some(true), // Enable streaming
         };
 
-        // Add extra parameters
-        let mut request_json = serde_json::to_value(&body)?;
-        if let serde_json::Value::Object(ref mut map) = request_json {
-            for (key, value) in request.extra_params {
-                map.insert(key, value);
-            }
-        }
+        let request_json = build_request_json_with_extra_params("xai", &body, request.extra_params)?;
 
         // Timeout constants for different phases of the request
         const CONNECTION_TIMEOUT: Duration = Duration::from_secs(60);

@@ -1,10 +1,11 @@
 //! `AI21` LLM provider implementation (Jamba / Chat + function calling)
 
 use crate::errors::{GraphBitError, GraphBitResult};
+use crate::llm::openai_compat::finish_reason::parse_openai_finish_reason;
+use crate::llm::openai_compat::http::build_http_client;
+use crate::llm::openai_compat::request::build_request_json_with_extra_params;
 use crate::llm::providers::LlmProviderTrait;
-use crate::llm::{
-    FinishReason, LlmMessage, LlmRequest, LlmResponse, LlmRole, LlmTool, LlmToolCall, LlmUsage,
-};
+use crate::llm::{LlmMessage, LlmRequest, LlmResponse, LlmRole, LlmTool, LlmToolCall, LlmUsage};
 use async_trait::async_trait;
 use futures::stream::{Stream, StreamExt};
 use reqwest::Client;
@@ -24,15 +25,7 @@ pub struct Ai21Provider {
 impl Ai21Provider {
     /// Create a new `AI21` Provider
     pub fn new(api_key: String, model: String) -> GraphBitResult<Self> {
-        let client = Client::builder()
-            .timeout(std::time::Duration::from_secs(60))
-            .pool_max_idle_per_host(10)
-            .pool_idle_timeout(std::time::Duration::from_secs(30))
-            .tcp_keepalive(std::time::Duration::from_secs(60))
-            .build()
-            .map_err(|e| {
-                GraphBitError::llm_provider("ai21", format!("Failed to create HTTP client: {e}"))
-            })?;
+        let client = build_http_client("ai21", None)?;
         // Base URL for AI21 chat API (Jamba)
         let base_url = "https://api.ai21.com/studio/v1".to_string();
         Ok(Self {
@@ -46,15 +39,7 @@ impl Ai21Provider {
 
     /// Create a new `AI21` provider with custom base url
     pub fn with_base_url(api_key: String, model: String, base_url: String) -> GraphBitResult<Self> {
-        let client = Client::builder()
-            .timeout(std::time::Duration::from_secs(60))
-            .pool_max_idle_per_host(10)
-            .pool_idle_timeout(std::time::Duration::from_secs(30))
-            .tcp_keepalive(std::time::Duration::from_secs(60))
-            .build()
-            .map_err(|e| {
-                GraphBitError::llm_provider("ai21", format!("Failed to create HTTP client: {e}"))
-            })?;
+        let client = build_http_client("ai21", None)?;
         Ok(Self {
             client,
             api_key,
@@ -164,13 +149,7 @@ impl Ai21Provider {
             })
             .collect();
 
-        let finish_reason = match choice.finish_reason.as_deref() {
-            Some("stop") => FinishReason::Stop,
-            Some("length") => FinishReason::Length,
-            Some("tool_calls") => FinishReason::ToolCalls,
-            Some(other) => FinishReason::Other(other.to_string()),
-            None => FinishReason::Stop,
-        };
+        let finish_reason = parse_openai_finish_reason(choice.finish_reason.as_deref());
 
         let usage = LlmUsage::new(resp.usage.prompt_tokens, resp.usage.completion_tokens);
 
@@ -217,13 +196,7 @@ impl LlmProviderTrait for Ai21Provider {
             },
         };
 
-        // Merge extra_params into request JSON
-        let mut req_json = serde_json::to_value(&body)?;
-        if let serde_json::Value::Object(ref mut map) = req_json {
-            for (k, v) in request.extra_params {
-                map.insert(k, v);
-            }
-        }
+        let req_json = build_request_json_with_extra_params("ai21", &body, request.extra_params)?;
 
         let mut builder = self
             .client
@@ -293,13 +266,8 @@ impl LlmProviderTrait for Ai21Provider {
             stream: Some(true),
         };
 
-        // Merge extra_params into request JSON
-        let mut request_json = serde_json::to_value(&body)?;
-        if let serde_json::Value::Object(ref mut map) = request_json {
-            for (key, value) in request.extra_params {
-                map.insert(key, value);
-            }
-        }
+        let request_json =
+            build_request_json_with_extra_params("ai21", &body, request.extra_params)?;
 
         // Timeout constants
         const CONNECTION_TIMEOUT: Duration = Duration::from_secs(60);
