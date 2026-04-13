@@ -2101,29 +2101,29 @@ impl Executor {
                                     );
                                 }
 
-                                // Record tool executions for observability
-                                for (i, result) in tool_execution_results.iter().enumerate() {
-                                    let mut enriched = result.clone();
-                                    if let Some(obj) = enriched.as_object_mut() {
-                                        obj.insert(
-                                            "iteration".to_string(),
-                                            serde_json::json!(iteration),
-                                        );
-                                        // Add tool call ID and original parameters from the LLM request
-                                        if let Some(tc) = current_tool_calls.get(i) {
-                                            if let Some(id) = tc.get("id") {
-                                                obj.insert("id".to_string(), id.clone());
-                                            }
-                                            if let Some(params) = tc.get("parameters") {
-                                                obj.insert(
-                                                    "parameters".to_string(),
-                                                    params.clone(),
-                                                );
-                                            }
+                            // Record tool executions for observability
+                            for (i, result) in tool_execution_results.iter().enumerate() {
+                                let mut enriched = result.clone();
+                                if let Some(obj) = enriched.as_object_mut() {
+                                    obj.insert(
+                                        "iteration".to_string(),
+                                        serde_json::json!(iteration),
+                                    );
+                                    // Add tool call ID and original parameters from the LLM request
+                                    if let Some(tc) = current_tool_calls.get(i) {
+                                        if let Some(id) = tc.get("id") {
+                                            obj.insert("id".to_string(), id.clone());
+                                        }
+                                        if let Some(params) = tc.get("parameters") {
+                                            obj.insert(
+                                                "parameters".to_string(),
+                                                params.clone(),
+                                            );
                                         }
                                     }
-                                    all_tool_executions.push(enriched);
                                 }
+                                all_tool_executions.push(enriched);
+                            }
 
                                 // ---- Step 4: Call LLM again WITH tools to let it decide next action ----
                                 for (i, tc) in python_tool_calls.iter().enumerate() {
@@ -2597,55 +2597,14 @@ impl Executor {
                                 .metadata
                                 .insert(format!("node_response_{}", node_name), node_meta);
 
-                            // Create completely raw, unstructured output
-                            let tool_results_summary = all_tool_executions
-                                .iter()
-                                .map(|result| {
-                                    let success = result
-                                        .get("success")
-                                        .and_then(|v| v.as_bool())
-                                        .unwrap_or(false);
-                                    if success {
-                                        let output = result
-                                            .get("output")
-                                            .and_then(|v| v.as_str())
-                                            .unwrap_or("");
-                                        output.to_string()
-                                    } else {
-                                        let err = result
-                                            .get("error")
-                                            .and_then(|v| v.as_str())
-                                            .unwrap_or("Tool execution failed");
-                                        err.to_string()
-                                    }
-                                })
-                                .collect::<Vec<String>>()
-                                .join("\n");
-
-                            // Build completely raw, unstructured conversation output
-                            let mut comprehensive_output = String::new();
-                            
-                            // Add original prompt (raw)
-                            comprehensive_output.push_str(&original_prompt);
-                            comprehensive_output.push_str("\n\n");
-                            
-                            // Add tool results if any were made (raw)
-                            if !tool_results_summary.is_empty() {
-                                comprehensive_output.push_str(&tool_results_summary);
-                                comprehensive_output.push_str("\n\n");
-                            }
-                            
-                            // Add final answer (raw)
-                            comprehensive_output.push_str(&final_content);
-                            
-                            let final_value = serde_json::Value::String(comprehensive_output.clone());
+                            let final_value = serde_json::Value::String(final_content.clone());
                             
                             // CRITICAL: Update node outputs with resolved answer (replaces tool_calls_required)
                             tracing::info!(
                                 "Storing resolved tool output for node '{}' ({}): {}",
                                 node_name,
                                 node.id,
-                                &comprehensive_output.chars().take(200).collect::<String>()
+                                &final_content.chars().take(200).collect::<String>()
                             );
                             
                             context.set_node_output(&node.id, final_value.clone());
