@@ -9,7 +9,7 @@ use crate::llm::openai_compat::response::{
     TOOL_ONLY_FALLBACK_TEXT, fallback_content_if_tool_only, first_choice_or_error, has_tool_calls,
     parse_tool_arguments_openai_style, usage_from_prompt_completion,
 };
-use crate::llm::openai_compat::simple_stream::execute_openai_style_text_stream;
+use crate::llm::openai_compat::advanced_stream::execute_advanced_stream_for_provider;
 use crate::llm::providers::LlmProviderTrait;
 use crate::llm::{LlmMessage, LlmRequest, LlmResponse, LlmRole, LlmTool, LlmToolCall};
 use async_trait::async_trait;
@@ -236,10 +236,13 @@ impl LlmProviderTrait for XaiProvider {
                 None
             },
             stream: Some(true), // Enable streaming
+            stream_options: Some(XaiStreamOptions {
+                include_usage: true,
+            }),
         };
 
         let request_json = build_request_json_with_extra_params("xai", &body, request.extra_params)?;
-        execute_openai_style_text_stream(
+        execute_advanced_stream_for_provider(
             "xai",
             "xAI",
             &self.client,
@@ -248,8 +251,6 @@ impl LlmProviderTrait for XaiProvider {
             &request_json,
             |rb| rb,
             self.model.clone(),
-            true,
-            extract_xai_stream_text,
         )
         .await
     }
@@ -257,15 +258,6 @@ impl LlmProviderTrait for XaiProvider {
     fn supports_streaming(&self) -> bool {
         true // xAI supports streaming via OpenAI-compatible API
     }
-}
-
-fn extract_xai_stream_text(chunk: &XaiStreamChunk) -> Option<(String, String)> {
-    chunk
-        .choices
-        .first()
-        .and_then(|choice| choice.delta.content.as_ref())
-        .filter(|content| !content.is_empty())
-        .map(|content| (chunk.id.clone(), content.clone()))
 }
 
 // `xAI` API types
@@ -359,27 +351,11 @@ struct XaiStreamRequest {
     tool_choice: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     stream: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    stream_options: Option<XaiStreamOptions>,
 }
 
-/// Streaming chunk from xAI API (OpenAI-compatible format)
-#[derive(Debug, Deserialize)]
-struct XaiStreamChunk {
-    id: String,
-    choices: Vec<XaiStreamChoice>,
-}
-
-#[derive(Debug, Deserialize)]
-struct XaiStreamChoice {
-    delta: XaiDelta,
-    #[allow(dead_code)]
-    finish_reason: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-struct XaiDelta {
-    #[serde(default)]
-    content: Option<String>,
-    #[serde(default)]
-    #[allow(dead_code)]
-    role: Option<String>,
+#[derive(Debug, Serialize)]
+struct XaiStreamOptions {
+    include_usage: bool,
 }

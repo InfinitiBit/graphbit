@@ -9,7 +9,7 @@ use crate::llm::openai_compat::response::{
     TOOL_ONLY_FALLBACK_TEXT, fallback_content_if_tool_only, first_choice_or_error, has_tool_calls,
     parse_tool_arguments_openai_style, usage_from_prompt_completion,
 };
-use crate::llm::openai_compat::simple_stream::execute_openai_style_text_stream;
+use crate::llm::openai_compat::advanced_stream::execute_advanced_stream_for_provider;
 use crate::llm::providers::LlmProviderTrait;
 use crate::llm::{LlmMessage, LlmRequest, LlmResponse, LlmRole, LlmTool, LlmToolCall};
 use async_trait::async_trait;
@@ -228,7 +228,7 @@ impl LlmProviderTrait for Ai21Provider {
         let request_json =
             build_request_json_with_extra_params("ai21", &body, request.extra_params)?;
         let organization = self.organization.clone();
-        execute_openai_style_text_stream(
+        execute_advanced_stream_for_provider(
             "ai21",
             "AI21",
             &self.client,
@@ -243,8 +243,6 @@ impl LlmProviderTrait for Ai21Provider {
                 }
             },
             self.model.clone(),
-            false,
-            extract_ai21_stream_text,
         )
         .await
     }
@@ -276,14 +274,7 @@ impl LlmProviderTrait for Ai21Provider {
     }
 }
 
-fn extract_ai21_stream_text(chunk: &Ai21StreamChunk) -> Option<(String, String)> {
-    chunk
-        .choices
-        .first()
-        .and_then(|choice| choice.delta.content.as_ref())
-        .filter(|content| !content.is_empty())
-        .map(|content| (chunk.id.clone(), content.clone()))
-}
+
 
 // Types reflecting AI21’s chat API
 #[derive(Debug, Serialize)]
@@ -367,9 +358,7 @@ where
     Ok(opt.unwrap_or_default())
 }
 
-// Streaming-specific types (OpenAI-compatible SSE format)
-
-/// Request body for streaming API calls (includes stream: true)
+// Streaming-specific request (includes stream: true)
 #[derive(Debug, Serialize)]
 struct Ai21StreamRequest {
     model: String,
@@ -386,27 +375,4 @@ struct Ai21StreamRequest {
     tool_choice: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     stream: Option<bool>,
-}
-
-/// Streaming chunk from AI21 API (OpenAI-compatible format)
-#[derive(Debug, Deserialize)]
-struct Ai21StreamChunk {
-    id: String,
-    choices: Vec<Ai21StreamChoice>,
-}
-
-#[derive(Debug, Deserialize)]
-struct Ai21StreamChoice {
-    delta: Ai21Delta,
-    #[allow(dead_code)]
-    finish_reason: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-struct Ai21Delta {
-    #[serde(default)]
-    content: Option<String>,
-    #[serde(default)]
-    #[allow(dead_code)]
-    role: Option<String>,
 }

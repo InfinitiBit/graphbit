@@ -17,7 +17,7 @@ use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 use tokio::time::timeout;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub(crate) struct OpenAiStreamChunk {
     pub(crate) id: String,
     pub(crate) choices: Vec<OpenAiStreamChoice>,
@@ -25,14 +25,14 @@ pub(crate) struct OpenAiStreamChunk {
     pub(crate) usage: Option<OpenAiUsage>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub(crate) struct OpenAiStreamChoice {
     pub(crate) delta: OpenAiDelta,
     #[serde(default)]
     pub(crate) finish_reason: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub(crate) struct OpenAiUsage {
     pub(crate) prompt_tokens: u32,
     pub(crate) completion_tokens: u32,
@@ -40,7 +40,7 @@ pub(crate) struct OpenAiUsage {
 
 type OpenAiDeltaToolCall = CompatStreamToolCallDelta;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub(crate) struct OpenAiDelta {
     #[serde(default)]
     pub(crate) content: Option<String>,
@@ -95,6 +95,58 @@ pub(crate) async fn execute_openai_advanced_stream<F>(
 where
     F: FnOnce(RequestBuilder) -> RequestBuilder,
 {
+    execute_advanced_stream_inner(
+        "openai",
+        "OpenAI",
+        client,
+        url,
+        api_key,
+        request_json,
+        customize_builder,
+        model,
+    )
+    .await
+}
+
+pub(crate) async fn execute_advanced_stream_for_provider<F>(
+    provider_name: &'static str,
+    provider_display_name: &'static str,
+    client: &Client,
+    url: &str,
+    api_key: &str,
+    request_json: &Value,
+    customize_builder: F,
+    model: String,
+) -> GraphBitResult<Box<dyn Stream<Item = GraphBitResult<LlmResponse>> + Unpin + Send>>
+where
+    F: FnOnce(RequestBuilder) -> RequestBuilder,
+{
+    execute_advanced_stream_inner(
+        provider_name,
+        provider_display_name,
+        client,
+        url,
+        api_key,
+        request_json,
+        customize_builder,
+        model,
+    )
+    .await
+}
+
+async fn execute_advanced_stream_inner<F>(
+    provider_name: &'static str,
+    provider_display_name: &'static str,
+    client: &Client,
+    url: &str,
+    api_key: &str,
+    request_json: &Value,
+    customize_builder: F,
+    model: String,
+) -> GraphBitResult<Box<dyn Stream<Item = GraphBitResult<LlmResponse>> + Unpin + Send>>
+where
+    F: FnOnce(RequestBuilder) -> RequestBuilder,
+{
     const CONNECTION_TIMEOUT: Duration = Duration::from_secs(60);
     const ERROR_BODY_TIMEOUT: Duration = Duration::from_secs(10);
     const CHUNK_TIMEOUT: Duration = Duration::from_secs(30);
@@ -114,15 +166,15 @@ where
     .await
     .map_err(|_| {
         GraphBitError::llm_provider(
-            "openai",
+            provider_name,
             format!(
-                "Connection timeout after {:?} - OpenAI did not respond. \
-                 Check network connectivity and OpenAI status.",
-                CONNECTION_TIMEOUT
+                "Connection timeout after {:?} - {} did not respond. \
+                 Check network connectivity and {} status.",
+                CONNECTION_TIMEOUT, provider_display_name, provider_display_name
             ),
         )
     })?
-    .map_err(|e| GraphBitError::llm_provider("openai", format!("Request failed: {e}")))?;
+    .map_err(|e| GraphBitError::llm_provider(provider_name, format!("Request failed: {e}")))?;
 
     if !response.status().is_success() {
         let error_text = timeout(ERROR_BODY_TIMEOUT, response.text())
@@ -131,12 +183,14 @@ where
             .unwrap_or_else(|_| "Unknown error (failed to read body)".to_string());
 
         return Err(GraphBitError::llm_provider(
-            "openai",
+            provider_name,
             format!("API error: {error_text}"),
         ));
     }
 
     let byte_stream = response.bytes_stream();
+    let provider_name_clone = provider_name;
+    let provider_display_name_clone = provider_display_name;
     let stream = futures::stream::unfold(
         (
             byte_stream,
@@ -157,6 +211,8 @@ where
             mut announced_tool_indices,
         )| {
             let model = model.clone();
+            let provider_name = provider_name_clone;
+            let provider_display_name = provider_display_name_clone;
             async move {
                 if timeout_occurred {
                     return None;
@@ -167,6 +223,76 @@ where
                         let chunk_result = match timeout(CHUNK_TIMEOUT, byte_stream.next()).await {
                             Ok(Some(result)) => result,
                             Ok(None) => {
+                                let tail_line = buffer.trim().to_string();
+                                if let Some(data) = tail_line.strip_prefix("data: ")
+                                    && data.trim() != "[DONE]"
+                                    && let Ok(stream_chunk) =
+                                        serde_json::from_str::<OpenAiStreamChunk>(data)
+                                {
+                                    let OpenAiStreamChunk { id, choices, usage } = stream_chunk;
+                                    let mut tool_fragment = String::new();
+                                    if let Some(choice) = choices.first() {
+                                        merge_openai_stream_tool_deltas(
+                                            &mut tool_call_accum,
+                                            &choice.delta.tool_calls,
+                                        );
+                                        tool_fragment = render_tool_call_delta_fragment(
+                                            &choice.delta.tool_calls,
+                                            &tool_call_accum,
+                                            &mut announced_tool_indices,
+                                        );
+                                    }
+                                    let streamed_tool_calls =
+                                        tool_accum_map_to_llm_calls(&tool_call_accum);
+                                    let usage = usage
+                                        .map(|u| LlmUsage::new(u.prompt_tokens, u.completion_tokens));
+                                    let finish_reason = choices
+                                        .first()
+                                        .and_then(|c| c.finish_reason.as_deref())
+                                        .map(|reason| parse_openai_finish_reason(Some(reason)));
+                                    let content = choices
+                                        .first()
+                                        .and_then(|c| c.delta.content.as_ref())
+                                        .cloned()
+                                        .unwrap_or_default();
+                                    let streamed_content = format!("{tool_fragment}{content}");
+
+                                    if !streamed_content.is_empty()
+                                        || usage.is_some()
+                                        || finish_reason.is_some()
+                                    {
+                                        let text = if streamed_content.is_empty() {
+                                            stream_assistant_text_for_tool_calls(
+                                                String::new(),
+                                                &streamed_tool_calls,
+                                            )
+                                        } else {
+                                            streamed_content
+                                        };
+                                        let mut response = LlmResponse::new(text, &model)
+                                            .with_id(id)
+                                            .with_tool_calls(streamed_tool_calls);
+                                        if let Some(usage) = usage {
+                                            response = response.with_usage(usage);
+                                        }
+                                        if let Some(finish_reason) = finish_reason {
+                                            response = response.with_finish_reason(finish_reason);
+                                        }
+                                        return Some((
+                                            Ok(response),
+                                            (
+                                                byte_stream,
+                                                String::new(),
+                                                false,
+                                                consecutive_parse_errors,
+                                                total_parse_errors,
+                                                tool_call_accum,
+                                                announced_tool_indices,
+                                            ),
+                                        ));
+                                    }
+                                }
+
                                 if total_parse_errors > 0 {
                                     tracing::warn!(
                                         "Stream ended with {} total parse errors. Some data may have been lost.",
@@ -177,13 +303,14 @@ where
                             }
                             Err(_) => {
                                 tracing::warn!(
-                                    "Stream chunk timeout after {:?} - OpenAI stopped responding. \
+                                    "Stream chunk timeout after {:?} - {} stopped responding. \
                                      Response may be incomplete.",
-                                    CHUNK_TIMEOUT
+                                    CHUNK_TIMEOUT,
+                                    provider_display_name
                                 );
                                 return Some((
                                     Err(GraphBitError::llm_provider(
-                                        "openai",
+                                        provider_name,
                                         format!(
                                             "Stream timeout after {:?} - response may be incomplete",
                                             CHUNK_TIMEOUT
@@ -206,7 +333,7 @@ where
                             Ok(c) => c,
                             Err(e) => {
                                 return Some((
-                                    Err(GraphBitError::llm_provider("openai", format!("Stream error: {e}"))),
+                                    Err(GraphBitError::llm_provider(provider_name, format!("Stream error: {e}"))),
                                     (
                                         byte_stream,
                                         buffer,
@@ -357,7 +484,7 @@ where
                                     if consecutive_parse_errors >= MAX_CONSECUTIVE_PARSE_ERRORS {
                                         return Some((
                                             Err(GraphBitError::llm_provider(
-                                                "openai",
+                                                provider_name,
                                                 format!(
                                                     "Stream corrupted: {} consecutive parse errors. \
                                                      Last error: {}. Data may be incomplete.",
