@@ -14,6 +14,7 @@ pub mod huggingface;
 pub mod mistralai;
 pub mod ollama;
 pub mod openai;
+pub mod openai_compat;
 pub mod openrouter;
 pub mod perplexity;
 pub mod providers;
