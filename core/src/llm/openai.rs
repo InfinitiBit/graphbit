@@ -1,6 +1,9 @@
 //! `OpenAI` LLM provider implementation
 
-use crate::errors::{GraphBitError, GraphBitResult};
+use crate::errors::GraphBitResult;
+use crate::llm::openai_compat::advanced_stream::{
+    execute_openai_advanced_stream,
+};
 use crate::llm::openai_compat::complete::execute_complete_request;
 use crate::llm::openai_compat::finish_reason::parse_openai_finish_reason;
 use crate::llm::openai_compat::http::build_http_client;
@@ -9,23 +12,12 @@ use crate::llm::openai_compat::response::{
     TOOL_ONLY_FALLBACK_TEXT, fallback_content_if_tool_only, first_choice_or_error, has_tool_calls,
     parse_tool_arguments_openai_style, usage_from_prompt_completion,
 };
-use crate::llm::openai_compat::stream_tools::{
-    StreamToolCallAccum as CompatStreamToolCallAccum,
-    StreamToolCallDelta as CompatStreamToolCallDelta,
-    assistant_text_for_tool_calls as compat_assistant_text_for_tool_calls,
-    merge_stream_tool_call_deltas as compat_merge_stream_tool_call_deltas,
-    render_stream_tool_call_delta_fragment as compat_render_stream_tool_call_delta_fragment,
-    stream_tool_accum_to_llm_calls as compat_stream_tool_accum_to_llm_calls,
-};
 use crate::llm::providers::LlmProviderTrait;
-use crate::llm::{LlmMessage, LlmRequest, LlmResponse, LlmRole, LlmTool, LlmToolCall, LlmUsage};
+use crate::llm::{LlmMessage, LlmRequest, LlmResponse, LlmRole, LlmTool, LlmToolCall};
 use async_trait::async_trait;
-use futures::stream::{Stream, StreamExt};
+use futures::stream::Stream;
 use reqwest::Client;
 use serde::{Deserialize, Deserializer, Serialize};
-use std::collections::{HashMap, HashSet};
-use std::time::Duration;
-use tokio::time::timeout;
 
 /// `OpenAI` API provider
 pub struct OpenAiProvider {
@@ -250,413 +242,22 @@ impl LlmProviderTrait for OpenAiProvider {
 
         let request_json =
             build_request_json_with_extra_params("openai", &body, request.extra_params)?;
-
-        let mut req_builder = self
-            .client
-            .post(&url)
-            .header("Authorization", format!("Bearer {}", self.api_key))
-            .header("Content-Type", "application/json")
-            .json(&request_json);
-
-        if let Some(org) = &self.organization {
-            req_builder = req_builder.header("OpenAI-Organization", org);
-        }
-
-        // Timeout constants for different phases of the request
-        // CONNECTION_TIMEOUT: Covers DNS resolution, TCP connection, TLS handshake, and first byte
-        // Should be generous for slow networks but prevent infinite hangs
-        const CONNECTION_TIMEOUT: Duration = Duration::from_secs(60);
-        // ERROR_BODY_TIMEOUT: Time to read error response body (usually small)
-        const ERROR_BODY_TIMEOUT: Duration = Duration::from_secs(10);
-        // CHUNK_TIMEOUT: Maximum time between streaming chunks
-        // If OpenAI stops sending chunks for this long, we timeout
-        const CHUNK_TIMEOUT: Duration = Duration::from_secs(30);
-
-        // Apply timeout to initial connection and first response byte
-        // This prevents hanging forever if OpenAI is unreachable or slow
-        let response = timeout(CONNECTION_TIMEOUT, req_builder.send())
-            .await
-            .map_err(|_| {
-                GraphBitError::llm_provider(
-                    "openai",
-                    format!(
-                        "Connection timeout after {:?} - OpenAI did not respond. \
-                         Check network connectivity and OpenAI status.",
-                        CONNECTION_TIMEOUT
-                    ),
-                )
-            })?
-            .map_err(|e| GraphBitError::llm_provider("openai", format!("Request failed: {e}")))?;
-
-        if !response.status().is_success() {
-            // Apply timeout to reading error body to prevent hanging on malformed responses
-            let error_text = timeout(ERROR_BODY_TIMEOUT, response.text())
-                .await
-                .unwrap_or_else(|_| {
-                    Ok(format!(
-                        "Error body read timeout after {:?}",
-                        ERROR_BODY_TIMEOUT
-                    ))
-                })
-                .unwrap_or_else(|_| "Unknown error (failed to read body)".to_string());
-
-            return Err(GraphBitError::llm_provider(
-                "openai",
-                format!("API error: {error_text}"),
-            ));
-        }
-
-        // Parse SSE stream with proper line buffering and per-chunk timeout
-        // This prevents hanging forever if OpenAI stops responding mid-stream
-        let model = self.model.clone();
-        let byte_stream = response.bytes_stream();
-
-        // State: byte_stream, buffer, timeout / parse error counters, accumulated tool-call
-        // fragments from `delta.tool_calls`, and which tool-call indices were announced.
-        // - consecutive_parse_errors: Resets on successful parse, triggers error if too high
-        // - total_parse_errors: Running count for logging
-        const MAX_CONSECUTIVE_PARSE_ERRORS: u32 = 5;
-
-        // Use a stateful stream that buffers incomplete lines with timeout protection
-        let stream = futures::stream::unfold(
-            (
-                byte_stream,
-                String::new(),
-                false,
-                0u32,
-                0u32,
-                HashMap::<u32, OpenAiStreamToolAccum>::new(),
-                HashSet::<u32>::new(),
-            ),
-            move |(
-                mut byte_stream,
-                mut buffer,
-                timeout_occurred,
-                mut consecutive_parse_errors,
-                mut total_parse_errors,
-                mut tool_call_accum,
-                mut announced_tool_indices,
-            )| {
-                let model = model.clone();
-                async move {
-                    // If we already had a timeout, don't continue
-                    if timeout_occurred {
-                        return None;
-                    }
-
-                    loop {
-                        // If the buffer has no complete line yet, read more bytes.
-                        // This ensures we don't block waiting for network data while
-                        // already-buffered SSE lines (e.g. terminal usage chunk) are pending.
-                        if buffer.find('\n').is_none() {
-                            // Apply timeout to each chunk read to prevent indefinite hanging
-                            let chunk_result = match timeout(CHUNK_TIMEOUT, byte_stream.next())
-                                .await
-                            {
-                                Ok(Some(result)) => result,
-                                Ok(None) => {
-                                    // Stream naturally ended
-                                    // Log if there were parse errors during the stream
-                                    if total_parse_errors > 0 {
-                                        tracing::warn!(
-                                            "Stream ended with {} total parse errors. Some data may have been lost.",
-                                            total_parse_errors
-                                        );
-                                    }
-                                    return None;
-                                }
-                                Err(_) => {
-                                    // Timeout occurred - OpenAI stopped responding
-                                    // Return an error so user knows the response may be incomplete
-                                    tracing::warn!(
-                                        "Stream chunk timeout after {:?} - OpenAI stopped responding. \
-                                             Response may be incomplete.",
-                                        CHUNK_TIMEOUT
-                                    );
-                                    // Return error to notify user, then end stream
-                                    return Some((
-                                        Err(GraphBitError::llm_provider(
-                                            "openai",
-                                            format!(
-                                                "Stream timeout after {:?} - response may be incomplete",
-                                                CHUNK_TIMEOUT
-                                            ),
-                                        )),
-                                        (
-                                            byte_stream,
-                                            buffer,
-                                            true,
-                                            consecutive_parse_errors,
-                                            total_parse_errors,
-                                            tool_call_accum,
-                                            announced_tool_indices,
-                                        ),
-                                    ));
-                                }
-                            };
-
-                            let chunk = match chunk_result {
-                                Ok(c) => c,
-                                Err(e) => {
-                                    return Some((
-                                        Err(GraphBitError::llm_provider(
-                                            "openai",
-                                            format!("Stream error: {e}"),
-                                        )),
-                                        (
-                                            byte_stream,
-                                            buffer,
-                                            false,
-                                            consecutive_parse_errors,
-                                            total_parse_errors,
-                                            tool_call_accum,
-                                            announced_tool_indices,
-                                        ),
-                                    ));
-                                }
-                            };
-
-                            // Append new data to buffer
-                            buffer.push_str(&String::from_utf8_lossy(&chunk));
-                        }
-
-                        // Process complete lines using drain() to avoid allocations
-                        while let Some(newline_pos) = buffer.find('\n') {
-                            // Extract the line without allocating a new String
-                            let line: String = buffer.drain(..=newline_pos).collect();
-                            let line = line.trim();
-
-                            // Skip empty lines and comments
-                            if line.is_empty() || line.starts_with(':') {
-                                continue;
-                            }
-
-                            // Check for data: prefix
-                            if let Some(data) = line.strip_prefix("data: ") {
-                                // Check for [DONE] marker
-                                if data.trim() == "[DONE]" {
-                                    // Log if there were parse errors during the stream
-                                    if total_parse_errors > 0 {
-                                        tracing::warn!(
-                                            "Stream completed with {} total parse errors. Some data may have been lost.",
-                                            total_parse_errors
-                                        );
-                                    }
-                                    return None; // End of stream
-                                }
-
-                                // Parse JSON chunk
-                                match serde_json::from_str::<OpenAiStreamChunk>(data) {
-                                    Ok(stream_chunk) => {
-                                        // Reset consecutive error counter on success
-                                        consecutive_parse_errors = 0;
-
-                                        let OpenAiStreamChunk { id, choices, usage } = stream_chunk;
-                                        let mut tool_fragment = String::new();
-                                        if let Some(choice) = choices.first() {
-                                            merge_openai_stream_tool_deltas(
-                                                &mut tool_call_accum,
-                                                &choice.delta.tool_calls,
-                                            );
-                                            tool_fragment = render_tool_call_delta_fragment(
-                                                &choice.delta.tool_calls,
-                                                &tool_call_accum,
-                                                &mut announced_tool_indices,
-                                            );
-                                        }
-                                        let streamed_tool_calls =
-                                            tool_accum_map_to_llm_calls(&tool_call_accum);
-                                        let usage = usage.map(|u| {
-                                            LlmUsage::new(u.prompt_tokens, u.completion_tokens)
-                                        });
-                                        let finish_reason = choices
-                                            .first()
-                                            .and_then(|c| c.finish_reason.as_deref())
-                                            .map(|reason| parse_openai_finish_reason(Some(reason)));
-
-                                        if let Some(choice) = choices.first() {
-                                            let content =
-                                                choice.delta.content.clone().unwrap_or_default();
-                                            let streamed_content =
-                                                format!("{tool_fragment}{content}");
-                                            if !streamed_content.is_empty() {
-                                                let mut response =
-                                                    LlmResponse::new(streamed_content, &model)
-                                                        .with_id(id.clone())
-                                                        .with_tool_calls(
-                                                            streamed_tool_calls.clone(),
-                                                        );
-                                                if let Some(usage) = usage.clone() {
-                                                    response = response.with_usage(usage);
-                                                }
-                                                if let Some(finish_reason) = finish_reason.clone() {
-                                                    response =
-                                                        response.with_finish_reason(finish_reason);
-                                                }
-                                                return Some((
-                                                    Ok(response),
-                                                    (
-                                                        byte_stream,
-                                                        buffer,
-                                                        false,
-                                                        consecutive_parse_errors,
-                                                        total_parse_errors,
-                                                        tool_call_accum,
-                                                        announced_tool_indices,
-                                                    ),
-                                                ));
-                                            }
-                                        }
-
-                                        // Terminal usage chunks are often emitted without content.
-                                        // Surface them so caller can preserve usage in final metadata.
-                                        if usage.is_some() || finish_reason.is_some() {
-                                            let text = stream_assistant_text_for_tool_calls(
-                                                String::new(),
-                                                &streamed_tool_calls,
-                                            );
-                                            let mut response = LlmResponse::new(text, &model)
-                                                .with_id(id)
-                                                .with_tool_calls(streamed_tool_calls);
-                                            if let Some(usage) = usage {
-                                                response = response.with_usage(usage);
-                                            }
-                                            if let Some(finish_reason) = finish_reason {
-                                                response =
-                                                    response.with_finish_reason(finish_reason);
-                                            }
-                                            return Some((
-                                                Ok(response),
-                                                (
-                                                    byte_stream,
-                                                    buffer,
-                                                    false,
-                                                    consecutive_parse_errors,
-                                                    total_parse_errors,
-                                                    tool_call_accum,
-                                                    announced_tool_indices,
-                                                ),
-                                            ));
-                                        }
-                                    }
-                                    Err(e) => {
-                                        // Fallback: OpenAI may evolve chunk schema in ways our typed
-                                        // deserializer doesn't yet model. Try a best-effort JSON parse
-                                        // and extract terminal usage so workflow metadata remains accurate.
-                                        if let Ok(value) =
-                                            serde_json::from_str::<serde_json::Value>(data)
-                                        {
-                                            let prompt_tokens = value
-                                                .get("usage")
-                                                .and_then(|u| u.get("prompt_tokens"))
-                                                .and_then(|v| v.as_u64())
-                                                .unwrap_or(0)
-                                                as u32;
-                                            let completion_tokens = value
-                                                .get("usage")
-                                                .and_then(|u| u.get("completion_tokens"))
-                                                .and_then(|v| v.as_u64())
-                                                .unwrap_or(0)
-                                                as u32;
-
-                                            if prompt_tokens > 0 || completion_tokens > 0 {
-                                                let id = value
-                                                    .get("id")
-                                                    .and_then(|v| v.as_str())
-                                                    .unwrap_or_default()
-                                                    .to_string();
-                                                let finish_reason = value
-                                                    .get("choices")
-                                                    .and_then(|c| c.as_array())
-                                                    .and_then(|arr| arr.first())
-                                                    .and_then(|c| c.get("finish_reason"))
-                                                    .and_then(|v| v.as_str())
-                                                    .map(|r| parse_openai_finish_reason(Some(r)));
-
-                                                let streamed_tool_calls =
-                                                    tool_accum_map_to_llm_calls(&tool_call_accum);
-                                                let text = stream_assistant_text_for_tool_calls(
-                                                    String::new(),
-                                                    &streamed_tool_calls,
-                                                );
-                                                let mut response = LlmResponse::new(text, &model)
-                                                    .with_usage(LlmUsage::new(
-                                                        prompt_tokens,
-                                                        completion_tokens,
-                                                    ))
-                                                    .with_tool_calls(streamed_tool_calls);
-                                                if !id.is_empty() {
-                                                    response = response.with_id(id);
-                                                }
-                                                if let Some(finish_reason) = finish_reason {
-                                                    response =
-                                                        response.with_finish_reason(finish_reason);
-                                                }
-                                                return Some((
-                                                    Ok(response),
-                                                    (
-                                                        byte_stream,
-                                                        buffer,
-                                                        false,
-                                                        consecutive_parse_errors,
-                                                        total_parse_errors,
-                                                        tool_call_accum,
-                                                        announced_tool_indices,
-                                                    ),
-                                                ));
-                                            }
-                                        }
-
-                                        // Track parse errors
-                                        consecutive_parse_errors += 1;
-                                        total_parse_errors += 1;
-
-                                        // Log the parse error with context
-                                        tracing::warn!(
-                                            "Failed to parse stream chunk (consecutive: {}, total: {}): {}, data: {}",
-                                            consecutive_parse_errors,
-                                            total_parse_errors,
-                                            e,
-                                            if data.len() > 200 { &data[..200] } else { data }
-                                        );
-
-                                        // If too many consecutive parse errors, fail the stream
-                                        // This indicates something is seriously wrong (corrupted stream, API change, etc.)
-                                        if consecutive_parse_errors >= MAX_CONSECUTIVE_PARSE_ERRORS
-                                        {
-                                            return Some((
-                                                Err(GraphBitError::llm_provider(
-                                                    "openai",
-                                                    format!(
-                                                        "Stream corrupted: {} consecutive parse errors. \
-                                                         Last error: {}. Data may be incomplete.",
-                                                        consecutive_parse_errors, e
-                                                    ),
-                                                )),
-                                                (
-                                                    byte_stream,
-                                                    buffer,
-                                                    true,
-                                                    consecutive_parse_errors,
-                                                    total_parse_errors,
-                                                    tool_call_accum,
-                                                    announced_tool_indices,
-                                                ),
-                                            ));
-                                        }
-
-                                        // For occasional errors (< threshold), continue but track
-                                        // This handles edge cases like partial chunks or unusual formatting
-                                    }
-                                }
-                            }
-                        }
-                    }
+        let organization = self.organization.clone();
+        execute_openai_advanced_stream(
+            &self.client,
+            &url,
+            &self.api_key,
+            &request_json,
+            move |rb| {
+                if let Some(org) = organization {
+                    rb.header("OpenAI-Organization", org)
+                } else {
+                    rb
                 }
             },
-        );
-
-        Ok(Box::new(Box::pin(stream)))
+            self.model.clone(),
+        )
+        .await
     }
 
     fn supports_streaming(&self) -> bool {
@@ -783,69 +384,13 @@ where
     Ok(opt.unwrap_or_default())
 }
 
-// Streaming-specific types
-#[derive(Debug, Deserialize)]
-struct OpenAiStreamChunk {
-    id: String,
-    choices: Vec<OpenAiStreamChoice>,
-    #[serde(default)]
-    usage: Option<OpenAiUsage>,
-}
-
-#[derive(Debug, Deserialize)]
-struct OpenAiStreamChoice {
-    delta: OpenAiDelta,
-    #[serde(default)]
-    finish_reason: Option<String>,
-}
-
-type OpenAiDeltaToolCall = CompatStreamToolCallDelta;
-
-#[derive(Debug, Deserialize)]
-struct OpenAiDelta {
-    #[serde(default)]
-    content: Option<String>,
-    #[serde(default)]
-    _role: Option<String>,
-    #[serde(default)]
-    tool_calls: Vec<OpenAiDeltaToolCall>,
-}
-
-/// One tool-call slot in an SSE stream (`index`), merged across chunks.
-type OpenAiStreamToolAccum = CompatStreamToolCallAccum;
-
-fn merge_openai_stream_tool_deltas(
-    acc: &mut HashMap<u32, OpenAiStreamToolAccum>,
-    deltas: &[OpenAiDeltaToolCall],
-) {
-    compat_merge_stream_tool_call_deltas(acc, deltas);
-}
-
-/// Render user-facing incremental text for tool-call deltas.
-/// This keeps streaming behavior close to normal token output:
-/// - one header per tool call (when first seen)
-/// - raw argument fragments appended as they arrive
-fn render_tool_call_delta_fragment(
-    deltas: &[OpenAiDeltaToolCall],
-    acc: &HashMap<u32, OpenAiStreamToolAccum>,
-    announced: &mut HashSet<u32>,
-) -> String {
-    compat_render_stream_tool_call_delta_fragment(deltas, acc, announced)
-}
-
-fn tool_accum_map_to_llm_calls(acc: &HashMap<u32, OpenAiStreamToolAccum>) -> Vec<LlmToolCall> {
-    compat_stream_tool_accum_to_llm_calls(acc)
-}
-
-/// For streaming, keep textual content as-is; tool-call details are surfaced via
-/// `LlmResponse.tool_calls` and consumed by higher layers.
-fn stream_assistant_text_for_tool_calls(content: String, tool_calls: &[LlmToolCall]) -> String {
-    compat_assistant_text_for_tool_calls(content, tool_calls)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::llm::openai_compat::advanced_stream::{
+        OpenAiStreamChunk, merge_openai_stream_tool_deltas, tool_accum_map_to_llm_calls,
+    };
+    use std::collections::HashMap;
 
     #[test]
     fn stream_usage_chunk_parses_with_empty_choices() {
