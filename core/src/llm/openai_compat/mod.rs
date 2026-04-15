@@ -9,6 +9,5 @@ pub(crate) mod complete;
 pub(crate) mod advanced_stream;
 pub(crate) mod request;
 pub(crate) mod response;
-pub(crate) mod simple_stream;
 pub(crate) mod sse;
 pub(crate) mod stream_tools;
