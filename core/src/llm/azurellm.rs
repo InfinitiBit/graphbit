@@ -106,24 +106,11 @@ impl AzureLlmProvider {
         }
     }
 
-    /// Check if the deployment requires the Responses API.
-    /// Models like `gpt-5.2-codex` and other reasoning/codex models use
-    /// Azure's Responses API (`/openai/responses`) instead of `/chat/completions`.
-    fn requires_responses_api(&self) -> bool {
-        let name = self.deployment_name.to_lowercase();
-        name.contains("codex")
-            || name.starts_with("code-davinci")
-            || name.starts_with("code-cushman")
-    }
-
     /// Check if the deployment is an OpenAI chat model
+    /// If it is openai model, use responses API instead of chat/completions
     /// OpenAI chat models require `max_completion_tokens` instead of `max_tokens`
     /// Other models (Claude, Llama, Mistral, etc.) use `max_tokens`
-    /// Responses API models are excluded — they use a different endpoint entirely.
     fn is_openai_model(&self) -> bool {
-        if self.requires_responses_api() {
-            return false;
-        }
         let name = self.deployment_name.to_lowercase();
         // OpenAI model patterns: gpt-*, o1*, o3*, o4*, gpt4*, gpt5*, etc.
         name.contains("gpt")
@@ -138,6 +125,7 @@ impl AzureLlmProvider {
             || name.starts_with("curie")
             || name.starts_with("babbage")
             || name.starts_with("ada")
+            || name.contains("codex")
     }
 
     /// Call Azure's Responses API (`POST /openai/responses`).
@@ -150,8 +138,11 @@ impl AzureLlmProvider {
     ) -> GraphBitResult<LlmResponse> {
         let endpoint = self.endpoint.trim_end_matches('/');
         // The Responses API requires api-version 2025-04-01-preview or later
-        let api_version = "2025-04-01-preview";
-        let url = format!("{}/openai/responses?api-version={}", endpoint, api_version);
+        // let api_version = "2025-04-01-preview";
+        let url = format!(
+            "{}/openai/responses?api-version={}",
+            endpoint, self.api_version
+        );
 
         // Convert messages to the Responses API input format
         let input: Vec<serde_json::Value> = request
@@ -457,9 +448,9 @@ impl LlmProviderTrait for AzureLlmProvider {
 
     async fn complete(&self, request: LlmRequest) -> GraphBitResult<LlmResponse> {
         // Models like gpt-5.2-codex use the Responses API, not chat/completions
-        if self.requires_responses_api() {
+        if self.is_openai_model() {
             tracing::debug!(
-                "Routing '{}' to Responses API (/openai/responses)",
+                "Routing '{}' to Responses API (/openai/responses) for all openai models",
                 self.deployment_name
             );
             return self.complete_with_responses_api(request).await;
@@ -697,31 +688,6 @@ mod tests {
         .unwrap();
 
         assert!(provider.supports_function_calling());
-    }
-
-    #[test]
-    fn test_responses_api_model_detection() {
-        let make_provider = |name: &str| {
-            AzureLlmProvider::new(
-                "test-api-key".to_string(),
-                name.to_string(),
-                "https://test.openai.azure.com".to_string(),
-                "2024-10-21".to_string(),
-            )
-            .unwrap()
-        };
-
-        // Codex/Responses API models should be detected
-        assert!(make_provider("gpt-5.2-codex").requires_responses_api());
-        assert!(make_provider("gpt-4-codex").requires_responses_api());
-        assert!(make_provider("code-davinci-002").requires_responses_api());
-        assert!(make_provider("code-cushman-001").requires_responses_api());
-
-        // Non-Codex models should NOT require Responses API
-        assert!(!make_provider("gpt-5.2-chat").requires_responses_api());
-        assert!(!make_provider("gpt-4o").requires_responses_api());
-        assert!(!make_provider("gpt-4-turbo").requires_responses_api());
-        assert!(!make_provider("claude-3-opus").requires_responses_api());
     }
 
     #[test]
