@@ -418,6 +418,108 @@ impl WorkflowExecutor {
             return Err(e);
         }
 
+        // Validate unique LLM configurations once per workflow (deduped by config fingerprint).
+        // This prevents validating the same key/provider repeatedly during agent creation.
+        {
+            // If we are re-entering execution (e.g. tool-resolution downstream reruns), avoid
+            // re-validating LLM configs again. This flag is workflow-run scoped and does not
+            // persist outside the current execution context.
+            let already_validated = context
+                .metadata
+                .get("workflow_llm_configs_validated")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            if already_validated {
+                tracing::info!("Workflow LLM validation: already validated; skipping");
+            } else {
+            use crate::llm::{LlmProvider, LlmProviderFactory, LlmRequest};
+            use std::collections::HashMap;
+
+            let mut unique: HashMap<String, crate::llm::LlmConfig> = HashMap::with_capacity(4);
+            for node in workflow.graph.get_nodes().values() {
+                if matches!(node.node_type, NodeType::Agent { .. }) {
+                    let resolved = self.resolve_llm_config_for_node(&node.config);
+                    if let Some(fp) = resolved.validation_fingerprint() {
+                        unique.entry(fp).or_insert(resolved);
+                    }
+                }
+            }
+
+            tracing::info!(
+                "Workflow LLM validation: {} unique LLM config(s) across {} node(s)",
+                unique.len(),
+                workflow.graph.node_count()
+            );
+
+            // If there is only one unique LLM configuration across the workflow, skip proactive
+            // validation entirely (fail fast on the first real LLM call instead).
+            //
+            // If there are multiple unique configurations, validate them concurrently before any
+            // node execution to avoid N sequential round trips.
+            if unique.len() <= 1 {
+                tracing::info!(
+                    "Workflow LLM validation: {} unique config; skipping proactive validation (fail-fast mode)",
+                    unique.len()
+                );
+            } else {
+                tracing::info!(
+                    "Workflow LLM validation: {} unique configs detected; validating concurrently",
+                    unique.len()
+                );
+                let configs: Vec<crate::llm::LlmConfig> = unique.into_values().collect();
+                let validations = configs.into_iter().map(|cfg| async move {
+                    let provider_name = cfg.provider_name().to_string();
+                    let model_name = cfg.model_name().to_string();
+
+                    tracing::info!(
+                        "Workflow LLM validation: validating provider={} model={}",
+                        provider_name,
+                        model_name
+                    );
+
+                    let provider = LlmProviderFactory::create_provider(cfg.clone())?;
+                    let llm_provider = LlmProvider::new(provider, cfg);
+                    let test_request = LlmRequest::new("Hello");
+                    llm_provider.complete(test_request).await?;
+
+                    Ok::<(), GraphBitError>(())
+                });
+
+                let results = futures::future::join_all(validations).await;
+                let mut failures: Vec<String> = Vec::new();
+                for r in results {
+                    if let Err(e) = r {
+                        // Do not include raw API keys here; provider errors already mask keys.
+                        failures.push(e.to_string());
+                    }
+                }
+
+                if !failures.is_empty() {
+                    let err = GraphBitError::config(format!(
+                        "LLM configuration validation failed for {} config(s): {}",
+                        failures.len(),
+                        failures.join(" | ")
+                    ));
+                    if let Some(ref tx) = event_tx {
+                        let _ = tx
+                            .send(StreamEvent::WorkflowFailed {
+                                error: err.to_string(),
+                                error_type: error_type_from_graphbit_error(&err),
+                            })
+                            .await;
+                    }
+                    return Err(err);
+                }
+            }
+
+            context.set_metadata(
+                "workflow_llm_configs_validated".to_string(),
+                serde_json::Value::Bool(true),
+            );
+            }
+        }
+
+
         // PERFORMANCE FIX: Auto-register agents for all agent nodes found in workflow
         let agent_ids = extract_agent_ids_from_workflow(&workflow);
         if agent_ids.is_empty() {
