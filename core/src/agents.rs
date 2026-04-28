@@ -133,28 +133,7 @@ impl Agent {
     pub async fn new(config: AgentConfig) -> GraphBitResult<Self> {
         let provider = crate::llm::LlmProviderFactory::create_provider(config.llm_config.clone())?;
         let llm_provider = LlmProvider::new(provider, config.llm_config.clone());
-
-        // Validate the LLM configuration by attempting a simple test call
-        // This ensures invalid API keys are caught during agent creation
-        // Skip validation for Python bridge providers to avoid GIL-related issues during initialization
-        #[cfg(feature = "python")]
-        let is_python_bridge = matches!(
-            config.llm_config,
-            crate::llm::LlmConfig::PythonBridge { .. }
-        );
-        #[cfg(not(feature = "python"))]
-        let is_python_bridge = false;
-
-        if !is_python_bridge {
-            // Use a small prompt for validation.
-            let test_request = LlmRequest::new("Hello");
-            if let Err(e) = llm_provider.complete(test_request).await {
-                return Err(crate::errors::GraphBitError::config(format!(
-                    "LLM configuration validation failed: {e}"
-                )));
-            }
-        }
-
+        
         Ok(Self {
             config,
             llm_provider,
