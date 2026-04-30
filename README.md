@@ -291,6 +291,49 @@ GraphBit is committed to maintaining security standards for our agentic framewor
 
 For detailed reporting procedures and response timelines, see our [Security Policy](SECURITY.md).
 
+## FAQ
+
+### What is GraphBit?
+GraphBit is a high-performance, developer-first agentic AI framework that combines Rust performance with Python flexibility. It provides type-safe AI agent workflows with a three-tier architecture: Rust core for workflow engine and agents, orchestration layer for project management, and Python API with PyO3 bindings.
+
+### How does GraphBit differ from other agent frameworks?
+GraphBit uses a Rust core for performance-critical operations while providing a rich Python API for developer convenience. Its three-tier architecture (Rust Core → Orchestration Layer → Python API) enables both high performance and ease of use, with built-in workflow graph management and observability.
+
+### Which LLM providers are supported?
+GraphBit supports 15+ LLM providers including OpenAI, Anthropic, Azure OpenAI, DeepSeek, Together, Ollama, OpenRouter, Fireworks, Mistral AI, Replicate, Perplexity, HuggingFace, AI21, Bytedance, xAI, and more. You can switch providers with minimal configuration changes.
+
+### What Python versions are supported?
+GraphBit supports Python 3.9 through 3.13, ensuring compatibility with most modern Python environments and packages.
+
+### What Rust version is required?
+GraphBit requires Rust 1.70 or later for building the core components. The Rust core handles workflow engine, agents, and LLM provider integrations.
+
+### How do I install GraphBit?
+Install via pip: `pip install graphbit`. For development, fork the repository and follow the setup instructions in [CONTRIBUTING.md](CONTRIBUTING.md) to build the Rust core and Python bindings.
+
+### What vector stores are supported?
+GraphBit integrates with Pinecone, Qdrant, Chroma, Milvus, Weaviate, FAISS, Elasticsearch, AstraDB, Redis, and more through its modular vector store extensions.
+
+### How does GraphBit handle observability?
+GraphBit Tracer captures and monitors LLM calls and AI workflows with minimal configuration. It wraps GraphBit LLM clients and workflow executors to trace prompts, responses, token usage, latency, and errors without changing your code.
+
+### Can I use GraphBit with my existing tools?
+Yes. GraphBit provides a comprehensive tool system with function decorators, registry, and execution framework. You can integrate custom tools, use built-in document loaders (PDF, DOCX, TXT, JSON, CSV, XML, HTML), and leverage text splitters for document processing.
+
+### Where can I get help?
+- **Documentation**: https://docs.graphbit.ai/
+- **Discord**: https://discord.com/invite/FMhgB3paMD
+- **YouTube**: https://www.youtube.com/@graphbitAI
+- **X (Twitter)**: https://x.com/graphbit_ai
+- **Issues**: https://github.com/InfinitiBit/graphbit/issues
+
+### How can I contribute?
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines. GraphBit is built by a community of researchers and engineers.
+
+### What is the license?
+GraphBit is licensed under the Apache License, Version 2.0. See [LICENSE.md](LICENSE.md) for complete terms and conditions.
+
+
 ## License
 
 GraphBit project is licensed under the Apache License, Version 2.0.
