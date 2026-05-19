@@ -525,6 +525,56 @@ impl LlmConfig {
             Self::Unconfigured { .. } => "none",
         }
     }
+
+    /// A stable fingerprint used to dedupe LLM config validation across a workflow.
+    ///
+    /// Returns `None` for configs that should be skipped (e.g. Python bridge).
+    /// The string is intended for in-memory set membership only; do not log it.
+    pub fn validation_fingerprint(&self) -> Option<String> {
+        use crate::llm::LlmConfig::*;
+
+        #[cfg(feature = "python")]
+        if matches!(self, PythonBridge { .. }) {
+            return None;
+        }
+
+        // Dedupe key validation by provider + api_key (NOT model).
+        // Also: never embed the raw API key in the returned string.
+        let (provider, api_key_opt): (&str, Option<&str>) = match self {
+            OpenAI { api_key, .. } => ("openai", Some(api_key.as_str())),
+            Anthropic { api_key, .. } => ("anthropic", Some(api_key.as_str())),
+            AzureLlm { api_key, .. } => ("azurellm", Some(api_key.as_str())),
+            ByteDance { api_key, .. } => ("bytedance", Some(api_key.as_str())),
+            DeepSeek { api_key, .. } => ("deepseek", Some(api_key.as_str())),
+            HuggingFace { api_key, .. } => ("huggingface", Some(api_key.as_str())),
+            Ollama { .. } => ("ollama", None),
+            Perplexity { api_key, .. } => ("perplexity", Some(api_key.as_str())),
+            OpenRouter { api_key, .. } => ("openrouter", Some(api_key.as_str())),
+            Fireworks { api_key, .. } => ("fireworks", Some(api_key.as_str())),
+            Replicate { api_key, .. } => ("replicate", Some(api_key.as_str())),
+            TogetherAi { api_key, .. } => ("togetherai", Some(api_key.as_str())),
+            Xai { api_key, .. } => ("xai", Some(api_key.as_str())),
+            Ai21 { api_key, .. } => ("ai21", Some(api_key.as_str())),
+            MistralAI { api_key, .. } => ("mistralai", Some(api_key.as_str())),
+            Gemini { api_key, .. } => ("gemini", Some(api_key.as_str())),
+            #[cfg(feature = "python")]
+            PythonBridge { .. } => return None,
+            Custom {
+                provider_type,
+                config,
+            } => (
+                "custom",
+                config
+                    .get("api_key")
+                    .and_then(|v| v.as_str())
+                    .or(Some(provider_type.as_str())),
+            ),
+            Unconfigured { .. } => return None,
+        };
+
+        let name = format!("{}|{}", provider, api_key_opt.unwrap_or(""));
+        Some(uuid::Uuid::new_v5(&uuid::Uuid::NAMESPACE_OID, name.as_bytes()).to_string())
+    }
 }
 
 impl Default for LlmConfig {
@@ -608,9 +658,10 @@ impl LlmProvider {
     /// Send a request to the LLM
     pub async fn complete(&self, request: LlmRequest) -> GraphBitResult<LlmResponse> {
         tracing::info!(
-            "LlmProvider wrapper: Forwarding request with {} tools to {} provider",
+            "LlmProvider wrapper: Forwarding request with {} tools to {} provider\nRequest: {:?}",
             request.tools.len(),
-            self.config.provider_name()
+            self.config.provider_name(),
+            request
         );
         self.inner.complete(request).await
     }
