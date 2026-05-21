@@ -119,15 +119,6 @@ impl WorkflowNode {
                         "Agent node must have a valid agent_id",
                     ));
                 }
-
-                // Production-grade validation for prompt templates
-                Self::validate_template_syntax(&config.prompt_template, "prompt_template")?;
-                if let Some(ctx) = &config.conversational_context {
-                    Self::validate_template_syntax(ctx, "conversational_context")?;
-                }
-                if let Some(sys) = &config.system_prompt_override {
-                    Self::validate_template_syntax(sys, "system_prompt_override")?;
-                }
             }
             NodeType::Condition { handler_id } => {
                 if handler_id.trim().is_empty() {
@@ -167,38 +158,6 @@ impl WorkflowNode {
                 }
             }
             _ => {}
-        }
-
-        Ok(())
-    }
-
-    /// Basic syntax validation for template strings (checks for balanced braces)
-    fn validate_template_syntax(template: &str, field_name: &str) -> GraphBitResult<()> {
-        let mut brace_level = 0;
-        let bytes = template.as_bytes();
-        let mut i = 0;
-
-        while i < bytes.len() {
-            if i + 1 < bytes.len() && bytes[i] == b'{' && bytes[i + 1] == b'{' {
-                brace_level += 1;
-                i += 2;
-            } else if i + 1 < bytes.len() && bytes[i] == b'}' && bytes[i + 1] == b'}' {
-                brace_level -= 1;
-                i += 2;
-                if brace_level < 0 {
-                    return Err(GraphBitError::graph(format!(
-                        "Invalid template syntax in {field_name}: unexpected closing braces '}}' at byte offset {i}"
-                    )));
-                }
-            } else {
-                i += 1;
-            }
-        }
-
-        if brace_level != 0 {
-            return Err(GraphBitError::graph(format!(
-                "Invalid template syntax in {field_name}: unbalanced braces (level {brace_level})"
-            )));
         }
 
         Ok(())
