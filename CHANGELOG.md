@@ -1,3 +1,22 @@
+## [0.6.8] - 2026-05-21
+
+### ✨ New Features
+
+- **Migrate Azure OpenAI models to Responses API and unify detection logic** by @JunaidHossain04 in [#499](https://github.com/InfinitiBit/graphbit/pull/499)
+
+### 🐛 Bug Fixes
+
+- **Fix tool agent output repetition and node output order in workflow metadata** by @JunaidHossain04 in [#498](https://github.com/InfinitiBit/graphbit/pull/498)
+
+### 🔧 Maintenance
+
+- **Smart validation** by @annur-infinitibit in [#500](https://github.com/InfinitiBit/graphbit/pull/500)
+- **Validation removed** by @annur-infinitibit in [#502](https://github.com/InfinitiBit/graphbit/pull/502)
+
+---
+**Total Changes**: 4
+**Changes by Category**: ✨ New Features: 1 | 🐛 Bug Fixes: 1 | 🔧 Maintenance: 2
+
 ## [0.6.7] - 2026-04-09
 
 ### ✨ New Features
